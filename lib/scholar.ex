@@ -1,0 +1,2 @@
+defmodule Scholar do
+end

@@ -1,0 +1,3 @@
+%{
+  "nx": {:hex, :nx, "0.1.0", "8f8a047dc0fd2b1798406edf828b43c46cca648b13c58fd5abd52285316b3d86", [:mix], [], "hexpm", "24ce6e184dc9c7b7c6c247923bfbe994101a7fe049bd3fd376b5b0512f787256"},
+}
