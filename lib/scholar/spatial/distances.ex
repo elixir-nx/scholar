@@ -170,8 +170,7 @@ defmodule Scholar.Spatial.Distances do
 
     x
     |> Nx.subtract(y)
-    |> Nx.abs()
-    |> Nx.reduce_max()
+    |> Nx.LinAlg.norm(ord: :inf)
     |> Nx.as_type({:f, 32})
   end
 
