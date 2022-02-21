@@ -1,4 +1,4 @@
-defmodule Scholar.Spatial.Distances do
+defmodule Scholar.Metrics.Distance do
   @moduledoc """
   Distance metrics between 1-D tensors.
   """
@@ -17,7 +17,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([3, 2])
-      iex> Scholar.Spatial.Distances.euclidean(x, y)
+      iex> Scholar.Metrics.Distance.euclidean(x, y)
       #Nx.Tensor<
         f32
         2.0
@@ -25,7 +25,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2])
-      iex> Scholar.Spatial.Distances.euclidean(x, y)
+      iex> Scholar.Metrics.Distance.euclidean(x, y)
       #Nx.Tensor<
         f32
         0.0
@@ -33,12 +33,12 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
-      iex> Scholar.Spatial.Distances.euclidean(x, y)
+      iex> Scholar.Metrics.Distance.euclidean(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
   """
   @spec euclidean(Nx.t(), Nx.t()) :: Nx.t()
   defn euclidean(x, y) do
-    assert_shape!(x, y)
+    assert_same_shape!(x, y)
     diff = x - y
 
     cond do
@@ -63,7 +63,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([3, 2])
-      iex> Scholar.Spatial.Distances.squared_euclidean(x, y)
+      iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
       #Nx.Tensor<
         f32
         4.0
@@ -71,7 +71,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2])
-      iex> Scholar.Spatial.Distances.squared_euclidean(x, y)
+      iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
       #Nx.Tensor<
         f32
         0.0
@@ -79,12 +79,12 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
-      iex> Scholar.Spatial.Distances.squared_euclidean(x, y)
+      iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
   """
   @spec squared_euclidean(Nx.t(), Nx.t()) :: Nx.t()
   defn squared_euclidean(x, y) do
-    assert_shape!(x, y)
+    assert_same_shape!(x, y)
 
     x
     |> Nx.subtract(y)
@@ -104,7 +104,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([3, 2])
-      iex> Scholar.Spatial.Distances.manhattan(x, y)
+      iex> Scholar.Metrics.Distance.manhattan(x, y)
       #Nx.Tensor<
         f32
         2.0
@@ -112,7 +112,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2])
-      iex> Scholar.Spatial.Distances.manhattan(x, y)
+      iex> Scholar.Metrics.Distance.manhattan(x, y)
       #Nx.Tensor<
         f32
         0.0
@@ -120,12 +120,12 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
-      iex> Scholar.Spatial.Distances.manhattan(x, y)
+      iex> Scholar.Metrics.Distance.manhattan(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
   """
   @spec manhattan(Nx.t(), Nx.t()) :: Nx.t()
   defn manhattan(x, y) do
-    assert_shape!(x, y)
+    assert_same_shape!(x, y)
 
     x
     |> Nx.subtract(y)
@@ -145,7 +145,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([3, 2])
-      iex> Scholar.Spatial.Distances.chebyshev(x, y)
+      iex> Scholar.Metrics.Distance.chebyshev(x, y)
       #Nx.Tensor<
         f32
         2.0
@@ -153,7 +153,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2])
-      iex> Scholar.Spatial.Distances.chebyshev(x, y)
+      iex> Scholar.Metrics.Distance.chebyshev(x, y)
       #Nx.Tensor<
         f32
         0.0
@@ -161,12 +161,12 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
-      iex> Scholar.Spatial.Distances.chebyshev(x, y)
+      iex> Scholar.Metrics.Distance.chebyshev(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
   """
   @spec chebyshev(Nx.t(), Nx.t()) :: Nx.t()
   defn chebyshev(x, y) do
-    assert_shape!(x, y)
+    assert_same_shape!(x, y)
 
     x
     |> Nx.subtract(y)
@@ -185,7 +185,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([5, 2])
-      iex> Scholar.Spatial.Distances.minkowski(x, y)
+      iex> Scholar.Metrics.Distance.minkowski(x, y)
       #Nx.Tensor<
         f32
         4.0
@@ -193,7 +193,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2])
-      iex> Scholar.Spatial.Distances.minkowski(x, y)
+      iex> Scholar.Metrics.Distance.minkowski(x, y)
       #Nx.Tensor<
         f32
         0.0
@@ -201,12 +201,12 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
-      iex> Scholar.Spatial.Distances.minkowski(x, y)
+      iex> Scholar.Metrics.Distance.minkowski(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
   """
   @spec minkowski(Nx.t(), Nx.t(), integer()) :: Nx.t()
   defn minkowski(x, y, p \\ 2) do
-    assert_shape!(x, y)
+    assert_same_shape!(x, y)
 
     x
     |> Nx.subtract(y)
@@ -227,7 +227,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([5, 2])
-      iex> Scholar.Spatial.Distances.cosine(x, y)
+      iex> Scholar.Metrics.Distance.cosine(x, y)
       #Nx.Tensor<
         f32
         0.2525906562805176
@@ -235,7 +235,7 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2])
-      iex> Scholar.Spatial.Distances.cosine(x, y)
+      iex> Scholar.Metrics.Distance.cosine(x, y)
       #Nx.Tensor<
         f32
         0.0
@@ -243,12 +243,12 @@ defmodule Scholar.Spatial.Distances do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
-      iex> Scholar.Spatial.Distances.cosine(x, y)
+      iex> Scholar.Metrics.Distance.cosine(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
   """
   @spec cosine(Nx.t(), Nx.t()) :: Nx.t()
   defn cosine(x, y) do
-    assert_shape!(x, y)
+    assert_same_shape!(x, y)
     norm_x = Nx.LinAlg.norm(x)
     norm_y = Nx.LinAlg.norm(y)
 
@@ -261,8 +261,8 @@ defmodule Scholar.Spatial.Distances do
 
       true ->
         numerator = Nx.dot(x, y)
-        denominator = norm_x  * norm_y
-        result = 1.0 - numerator / denominator
+        denominator = norm_x * norm_y
+        1.0 - numerator / denominator
     end
   end
 end

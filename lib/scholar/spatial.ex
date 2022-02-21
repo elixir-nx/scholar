@@ -1,5 +1,5 @@
-defmodule Scholar.Spatial do
+defmodule Scholar.Metrics do
   @moduledoc """
-  Spatial algorithms.
+  Score functions, performance metrics, pairwise metrics, and distance computations.
   """
 end
