@@ -214,7 +214,6 @@ defmodule Scholar.Spatial.Distances do
     |> Nx.power(p)
     |> Nx.sum()
     |> Nx.power(1.0 / p)
-    |> Nx.as_type({:f, 32})
   end
 
   @doc """
