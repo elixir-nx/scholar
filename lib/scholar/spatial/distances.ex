@@ -262,7 +262,7 @@ defmodule Scholar.Spatial.Distances do
 
       true ->
         numerator = Nx.dot(x, y)
-        denominator = norm_x |> Nx.dot(norm_y)
+        denominator = norm_x  * norm_y
         result = 1.0 - numerator / denominator
         Nx.as_type(result, {:f, 32})
     end
