@@ -10,7 +10,7 @@ defmodule Scholar.Shared do
   @doc """
   Asserts `lhs` has same shape as `rhs`.
   """
-  defn assert_shape!(lhs, rhs) do
+  defn assert_same_shape!(lhs, rhs) do
     transform(
       {lhs, rhs},
       fn {lhs, rhs} ->
