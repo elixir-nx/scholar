@@ -3,6 +3,8 @@ defmodule Scholar.Preprocessing do
   Set of functions for preprocessing data.
   """
 
+  import Nx.Defn
+
   @doc """
   Standardizes the tensor by removing the mean and scaling to unit variance.
 
@@ -14,7 +16,7 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-        iex> Scholar.Preprocessing.standard_scaler([1,2,3])
+        iex> Scholar.Preprocessing.standard_scaler(Nx.tensor([1,2,3]))
         #Nx.Tensor<
           f32[3]
           [-1.2247447967529297, 0.0, 1.2247447967529297]
@@ -32,12 +34,13 @@ defmodule Scholar.Preprocessing do
 
         iex> Scholar.Preprocessing.standard_scaler(42)
         #Nx.Tensor<
-          s64
+          f32
           42
         >
   """
   @spec standard_scaler(tensor :: Nx.Tensor.t()) :: Nx.Tensor.t()
-  def standard_scaler(%Nx.Tensor{} = tensor) do
+  defn standard_scaler(tensor) do
+    tensor = Nx.to_tensor(tensor)
     std = Nx.standard_deviation(tensor)
 
     if std == Nx.tensor(0.0) do
@@ -48,7 +51,4 @@ defmodule Scholar.Preprocessing do
       |> Nx.divide(std)
     end
   end
-
-  @spec standard_scaler(data :: term()) :: Nx.Tensor.t()
-  def standard_scaler(data), do: standard_scaler(Nx.tensor(data))
 end
