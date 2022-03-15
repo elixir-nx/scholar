@@ -1,2 +1,3 @@
-defmodule Scholar do
+defprotocol Scholar do
+  def predict(estimator, x)
 end
