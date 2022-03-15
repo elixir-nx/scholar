@@ -1,5 +1,7 @@
 defmodule Scholar.LinearRegression do
 
+  defstruct :coefficients
+
   @doc """
   Fits a linear regression model to the given dataset.
   """
