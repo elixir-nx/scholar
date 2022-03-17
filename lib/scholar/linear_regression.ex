@@ -5,7 +5,7 @@ defmodule Scholar.LinearRegression do
   @doc """
   Fits a linear regression model to the given dataset.
   """
-  def fit(x, y) do
+  defn fit(x, y) do
     {coeff, intercept} = lstsq(x, y)
   end
 
