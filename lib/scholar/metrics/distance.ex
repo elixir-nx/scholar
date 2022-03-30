@@ -43,12 +43,14 @@ defmodule Scholar.Metrics.Distance do
 
     cond do
       Nx.all(diff == 0) ->
-        Nx.tensor(0.0)
+        0
+        |> Nx.tensor()
+        |> upcast(diff)
 
       true ->
         diff
         |> Nx.LinAlg.norm()
-        |> Nx.as_type({:f, 32})
+        |> upcast(diff)
     end
   end
 
@@ -65,12 +67,12 @@ defmodule Scholar.Metrics.Distance do
       iex> y = Nx.tensor([3, 2])
       iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
       #Nx.Tensor<
-        f32
-        4.0
+        s64
+        4
       >
 
       iex> x = Nx.tensor([1, 2])
-      iex> y = Nx.tensor([1, 2])
+      iex> y = Nx.tensor([1.0, 2.0])
       iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
       #Nx.Tensor<
         f32
@@ -90,7 +92,7 @@ defmodule Scholar.Metrics.Distance do
     |> Nx.subtract(y)
     |> Nx.power(2)
     |> Nx.sum()
-    |> Nx.as_type({:f, 32})
+    |> upcast(y)
   end
 
   @doc """
@@ -106,11 +108,11 @@ defmodule Scholar.Metrics.Distance do
       iex> y = Nx.tensor([3, 2])
       iex> Scholar.Metrics.Distance.manhattan(x, y)
       #Nx.Tensor<
-        f32
-        2.0
+        s64
+        2
       >
 
-      iex> x = Nx.tensor([1, 2])
+      iex> x = Nx.tensor([1.0, 2.0])
       iex> y = Nx.tensor([1, 2])
       iex> Scholar.Metrics.Distance.manhattan(x, y)
       #Nx.Tensor<
@@ -131,7 +133,7 @@ defmodule Scholar.Metrics.Distance do
     |> Nx.subtract(y)
     |> Nx.abs()
     |> Nx.sum()
-    |> Nx.as_type({:f, 32})
+    |> upcast(y)
   end
 
   @doc """
@@ -171,7 +173,7 @@ defmodule Scholar.Metrics.Distance do
     x
     |> Nx.subtract(y)
     |> Nx.LinAlg.norm(ord: :inf)
-    |> Nx.as_type({:f, 32})
+    |> upcast(y)
   end
 
   @doc """
@@ -264,5 +266,13 @@ defmodule Scholar.Metrics.Distance do
         denominator = norm_x * norm_y
         1.0 - numerator / denominator
     end
+  end
+
+  defnp upcast(x, y) do
+    transform([x, y], fn [x, y] ->
+      out_type = Nx.Type.merge(x.type, y.type)
+
+      Nx.as_type(x, out_type)
+    end)
   end
 end
