@@ -41,14 +41,10 @@ defmodule Scholar.Metrics.Distance do
     assert_same_shape!(x, y)
     diff = x - y
 
-    cond do
-      Nx.all(diff == 0) ->
-        Nx.tensor(0.0)
-
-      true ->
-        diff
-        |> Nx.LinAlg.norm()
-        |> Nx.as_type({:f, 32})
+    if Nx.all(diff == 0) do
+      0.0
+    else
+      Nx.LinAlg.norm(diff)
     end
   end
 
@@ -70,7 +66,7 @@ defmodule Scholar.Metrics.Distance do
       >
 
       iex> x = Nx.tensor([1, 2])
-      iex> y = Nx.tensor([1, 2])
+      iex> y = Nx.tensor([1.0, 2.0])
       iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
       #Nx.Tensor<
         f32
@@ -90,7 +86,7 @@ defmodule Scholar.Metrics.Distance do
     |> Nx.subtract(y)
     |> Nx.power(2)
     |> Nx.sum()
-    |> Nx.as_type({:f, 32})
+    |> as_float()
   end
 
   @doc """
@@ -110,7 +106,7 @@ defmodule Scholar.Metrics.Distance do
         2.0
       >
 
-      iex> x = Nx.tensor([1, 2])
+      iex> x = Nx.tensor([1.0, 2.0])
       iex> y = Nx.tensor([1, 2])
       iex> Scholar.Metrics.Distance.manhattan(x, y)
       #Nx.Tensor<
@@ -131,7 +127,7 @@ defmodule Scholar.Metrics.Distance do
     |> Nx.subtract(y)
     |> Nx.abs()
     |> Nx.sum()
-    |> Nx.as_type({:f, 32})
+    |> as_float()
   end
 
   @doc """
@@ -171,7 +167,6 @@ defmodule Scholar.Metrics.Distance do
     x
     |> Nx.subtract(y)
     |> Nx.LinAlg.norm(ord: :inf)
-    |> Nx.as_type({:f, 32})
   end
 
   @doc """
@@ -264,5 +259,12 @@ defmodule Scholar.Metrics.Distance do
         denominator = norm_x * norm_y
         1.0 - numerator / denominator
     end
+  end
+
+  defnp as_float(x) do
+    transform(x, fn x ->
+      x_f = Nx.Type.to_floating(x.type)
+      Nx.as_type(x, x_f)
+    end)
   end
 end
