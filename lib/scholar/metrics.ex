@@ -332,6 +332,76 @@ defmodule Scholar.Metrics do
   end
 
   @doc ~S"""
+  Calculates the confusion matrix.
+
+  ## Argument Shapes
+
+    * `y_true` - $\(d_0, d_1, ..., d_n\)$
+    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([1.0, 1.0, 2.0, 2.0, 3.0, 3.0], type: {:f, 32})
+      iex> y_pred = Nx.tensor([1.0, 2.0, 1.0, 3.0, 3.0, 3.0], type: {:f, 32})
+      iex> Scholar.Metrics.confusion_matrix(y_true, y_pred)
+  """
+  def confusion_matrix(y_true, y_pred) do
+    {unique_label_atoms, unique_labels, num_classes} =
+      [y_true, y_pred]
+      |> Nx.concatenate()
+      |> Nx.to_flat_list()
+      |> Enum.reduce(%{}, fn label, acc ->
+        Map.update(acc, String.to_atom("#{label}"), label, fn _ -> label end)
+      end)
+      |> then(&{Map.keys(&1), Nx.tensor(Map.values(&1))})
+      |> then(fn {unique_label_atoms, unique_labels} ->
+        {unique_label_atoms, unique_labels, Enum.count(unique_label_atoms)}
+      end)
+
+    y_true_indices =
+      y_true
+      |> Nx.to_flat_list()
+      |> then(&Enum.zip(&1, 0..(Enum.count(&1) - 1)))
+      |> Enum.reduce(%{}, fn {label, index}, acc ->
+        Map.update(acc, String.to_atom("#{label}"), [index], fn indices -> [index | indices] end)
+      end)
+      |> Enum.reduce(%{}, fn {label, indices}, acc ->
+        Map.update(acc, label, Enum.reverse(indices), fn existing_indices ->
+          Enum.reverse(existing_indices)
+        end)
+      end)
+
+    cm =
+      for label <- unique_label_atoms, reduce: [] do
+        acc ->
+          indices = Map.get(y_true_indices, label)
+
+          cm_row_map =
+            y_pred
+            |> Nx.take(Nx.tensor(indices))
+            |> Nx.to_flat_list()
+            |> Enum.reduce(%{}, fn x, acc ->
+              Map.update(acc, String.to_atom("#{x}"), 1, fn count -> count + 1 end)
+            end)
+
+          cm_row =
+            for predicted_label <- unique_label_atoms, reduce: [] do
+              acc ->
+                [Map.get(cm_row_map, predicted_label, 0) | acc]
+            end
+            |> Enum.reverse()
+            |> Nx.tensor()
+
+          [cm_row | acc]
+      end
+      |> Enum.reverse()
+      |> Nx.concatenate()
+      |> Nx.reshape({num_classes, num_classes})
+
+    {cm, unique_labels}
+  end
+
+  @doc ~S"""
   Calculates the mean absolute error of predictions
   with respect to targets.
 
