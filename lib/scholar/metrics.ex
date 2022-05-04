@@ -127,6 +127,8 @@ defmodule Scholar.Metrics do
 
     * `:threshold` - threshold for truth value of predictions.
       Defaults to `0.5`.
+    * `:num_classes` - Number of classes contained in the input tensors.
+      Defaults to `1`. Binary classification.
 
   ## Examples
 
@@ -137,20 +139,36 @@ defmodule Scholar.Metrics do
         u64
         1
       >
+      iex> y_true = Nx.tensor([1, 0, 1, 1, 0, 1, 0])
+      iex> y_pred = Nx.tensor([1, 1, 0, 0, 1, 0, 0])
+      iex> Scholar.Metrics.true_positives(y_true, y_pred, num_classes: 2)
+      #Nx.Tensor<
+        s64[2]
+        [1, 1]
+      >
   """
   defn true_positives(y_true, y_pred, opts \\ []) do
     assert_shape(y_true, Nx.shape(y_pred))
 
-    opts = keyword!(opts, threshold: 0.5)
+    opts = keyword!(opts, threshold: 0.5, num_classes: 1)
 
     thresholded_preds =
       y_pred
       |> Nx.greater(opts[:threshold])
 
-    thresholded_preds
-    |> Nx.equal(y_true)
-    |> Nx.logical_and(Nx.equal(thresholded_preds, 1))
-    |> Nx.sum()
+    transform(opts[:num_classes], fn num_classes ->
+      case num_classes do
+        1 ->
+          thresholded_preds
+          |> Nx.equal(y_true)
+          |> Nx.logical_and(Nx.equal(thresholded_preds, 1))
+          |> Nx.sum()
+
+        _ ->
+          confusion_matrix(y_true, thresholded_preds, num_classes: num_classes)
+          |> Nx.take_diagonal()
+      end
+    end)
   end
 
   @doc """
@@ -364,7 +382,7 @@ defmodule Scholar.Metrics do
 
     zeros = Nx.broadcast(0, {num_classes, num_classes})
     indices = Nx.concatenate([Nx.new_axis(y_true, 1), Nx.new_axis(y_pred, 1)], axis: 1)
-    updates = Nx.broadcast(1, {Nx.size(y_true)}) 
+    updates = Nx.broadcast(1, {Nx.size(y_true)})
 
     Nx.indexed_add(zeros, indices, updates)
   end
