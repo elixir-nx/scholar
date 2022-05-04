@@ -353,14 +353,14 @@ defmodule Scholar.Metrics do
         ]
       >
   """
-  def confusion_matrix(y_true, y_pred, opts \\ []) do
+  defn confusion_matrix(y_true, y_pred, opts \\ []) do
     num_classes = opts[:num_classes]
 
     indices =
-      Enum.to_list(0..(Nx.size(y_true) - 1))
-      |> Enum.map(&Nx.tensor(&1))
-      |> Enum.map(&[Nx.take(y_true, &1), Nx.take(y_pred, &1)])
-      |> Nx.tensor()
+      Nx.iota({Nx.size(y_true)})
+      |> then(&[Nx.take(y_true, &1), Nx.take(y_pred, &1)])
+      |> Nx.stack()
+      |> Nx.transpose()
 
     Nx.indexed_add(
       Nx.broadcast(0, {num_classes, num_classes}),
