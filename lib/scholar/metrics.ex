@@ -332,6 +332,46 @@ defmodule Scholar.Metrics do
   end
 
   @doc ~S"""
+  Calculates the confusion matrix given rank-1 tensors which represent
+  the expected (`y_true`) and predicted (`y_pred`) classes.
+
+  ## Options
+
+    * `:num_classes` - required. Number of classes contained in the input tensors
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 0, 1, 1, 2, 2], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: {:u, 32})
+      iex> Scholar.Metrics.confusion_matrix(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        s64[3][3]
+        [
+          [1, 1, 0],
+          [1, 0, 1],
+          [0, 0, 2]
+        ]
+      >
+  """
+  defn confusion_matrix(y_true, y_pred, opts \\ []) do
+    opts = Keyword.validate!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true)
+
+    num_classes = opts[:num_classes] || raise ArgumentError, "missing option `:num_classes`"
+
+    zeros = Nx.broadcast(0, {num_classes, num_classes})
+    indices = Nx.concatenate([Nx.new_axis(y_true, 1), Nx.new_axis(y_pred, 1)], axis: 1)
+    updates = Nx.broadcast(1, {Nx.size(y_true)}) 
+
+    Nx.indexed_add(
+      zeros,
+      indices,
+      updates
+    )
+  end
+
+  @doc ~S"""
   Calculates the mean absolute error of predictions
   with respect to targets.
 
