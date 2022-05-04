@@ -377,13 +377,13 @@ defmodule Scholar.Metrics do
 
     * `:num_classes` - required. Number of classes contained in the input tensors
     * `:average` - optional. This determines the type of averaging performed on the data.
-      * `nil`. Default value. In this case, the scores for each class are returned.
       * `:macro`. Calculate metrics for each label, and find their unweighted mean.
         This does not take label imbalance into account.
       * `:weighted`. Calculate metrics for each label, and find their average weighted by
         support (the number of true instances for each label).
       * `:micro`. Calculate metrics globally by counting the total true positives,
         false negatives and false positives.
+      * If not specified, then the f1 scores for each class are returned.
 
   ## Examples
 
@@ -488,6 +488,7 @@ defmodule Scholar.Metrics do
 
   # Combinators
 
+  @spec running_average(any) :: (any, list, any -> any)
   @doc """
   Returns a function which computes a running average given current average,
   new observation, and current iteration.
