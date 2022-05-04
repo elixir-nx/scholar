@@ -43,41 +43,6 @@ defmodule Scholar.Metrics do
   end
 
   @doc ~S"""
-  Computes the categorical accuracy of the given predictions
-  for binary and multi-class classification problems
-  when using one-hot encoding.
-
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
-
-  ## Examples
-
-      iex> Scholar.Metrics.onehot_accuracy(Nx.tensor([[0, 1], [1, 0], [1, 0]]), Nx.tensor([[0, 1], [1, 0], [0, 1]]))
-      #Nx.Tensor<
-        f32
-        0.6666666865348816
-      >
-      iex> y_true = Nx.tensor([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
-      iex> y_pred = Nx.tensor([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1]])
-      iex> Scholar.Metrics.onehot_accuracy(y_true, y_pred)
-      #Nx.Tensor<
-        f32
-        0.5
-      >
-
-  """
-  defn onehot_accuracy(y_true, y_pred) do
-    assert_shape(y_true, Nx.shape(y_pred))
-
-    y_true
-    |> Nx.argmax(axis: -1)
-    |> Nx.equal(Nx.argmax(y_pred, axis: -1))
-    |> Nx.mean()
-  end
-
-  @doc ~S"""
   Computes the accuracy of the given predictions
   for multi-class classification problems.
 
@@ -721,14 +686,6 @@ defmodule Scholar.Metrics do
       iex> y_true = Nx.tensor([0, 1, 1])
       iex> y_pred = Nx.tensor([0, 1, 1])
       iex> avg_acc = Scholar.Metrics.running_average(&Scholar.Metrics.binary_accuracy/2)
-      iex> avg_acc.(cur_avg, [y_true, y_pred], iteration)
-      #Nx.Tensor<
-        f32
-        0.75
-      >
-      iex> y_true = Nx.tensor([[0, 1, 0], [1, 0, 0], [0, 0, 1]])
-      iex> y_pred = Nx.tensor([[0, 1, 0], [1, 0, 0], [0, 0, 1]])
-      iex> avg_acc = Scholar.Metrics.running_average(&Scholar.Metrics.onehot_accuracy/2)
       iex> avg_acc.(cur_avg, [y_true, y_pred], iteration)
       #Nx.Tensor<
         f32
