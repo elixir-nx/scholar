@@ -452,7 +452,11 @@ defmodule Scholar.Metrics do
           true_positive = Nx.sum(true_positive)
           false_positive = Nx.sum(false_positive)
           false_negative = Nx.sum(false_negative)
-          Nx.divide(true_positive, true_positive + 0.5 * (false_positive + false_negative) + 1.0e-16)
+
+          Nx.divide(
+            true_positive,
+            true_positive + 0.5 * (false_positive + false_negative) + 1.0e-16
+          )
       end
     end)
   end
