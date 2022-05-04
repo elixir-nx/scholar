@@ -357,10 +357,8 @@ defmodule Scholar.Metrics do
     num_classes = opts[:num_classes]
 
     indices =
-      Nx.iota({Nx.size(y_true)})
-      |> then(&[Nx.take(y_true, &1), Nx.take(y_pred, &1)])
-      |> Nx.stack()
-      |> Nx.transpose()
+      [Nx.new_axis(y_true, 1), Nx.new_axis(y_pred, 1)]
+      |> Nx.concatenate(axis: 1)
 
     Nx.indexed_add(
       Nx.broadcast(0, {num_classes, num_classes}),
