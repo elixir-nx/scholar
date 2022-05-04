@@ -341,64 +341,37 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([1.0, 1.0, 2.0, 2.0, 3.0, 3.0], type: {:f, 32})
-      iex> y_pred = Nx.tensor([1.0, 2.0, 1.0, 3.0, 3.0, 3.0], type: {:f, 32})
-      iex> Scholar.Metrics.confusion_matrix(y_true, y_pred)
+      iex> y_true = Nx.tensor([0, 0, 1, 1, 2, 2], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: {:u, 32})
+      iex> Scholar.Metrics.confusion_matrix(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        s64[3][3]
+        [
+          [1, 1, 0],
+          [1, 0, 1],
+          [0, 0, 2]
+        ]
+      >
   """
-  def confusion_matrix(y_true, y_pred) do
-    {unique_label_atoms, unique_labels, num_classes} =
-      [y_true, y_pred]
-      |> Nx.concatenate()
-      |> Nx.to_flat_list()
-      |> Enum.reduce(%{}, fn label, acc ->
-        Map.update(acc, String.to_atom("#{label}"), label, fn _ -> label end)
-      end)
-      |> then(&{Map.keys(&1), Nx.tensor(Map.values(&1))})
-      |> then(fn {unique_label_atoms, unique_labels} ->
-        {unique_label_atoms, unique_labels, Enum.count(unique_label_atoms)}
-      end)
-
-    y_true_indices =
-      y_true
-      |> Nx.to_flat_list()
-      |> then(&Enum.zip(&1, 0..(Enum.count(&1) - 1)))
-      |> Enum.reduce(%{}, fn {label, index}, acc ->
-        Map.update(acc, String.to_atom("#{label}"), [index], fn indices -> [index | indices] end)
-      end)
-      |> Enum.reduce(%{}, fn {label, indices}, acc ->
-        Map.update(acc, label, Enum.reverse(indices), fn existing_indices ->
-          Enum.reverse(existing_indices)
-        end)
-      end)
+  def confusion_matrix(y_true, y_pred, opts \\ []) do
+    num_classes = opts[:num_classes]
 
     cm =
-      for label <- unique_label_atoms, reduce: [] do
-        acc ->
-          indices = Map.get(y_true_indices, label)
+      Nx.iota({num_classes, num_classes})
+      |> then(&Nx.subtract(&1, &1))
 
-          cm_row_map =
-            y_pred
-            |> Nx.take(Nx.tensor(indices))
-            |> Nx.to_flat_list()
-            |> Enum.reduce(%{}, fn x, acc ->
-              Map.update(acc, String.to_atom("#{x}"), 1, fn count -> count + 1 end)
-            end)
+    indices =
+      Enum.to_list(0..Nx.size(y_true)-1)
+      |> Enum.map(&Nx.tensor(&1))
+      |> Enum.map(&[Nx.take(y_true, &1), Nx.take(y_pred, &1)])
+      |> Nx.tensor()
 
-          cm_row =
-            for predicted_label <- unique_label_atoms, reduce: [] do
-              acc ->
-                [Map.get(cm_row_map, predicted_label, 0) | acc]
-            end
-            |> Enum.reverse()
-            |> Nx.tensor()
+    updates =
+      Nx.iota({Nx.size(y_true)})
+      |> then(&Nx.subtract(&1, &1))
+      |> Nx.add(1)
 
-          [cm_row | acc]
-      end
-      |> Enum.reverse()
-      |> Nx.concatenate()
-      |> Nx.reshape({num_classes, num_classes})
-
-    {cm, unique_labels}
+    Nx.indexed_add(cm, indices, updates)
   end
 
   @doc ~S"""
