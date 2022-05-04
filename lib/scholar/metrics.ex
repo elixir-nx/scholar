@@ -17,7 +17,7 @@ defmodule Scholar.Metrics do
 
   @doc ~S"""
   Computes the accuracy of the given predictions
-  for binary classification problems.
+  for binary and multi-class classification problems.
 
   ## Argument Shapes
 
@@ -26,55 +26,26 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> Scholar.Metrics.binary_accuracy(Nx.tensor([1, 0, 0]), Nx.tensor([1, 0, 1]))
+      iex> Scholar.Metrics.accuracy(Nx.tensor([1, 0, 0]), Nx.tensor([1, 0, 1]))
       #Nx.Tensor<
         f32
         0.6666666865348816
       >
-
-  """
-  defn binary_accuracy(y_true, y_pred) do
-    assert_shape(y_true, Nx.shape(y_pred))
-
-    y_pred
-    |> Nx.greater(0.5)
-    |> Nx.equal(y_true)
-    |> Nx.mean()
-  end
-
-  @doc ~S"""
-  Computes the accuracy of the given predictions
-  for multi-class classification problems.
-
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
-
-  ## Examples
-
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
-      iex> Scholar.Metrics.accuracy(y_true, y_pred, num_classes: 3)
+      iex> Scholar.Metrics.accuracy(y_true, y_pred)
       #Nx.Tensor<
         f32
         0.6000000238418579
       >
 
   """
-  defn accuracy(y_true, y_pred, opts \\ []) do
-    opts = keyword!(opts, [:num_classes])
-    assert_shape_pattern(y_true, {_})
+  defn accuracy(y_true, y_pred) do
     assert_shape(y_pred, Nx.shape(y_true))
 
-    cm = confusion_matrix(y_true, y_pred, opts)
-
-    true_positive = Nx.take_diagonal(cm)
-    false_positive = Nx.sum(Nx.subtract(Nx.sum(cm, axes: [0]), true_positive))
-    false_negative = Nx.sum(Nx.subtract(Nx.sum(cm, axes: [1]), true_positive))
-    true_positive = Nx.sum(true_positive)
-
-    Nx.divide(true_positive, true_positive + 0.5 * (false_positive + false_negative) + 1.0e-16)
+    y_pred
+    |> Nx.equal(y_true)
+    |> Nx.mean()
   end
 
   @doc ~S"""
@@ -86,11 +57,6 @@ defmodule Scholar.Metrics do
     * `y_true` - $\(d_0, d_1, ..., d_n\)$
     * `y_pred` - $\(d_0, d_1, ..., d_n\)$
 
-  ## Options
-
-    * `:threshold` - threshold for truth value of the predictions.
-      Defaults to `0.5`
-
   ## Examples
 
       iex> Scholar.Metrics.binary_precision(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -100,11 +66,11 @@ defmodule Scholar.Metrics do
       >
 
   """
-  defn binary_precision(y_true, y_pred, opts \\ []) do
+  defn binary_precision(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
-    true_positives = binary_true_positives(y_true, y_pred, opts)
-    false_positives = binary_false_positives(y_true, y_pred, opts)
+    true_positives = binary_true_positives(y_true, y_pred)
+    false_positives = binary_false_positives(y_true, y_pred)
 
     true_positives
     |> Nx.divide(true_positives + false_positives + 1.0e-16)
@@ -121,8 +87,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-    * `:threshold` - threshold for truth value of the predictions.
-      Defaults to `0.5`
+    * `:num_classes` - Number of classes contained in the input tensors
 
   ## Examples
 
@@ -141,9 +106,11 @@ defmodule Scholar.Metrics do
     assert_shape(y_pred, Nx.shape(y_true))
 
     cm = confusion_matrix(y_true, y_pred, opts)
-    true_positive = Nx.take_diagonal(cm)
-    false_positive = Nx.subtract(Nx.sum(cm, axes: [0]), true_positive)
-    Nx.divide(true_positive, true_positive + false_positive + 1.0e-16)
+    true_positives = Nx.take_diagonal(cm)
+    false_positives = Nx.subtract(Nx.sum(cm, axes: [0]), true_positives)
+
+    true_positives
+    |> Nx.divide(true_positives + false_positives + 1.0e-16)
   end
 
   @doc ~S"""
@@ -155,11 +122,6 @@ defmodule Scholar.Metrics do
     * `y_true` - $\(d_0, d_1, ..., d_n\)$
     * `y_pred` - $\(d_0, d_1, ..., d_n\)$
 
-  ## Options
-
-    * `:threshold` - threshold for truth value of the predictions.
-      Defaults to `0.5`
-
   ## Examples
 
       iex> Scholar.Metrics.binary_recall(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -169,11 +131,11 @@ defmodule Scholar.Metrics do
       >
 
   """
-  defn binary_recall(y_true, y_pred, opts \\ []) do
+  defn binary_recall(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
-    true_positives = binary_true_positives(y_true, y_pred, opts)
-    false_negatives = binary_false_negatives(y_true, y_pred, opts)
+    true_positives = binary_true_positives(y_true, y_pred)
+    false_negatives = binary_false_negatives(y_true, y_pred)
 
     Nx.divide(true_positives, false_negatives + true_positives + 1.0e-16)
   end
@@ -189,8 +151,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-    * `:threshold` - threshold for truth value of the predictions.
-      Defaults to `0.5`
+    * `:num_classes` - Number of classes contained in the input tensors
 
   ## Examples
 
@@ -216,36 +177,26 @@ defmodule Scholar.Metrics do
 
   @doc """
   Computes the number of true positive predictions with respect
-  to given targets for multi-class classification problems.
-
-  ## Options
-
-    * `:threshold` - threshold for truth value of predictions.
-      Defaults to `0.5`.
-
+  to given targets for binary classification problems.
 
   ## Examples
 
+      iex> threshold = 0.5
       iex> y_true = Nx.tensor([1, 0, 1, 1, 0, 1, 0])
       iex> y_pred = Nx.tensor([0.8, 0.6, 0.4, 0.2, 0.8, 0.2, 0.2])
+      iex> y_pred = Nx.greater(y_pred, threshold)
       iex> Scholar.Metrics.binary_true_positives(y_true, y_pred)
       #Nx.Tensor<
         u64
         1
       >
   """
-  defn binary_true_positives(y_true, y_pred, opts \\ []) do
+  defn binary_true_positives(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
-    opts = keyword!(opts, threshold: 0.5)
-
-    thresholded_preds =
-      y_pred
-      |> Nx.greater(opts[:threshold])
-
-    thresholded_preds
+    y_pred
     |> Nx.equal(y_true)
-    |> Nx.logical_and(Nx.equal(thresholded_preds, 1))
+    |> Nx.logical_and(Nx.equal(y_pred, 1))
     |> Nx.sum()
   end
 
@@ -253,33 +204,24 @@ defmodule Scholar.Metrics do
   Computes the number of false negative predictions with respect
   to given targets for binary classification problems.
 
-  ## Options
-
-    * `:threshold` - threshold for truth value of predictions.
-      Defaults to `0.5`.
-
   ## Examples
 
+      iex> threshold = 0.5
       iex> y_true = Nx.tensor([1, 0, 1, 1, 0, 1, 0])
       iex> y_pred = Nx.tensor([0.8, 0.6, 0.4, 0.2, 0.8, 0.2, 0.2])
+      iex> y_pred = Nx.greater(y_pred, threshold)
       iex> Scholar.Metrics.binary_false_negatives(y_true, y_pred)
       #Nx.Tensor<
         u64
         3
       >
   """
-  defn binary_false_negatives(y_true, y_pred, opts \\ []) do
+  defn binary_false_negatives(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
-    opts = keyword!(opts, threshold: 0.5)
-
-    thresholded_preds =
-      y_pred
-      |> Nx.greater(opts[:threshold])
-
-    thresholded_preds
+    y_pred
     |> Nx.not_equal(y_true)
-    |> Nx.logical_and(Nx.equal(thresholded_preds, 0))
+    |> Nx.logical_and(Nx.equal(y_pred, 0))
     |> Nx.sum()
   end
 
@@ -287,33 +229,24 @@ defmodule Scholar.Metrics do
   Computes the number of true negative predictions with respect
   to given targets for binary classification problems.
 
-  ## Options
-
-    * `:threshold` - threshold for truth value of predictions.
-      Defaults to `0.5`.
-
   ## Examples
 
+      iex> threshold = 0.5
       iex> y_true = Nx.tensor([1, 0, 1, 1, 0, 1, 0])
       iex> y_pred = Nx.tensor([0.8, 0.6, 0.4, 0.2, 0.8, 0.2, 0.2])
+      iex> y_pred = Nx.greater(y_pred, threshold)
       iex> Scholar.Metrics.binary_true_negatives(y_true, y_pred)
       #Nx.Tensor<
         u64
         1
       >
   """
-  defn binary_true_negatives(y_true, y_pred, opts \\ []) do
+  defn binary_true_negatives(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
-    opts = keyword!(opts, threshold: 0.5)
-
-    thresholded_preds =
-      y_pred
-      |> Nx.greater(opts[:threshold])
-
-    thresholded_preds
+    y_pred
     |> Nx.equal(y_true)
-    |> Nx.logical_and(Nx.equal(thresholded_preds, 0))
+    |> Nx.logical_and(Nx.equal(y_pred, 0))
     |> Nx.sum()
   end
 
@@ -321,33 +254,24 @@ defmodule Scholar.Metrics do
   Computes the number of false positive predictions with respect
   to given targets for binary classification problems.
 
-  ## Options
-
-    * `:threshold` - threshold for truth value of predictions.
-      Defaults to `0.5`.
-
   ## Examples
 
+      iex> threshold = 0.5
       iex> y_true = Nx.tensor([1, 0, 1, 1, 0, 1, 0])
       iex> y_pred = Nx.tensor([0.8, 0.6, 0.4, 0.2, 0.8, 0.2, 0.2])
+      iex> y_pred = Nx.greater(y_pred, threshold)
       iex> Scholar.Metrics.binary_false_positives(y_true, y_pred)
       #Nx.Tensor<
         u64
         2
       >
   """
-  defn binary_false_positives(y_true, y_pred, opts \\ []) do
+  defn binary_false_positives(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
-    opts = keyword!(opts, threshold: 0.5)
-
-    thresholded_preds =
-      y_pred
-      |> Nx.greater(opts[:threshold])
-
-    thresholded_preds
+    y_pred
     |> Nx.not_equal(y_true)
-    |> Nx.logical_and(Nx.equal(thresholded_preds, 1))
+    |> Nx.logical_and(Nx.equal(y_pred, 1))
     |> Nx.sum()
   end
 
@@ -360,11 +284,6 @@ defmodule Scholar.Metrics do
     * `y_true` - $\(d_0, d_1, ..., d_n\)$
     * `y_pred` - $\(d_0, d_1, ..., d_n\)$
 
-  ## Options
-
-    * `:threshold` - threshold for truth value of the predictions.
-      Defaults to `0.5`
-
   ## Examples
 
       iex> Scholar.Metrics.binary_sensitivity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -374,12 +293,10 @@ defmodule Scholar.Metrics do
       >
 
   """
-  defn binary_sensitivity(y_true, y_pred, opts \\ []) do
+  defn binary_sensitivity(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
-    opts = keyword!(opts, threshold: 0.5)
-
-    binary_recall(y_true, y_pred, opts)
+    binary_recall(y_true, y_pred)
   end
 
   @doc ~S"""
@@ -423,11 +340,6 @@ defmodule Scholar.Metrics do
     * `y_true` - $\(d_0, d_1, ..., d_n\)$
     * `y_pred` - $\(d_0, d_1, ..., d_n\)$
 
-  ## Options
-
-    * `:threshold` - threshold for truth value of the predictions.
-      Defaults to `0.5`
-
   ## Examples
 
       iex> Scholar.Metrics.binary_specificity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -437,23 +349,19 @@ defmodule Scholar.Metrics do
       >
 
   """
-  defn binary_specificity(y_true, y_pred, opts \\ []) do
+  defn binary_specificity(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
-    opts = keyword!(opts, threshold: 0.5)
-
-    thresholded_preds = Nx.greater(y_pred, opts[:threshold])
-
     true_negatives =
-      thresholded_preds
+      y_pred
       |> Nx.equal(y_true)
-      |> Nx.logical_and(Nx.equal(thresholded_preds, 0))
+      |> Nx.logical_and(Nx.equal(y_pred, 0))
       |> Nx.sum()
 
     false_positives =
-      thresholded_preds
+      y_pred
       |> Nx.not_equal(y_true)
-      |> Nx.logical_and(Nx.equal(thresholded_preds, 1))
+      |> Nx.logical_and(Nx.equal(y_pred, 1))
       |> Nx.sum()
 
     Nx.divide(true_negatives, false_positives + true_negatives + 1.0e-16)
@@ -461,7 +369,7 @@ defmodule Scholar.Metrics do
 
   @doc ~S"""
   Computes the specificity of the given predictions with respect
-  to the given targets for binary classification problems.
+  to the given targets for multi-class classification problems.
 
   ## Argument Shapes
 
@@ -579,15 +487,7 @@ defmodule Scholar.Metrics do
       iex> iteration = 1
       iex> y_true = Nx.tensor([0, 1, 1])
       iex> y_pred = Nx.tensor([0, 1, 1])
-      iex> avg_acc = Scholar.Metrics.running_average(&Scholar.Metrics.binary_accuracy/2)
-      iex> avg_acc.(cur_avg, [y_true, y_pred], iteration)
-      #Nx.Tensor<
-        f32
-        0.75
-      >
-      iex> y_true = Nx.tensor([0, 1, 2])
-      iex> y_pred = Nx.tensor([0, 1, 2])
-      iex> avg_acc = Scholar.Metrics.running_average(&Scholar.Metrics.accuracy(&1, &2, num_classes: 3))
+      iex> avg_acc = Scholar.Metrics.running_average(&Scholar.Metrics.accuracy/2)
       iex> avg_acc.(cur_avg, [y_true, y_pred], iteration)
       #Nx.Tensor<
         f32
