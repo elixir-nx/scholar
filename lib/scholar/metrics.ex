@@ -659,18 +659,20 @@ defmodule Scholar.Metrics do
           [0, 0, 2]
         ]
       >
+
   """
   defn confusion_matrix(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
     assert_shape_pattern(y_true, {_})
     assert_shape(y_pred, Nx.shape(y_true))
 
-    num_classes = transform(opts[:num_classes], fn num_classes ->
-      num_classes || raise ArgumentError, "missing option :num_classes"
-    end)
+    num_classes =
+      transform(opts[:num_classes], fn num_classes ->
+        num_classes || raise ArgumentError, "missing option :num_classes"
+      end)
 
     zeros = Nx.broadcast(0, {num_classes, num_classes})
-    indices = Nx.concatenate([Nx.new_axis(y_true, 1), Nx.new_axis(y_pred, 1)], axis: 1)
+    indices = Nx.stack([y_true, y_pred], axis: 1)
     updates = Nx.broadcast(1, {Nx.size(y_true)})
 
     Nx.indexed_add(zeros, indices, updates)
