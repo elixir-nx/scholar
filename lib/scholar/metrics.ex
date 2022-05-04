@@ -370,6 +370,93 @@ defmodule Scholar.Metrics do
   end
 
   @doc ~S"""
+  Calculates F1 score given rank-1 tensors which represent
+  the expected (`y_true`) and predicted (`y_pred`) classes.
+
+  ## Options
+
+    * `:num_classes` - required. Number of classes contained in the input tensors
+    * `:average` - optional. This determines the type of averaging performed on the data.
+      * `nil`. Default value. In this case, the scores for each class are returned.
+      * `:macro`. Calculate metrics for each label, and find their unweighted mean.
+        This does not take label imbalance into account.
+      * `:weighted`. Calculate metrics for each label, and find their average weighted by
+        support (the number of true instances for each label).
+      * `:micro`. Calculate metrics globally by counting the total true positives,
+        false negatives and false positives.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: nil)
+      #Nx.Tensor<
+        f32[3]
+        [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
+      >
+      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: :macro)
+      #Nx.Tensor<
+        f32
+        0.5777778029441833
+      >
+      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: :weighted)
+      #Nx.Tensor<
+        f32
+        0.64000004529953
+      >
+      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: :micro)
+      #Nx.Tensor<
+        f32
+        0.6000000238418579
+      >
+  """
+  defn f1_score(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, [:num_classes, :average])
+
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true))
+
+    num_classes =
+      transform(opts[:num_classes], fn num_classes ->
+        num_classes || raise ArgumentError, "missing option :num_classes"
+      end)
+
+    average =
+      transform(opts[:average], fn average ->
+        average || nil
+      end)
+
+    cm = confusion_matrix(y_true, y_pred, num_classes: num_classes)
+    true_positive = Nx.take_diagonal(cm)
+    false_positive = Nx.subtract(Nx.sum(cm, axes: [0]), true_positive)
+    false_negative = Nx.subtract(Nx.sum(cm, axes: [1]), true_positive)
+    precision = Nx.divide(true_positive, Nx.add(true_positive, false_positive))
+    recall = Nx.divide(true_positive, Nx.add(true_positive, false_negative))
+
+    per_class_f1 =
+      Nx.divide(Nx.multiply(2, Nx.multiply(precision, recall)), Nx.add(precision, recall))
+
+    transform(average, fn average ->
+      case average do
+        nil ->
+          per_class_f1
+
+        :macro ->
+          Nx.mean(per_class_f1)
+
+        :weighted ->
+          support = Nx.sum(Nx.equal(y_true, Nx.new_axis(Nx.iota({num_classes}), 1)), axes: [1])
+          Nx.sum(Nx.multiply(per_class_f1, Nx.divide(support, Nx.sum(support))))
+
+        :micro ->
+          true_positive = Nx.sum(true_positive)
+          false_positive = Nx.sum(false_positive)
+          Nx.divide(true_positive, Nx.add(true_positive, false_positive))
+      end
+    end)
+  end
+
+  @doc ~S"""
   Calculates the mean absolute error of predictions
   with respect to targets.
 
