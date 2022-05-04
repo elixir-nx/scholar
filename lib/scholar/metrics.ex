@@ -354,6 +354,8 @@ defmodule Scholar.Metrics do
       >
   """
   defn confusion_matrix(y_true, y_pred, opts \\ []) do
+    assert_shape(y_true, Nx.shape(y_pred))
+
     num_classes = opts[:num_classes]
 
     indices =
