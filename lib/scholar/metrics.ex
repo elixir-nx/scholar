@@ -445,7 +445,7 @@ defmodule Scholar.Metrics do
           Nx.mean(per_class_f1)
 
         :weighted ->
-          support = Nx.sum(Nx.equal(y_true, Nx.new_axis(Nx.iota({num_classes}), 1)), axes: [1])
+          support = Nx.sum(Nx.equal(y_true, Nx.iota({num_classes, 1})), axes: [1])
           Nx.sum(Nx.multiply(per_class_f1, Nx.divide(support, Nx.sum(support))))
 
         :micro ->
