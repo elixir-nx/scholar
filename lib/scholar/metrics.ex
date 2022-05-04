@@ -332,12 +332,12 @@ defmodule Scholar.Metrics do
   end
 
   @doc ~S"""
-  Calculates the confusion matrix.
+  Calculates the confusion matrix given rank-1 tensors which represent
+  the expected (`y_true`) and predicted (`y_pred`) classes.
 
-  ## Argument Shapes
+  ## Options
 
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
+    * `:num_classes` - required. Number of classes contained in the input tensors
 
   ## Examples
 
@@ -354,18 +354,20 @@ defmodule Scholar.Metrics do
       >
   """
   defn confusion_matrix(y_true, y_pred, opts \\ []) do
-    assert_shape(y_true, Nx.shape(y_pred))
+    opts = Keyword.validate!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true)
 
-    num_classes = opts[:num_classes]
+    num_classes = opts[:num_classes] || raise ArgumentError, "missing option `:num_classes`"
 
-    indices =
-      [Nx.new_axis(y_true, 1), Nx.new_axis(y_pred, 1)]
-      |> Nx.concatenate(axis: 1)
+    zeros = Nx.broadcast(0, {num_classes, num_classes})
+    indices = Nx.concatenate([Nx.new_axis(y_true, 1), Nx.new_axis(y_pred, 1)], axis: 1)
+    updates = Nx.broadcast(1, {Nx.size(y_true)}) 
 
     Nx.indexed_add(
-      Nx.broadcast(0, {num_classes, num_classes}),
+      zeros,
       indices,
-      Nx.broadcast(1, {Nx.size(y_true)})
+      updates
     )
   end
 
