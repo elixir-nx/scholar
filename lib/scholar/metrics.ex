@@ -57,8 +57,8 @@ defmodule Scholar.Metrics do
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
       iex> Scholar.Metrics.accuracy(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
-        f32[3]
-        [0.6666666865348816, 1.0, 0.25]
+        f32
+        0.6000000238418579
       >
 
   """
@@ -70,9 +70,11 @@ defmodule Scholar.Metrics do
     cm = confusion_matrix(y_true, y_pred, opts)
 
     true_positive = Nx.take_diagonal(cm)
-    false_positive = Nx.subtract(Nx.sum(cm, axes: [0]), true_positive)
+    false_positive = Nx.sum(Nx.subtract(Nx.sum(cm, axes: [0]), true_positive))
+    false_negative = Nx.sum(Nx.subtract(Nx.sum(cm, axes: [1]), true_positive))
+    true_positive = Nx.sum(true_positive)
 
-    Nx.divide(true_positive, true_positive + false_positive + 1.0e-16)
+    Nx.divide(true_positive, true_positive + 0.5 * (false_positive + false_negative) + 1.0e-16)
   end
 
   @doc ~S"""
@@ -588,8 +590,8 @@ defmodule Scholar.Metrics do
       iex> avg_acc = Scholar.Metrics.running_average(&Scholar.Metrics.accuracy(&1, &2, num_classes: 3))
       iex> avg_acc.(cur_avg, [y_true, y_pred], iteration)
       #Nx.Tensor<
-        f32[3]
-        [0.75, 0.75, 0.75]
+        f32
+        0.75
       >
   """
   def running_average(metric) do
