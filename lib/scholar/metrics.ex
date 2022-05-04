@@ -78,8 +78,8 @@ defmodule Scholar.Metrics do
   end
 
   @doc ~S"""
-  Computes the precision of the given predictions with
-  respect to the given targets for binary classification problems.
+  Computes the precision of the given predictions with respect to
+  the given targets for binary classification problems.
 
   ## Argument Shapes
 
@@ -108,6 +108,42 @@ defmodule Scholar.Metrics do
 
     true_positives
     |> Nx.divide(true_positives + false_positives + 1.0e-16)
+  end
+
+  @doc ~S"""
+  Computes the precision of the given predictions with respect to
+  the given targets for multi-class classification problems.
+
+  ## Argument Shapes
+
+    * `y_true` - $\(d_0, d_1, ..., d_n\)$
+    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
+
+  ## Options
+
+    * `:threshold` - threshold for truth value of the predictions.
+      Defaults to `0.5`
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.precision(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        f32[3]
+        [0.6666666865348816, 1.0, 0.25]
+      >
+
+  """
+  defn precision(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true))
+
+    cm = confusion_matrix(y_true, y_pred, opts)
+    true_positive = Nx.take_diagonal(cm)
+    false_positive = Nx.subtract(Nx.sum(cm, axes: [0]), true_positive)
+    Nx.divide(true_positive, Nx.add(true_positive, false_positive))
   end
 
   @doc ~S"""
@@ -142,14 +178,51 @@ defmodule Scholar.Metrics do
     Nx.divide(true_positives, false_negatives + true_positives + 1.0e-16)
   end
 
+  @doc ~S"""
+  Computes the recall of the given predictions with respect to
+  the given targets for multi-class classification problems.
+
+  ## Argument Shapes
+
+    * `y_true` - $\(d_0, d_1, ..., d_n\)$
+    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
+
+  ## Options
+
+    * `:threshold` - threshold for truth value of the predictions.
+      Defaults to `0.5`
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.recall(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        f32[3]
+        [0.6666666865348816, 0.5, 1.0]
+      >
+
+  """
+  defn recall(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true))
+
+    cm = confusion_matrix(y_true, y_pred, opts)
+    true_positive = Nx.take_diagonal(cm)
+    false_negative = Nx.subtract(Nx.sum(cm, axes: [1]), true_positive)
+    Nx.divide(true_positive, Nx.add(true_positive, false_negative))
+  end
+
   @doc """
   Computes the number of true positive predictions with respect
-  to given targets for binary classification problems.
+  to given targets for multi-class classification problems.
 
   ## Options
 
     * `:threshold` - threshold for truth value of predictions.
       Defaults to `0.5`.
+
 
   ## Examples
 
@@ -174,6 +247,33 @@ defmodule Scholar.Metrics do
     |> Nx.equal(y_true)
     |> Nx.logical_and(Nx.equal(thresholded_preds, 1))
     |> Nx.sum()
+  end
+
+  @doc """
+  Computes the number of true positive predictions with respect
+  to given targets for multi-class classification problems.
+
+  ## Options
+
+    * `:num_classes` - Number of classes contained in the input tensors
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.true_positives(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        s64[3]
+        [2, 3, 1]
+      >
+  """
+  defn true_positives(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true))
+
+    confusion_matrix(y_true, y_pred, opts)
+    |> Nx.take_diagonal()
   end
 
   @doc """
@@ -211,6 +311,33 @@ defmodule Scholar.Metrics do
   end
 
   @doc """
+  Computes the number of false negative predictions with respect
+  to given targets for multi-class classification problems.
+
+  ## Options
+
+    * `:num_classes` - Number of classes contained in the input tensors
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.false_negatives(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        s64[3]
+        [1, 3, 0]
+      >
+  """
+  defn false_negatives(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true))
+
+    cm = confusion_matrix(y_true, y_pred, opts)
+    Nx.subtract(Nx.sum(cm, axes: [1]), Nx.take_diagonal(cm))
+  end
+
+  @doc """
   Computes the number of true negative predictions with respect
   to given targets for binary classification problems.
 
@@ -242,6 +369,36 @@ defmodule Scholar.Metrics do
     |> Nx.equal(y_true)
     |> Nx.logical_and(Nx.equal(thresholded_preds, 0))
     |> Nx.sum()
+  end
+
+  @doc """
+  Computes the number of true negative predictions with respect
+  to given targets for multi-class classification problems.
+
+  ## Options
+
+    * `:num_classes` - Number of classes contained in the input tensors
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.true_negatives(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        s64[3]
+        [6, 4, 6]
+      >
+  """
+  defn true_negatives(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true))
+
+    cm = confusion_matrix(y_true, y_pred, opts)
+    true_positive = Nx.take_diagonal(cm)
+    false_positive = Nx.subtract(Nx.sum(cm, axes: [0]), true_positive)
+    false_negative = Nx.subtract(Nx.sum(cm, axes: [1]), true_positive)
+    Nx.subtract(Nx.sum(cm), Nx.add(Nx.add(false_negative, false_positive), true_positive))
   end
 
   @doc """
@@ -278,6 +435,33 @@ defmodule Scholar.Metrics do
     |> Nx.sum()
   end
 
+  @doc """
+  Computes the number of false positives predictions with respect
+  to given targets for multi-class classification problems.
+
+  ## Options
+
+    * `:num_classes` - Number of classes contained in the input tensors
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.false_positives(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        s64[3]
+        [1, 0, 3]
+      >
+  """
+  defn false_positives(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true))
+
+    cm = confusion_matrix(y_true, y_pred, opts)
+    Nx.subtract(Nx.sum(cm, axes: [0]), Nx.take_diagonal(cm))
+  end
+
   @doc ~S"""
   Computes the sensitivity of the given predictions with respect
   to the given targets for binary classification problems.
@@ -307,6 +491,38 @@ defmodule Scholar.Metrics do
     opts = keyword!(opts, threshold: 0.5)
 
     binary_recall(y_true, y_pred, opts)
+  end
+
+  @doc ~S"""
+  Computes the sensitivity of the given predictions with respect
+  to the given targets for multi-class classification problems.
+
+  ## Argument Shapes
+
+    * `y_true` - $\(d_0, d_1, ..., d_n\)$
+    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
+
+  ## Options
+
+    * `:num_classes` - Number of classes contained in the input tensors
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.sensitivity(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        f32[3]
+        [0.6666666865348816, 0.5, 1.0]
+      >
+
+  """
+  defn sensitivity(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true))
+
+    recall(y_true, y_pred, opts)
   end
 
   @doc ~S"""
@@ -350,6 +566,41 @@ defmodule Scholar.Metrics do
       |> Nx.not_equal(y_true)
       |> Nx.logical_and(Nx.equal(thresholded_preds, 1))
       |> Nx.sum()
+
+    Nx.divide(true_negatives, false_positives + true_negatives + 1.0e-16)
+  end
+
+  @doc ~S"""
+  Computes the specificity of the given predictions with respect
+  to the given targets for binary classification problems.
+
+  ## Argument Shapes
+
+    * `y_true` - $\(d_0, d_1, ..., d_n\)$
+    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
+
+  ## Options
+
+    * `:num_classes` - Number of classes contained in the input tensors
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.specificity(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        f32[3]
+        [0.8571428656578064, 1.0, 0.6666666865348816]
+      >
+
+  """
+  defn specificity(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, [:num_classes])
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_pred, Nx.shape(y_true))
+
+    true_negatives = true_negatives(y_true, y_pred, opts)
+    false_positives = false_positives(y_true, y_pred, opts)
 
     Nx.divide(true_negatives, false_positives + true_negatives + 1.0e-16)
   end
