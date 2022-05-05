@@ -451,11 +451,11 @@ defmodule Scholar.Metrics do
       iex> iteration = 2
       iex> y_true = Nx.tensor([0, 1, 0, 1])
       iex> y_pred = Nx.tensor([1, 1, 0, 1])
-      iex> fps = Scholar.Metrics.running_sum(&Scholar.Metrics.binary_false_positives/2)
+      iex> fps = Scholar.Metrics.running_sum(&Scholar.Metrics.mean_absolute_error/2)
       iex> fps.(cur_sum, [y_true, y_pred], iteration)
       #Nx.Tensor<
-        s64
-        13
+        f32
+        12.25
       >
   """
   def running_sum(metric) do
