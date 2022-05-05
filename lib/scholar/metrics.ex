@@ -383,15 +383,15 @@ defmodule Scholar.Metrics do
     assert_shape_pattern(y_true, {_})
     assert_shape(y_pred, Nx.shape(y_true))
 
+    num_classes =
+    transform(opts[:num_classes], fn num_classes ->
+      num_classes || raise ArgumentError, "missing option :num_classes"
+    end)
+
     transform(opts[:average], fn average ->
       if Elixir.Kernel.==(average, :micro) do
         accuracy(y_true, y_pred)
       else
-        num_classes =
-          transform(opts[:num_classes], fn num_classes ->
-            num_classes || raise ArgumentError, "missing option :num_classes"
-          end)
-
         cm = confusion_matrix(y_true, y_pred, num_classes: num_classes)
         true_positive = Nx.take_diagonal(cm)
         false_positive = Nx.subtract(Nx.sum(cm, axes: [0]), true_positive)
@@ -405,19 +405,17 @@ defmodule Scholar.Metrics do
             precision + recall + 1.0e-16
           )
 
-        transform(opts[:average], fn average ->
-          case average do
-            nil ->
-              per_class_f1
+        case average do
+          nil ->
+            per_class_f1
 
-            :macro ->
-              Nx.mean(per_class_f1)
+          :macro ->
+            Nx.mean(per_class_f1)
 
-            :weighted ->
-              support = Nx.sum(Nx.equal(y_true, Nx.iota({num_classes, 1})), axes: [1])
-              Nx.sum(Nx.multiply(per_class_f1, Nx.divide(support, Nx.sum(support) + 1.0e-16)))
-          end
-        end)
+          :weighted ->
+            support = Nx.sum(Nx.equal(y_true, Nx.iota({num_classes, 1})), axes: [1])
+            Nx.sum(Nx.multiply(per_class_f1, Nx.divide(support, Nx.sum(support) + 1.0e-16)))
+        end
       end
     end)
   end
