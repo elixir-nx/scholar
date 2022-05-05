@@ -450,7 +450,6 @@ defmodule Scholar.Metrics do
 
   # Combinators
 
-  @spec running_average(any) :: (any, list, any -> any)
   @doc """
   Returns a function which computes a running average given current average,
   new observation, and current iteration.
