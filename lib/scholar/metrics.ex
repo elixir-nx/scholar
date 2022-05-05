@@ -41,7 +41,8 @@ defmodule Scholar.Metrics do
 
   """
   defn accuracy(y_true, y_pred) do
-    assert_shape(y_pred, Nx.shape(y_true))
+    assert_shape_pattern(y_true, {_})
+    assert_shape(y_true, Nx.shape(y_pred))
 
     y_pred
     |> Nx.equal(y_true)
@@ -67,6 +68,7 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_precision(y_true, y_pred) do
+    assert_shape_pattern(y_true, {_})
     assert_shape(y_true, Nx.shape(y_pred))
 
     true_positives = binary_true_positives(y_true, y_pred)
@@ -103,7 +105,7 @@ defmodule Scholar.Metrics do
   defn precision(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
     assert_shape_pattern(y_true, {_})
-    assert_shape(y_pred, Nx.shape(y_true))
+    assert_shape(y_true, Nx.shape(y_pred))
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positives = Nx.take_diagonal(cm)
@@ -132,6 +134,7 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_recall(y_true, y_pred) do
+    assert_shape_pattern(y_true, {_})
     assert_shape(y_true, Nx.shape(y_pred))
 
     true_positives = binary_true_positives(y_true, y_pred)
@@ -176,6 +179,7 @@ defmodule Scholar.Metrics do
   end
 
   defnp binary_true_positives(y_true, y_pred) do
+    assert_shape_pattern(y_true, {_})
     assert_shape(y_true, Nx.shape(y_pred))
 
     y_pred
@@ -185,6 +189,7 @@ defmodule Scholar.Metrics do
   end
 
   defnp binary_false_negatives(y_true, y_pred) do
+    assert_shape_pattern(y_true, {_})
     assert_shape(y_true, Nx.shape(y_pred))
 
     y_pred
@@ -194,6 +199,7 @@ defmodule Scholar.Metrics do
   end
 
   defnp binary_true_negatives(y_true, y_pred) do
+    assert_shape_pattern(y_true, {_})
     assert_shape(y_true, Nx.shape(y_pred))
 
     y_pred
@@ -203,6 +209,7 @@ defmodule Scholar.Metrics do
   end
 
   defnp binary_false_positives(y_true, y_pred) do
+    assert_shape_pattern(y_true, {_})
     assert_shape(y_true, Nx.shape(y_pred))
 
     y_pred
@@ -230,6 +237,7 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_sensitivity(y_true, y_pred) do
+    assert_shape_pattern(y_true, {_})
     assert_shape(y_true, Nx.shape(y_pred))
 
     binary_recall(y_true, y_pred)
@@ -286,19 +294,11 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_specificity(y_true, y_pred) do
+    assert_shape_pattern(y_true, {_})
     assert_shape(y_true, Nx.shape(y_pred))
 
-    true_negatives =
-      y_pred
-      |> Nx.equal(y_true)
-      |> Nx.logical_and(Nx.equal(y_pred, 0))
-      |> Nx.sum()
-
-    false_positives =
-      y_pred
-      |> Nx.not_equal(y_true)
-      |> Nx.logical_and(Nx.equal(y_pred, 1))
-      |> Nx.sum()
+    true_negatives = binary_true_negatives(y_true, y_pred)
+    false_positives = binary_false_positives(y_true, y_pred)
 
     Nx.divide(true_negatives, false_positives + true_negatives + 1.0e-16)
   end
