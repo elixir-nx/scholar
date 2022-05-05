@@ -364,7 +364,7 @@ defmodule Scholar.Metrics do
 
     zeros = Nx.broadcast(0, {num_classes, num_classes})
     indices = Nx.concatenate([Nx.new_axis(y_true, 1), Nx.new_axis(y_pred, 1)], axis: 1)
-    updates = Nx.broadcast(1, {Nx.size(y_true)}) 
+    updates = Nx.broadcast(1, {Nx.size(y_true)})
 
     Nx.indexed_add(zeros, indices, updates)
   end
@@ -430,11 +430,11 @@ defmodule Scholar.Metrics do
     true_positive = Nx.take_diagonal(cm)
     false_positive = Nx.subtract(Nx.sum(cm, axes: [0]), true_positive)
     false_negative = Nx.subtract(Nx.sum(cm, axes: [1]), true_positive)
-    precision = Nx.divide(true_positive, Nx.add(true_positive, false_positive))
-    recall = Nx.divide(true_positive, Nx.add(true_positive, false_negative))
+    precision = Nx.divide(true_positive, true_positive + false_positive + 1.0e-16)
+    recall = Nx.divide(true_positive, true_positive + false_negative + 1.0e-16)
 
     per_class_f1 =
-      Nx.divide(Nx.multiply(2, Nx.multiply(precision, recall)), Nx.add(precision, recall))
+      Nx.divide(Nx.multiply(2, Nx.multiply(precision, recall)), precision + recall + 1.0e-16)
 
     transform(average, fn average ->
       case average do
@@ -446,17 +446,12 @@ defmodule Scholar.Metrics do
 
         :weighted ->
           support = Nx.sum(Nx.equal(y_true, Nx.iota({num_classes, 1})), axes: [1])
-          Nx.sum(Nx.multiply(per_class_f1, Nx.divide(support, Nx.sum(support))))
+          Nx.sum(Nx.multiply(per_class_f1, Nx.divide(support, Nx.sum(support) + 1.0e-16)))
 
         :micro ->
-          true_positive = Nx.sum(true_positive)
-          false_positive = Nx.sum(false_positive)
-          false_negative = Nx.sum(false_negative)
-
-          Nx.divide(
-            true_positive,
-            true_positive + 0.5 * (false_positive + false_negative) + 1.0e-16
-          )
+          y_pred
+          |> Nx.equal(y_true)
+          |> Nx.mean()
       end
     end)
   end
