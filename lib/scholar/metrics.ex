@@ -175,23 +175,7 @@ defmodule Scholar.Metrics do
     Nx.divide(true_positive, true_positive + false_negative + 1.0e-16)
   end
 
-  @doc """
-  Computes the number of true positive predictions with respect
-  to given targets for binary classification problems.
-
-  ## Examples
-
-      iex> threshold = 0.5
-      iex> y_true = Nx.tensor([1, 0, 1, 1, 0, 1, 0])
-      iex> y_pred = Nx.tensor([0.8, 0.6, 0.4, 0.2, 0.8, 0.2, 0.2])
-      iex> y_pred = Nx.greater(y_pred, threshold)
-      iex> Scholar.Metrics.binary_true_positives(y_true, y_pred)
-      #Nx.Tensor<
-        u64
-        1
-      >
-  """
-  defn binary_true_positives(y_true, y_pred) do
+  defnp binary_true_positives(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
     y_pred
@@ -200,23 +184,7 @@ defmodule Scholar.Metrics do
     |> Nx.sum()
   end
 
-  @doc """
-  Computes the number of false negative predictions with respect
-  to given targets for binary classification problems.
-
-  ## Examples
-
-      iex> threshold = 0.5
-      iex> y_true = Nx.tensor([1, 0, 1, 1, 0, 1, 0])
-      iex> y_pred = Nx.tensor([0.8, 0.6, 0.4, 0.2, 0.8, 0.2, 0.2])
-      iex> y_pred = Nx.greater(y_pred, threshold)
-      iex> Scholar.Metrics.binary_false_negatives(y_true, y_pred)
-      #Nx.Tensor<
-        u64
-        3
-      >
-  """
-  defn binary_false_negatives(y_true, y_pred) do
+  defnp binary_false_negatives(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
     y_pred
@@ -225,23 +193,7 @@ defmodule Scholar.Metrics do
     |> Nx.sum()
   end
 
-  @doc """
-  Computes the number of true negative predictions with respect
-  to given targets for binary classification problems.
-
-  ## Examples
-
-      iex> threshold = 0.5
-      iex> y_true = Nx.tensor([1, 0, 1, 1, 0, 1, 0])
-      iex> y_pred = Nx.tensor([0.8, 0.6, 0.4, 0.2, 0.8, 0.2, 0.2])
-      iex> y_pred = Nx.greater(y_pred, threshold)
-      iex> Scholar.Metrics.binary_true_negatives(y_true, y_pred)
-      #Nx.Tensor<
-        u64
-        1
-      >
-  """
-  defn binary_true_negatives(y_true, y_pred) do
+  defnp binary_true_negatives(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
     y_pred
@@ -250,23 +202,7 @@ defmodule Scholar.Metrics do
     |> Nx.sum()
   end
 
-  @doc """
-  Computes the number of false positive predictions with respect
-  to given targets for binary classification problems.
-
-  ## Examples
-
-      iex> threshold = 0.5
-      iex> y_true = Nx.tensor([1, 0, 1, 1, 0, 1, 0])
-      iex> y_pred = Nx.tensor([0.8, 0.6, 0.4, 0.2, 0.8, 0.2, 0.2])
-      iex> y_pred = Nx.greater(y_pred, threshold)
-      iex> Scholar.Metrics.binary_false_positives(y_true, y_pred)
-      #Nx.Tensor<
-        u64
-        2
-      >
-  """
-  defn binary_false_positives(y_true, y_pred) do
+  defnp binary_false_positives(y_true, y_pred) do
     assert_shape(y_true, Nx.shape(y_pred))
 
     y_pred
