@@ -384,9 +384,9 @@ defmodule Scholar.Metrics do
     assert_shape(y_pred, Nx.shape(y_true))
 
     num_classes =
-    transform(opts[:num_classes], fn num_classes ->
-      num_classes || raise ArgumentError, "missing option :num_classes"
-    end)
+      transform(opts[:num_classes], fn num_classes ->
+        num_classes || raise ArgumentError, "missing option :num_classes"
+      end)
 
     transform(opts[:average], fn average ->
       if Elixir.Kernel.==(average, :micro) do
