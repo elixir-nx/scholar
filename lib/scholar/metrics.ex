@@ -19,11 +19,6 @@ defmodule Scholar.Metrics do
   Computes the accuracy of the given predictions
   for binary and multi-class classification problems.
 
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
-
   ## Examples
 
       iex> Scholar.Metrics.accuracy(Nx.tensor([1, 0, 0]), Nx.tensor([1, 0, 1]))
@@ -53,11 +48,6 @@ defmodule Scholar.Metrics do
   Computes the precision of the given predictions with respect to
   the given targets for binary classification problems.
 
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
-
   ## Examples
 
       iex> Scholar.Metrics.binary_precision(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -81,11 +71,6 @@ defmodule Scholar.Metrics do
   @doc ~S"""
   Computes the precision of the given predictions with respect to
   the given targets for multi-class classification problems.
-
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
 
   ## Options
 
@@ -119,11 +104,6 @@ defmodule Scholar.Metrics do
   Computes the recall of the given predictions with respect to
   the given targets for binary classification problems.
 
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
-
   ## Examples
 
       iex> Scholar.Metrics.binary_recall(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -146,11 +126,6 @@ defmodule Scholar.Metrics do
   @doc ~S"""
   Computes the recall of the given predictions with respect to
   the given targets for multi-class classification problems.
-
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
 
   ## Options
 
@@ -222,11 +197,6 @@ defmodule Scholar.Metrics do
   Computes the sensitivity of the given predictions with respect
   to the given targets for binary classification problems.
 
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
-
   ## Examples
 
       iex> Scholar.Metrics.binary_sensitivity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -246,11 +216,6 @@ defmodule Scholar.Metrics do
   @doc ~S"""
   Computes the sensitivity of the given predictions with respect
   to the given targets for multi-class classification problems.
-
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
 
   ## Options
 
@@ -279,11 +244,6 @@ defmodule Scholar.Metrics do
   Computes the specificity of the given predictions with respect
   to the given targets for binary classification problems.
 
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
-
   ## Examples
 
       iex> Scholar.Metrics.binary_specificity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -306,11 +266,6 @@ defmodule Scholar.Metrics do
   @doc ~S"""
   Computes the specificity of the given predictions with respect
   to the given targets for multi-class classification problems.
-
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
 
   ## Options
 
@@ -386,11 +341,6 @@ defmodule Scholar.Metrics do
   with respect to targets.
 
   $$l_i = \sum_i |\hat{y_i} - y_i|$$
-
-  ## Argument Shapes
-
-    * `y_true` - $\(d_0, d_1, ..., d_n\)$
-    * `y_pred` - $\(d_0, d_1, ..., d_n\)$
 
   ## Examples
 
