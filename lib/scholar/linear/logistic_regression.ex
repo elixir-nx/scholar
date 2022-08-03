@@ -13,7 +13,7 @@ defmodule Scholar.Linear.LogisticRegression do
   sample targets `y`. Depending on number of classes the function chooses
   either binary or multinomial logistic regression.
   """
-  defn(fit(x, y, opts \\ []), do: fit_verify(x, y, opts))
+  defn fit(x, y, opts \\ []), do: fit_verify(x, y, opts)
 
   # Function checks validity of the provided data
 
@@ -35,7 +35,7 @@ defmodule Scholar.Linear.LogisticRegression do
       raise ArgumentError, "Learning rate must be a positive number"
     end
 
-    if is_integer(opts[:iterations]) and opts[:iterations] <= 0 do
+    unless is_integer(opts[:iterations]) and opts[:iterations] > 0 do
       raise ArgumentError, "Number of iterations must be a positive integer"
     end
 
@@ -181,7 +181,7 @@ defmodule Scholar.Linear.LogisticRegression do
       |> Nx.add(1)
       |> then(&(1 / &1))
 
-    Nx.select(Nx.greater(logit, 0.5), 1, 0)
+    logit > 0.5
   end
 
   defnp predict_multinomial(%LogisticRegression{coefficients: coeff}, x) do
