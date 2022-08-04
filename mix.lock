@@ -1,5 +1,4 @@
 %{
-  "axon": {:hex, :axon, "0.1.0", "1647577eb4ef1faa0ce15e4a459a523b41992354bfa122d9e23f0764d0b9579f", [:mix], [{:nx, "~> 0.2.1", [hex: :nx, repo: "hexpm", optional: false]}, {:table_rex, "~> 3.1.1", [hex: :table_rex, repo: "hexpm", optional: false]}], "hexpm", "115aa8ee1d5802ee543ef9d68b25b44f580224c1c3e1c21f7993e682fa6a7bd4"},
   "castore": {:hex, :castore, "0.1.17", "ba672681de4e51ed8ec1f74ed624d104c0db72742ea1a5e74edbc770c815182f", [:mix], [], "hexpm", "d9844227ed52d26e7519224525cb6868650c272d4a3d327ce3ca5570c12163f9"},
   "complex": {:hex, :complex, "0.4.1", "5d5a7bdbec13428c05824bac550b7d2b14ec395cd64663eca3cb0d3359aa22c5", [:mix], [], "hexpm", "6a813529dddba9bdfc17dffdd1aeda7b3d6891b76c8d4c1ae902ec74eb496a32"},
   "earmark_parser": {:hex, :earmark_parser, "1.4.25", "2024618731c55ebfcc5439d756852ec4e85978a39d0d58593763924d9a15916f", [:mix], [], "hexpm", "56749c5e1c59447f7b7a23ddb235e4b3defe276afc220a6227237f3efe83f51e"},

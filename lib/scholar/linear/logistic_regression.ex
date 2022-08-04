@@ -27,7 +27,12 @@ defmodule Scholar.Linear.LogisticRegression do
   defn fit(x, y, opts \\ []) do
     opts = keyword!(opts, [:num_classes, iterations: 1000, learning_rate: 0.01])
     fit_verify(x, y, opts)
-    if opts[:num_classes] < 3, do: fit_binary(x, y, opts), else: fit_multinomial(x, y, opts)
+
+    if opts[:num_classes] < 3 do
+      fit_binary(x, y, opts)
+    else
+      fit_multinomial(x, y, opts)
+    end
   end
 
   # Function checks validity of the provided data
