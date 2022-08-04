@@ -11,7 +11,7 @@ defmodule Scholar.Metrics do
   any supported `Nx` compiler.
   """
 
-  import Nx.Defn
+  import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
 
   # Standard Metrics
 
@@ -36,8 +36,8 @@ defmodule Scholar.Metrics do
 
   """
   defn accuracy(y_true, y_pred) do
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     y_pred
     |> Nx.equal(y_true)
@@ -58,8 +58,8 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_precision(y_true, y_pred) do
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     true_positives = binary_true_positives(y_true, y_pred)
     false_positives = binary_false_positives(y_true, y_pred)
@@ -89,8 +89,8 @@ defmodule Scholar.Metrics do
   """
   defn precision(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positives = Nx.take_diagonal(cm)
@@ -114,8 +114,8 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_recall(y_true, y_pred) do
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     true_positives = binary_true_positives(y_true, y_pred)
     false_negatives = binary_false_negatives(y_true, y_pred)
@@ -144,8 +144,8 @@ defmodule Scholar.Metrics do
   """
   defn recall(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_pred, Nx.shape(y_true))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_pred, y_true)
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positive = Nx.take_diagonal(cm)
@@ -154,8 +154,8 @@ defmodule Scholar.Metrics do
   end
 
   defnp binary_true_positives(y_true, y_pred) do
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     y_pred
     |> Nx.equal(y_true)
@@ -164,8 +164,8 @@ defmodule Scholar.Metrics do
   end
 
   defnp binary_false_negatives(y_true, y_pred) do
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     y_pred
     |> Nx.not_equal(y_true)
@@ -174,8 +174,8 @@ defmodule Scholar.Metrics do
   end
 
   defnp binary_true_negatives(y_true, y_pred) do
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     y_pred
     |> Nx.equal(y_true)
@@ -184,8 +184,8 @@ defmodule Scholar.Metrics do
   end
 
   defnp binary_false_positives(y_true, y_pred) do
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     y_pred
     |> Nx.not_equal(y_true)
@@ -207,8 +207,8 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_sensitivity(y_true, y_pred) do
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     binary_recall(y_true, y_pred)
   end
@@ -234,8 +234,8 @@ defmodule Scholar.Metrics do
   """
   defn sensitivity(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_pred, Nx.shape(y_true))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_pred, y_true)
 
     recall(y_true, y_pred, opts)
   end
@@ -254,8 +254,8 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_specificity(y_true, y_pred) do
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_true, y_pred)
 
     true_negatives = binary_true_negatives(y_true, y_pred)
     false_positives = binary_false_positives(y_true, y_pred)
@@ -284,8 +284,8 @@ defmodule Scholar.Metrics do
   """
   defn specificity(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_pred, Nx.shape(y_true))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_pred, y_true)
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positive = Nx.take_diagonal(cm)
@@ -321,8 +321,8 @@ defmodule Scholar.Metrics do
   """
   defn confusion_matrix(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_pred, Nx.shape(y_true))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_pred, y_true)
 
     num_classes =
       transform(opts[:num_classes], fn num_classes ->
@@ -380,8 +380,8 @@ defmodule Scholar.Metrics do
   defn f1_score(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes, :average])
 
-    assert_shape_pattern(y_true, {_})
-    assert_shape(y_pred, Nx.shape(y_true))
+    assert_rank(y_true, 1)
+    assert_same_shape(y_pred, y_true)
 
     num_classes =
       transform(opts[:num_classes], fn num_classes ->
@@ -437,7 +437,7 @@ defmodule Scholar.Metrics do
       >
   """
   defn mean_absolute_error(y_true, y_pred) do
-    assert_shape(y_true, Nx.shape(y_pred))
+    assert_same_shape(y_true, y_pred)
 
     y_true
     |> Nx.subtract(y_pred)
@@ -498,5 +498,24 @@ defmodule Scholar.Metrics do
 
   defnp running_sum_impl(sum, obs, _) do
     Nx.add(sum, obs)
+  end
+
+  deftransformp assert_rank(tensor, target_rank) do
+    rank = Nx.rank(tensor)
+
+    unless rank == target_rank do
+      raise ArgumentError,
+            "expected tensor to have rank #{target_rank}, got tensor with rank #{rank}"
+    end
+  end
+
+  deftransformp assert_same_shape(left, right) do
+    left_shape = Nx.shape(left)
+    right_shape = Nx.shape(right)
+
+    unless left_shape == right_shape do
+      raise ArgumentError,
+            "expected tensor to have shape #{inspect(right_shape)}, got tensor with shape #{inspect(left_shape)}"
+    end
   end
 end
