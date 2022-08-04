@@ -93,18 +93,13 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert Scholar.Metrics.accuracy(y_test, res) >= 0.965
     end
 
-    test "Number of classes is not a positive integer I" do
+    test "raises on invalid :num_classes" do
       x = Nx.tensor([[1, 2], [3, 4]])
       y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError, "expected :num_classes to be a positive integer, got: -3", fn ->
         Scholar.Linear.LogisticRegression.fit(x, y, num_classes: -3)
       end
-    end
-
-    test "Number of classes is not a positive integer II" do
-      x = Nx.tensor([[1, 2], [3, 4]])
-      y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError,
                    "expected :num_classes to be a positive integer, got: 2.0",

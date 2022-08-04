@@ -15,9 +15,14 @@ defmodule Scholar.Linear.LogisticRegression do
   or multinomial logistic regression.
 
   ## Options
-    * `:num_classes` - Number of classes contained in the input tensors
-    * `:learning_rate` - Learning rate used in logistic regression
-    * `:iterations` - Number of iterations of gradient descent performed inside logistic regression
+  
+    * `:num_classes` - number of classes contained in the input tensors. Required
+
+    * `:learning_rate` - learning rate used by gradient descent. Defaults to `0.01`
+
+    * `:iterations` - number of iterations of gradient descent performed inside logistic
+      regression. Defaults to `1000`
+
   """
   defn fit(x, y, opts \\ []) do
     opts = keyword!(opts, [:num_classes, iterations: 1000, learning_rate: 0.01])
