@@ -21,6 +21,7 @@ defmodule Scholar.Linear.LogisticRegression do
         lr: 0.01,
         num_classes: 1
       )
+
     fit_verify(x, y, opts)
     if opts[:num_classes] < 3, do: fit_binary(x, y, opts), else: fit_multinomial(x, y, opts)
   end
@@ -29,11 +30,13 @@ defmodule Scholar.Linear.LogisticRegression do
 
   deftransformp fit_verify(x, y, opts) do
     unless is_integer(opts[:num_classes]) and opts[:num_classes] > 0 do
-      raise ArgumentError, "expected :num_classes to be a positive integer, got: #{inspect(opts[:num_classes])}"
+      raise ArgumentError,
+            "expected :num_classes to be a positive integer, got: #{inspect(opts[:num_classes])}"
     end
 
     if Nx.rank(x) != 2 do
-      raise ArgumentError, "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
+      raise ArgumentError,
+            "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
     if Nx.rank(y) != 1 do
@@ -46,14 +49,14 @@ defmodule Scholar.Linear.LogisticRegression do
     end
 
     unless is_integer(opts[:iterations]) and opts[:iterations] > 0 do
-      raise ArgumentError, "expected :iterations to be a positive integer, got: #{inspect(opts[:iterations])}"
+      raise ArgumentError,
+            "expected :iterations to be a positive integer, got: #{inspect(opts[:iterations])}"
     end
   end
 
   # Binary logistic regression
 
   defnp fit_binary(x, y, opts \\ []) do
-
     iterations = opts[:iterations]
     lr = opts[:lr]
     x_t = Nx.transpose(x)
@@ -88,7 +91,7 @@ defmodule Scholar.Linear.LogisticRegression do
     one_hot = one_hot_encoding(y, num_classes)
     x_t = Nx.transpose(x)
 
-    {_, _, _, _, _, _,_, final_coeff} =
+    {_, _, _, _, _, _, _, final_coeff} =
       while {iter = 0, x, lr, n, iterations, one_hot, x_t,
              coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n, num_classes})},
             Nx.less(iter, iterations) do

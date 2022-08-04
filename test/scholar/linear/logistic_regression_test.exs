@@ -106,9 +106,11 @@ defmodule Scholar.Linear.LinearRegressionTest do
       x = Nx.tensor([[1, 2], [3, 4]])
       y = Nx.tensor([1, 2])
 
-      assert_raise ArgumentError, "expected :num_classes to be a positive integer, got: 2.0", fn ->
-        Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2.0)
-      end
+      assert_raise ArgumentError,
+                   "expected :num_classes to be a positive integer, got: 2.0",
+                   fn ->
+                     Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2.0)
+                   end
     end
 
     test "Learning rate is not a positive number" do
@@ -116,7 +118,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError,
-                  "expected :lr to be a positive number, got: -0.001",
+                   "expected :lr to be a positive number, got: -0.001",
                    fn ->
                      Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2, lr: -0.001)
                    end
@@ -127,7 +129,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError,
-                  "expected :iterations to be a positive integer, got: 0",
+                   "expected :iterations to be a positive integer, got: 0",
                    fn ->
                      Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2, iterations: 0)
                    end
@@ -138,7 +140,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError,
-                  "expected x to have shape {n_samples, n_features}, got tensor with shape: {2}",
+                   "expected x to have shape {n_samples, n_features}, got tensor with shape: {2}",
                    fn -> Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2) end
     end
 
@@ -147,7 +149,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       y = Nx.tensor([[0, 1], [1, 0]])
 
       assert_raise ArgumentError,
-                  "expected y to have shape {n_samples}, got tensor with shape: {2, 2}",
+                   "expected y to have shape {n_samples}, got tensor with shape: {2, 2}",
                    fn -> Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2) end
     end
   end
