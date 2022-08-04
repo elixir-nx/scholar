@@ -21,7 +21,9 @@ defmodule Scholar.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
-      {:nx, "~> 0.2.0"}
+      {:nx, github: "elixir-nx/nx", sparse: "nx"},
+      {:scidata, "~> 0.1.9", only: [:test, :dev]},
+      {:explorer, "~> 0.2.0", only: [:test, :dev]}
     ]
   end
 
