@@ -15,7 +15,7 @@ defmodule Scholar.Linear.LogisticRegression do
   or multinomial logistic regression.
 
   ## Options
-  
+
     * `:num_classes` - number of classes contained in the input tensors. Required
 
     * `:learning_rate` - learning rate used by gradient descent. Defaults to `0.01`
