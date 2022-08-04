@@ -28,7 +28,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
         Scholar.Linear.LogisticRegression.fit(x_train, y_train,
           num_classes: 2,
           iterations: 1000,
-          lr: 0.0085
+          learning_rate: 0.0085
         )
 
       res = Scholar.Linear.LogisticRegression.predict(model, x_test)
@@ -54,7 +54,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
         Scholar.Linear.LogisticRegression.fit(x_train, y_train,
           num_classes: 3,
           iterations: 1000,
-          lr: 0.0085
+          learning_rate: 0.0085
         )
 
       res = Scholar.Linear.LogisticRegression.predict(model, x_test)
@@ -118,9 +118,9 @@ defmodule Scholar.Linear.LinearRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError,
-                   "expected :lr to be a positive number, got: -0.001",
+                   "expected :learning_rate to be a positive number, got: -0.001",
                    fn ->
-                     Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2, lr: -0.001)
+                     Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2, learning_rate: -0.001)
                    end
     end
 
@@ -151,6 +151,15 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_raise ArgumentError,
                    "expected y to have shape {n_samples}, got tensor with shape: {2, 2}",
                    fn -> Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2) end
+    end
+
+    test "Missing the :num_classes option" do
+      x = Nx.tensor([[1, 2], [3, 4]])
+      y = Nx.tensor([0, 1])
+
+      assert_raise ArgumentError,
+                  "missing option :num_classes",
+                   fn -> Scholar.Linear.LogisticRegression.fit(x, y) end
     end
   end
 end

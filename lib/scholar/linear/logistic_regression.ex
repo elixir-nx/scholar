@@ -13,15 +13,14 @@ defmodule Scholar.Linear.LogisticRegression do
 
   Depending on number of classes the function chooses either binary
   or multinomial logistic regression.
+
+  ## Options
+    * `:num_classes` - Number of classes contained in the input tensors
+    * `:learning_rate` - Learning rate used in logistic regression
+    * `:iterations` - Number of iterations of gradient descent performed inside logistic regression
   """
   defn fit(x, y, opts \\ []) do
-    opts =
-      keyword!(opts,
-        iterations: 1000,
-        lr: 0.01,
-        num_classes: 1
-      )
-
+    opts = keyword!(opts, [:num_classes, iterations: 1000, learning_rate: 0.01])
     fit_verify(x, y, opts)
     if opts[:num_classes] < 3, do: fit_binary(x, y, opts), else: fit_multinomial(x, y, opts)
   end
@@ -29,6 +28,10 @@ defmodule Scholar.Linear.LogisticRegression do
   # Function checks validity of the provided data
 
   deftransformp fit_verify(x, y, opts) do
+    unless opts[:num_classes] do
+      raise ArgumentError, "missing option :num_classes"
+    end
+
     unless is_integer(opts[:num_classes]) and opts[:num_classes] > 0 do
       raise ArgumentError,
             "expected :num_classes to be a positive integer, got: #{inspect(opts[:num_classes])}"
@@ -44,8 +47,9 @@ defmodule Scholar.Linear.LogisticRegression do
             "expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
     end
 
-    unless is_number(opts[:lr]) and opts[:lr] > 0 do
-      raise ArgumentError, "expected :lr to be a positive number, got: #{inspect(opts[:lr])}"
+    unless is_number(opts[:learning_rate]) and opts[:learning_rate] > 0 do
+      raise ArgumentError,
+            "expected :learning_rate to be a positive number, got: #{inspect(opts[:learning_rate])}"
     end
 
     unless is_integer(opts[:iterations]) and opts[:iterations] > 0 do
@@ -58,7 +62,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
   defnp fit_binary(x, y, opts \\ []) do
     iterations = opts[:iterations]
-    lr = opts[:lr]
+    learning_rate = opts[:learning_rate]
     x_t = Nx.transpose(x)
     y_t = Nx.transpose(y)
 
@@ -66,13 +70,14 @@ defmodule Scholar.Linear.LogisticRegression do
     coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n})
 
     {_, _, _, _, _, _, final_coeff, final_bias} =
-      while {iter = 0, x, lr, iterations, x_t, y_t, coeff, bias = Nx.tensor(0, type: {:f, 32})},
+      while {iter = 0, x, learning_rate, iterations, x_t, y_t, coeff,
+             bias = Nx.tensor(0, type: {:f, 32})},
             Nx.less(iter, iterations) do
-        {coeff, bias} = update_coefficients(x, x_t, y_t, {coeff, bias}, lr)
-        {iter + 1, x, lr, iterations, x_t, y_t, coeff, bias}
+        {coeff, bias} = update_coefficients(x, x_t, y_t, {coeff, bias}, learning_rate)
+        {iter + 1, x, learning_rate, iterations, x_t, y_t, coeff, bias}
       end
 
-    %__MODULE__{coefficients: final_coeff, bias: final_bias, mode: 0}
+    %__MODULE__{coefficients: final_coeff, bias: final_bias, mode: :binary}
   end
 
   # Function computes one-hot encoding
@@ -86,32 +91,32 @@ defmodule Scholar.Linear.LogisticRegression do
   defnp fit_multinomial(x, y, opts) do
     {_m, n} = x.shape
     iterations = opts[:iterations]
-    lr = opts[:lr]
+    learning_rate = opts[:learning_rate]
     num_classes = opts[:num_classes]
     one_hot = one_hot_encoding(y, num_classes)
     x_t = Nx.transpose(x)
 
     {_, _, _, _, _, _, _, final_coeff} =
-      while {iter = 0, x, lr, n, iterations, one_hot, x_t,
+      while {iter = 0, x, learning_rate, n, iterations, one_hot, x_t,
              coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n, num_classes})},
             Nx.less(iter, iterations) do
-        coeff = update_coefficients_multinomial(x, x_t, one_hot, coeff, lr)
-        {iter + 1, x, lr, n, iterations, one_hot, x_t, coeff}
+        coeff = update_coefficients_multinomial(x, x_t, one_hot, coeff, learning_rate)
+        {iter + 1, x, learning_rate, n, iterations, one_hot, x_t, coeff}
       end
 
-    %__MODULE__{coefficients: final_coeff, bias: Nx.tensor(0, type: {:f, 32}), mode: 1}
+    %__MODULE__{coefficients: final_coeff, bias: Nx.tensor(0, type: {:f, 32}), mode: :multinomial}
   end
 
   # Normalized softmax
 
   defnp softmax(t) do
-    normalized = t - Nx.reduce_max(t, axes: [1], keep_axes: true)
-    Nx.transpose(Nx.transpose(Nx.exp(normalized)) / Nx.sum(Nx.exp(normalized), axes: [1]))
+    normalized_exp = (t - Nx.reduce_max(t, axes: [0], keep_axes: true)) |> Nx.exp()
+    normalized_exp / Nx.sum(normalized_exp, axes: [0])
   end
 
   # Gradient descent for binary regression
 
-  defnp update_coefficients(x, x_t, y_t, {coeff, bias}, lr) do
+  defnp update_coefficients(x, x_t, y_t, {coeff, bias}, learning_rate) do
     {m, _n} = x.shape
 
     logit =
@@ -138,15 +143,15 @@ defmodule Scholar.Linear.LogisticRegression do
       |> Nx.sum()
       |> Nx.divide(m)
 
-    new_coeff = coeff - coeff_diff * lr
-    new_bias = bias - bias_diff * lr
+    new_coeff = coeff - coeff_diff * learning_rate
+    new_bias = bias - bias_diff * learning_rate
 
     {new_coeff, new_bias}
   end
 
   # Gradient descent for multinomial regression
 
-  defnp update_coefficients_multinomial(x, x_t, one_hot, coeff, lr) do
+  defnp update_coefficients_multinomial(x, x_t, one_hot, coeff, learning_rate) do
     {m, _n} = x.shape
 
     dot_prod =
@@ -157,7 +162,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
     diff = Nx.dot(x_t, prob - one_hot) / m
 
-    coeff - diff * lr
+    coeff - diff * learning_rate
   end
 
   @doc """
@@ -165,7 +170,10 @@ defmodule Scholar.Linear.LogisticRegression do
   """
 
   defn predict(%__MODULE__{mode: mode} = model, x) do
-    if mode == 0, do: predict_binary(model, x), else: predict_multinomial(model, x)
+    case mode do
+      :binary -> predict_binary(model, x)
+      :multinomial -> predict_multinomial(model, x)
+    end
   end
 
   defnp predict_binary(%__MODULE__{coefficients: coeff, bias: bias}, x) do
