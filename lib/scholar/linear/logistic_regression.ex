@@ -1,6 +1,6 @@
 defmodule Scholar.Linear.LogisticRegression do
   @moduledoc """
-  Logistic regression in both binary and multinomial variants
+  Logistic regression in both binary and multinomial variants.
   """
   import Nx.Defn
   alias __MODULE__
@@ -9,9 +9,11 @@ defmodule Scholar.Linear.LogisticRegression do
   defstruct [:coefficients, :bias, :mode]
 
   @doc """
-  Fits a logistic regression model for sample inputs `x` and
-  sample targets `y`. Depending on number of classes the function chooses
-  either binary or multinomial logistic regression.
+  Fits a logistic regression model for sample inputs `x` and sample
+  targets `y`.
+  
+  Depending on number of classes the function chooses either binary
+  or multinomial logistic regression.
   """
   defn fit(x, y, opts \\ []) do
     fit_verify(x, y, opts)
@@ -22,11 +24,11 @@ defmodule Scholar.Linear.LogisticRegression do
 
   deftransformp fit_verify(x, y, opts) do
     if !is_integer(opts[:num_classes]) or opts[:num_classes] < 1 do
-      raise ArgumentError, "The number of classes must be a positive integer"
+      raise ArgumentError, "expected :num_classes to be a positive integer, got: #{inspect(opts[:num_classes]}"
     end
 
-    if Nx.rank(x.shape) != 2 do
-      raise ArgumentError, "Training vector must be two-dimensional (n_samples, n_features)"
+    if Nx.rank(x) != 2 do
+      raise ArgumentError, "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
     if (Nx.rank(y.shape) != 1 and !opts[:one_hot]) or (Nx.rank(y.shape) != 2 and opts[:one_hot]) do
