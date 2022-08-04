@@ -120,7 +120,10 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_raise ArgumentError,
                    "expected :learning_rate to be a positive number, got: -0.001",
                    fn ->
-                     Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2, learning_rate: -0.001)
+                     Scholar.Linear.LogisticRegression.fit(x, y,
+                       num_classes: 2,
+                       learning_rate: -0.001
+                     )
                    end
     end
 
@@ -158,7 +161,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       y = Nx.tensor([0, 1])
 
       assert_raise ArgumentError,
-                  "missing option :num_classes",
+                   "missing option :num_classes",
                    fn -> Scholar.Linear.LogisticRegression.fit(x, y) end
     end
   end
