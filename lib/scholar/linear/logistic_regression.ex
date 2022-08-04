@@ -62,7 +62,7 @@ defmodule Scholar.Linear.LogisticRegression do
     x_t = Nx.transpose(x)
     y_t = Nx.transpose(y)
 
-    {_m, n} = x.shape
+    {_m, n} = Nx.shape(x)
     coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n})
 
     {_, _, _, _, _, _, final_coeff, final_bias} =
@@ -138,8 +138,8 @@ defmodule Scholar.Linear.LogisticRegression do
       |> Nx.sum()
       |> Nx.divide(m)
 
-    new_coeff = Nx.subtract(coeff, Nx.multiply(coeff_diff, lr))
-    new_bias = Nx.subtract(bias, Nx.multiply(bias_diff, lr))
+    new_coeff = coeff - coeff_diff * lr
+    new_bias = bias - bias_diff * lr
 
     {new_coeff, new_bias}
   end
@@ -155,13 +155,9 @@ defmodule Scholar.Linear.LogisticRegression do
 
     prob = softmax(dot_prod)
 
-    diff =
-      prob
-      |> Nx.subtract(one_hot)
-      |> then(&Nx.dot(x_t, &1))
-      |> Nx.divide(m)
+    diff = Nx.dot(x_t, prob - one_hot) / m
 
-    Nx.subtract(coeff, Nx.multiply(diff, lr))
+    coeff - diff * lr
   end
 
   @doc """
