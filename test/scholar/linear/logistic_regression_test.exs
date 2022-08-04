@@ -10,7 +10,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
     end
 
     test "Pima Indians Diabetes Data - binary logistic regression test" do
-      {:ok, data} = Explorer.DataFrame.from_csv(Path.join(__DIR__, "test_data/pima.csv"), header: false)
+      {:ok, data} =
+        Explorer.DataFrame.from_csv(Path.join(__DIR__, "test_data/pima.csv"), header: false)
 
       x =
         Explorer.DataFrame.select(data, &String.ends_with?(&1, "column_9"), :drop)
@@ -35,7 +36,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
     end
 
     test "Pima Indians Diabetes Data - multinomial logistic regression test for binary data" do
-      {:ok, data} = Explorer.DataFrame.from_csv(Path.join(__DIR__, "test_data/pima.csv"), header: false)
+      {:ok, data} =
+        Explorer.DataFrame.from_csv(Path.join(__DIR__, "test_data/pima.csv"), header: false)
 
       x =
         Explorer.DataFrame.select(data, &String.ends_with?(&1, "column_9"), :drop)
@@ -91,44 +93,11 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert Scholar.Metrics.accuracy(y_test, res) >= 0.965
     end
 
-    test "Iris Data Set - multinomial logistic regression test for multinomial data with one_hot encoded targets" do
-      df = Explorer.Datasets.iris()
-      train_ids = for n <- 0..149, rem(n, 5) != 0, do: n
-      test_ids = for n <- 0..149, rem(n, 5) == 0, do: n
-      train_df = Explorer.DataFrame.take(df, train_ids)
-      test_df = Explorer.DataFrame.take(df, test_ids)
-
-      x_train =
-        Explorer.DataFrame.select(train_df, &String.ends_with?(&1, "species"), :drop)
-        |> df_to_tensor()
-
-      y_train =
-        Explorer.DataFrame.select(train_df, &String.ends_with?(&1, "species"))
-        |> Explorer.DataFrame.dummies(["species"])
-        |> df_to_tensor()
-
-      x_test =
-        Explorer.DataFrame.select(test_df, &String.ends_with?(&1, "species"), :drop)
-        |> df_to_tensor()
-
-      y_test =
-        Explorer.DataFrame.select(test_df, &String.ends_with?(&1, "species"))
-        |> Explorer.DataFrame.dummies(["species"])
-        |> df_to_tensor()
-        |> Nx.argmax(axis: 1)
-
-      model =
-        Scholar.Linear.LogisticRegression.fit(x_train, y_train, num_classes: 3, one_hot: true)
-
-      res = Scholar.Linear.LogisticRegression.predict(model, x_test)
-      assert Scholar.Metrics.accuracy(y_test, res) >= 0.965
-    end
-
     test "Number of classes is not a positive integer I" do
       x = Nx.tensor([[1, 2], [3, 4]])
       y = Nx.tensor([1, 2])
 
-      assert_raise ArgumentError, "The number of classes must be a positive integer", fn ->
+      assert_raise ArgumentError, "expected :num_classes to be a positive integer, got: -3", fn ->
         Scholar.Linear.LogisticRegression.fit(x, y, num_classes: -3)
       end
     end
@@ -137,7 +106,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       x = Nx.tensor([[1, 2], [3, 4]])
       y = Nx.tensor([1, 2])
 
-      assert_raise ArgumentError, "The number of classes must be a positive integer", fn ->
+      assert_raise ArgumentError, "expected :num_classes to be a positive integer, got: 2.0", fn ->
         Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2.0)
       end
     end
@@ -147,7 +116,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError,
-                  "Learning rate must be a positive number",
+                  "expected :lr to be a positive number, got: -0.001",
                    fn ->
                      Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2, lr: -0.001)
                    end
@@ -158,7 +127,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError,
-                  "Number of iterations must be a positive integer",
+                  "expected :iterations to be a positive integer, got: 0",
                    fn ->
                      Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2, iterations: 0)
                    end
@@ -169,28 +138,17 @@ defmodule Scholar.Linear.LinearRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError,
-                   "Training vector must be two-dimensional (n_samples, n_features)",
+                  "expected x to have shape {n_samples, n_features}, got tensor with shape: {2}",
                    fn -> Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2) end
     end
 
-    test "Wrong target vector size I" do
+    test "Wrong target vector size" do
       x = Nx.tensor([[1, 2], [3, 4]])
       y = Nx.tensor([[0, 1], [1, 0]])
 
       assert_raise ArgumentError,
-                   "Target vector must be one-dimensional (n_samples) or two-dimensional if :one_hot set to true",
+                  "expected y to have shape {n_samples}, got tensor with shape: {2, 2}",
                    fn -> Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2) end
-    end
-
-    test "Wrong target vector size II" do
-      x = Nx.tensor([[1, 2], [3, 4]])
-      y = Nx.tensor([1, 2])
-
-      assert_raise ArgumentError,
-                   "Target vector must be one-dimensional (n_samples) or two-dimensional if :one_hot set to true",
-                   fn ->
-                     Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2, one_hot: true)
-                   end
     end
   end
 end

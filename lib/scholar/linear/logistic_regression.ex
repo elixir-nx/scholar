@@ -3,7 +3,6 @@ defmodule Scholar.Linear.LogisticRegression do
   Logistic regression in both binary and multinomial variants.
   """
   import Nx.Defn
-  alias __MODULE__
 
   @derive {Nx.Container, containers: [:coefficients, :bias], keep: [:mode]}
   defstruct [:coefficients, :bias, :mode]
@@ -11,11 +10,17 @@ defmodule Scholar.Linear.LogisticRegression do
   @doc """
   Fits a logistic regression model for sample inputs `x` and sample
   targets `y`.
-  
+
   Depending on number of classes the function chooses either binary
   or multinomial logistic regression.
   """
   defn fit(x, y, opts \\ []) do
+    opts =
+      keyword!(opts,
+        iterations: 1000,
+        lr: 0.01,
+        num_classes: 1
+      )
     fit_verify(x, y, opts)
     if opts[:num_classes] < 3, do: fit_binary(x, y, opts), else: fit_multinomial(x, y, opts)
   end
@@ -23,37 +28,34 @@ defmodule Scholar.Linear.LogisticRegression do
   # Function checks validity of the provided data
 
   deftransformp fit_verify(x, y, opts) do
-    if !is_integer(opts[:num_classes]) or opts[:num_classes] < 1 do
-      raise ArgumentError, "expected :num_classes to be a positive integer, got: #{inspect(opts[:num_classes]}"
+    unless is_integer(opts[:num_classes]) and opts[:num_classes] > 0 do
+      raise ArgumentError, "expected :num_classes to be a positive integer, got: #{inspect(opts[:num_classes])}"
     end
 
     if Nx.rank(x) != 2 do
       raise ArgumentError, "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
-    if (Nx.rank(y.shape) != 1 and !opts[:one_hot]) or (Nx.rank(y.shape) != 2 and opts[:one_hot]) do
+    if Nx.rank(y) != 1 do
       raise ArgumentError,
-            "Target vector must be one-dimensional (n_samples) or two-dimensional if :one_hot set to true"
+            "expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
     end
 
-    if (!is_nil(opts[:lr]) and !is_number(opts[:lr])) or (is_number(opts[:lr]) and opts[:lr] <= 0) do
-      raise ArgumentError, "Learning rate must be a positive number"
+    unless is_number(opts[:lr]) and opts[:lr] > 0 do
+      raise ArgumentError, "expected :lr to be a positive number, got: #{inspect(opts[:lr])}"
     end
 
-    if (!is_nil(opts[:iterations]) and !is_number(opts[:iterations])) or
-         (is_integer(opts[:iterations]) and opts[:iterations] <= 0) do
-      raise ArgumentError, "Number of iterations must be a positive integer"
+    unless is_integer(opts[:iterations]) and opts[:iterations] > 0 do
+      raise ArgumentError, "expected :iterations to be a positive integer, got: #{inspect(opts[:iterations])}"
     end
   end
 
   # Binary logistic regression
 
   defnp fit_binary(x, y, opts \\ []) do
-    opts = keyword!(opts, iterations: 1000, lr: 0.01, num_classes: 2, one_hot: false)
 
     iterations = opts[:iterations]
     lr = opts[:lr]
-    y = if opts[:one_hot], do: Nx.argmax(y, axis: 1), else: y
     x_t = Nx.transpose(x)
     y_t = Nx.transpose(y)
 
@@ -67,7 +69,7 @@ defmodule Scholar.Linear.LogisticRegression do
         {iter + 1, x, lr, iterations, x_t, y_t, coeff, bias}
       end
 
-    %LogisticRegression{coefficients: final_coeff, bias: final_bias, mode: 0}
+    %__MODULE__{coefficients: final_coeff, bias: final_bias, mode: 0}
   end
 
   # Function computes one-hot encoding
@@ -80,19 +82,10 @@ defmodule Scholar.Linear.LogisticRegression do
 
   defnp fit_multinomial(x, y, opts) do
     {_m, n} = x.shape
-
-    opts =
-      keyword!(opts,
-        iterations: 1000,
-        lr: 0.01,
-        num_classes: 1,
-        one_hot: false
-      )
-
     iterations = opts[:iterations]
     lr = opts[:lr]
     num_classes = opts[:num_classes]
-    one_hot = if opts[:one_hot], do: y, else: one_hot_encoding(y, num_classes)
+    one_hot = one_hot_encoding(y, num_classes)
     x_t = Nx.transpose(x)
 
     {_, _, _, _, _, _,_, final_coeff} =
@@ -103,7 +96,7 @@ defmodule Scholar.Linear.LogisticRegression do
         {iter + 1, x, lr, n, iterations, one_hot, x_t, coeff}
       end
 
-    %LogisticRegression{coefficients: final_coeff, bias: Nx.tensor(0, type: {:f, 32}), mode: 1}
+    %__MODULE__{coefficients: final_coeff, bias: Nx.tensor(0, type: {:f, 32}), mode: 1}
   end
 
   # Normalized softmax
@@ -172,11 +165,11 @@ defmodule Scholar.Linear.LogisticRegression do
   Makes predictions with the given model on inputs `x`.
   """
 
-  defn predict(%LogisticRegression{mode: mode} = model, x) do
+  defn predict(%__MODULE__{mode: mode} = model, x) do
     if mode == 0, do: predict_binary(model, x), else: predict_multinomial(model, x)
   end
 
-  defnp predict_binary(%LogisticRegression{coefficients: coeff, bias: bias}, x) do
+  defnp predict_binary(%__MODULE__{coefficients: coeff, bias: bias}, x) do
     logit =
       coeff
       |> Nx.dot(Nx.transpose(x))
@@ -189,7 +182,7 @@ defmodule Scholar.Linear.LogisticRegression do
     logit > 0.5
   end
 
-  defnp predict_multinomial(%LogisticRegression{coefficients: coeff}, x) do
+  defnp predict_multinomial(%__MODULE__{coefficients: coeff}, x) do
     dot_prod = Nx.dot(x, coeff)
     prob = softmax(dot_prod)
     Nx.argmax(prob, axis: 1)
