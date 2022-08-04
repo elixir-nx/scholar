@@ -34,11 +34,12 @@ defmodule Scholar.Linear.LogisticRegression do
             "Target vector must be one-dimensional (n_samples) or two-dimensional if :one_hot set to true"
     end
 
-    if !is_nil(opts[:lr]) and !is_number(opts[:lr]) or is_number(opts[:lr]) and opts[:lr] <= 0 do
+    if (!is_nil(opts[:lr]) and !is_number(opts[:lr])) or (is_number(opts[:lr]) and opts[:lr] <= 0) do
       raise ArgumentError, "Learning rate must be a positive number"
     end
 
-    if !is_nil(opts[:iterations]) and !is_number(opts[:iterations]) or is_integer(opts[:iterations]) and opts[:iterations] <= 0 do
+    if (!is_nil(opts[:iterations]) and !is_number(opts[:iterations])) or
+         (is_integer(opts[:iterations]) and opts[:iterations] <= 0) do
       raise ArgumentError, "Number of iterations must be a positive integer"
     end
   end
@@ -51,15 +52,17 @@ defmodule Scholar.Linear.LogisticRegression do
     iterations = opts[:iterations]
     lr = opts[:lr]
     y = if opts[:one_hot], do: Nx.argmax(y, axis: 1), else: y
+    x_t = Nx.transpose(x)
+    y_t = Nx.transpose(y)
 
     {_m, n} = x.shape
     coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n})
 
-    {_, _, _, _, _, final_coeff, final_bias} =
-      while {iter = 0, x, y, lr, iterations, coeff, bias = Nx.tensor(0, type: {:f, 32})},
+    {_, _, _, _, _, _, final_coeff, final_bias} =
+      while {iter = 0, x, lr, iterations, x_t, y_t, coeff, bias = Nx.tensor(0, type: {:f, 32})},
             Nx.less(iter, iterations) do
-        {coeff, bias} = update_coefficients(x, y, {coeff, bias}, lr)
-        {iter + 1, x, y, lr, iterations, coeff, bias}
+        {coeff, bias} = update_coefficients(x, x_t, y_t, {coeff, bias}, lr)
+        {iter + 1, x, lr, iterations, x_t, y_t, coeff, bias}
       end
 
     %LogisticRegression{coefficients: final_coeff, bias: final_bias, mode: 0}
@@ -88,13 +91,14 @@ defmodule Scholar.Linear.LogisticRegression do
     lr = opts[:lr]
     num_classes = opts[:num_classes]
     one_hot = if opts[:one_hot], do: y, else: one_hot_encoding(y, num_classes)
+    x_t = Nx.transpose(x)
 
-    {_, _, _, _, _, _, final_coeff} =
-      while {iter = 0, x, lr, n, iterations, one_hot,
+    {_, _, _, _, _, _,_, final_coeff} =
+      while {iter = 0, x, lr, n, iterations, one_hot, x_t,
              coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n, num_classes})},
             Nx.less(iter, iterations) do
-        coeff = update_coefficients_multinomial(x, one_hot, coeff, lr)
-        {iter + 1, x, lr, n, iterations, one_hot, coeff}
+        coeff = update_coefficients_multinomial(x, x_t, one_hot, coeff, lr)
+        {iter + 1, x, lr, n, iterations, one_hot, x_t, coeff}
       end
 
     %LogisticRegression{coefficients: final_coeff, bias: Nx.tensor(0, type: {:f, 32}), mode: 1}
@@ -109,12 +113,12 @@ defmodule Scholar.Linear.LogisticRegression do
 
   # Gradient descent for binary regression
 
-  defnp update_coefficients(x, y, {coeff, bias}, lr) do
+  defnp update_coefficients(x, x_t, y_t, {coeff, bias}, lr) do
     {m, _n} = x.shape
 
     logit =
-      coeff
-      |> Nx.dot(Nx.transpose(x))
+      x
+      |> Nx.dot(coeff)
       |> Nx.add(bias)
       |> Nx.multiply(-1)
       |> Nx.exp()
@@ -123,12 +127,11 @@ defmodule Scholar.Linear.LogisticRegression do
 
     diff =
       logit
-      |> Nx.subtract(Nx.transpose(y))
+      |> Nx.subtract(y_t)
       |> Nx.reshape({m})
 
     coeff_diff =
-      x
-      |> Nx.transpose()
+      x_t
       |> Nx.dot(diff)
       |> Nx.divide(m)
 
@@ -145,7 +148,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
   # Gradient descent for multinomial regression
 
-  defnp update_coefficients_multinomial(x, one_hot, coeff, lr) do
+  defnp update_coefficients_multinomial(x, x_t, one_hot, coeff, lr) do
     {m, _n} = x.shape
 
     dot_prod =
@@ -155,10 +158,9 @@ defmodule Scholar.Linear.LogisticRegression do
     prob = softmax(dot_prod)
 
     diff =
-      one_hot
-      |> Nx.subtract(prob)
-      |> then(&Nx.dot(Nx.transpose(x), &1))
-      |> Nx.multiply(-1)
+      prob
+      |> Nx.subtract(one_hot)
+      |> then(&Nx.dot(x_t, &1))
       |> Nx.divide(m)
 
     Nx.subtract(coeff, Nx.multiply(diff, lr))
