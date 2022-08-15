@@ -9,7 +9,7 @@ defmodule Scholar.Cluster.Utils do
     opts =
       keyword!(
         opts,
-        axes: 0
+        axes: 2
       )
 
     x
