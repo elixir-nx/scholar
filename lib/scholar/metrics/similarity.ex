@@ -46,9 +46,9 @@ defmodule Scholar.Metrics.Similarity do
     y_size = unique_size(y)
 
     union_size = unique_size(Nx.concatenate([x, y]))
-    intersection_size = Nx.add(x_size, y_size) - union_size
+    intersection_size = x_size + y_size - union_size
 
-    Nx.divide(intersection_size, union_size)
+    intersection_size / union_size
   end
 
   defnp unique_size(tensor) do
