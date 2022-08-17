@@ -53,11 +53,23 @@ defmodule Scholar.Metrics.Similarity do
     intersection_size / union_size
   end
 
-  defnp unique_size(tensor) do
-    sorted = Nx.sort(tensor)
+  defnp unique_size(%Nx.Tensor{shape: shape} = tensor) do
+    transform(
+      shape,
+      fn
+        {} ->
+          raise "expected input shape of at least {1}, got: {}"
 
-    Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1])
-    |> Nx.sum()
-    |> Nx.add(1)
+        {1} ->
+          Nx.tensor(1)
+
+        _ ->
+          sorted = Nx.sort(tensor)
+
+          Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1])
+          |> Nx.sum()
+          |> Nx.add(1)
+      end
+    )
   end
 end

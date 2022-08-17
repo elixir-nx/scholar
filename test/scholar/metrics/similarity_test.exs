@@ -32,11 +32,34 @@ defmodule Scholar.Metrics.SimilarityTest do
       assert Similarity.jaccard(x, y) == Nx.tensor(0.20)
     end
 
+    test "returns similarity when tensor has single shape" do
+      x = Nx.tensor([1])
+      y = Nx.tensor([2])
+
+      assert Similarity.jaccard(x, y) == Nx.tensor(0.0)
+    end
+
+    test "returns similarity when tensor has multiple dimensions" do
+      x = Nx.tensor([[0, 1, 1], [1, 1, 0]])
+      y = Nx.tensor([[1, 1, 1], [1, 0, 0]])
+
+      assert Similarity.jaccard(x, y) == Nx.tensor(0.5)
+    end
+
     test "raises exception when tensors have different shapes" do
       x = Nx.tensor([1, 2, 3, 5])
       y = Nx.tensor([1, 30, 4, 8, 9])
 
       assert_raise ArgumentError, "expected input shapes to be equal, got {4} != {5}", fn ->
+        Similarity.jaccard(x, y)
+      end
+    end
+
+    test "raises exception when tensors have shape zero" do
+      x = Nx.tensor(1)
+      y = Nx.tensor(1)
+
+      assert_raise RuntimeError, "expected input shape of at least {1}, got: {}", fn ->
         Similarity.jaccard(x, y)
       end
     end
