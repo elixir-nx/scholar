@@ -196,8 +196,7 @@ defmodule Scholar.Cluster.KMeans do
 
     centroids = Nx.indexed_put(centroids, indices_centroids, first_centroid)
 
-    indices_mask =
-      Nx.stack([Nx.iota({num_runs}), first_centroid_idx], axis: -1)
+    indices_mask = Nx.stack([Nx.iota({num_runs}), first_centroid_idx], axis: -1)
 
     centroid_mask = Nx.indexed_put(centroid_mask, indices_mask, Nx.broadcast(0, {num_runs}))
 
@@ -221,8 +220,7 @@ defmodule Scholar.Cluster.KMeans do
 
         centroids = Nx.indexed_put(centroids, indices_centroids, Nx.flatten(new_centroid))
 
-        indices_mask =
-          Nx.stack([Nx.iota({num_runs}), centroid_idx], axis: -1)
+        indices_mask = Nx.stack([Nx.iota({num_runs}), centroid_idx], axis: -1)
 
         centroid_mask = Nx.indexed_put(centroid_mask, indices_mask, Nx.broadcast(0, {num_runs}))
         {idx + 1, centroid_mask, x, inertia, centroids}
