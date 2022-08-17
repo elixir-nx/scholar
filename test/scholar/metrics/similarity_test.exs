@@ -4,7 +4,7 @@ defmodule Scholar.Metrics.SimilarityTest do
   doctest Similarity
 
   describe "jaccard/2" do
-    test "returns tensor of '0.1111111119389534' according to sklearn jaccard_score function" do
+    test "returns similarity according to sklearn jaccard_score function" do
       x = Nx.tensor([1, 2, 3, 5, 0])
       y = Nx.tensor([1, 30, 4, 8, 9])
 

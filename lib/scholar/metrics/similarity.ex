@@ -7,11 +7,14 @@ defmodule Scholar.Metrics.Similarity do
   import Scholar.Shared
 
   @doc """
-  The Jaccard similarity (also known as Jaccard similarity coefficient, or Jaccard index)
-  is a statistic used to measure similarities between two sets. Mathematically, the calculation
+  Calculates Jaccard similarity (also known as Jaccard similarity coefficient, or Jaccard index).
+
+  Jaccard similarity is a statistic used to measure similarities between two sets. Mathematically, the calculation
   of Jaccard similarity is the ratio of set intersection over set union.
 
-  J(A, B) = |A∩B| / |A∪B|
+  $$
+  J(A, B) = \frac{\mid A \cap B \mid}{\mid A \cup B \mid}
+  $$
 
   ## Examples
 
@@ -23,9 +26,9 @@ defmodule Scholar.Metrics.Similarity do
         0.1428571492433548
       >
 
-      iex> x = Nx.tensor([1,2,3,5,7])
-      iex> y = Nx.tensor([1,2,4,8,9])
-      iex> Scholar.Metrics.Similarity.jaccard x, y
+      iex> x = Nx.tensor([1, 2, 3, 5, 7])
+      iex> y = Nx.tensor([1, 2, 4, 8, 9])
+      iex> Scholar.Metrics.Similarity.jaccard(x, y)
       #Nx.Tensor<
         f32
         0.25
@@ -33,7 +36,7 @@ defmodule Scholar.Metrics.Similarity do
 
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
-      iex> Scholar.Metrics.Similarity.jaccard x, y
+      iex> Scholar.Metrics.Similarity.jaccard(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
   """
   defn jaccard(x, y) do
