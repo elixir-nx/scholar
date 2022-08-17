@@ -6,7 +6,7 @@ defmodule Scholar.Metrics.Similarity do
   import Nx.Defn
   import Scholar.Shared
 
-  @doc """
+  @doc ~S"""
   Calculates Jaccard similarity (also known as Jaccard similarity coefficient, or Jaccard index).
 
   Jaccard similarity is a statistic used to measure similarities between two sets. Mathematically, the calculation
@@ -40,6 +40,8 @@ defmodule Scholar.Metrics.Similarity do
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
   """
   defn jaccard(x, y) do
+    # We're requiring the same shape because usual use cases will have the same shape.
+    # The last axis could in theory be different on both sides.
     assert_same_shape!(x, y)
 
     x_size = unique_size(x)
