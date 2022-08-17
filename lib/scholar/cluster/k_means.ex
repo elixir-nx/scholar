@@ -185,11 +185,14 @@ defmodule Scholar.Cluster.KMeans do
     first_centroid = Nx.take(x, first_centroid_idx) |> Nx.flatten()
 
     indices_centroids =
-      Nx.stack([
-        Nx.flatten(Nx.iota({num_runs, num_features}, axis: 0)),
-        Nx.broadcast(0, {num_runs * num_features}),
-        Nx.tile(Nx.iota({num_features}), [num_runs])
-      ], axis: -1)
+      Nx.stack(
+        [
+          Nx.flatten(Nx.iota({num_runs, num_features}, axis: 0)),
+          Nx.broadcast(0, {num_runs * num_features}),
+          Nx.tile(Nx.iota({num_features}), [num_runs])
+        ],
+        axis: -1
+      )
 
     centroids = Nx.indexed_put(centroids, indices_centroids, first_centroid)
 
@@ -208,14 +211,16 @@ defmodule Scholar.Cluster.KMeans do
         {new_centroid, centroid_idx} = find_new_centroid(min_inertia, x, num_clusters, num_runs)
 
         indices_centroids =
-          Nx.stack([
-            Nx.flatten(Nx.iota({num_runs, num_features}, axis: 0)),
-            Nx.broadcast(idx, {num_runs * num_features}),
-            Nx.tile(Nx.iota({num_features}), [num_runs])
-          ], axis: -1)
+          Nx.stack(
+            [
+              Nx.flatten(Nx.iota({num_runs, num_features}, axis: 0)),
+              Nx.broadcast(idx, {num_runs * num_features}),
+              Nx.tile(Nx.iota({num_features}), [num_runs])
+            ],
+            axis: -1
+          )
 
-        centroids =
-          Nx.indexed_put(centroids, indices_centroids, Nx.flatten(new_centroid))
+        centroids = Nx.indexed_put(centroids, indices_centroids, Nx.flatten(new_centroid))
 
         indices_mask =
           Nx.concatenate([Nx.new_axis(Nx.iota({num_runs}), 0), Nx.new_axis(centroid_idx, 0)])
