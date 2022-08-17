@@ -59,7 +59,6 @@ defmodule Scholar.Cluster.KMeans do
       )
 
     verify(x, opts)
-    x = x |> Nx.as_type({:f, 32})
     inf = Nx.Constants.infinity({:f, 32})
     {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
@@ -74,7 +73,6 @@ defmodule Scholar.Cluster.KMeans do
 
     broadcast_x =
       x
-      |> Nx.reshape({1, num_samples, num_features})
       |> Nx.broadcast({num_runs, num_samples, num_features})
 
     centroids = initialize_centroids(x, opts)
@@ -184,15 +182,14 @@ defmodule Scholar.Cluster.KMeans do
 
     first_centroid_idx = Nx.random_uniform({num_runs}, 0, num_samples - 1, type: {:u, 32})
 
-    first_centroid = Nx.take(x, first_centroid_idx) |> Nx.reshape({:auto})
+    first_centroid = Nx.take(x, first_centroid_idx) |> Nx.flatten()
 
     indices_centroids =
-      Nx.concatenate([
-        Nx.new_axis(Nx.reshape(Nx.iota({num_runs, num_features}, axis: 0), {:auto}), 0),
-        Nx.new_axis(Nx.broadcast(0, {num_runs * num_features}), 0),
-        Nx.new_axis(Nx.tile(Nx.iota({num_features}), [num_runs]), 0)
-      ])
-      |> Nx.transpose()
+      Nx.stack([
+        Nx.flatten(Nx.iota({num_runs, num_features}, axis: 0)),
+        Nx.broadcast(0, {num_runs * num_features}),
+        Nx.tile(Nx.iota({num_features}), [num_runs])
+      ], axis: -1)
 
     centroids = Nx.indexed_put(centroids, indices_centroids, first_centroid)
 
@@ -211,15 +208,14 @@ defmodule Scholar.Cluster.KMeans do
         {new_centroid, centroid_idx} = find_new_centroid(min_inertia, x, num_clusters, num_runs)
 
         indices_centroids =
-          Nx.concatenate([
-            Nx.new_axis(Nx.reshape(Nx.iota({num_runs, num_features}, axis: 0), {:auto}), 0),
-            Nx.new_axis(Nx.broadcast(idx, {num_runs * num_features}), 0),
-            Nx.new_axis(Nx.tile(Nx.iota({num_features}), [num_runs]), 0)
-          ])
-          |> Nx.transpose()
+          Nx.stack([
+            Nx.flatten(Nx.iota({num_runs, num_features}, axis: 0)),
+            Nx.broadcast(idx, {num_runs * num_features}),
+            Nx.tile(Nx.iota({num_features}), [num_runs])
+          ], axis: -1)
 
         centroids =
-          Nx.indexed_put(centroids, indices_centroids, Nx.reshape(new_centroid, {:auto}))
+          Nx.indexed_put(centroids, indices_centroids, Nx.flatten(new_centroid))
 
         indices_mask =
           Nx.concatenate([Nx.new_axis(Nx.iota({num_runs}), 0), Nx.new_axis(centroid_idx, 0)])
