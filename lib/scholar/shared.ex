@@ -14,7 +14,7 @@ defmodule Scholar.Shared do
     lhs = Nx.shape(lhs)
     rhs = Nx.shape(rhs)
 
-    unless Elixir.Kernel.==(lhs, rhs) do
+    unless lhs == rhs do
       raise ArgumentError,
             "expected input shapes to be equal," <>
               " got #{inspect(lhs)} != #{inspect(rhs)}"
