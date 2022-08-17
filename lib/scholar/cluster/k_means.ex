@@ -5,8 +5,7 @@ defmodule Scholar.Cluster.KMeans do
   import Nx.Defn
   import Scholar.Shared
 
-  @derive {Nx.Container,
-           containers: [:num_iterations, :clusters, :inertia, :labels]}
+  @derive {Nx.Container, containers: [:num_iterations, :clusters, :inertia, :labels]}
   defstruct [:num_iterations, :clusters, :inertia, :labels]
 
   @doc """
@@ -23,7 +22,7 @@ defmodule Scholar.Cluster.KMeans do
 
     * `:tol` - Relative tolerance with regards to Frobenius norm of the difference in the cluster centers of two consecutive iterations to declare convergence. Defaults to `1e-4`.
 
-    * `:random_state` - Determines random number generation for centroid initialization. Use an int to make the randomness deterministic. The argument `-1` is special and means that the seed is not set. Defaults to `-1`.
+    * `:random_state` - Determines random number generation for centroid initialization. Use an int to make the randomness deterministic. The argument `nil` is special and means that the seed is not set. Defaults to `nil`.
 
     * `:init` - Method for initialization (Defaults to `:k_means_plus_plus`):
 
@@ -52,24 +51,39 @@ defmodule Scholar.Cluster.KMeans do
         max_iterations: 300,
         num_runs: 10,
         tol: 1.0e-4,
-        random_state: -1,
-        init: :k_means_plus_plus
+        random_state: nil,
+        init: :k_means_plus_plus,
+        weights: nil
       )
 
     verify(x, opts)
-    if opts[:random_state] == -1, do: nil, else: :rand.seed(:exsss, opts[:random_state])
     x = x |> Nx.as_type({:f, 32})
     inf = Nx.Constants.infinity({:f, 32})
     {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
     num_runs = opts[:num_runs]
 
-    initial_centroids = initialize_centroids(x, opts)
+    weights =
+      case opts[:weights] do
+        nil ->
+          Nx.broadcast(1.0, {num_runs, num_samples})
+
+        _ ->
+          assert_same_shape!(opts[:weights], Nx.template({num_samples}, {:f, 32}))
+          any_negative? = opts[:weights] |> Nx.less(0) |> Nx.any()
+          if any_negative? do
+            raise ArgumentError,
+            "expected :weights to have only positive values, got: #{inspect(opts[:weights])}"
+          end
+          opts[:weights] |> Nx.reshape({1, num_samples}) |> Nx.broadcast({num_runs, num_samples})
+      end
+
+    centroids = initialize_centroids(x, opts)
     distance = Nx.broadcast(inf, {num_runs})
 
     {i, _, _, _, _, final_centroids, nearest_centroids} =
-      while {i = 0, x, previous_iteration_centroids = Nx.broadcast(inf, initial_centroids),
-             distance, inertia = Nx.broadcast(0.0, {num_runs}), initial_centroids,
+      while {i = 0, x, previous_iteration_centroids = Nx.broadcast(inf, centroids), distance,
+             inertia = Nx.broadcast(0.0, {num_runs}), centroids,
              nearest_centroids = Nx.broadcast(-1, {num_runs, num_samples})},
             Nx.less(i, opts[:max_iterations]) and
               Nx.all(
@@ -78,20 +92,26 @@ defmodule Scholar.Cluster.KMeans do
                   opts[:tol]
                 )
               ) do
-        previous_iteration_centroids = initial_centroids
+        previous_iteration_centroids = centroids
 
         {inertia_for_centroids, min_inertia} =
-          calculate_inetria(x, initial_centroids, num_clusters, num_runs)
+          calculate_inetria(x, centroids, num_clusters, num_runs)
 
         nearest_centroids = Nx.argmin(inertia_for_centroids, axis: 1)
 
-        inertia = Nx.sum(min_inertia, axes: [1])
+        inertia = min_inertia |> Nx.multiply(weights) |> Nx.sum(axes: [1])
+
+        modified_weights =
+          weights
+          |> Nx.reshape({num_runs, 1, num_samples})
+          |> Nx.broadcast({num_runs, num_clusters, num_samples})
 
         group_masks =
           Nx.equal(
             Nx.broadcast(Nx.iota({num_clusters, 1}), {num_runs, num_clusters, 1}),
             Nx.reshape(nearest_centroids, {num_runs, 1, num_samples})
           )
+          |> Nx.multiply(modified_weights)
 
         group_sizes = Nx.sum(group_masks, axes: [2], keep_axes: true)
 
@@ -100,7 +120,7 @@ defmodule Scholar.Cluster.KMeans do
           |> Nx.reshape({1, num_samples, num_features})
           |> Nx.broadcast({num_runs, num_samples, num_features})
 
-        initial_centroids =
+        centroids =
           Nx.multiply(
             Nx.reshape(group_masks, {num_runs, num_clusters, num_samples, 1}),
             Nx.reshape(x_modified, {num_runs, 1, num_samples, num_features})
@@ -108,16 +128,15 @@ defmodule Scholar.Cluster.KMeans do
           |> Nx.sum(axes: [2])
           |> Nx.divide(group_sizes)
 
-        distance = Nx.sum(Nx.abs(initial_centroids - previous_iteration_centroids), axes: [1, 2])
+        distance = Nx.sum(Nx.abs(centroids - previous_iteration_centroids), axes: [1, 2])
 
-        {i + 1, x, previous_iteration_centroids, distance, inertia, initial_centroids,
-         nearest_centroids}
+        {i + 1, x, previous_iteration_centroids, distance, inertia, centroids, nearest_centroids}
       end
 
     {_inertia_for_centroids, min_inertia} =
       calculate_inetria(x, final_centroids, num_clusters, num_runs)
 
-    final_inertia = Nx.sum(min_inertia, axes: [1])
+    final_inertia = min_inertia |> Nx.multiply(weights) |> Nx.sum(axes: [1])
     best_run = Nx.argmin(final_inertia)
 
     %__MODULE__{
@@ -270,9 +289,13 @@ defmodule Scholar.Cluster.KMeans do
             "expected :tol to be a positive number, got: #{inspect(opts[:tol])}"
     end
 
-    unless is_integer(opts[:random_state]) do
+    unless is_integer(opts[:random_state]) or is_nil(opts[:random_state]) do
       raise ArgumentError,
-            "expected :random_state to be an integer, got: #{inspect(opts[:random_state])}"
+            "expected :random_state to be an integer or nil, got: #{inspect(opts[:random_state])}"
+    end
+
+    if opts[:random_state] != nil do
+      :rand.seed(:exsss, opts[:random_state])
     end
   end
 
@@ -303,3 +326,11 @@ defmodule Scholar.Cluster.KMeans do
     inertia_for_centroids |> Nx.argmin(axis: 0)
   end
 end
+
+model =
+  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
+    num_clusters: 2,
+    weights: Nx.tensor([1, 2, 3, 4])
+  )
+
+IO.inspect(model)
