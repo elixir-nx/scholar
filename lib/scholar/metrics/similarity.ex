@@ -54,11 +54,8 @@ defmodule Scholar.Metrics.Similarity do
   defnp unique_size(tensor) do
     sorted = Nx.sort(tensor)
 
-    [
-      Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1]),
-      Nx.tensor([1])
-    ]
-    |> Nx.concatenate()
+    Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1])
     |> Nx.sum()
+    |> Nx.add(1)
   end
 end
