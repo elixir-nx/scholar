@@ -54,24 +54,21 @@ defmodule Scholar.Metrics.Similarity do
   end
 
   defnp unique_size(%Nx.Tensor{shape: shape} = tensor) do
-    transform(
-      shape,
-      fn
-        {} ->
-          raise "expected input shape of at least {1}, got: {}"
+    case shape do
+      {} ->
+        raise "expected input shape of at least {1}, got: {}"
 
-        {1} ->
-          Nx.tensor(1)
+      {1} ->
+        Nx.tensor(1)
 
-        _ ->
-          sorted = Nx.sort(tensor)
+      _ ->
+        sorted = Nx.sort(tensor)
 
-          different_from_successor? = Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1])
+        different_from_successor? = Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1])
 
-          different_from_successor?
-          |> Nx.sum()
-          |> Nx.add(1)
-      end
-    )
+        different_from_successor?
+        |> Nx.sum()
+        |> Nx.add(1)
+    end
   end
 end
