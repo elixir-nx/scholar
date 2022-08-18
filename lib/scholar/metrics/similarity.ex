@@ -59,7 +59,7 @@ defmodule Scholar.Metrics.Similarity do
         raise "expected input shape of at least {1}, got: {}"
 
       {1} ->
-        Nx.tensor(1)
+        1
 
       _ ->
         sorted = Nx.sort(tensor)
