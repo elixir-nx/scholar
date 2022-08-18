@@ -1,4 +1,4 @@
-# Scholar
+<h1><img src="./scholar.png" alt="Scholar" width="400"></h1>
 
 Machine learning tools built on top of Nx.
 
