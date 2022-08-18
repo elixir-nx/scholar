@@ -66,7 +66,9 @@ defmodule Scholar.Metrics.Similarity do
         _ ->
           sorted = Nx.sort(tensor)
 
-          Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1])
+          different_from_successor? = Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1])
+          
+          different_from_successor?
           |> Nx.sum()
           |> Nx.add(1)
       end
