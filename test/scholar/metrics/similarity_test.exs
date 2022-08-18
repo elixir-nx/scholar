@@ -32,7 +32,7 @@ defmodule Scholar.Metrics.SimilarityTest do
       assert Similarity.jaccard(x, y) == Nx.tensor(0.20)
     end
 
-    test "returns similarity when tensor has single shape" do
+    test "returns similarity when tensors have a single element" do
       x = Nx.tensor([1])
       y = Nx.tensor([2])
 
