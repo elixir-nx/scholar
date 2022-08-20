@@ -1,7 +1,7 @@
 defmodule Scholar.Cluster.KMeansTest do
   use ExUnit.Case, async: true
 
-  test "Simple test without weights" do
+  test "without weights" do
     model =
       Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
         num_clusters: 2,
@@ -17,7 +17,7 @@ defmodule Scholar.Cluster.KMeansTest do
     assert predictions == Nx.tensor([0, 1])
   end
 
-  test "Simple test with weights" do
+  test "with weights" do
     model =
       Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
         num_clusters: 2,

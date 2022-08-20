@@ -1,6 +1,6 @@
 defmodule Scholar.Cluster.KMeans do
   @moduledoc """
-  K-Means algorithm
+  K-Means algorithm.
   """
   import Nx.Defn
   import Scholar.Shared
@@ -275,9 +275,10 @@ defmodule Scholar.Cluster.KMeans do
     end
   end
 
-  #
   @doc """
-  Makes predictions with the given model on inputs `x`. It returns a tensor with clusters corresponding to the input.
+  Makes predictions with the given model on inputs `x`.
+
+  It returns a tensor with clusters corresponding to the input.
   """
 
   defn predict(%__MODULE__{clusters: clusters} = _module, x) do
