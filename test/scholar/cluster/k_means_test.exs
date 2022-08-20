@@ -35,6 +35,16 @@ defmodule Scholar.Cluster.KMeansTest do
   end
 
   describe "errors" do
+    test "when :num_clusters is not provided" do
+      x = Nx.tensor([[1, 2], [3, 4], [5, 6]])
+
+      assert_raise ArgumentError,
+                   "missing option :num_clusters",
+                   fn ->
+                     Scholar.Cluster.KMeans.fit(x)
+                   end
+    end
+
     test "when :num_clusters is invalid" do
       x = Nx.tensor([[1, 2], [3, 4], [5, 6]])
 
