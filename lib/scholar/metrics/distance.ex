@@ -335,7 +335,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   @doc """
-  Cosine distance. It only accepts 2D tensors.
+  Cosine distance.
 
   $$
   1 - \\frac{u \\cdot v}{\\|u\\|_2 \\|v\\|_2}
@@ -352,16 +352,16 @@ defmodule Scholar.Metrics.Distance do
       iex> y = Nx.tensor([[5, 2]])
       iex> Scholar.Metrics.Distance.cosine(x, y)
       #Nx.Tensor<
-        f32[1]
-        [0.25259071588516235]
+        f32
+        0.25259071588516235
       >
 
       iex> x = Nx.tensor([[1, 2]])
       iex> y = Nx.tensor([[1, 2]])
       iex> Scholar.Metrics.Distance.cosine(x, y)
       #Nx.Tensor<
-        f32[1]
-        [0.0]
+        f32
+        0.0
       >
 
       iex> x = Nx.tensor([[1, 2]])
@@ -385,6 +385,9 @@ defmodule Scholar.Metrics.Distance do
   defn cosine(x, y, opts \\ []) do
     cutoff = 10 * 2.220446049250313e-16
     assert_same_shape!(x, y)
+
+    x = if Nx.rank(x) == 1, do: Nx.new_axis(x, 0), else: x
+    y = if Nx.rank(y) == 1, do: Nx.new_axis(y, 0), else: y
 
     {m, n} = Nx.shape(x)
 
@@ -411,7 +414,7 @@ defmodule Scholar.Metrics.Distance do
     res = Nx.dot(norm_x, Nx.transpose(norm_y))
     res = Nx.select(zero_xor_one_mask, 0.0, res)
     res = 1.0 - Nx.select(zero_mask, 1.0, res)
-    if m != 1, do: res, else: Nx.new_axis(res[0][0], 0)
+    if m != 1, do: res, else: res[0][0]
   end
 
   defnp as_float(x) do

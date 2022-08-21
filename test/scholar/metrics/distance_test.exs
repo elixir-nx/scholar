@@ -50,7 +50,6 @@ defmodule Scholar.Metrics.DistanceTest do
   end
 
   test "cosine matches scipy" do
-    assert Distance.cosine(Nx.new_axis(@x, 0), Nx.new_axis(@y, 0)) ==
-             Nx.tensor([0.7650632810164779])
+    assert Distance.cosine(@x, @y) == Nx.tensor(0.7650632810164779)
   end
 end
