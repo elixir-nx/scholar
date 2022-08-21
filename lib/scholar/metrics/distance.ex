@@ -348,26 +348,26 @@ defmodule Scholar.Metrics.Distance do
 
   ## Examples
 
-      iex> x = Nx.tensor([[1, 2]])
-      iex> y = Nx.tensor([[5, 2]])
+      iex> x = Nx.tensor([1, 2])
+      iex> y = Nx.tensor([5, 2])
       iex> Scholar.Metrics.Distance.cosine(x, y)
       #Nx.Tensor<
         f32
         0.25259071588516235
       >
 
-      iex> x = Nx.tensor([[1, 2]])
-      iex> y = Nx.tensor([[1, 2]])
+      iex> x = Nx.tensor([1, 2])
+      iex> y = Nx.tensor([1, 2])
       iex> Scholar.Metrics.Distance.cosine(x, y)
       #Nx.Tensor<
         f32
         0.0
       >
 
-      iex> x = Nx.tensor([[1, 2]])
-      iex> y = Nx.tensor([[1, 2, 3]])
+      iex> x = Nx.tensor([1, 2])
+      iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.cosine(x, y)
-      ** (ArgumentError) expected input shapes to be equal, got {1, 2} != {1, 3}
+      ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
 
       iex> x = Nx.tensor([[1, 2, 3], [0, 0, 0], [5, 2, 4]])
       iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
