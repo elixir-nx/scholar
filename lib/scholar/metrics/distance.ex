@@ -125,7 +125,7 @@ defmodule Scholar.Metrics.Distance do
     |> Nx.subtract(y)
     |> Nx.power(2)
     |> Nx.sum(axes: opts[:axes])
-    |> as_float
+    |> as_float()
   end
 
   @doc """
@@ -335,7 +335,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   @doc """
-  Cosine distance.
+  Cosine distance. It only accepts 2D tensors.
 
   $$
   1 - \\frac{u \\cdot v}{\\|u\\|_2 \\|v\\|_2}
@@ -356,8 +356,8 @@ defmodule Scholar.Metrics.Distance do
         [0.25259071588516235]
       >
 
-      iex> x = Nx.tensor([1, 2])
-      iex> y = Nx.tensor([1, 2])
+      iex> x = Nx.tensor([[1, 2]])
+      iex> y = Nx.tensor([[1, 2]])
       iex> Scholar.Metrics.Distance.cosine(x, y)
       #Nx.Tensor<
         f32[1]
