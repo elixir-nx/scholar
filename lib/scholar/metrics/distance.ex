@@ -15,8 +15,8 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-    * `:axes` - Axes to aggregate distance over. If `:axes` set to `nil` then function does not aggregate distances.
-      Defaults to `nil`.
+  * `:axes` - Axes to calculate the distance over. By default the distance
+    is calculated between the whole tensors.
 
   ## Examples
 
@@ -41,23 +41,19 @@ defmodule Scholar.Metrics.Distance do
       iex> Scholar.Metrics.Distance.euclidean(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
 
-      iex> x = Nx.tensor([[1,2], [3,4]])
-      iex> y = Nx.tensor([[8,3], [2,5]])
+      iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
+      iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
       iex> Scholar.Metrics.Distance.euclidean(x, y, axes: [0])
       #Nx.Tensor<
-        f32[2]
-        [7.071067810058594, 1.4142135381698608]
+        f32[3]
+        [7.071067810058594, 1.4142135381698608, 4.123106002807617]
       >
   """
-  @spec euclidean(Nx.t(), Nx.t()) :: Nx.t()
+  @spec euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   defn euclidean(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
-    opts =
-      keyword!(
-        opts,
-        axes: nil
-      )
+    opts = keyword!(opts, [:axes])
 
     diff = x - y
 
@@ -77,8 +73,8 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to aggregate distance over. If `:axes` set to `nil` then function does not aggregate distances.
-    Defaults to `nil`.
+  * `:axes` - Axes to calculate the distance over. By default the distance
+    is calculated between the whole tensors.
 
   ## Examples
 
@@ -103,23 +99,19 @@ defmodule Scholar.Metrics.Distance do
       iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
 
-      iex> x = Nx.tensor([[1,2], [3,4]])
-      iex> y = Nx.tensor([[8,3], [2,5]])
+      iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
+      iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
       iex> Scholar.Metrics.Distance.squared_euclidean(x, y, axes: [0])
       #Nx.Tensor<
-        f32[2]
-        [50.0, 2.0]
+        f32[3]
+        [50.0, 2.0, 17.0]
       >
   """
-  @spec squared_euclidean(Nx.t(), Nx.t()) :: Nx.t()
+  @spec squared_euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   defn squared_euclidean(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
-    opts =
-      keyword!(
-        opts,
-        axes: nil
-      )
+    opts = keyword!(opts, [:axes])
 
     x
     |> Nx.subtract(y)
@@ -137,8 +129,8 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to aggregate distance over. If `:axes` set to `nil` then function does not aggregate distances.
-    Defaults to `nil`.
+  * `:axes` - Axes to calculate the distance over. By default the distance
+    is calculated between the whole tensors.
 
   ## Examples
 
@@ -163,23 +155,19 @@ defmodule Scholar.Metrics.Distance do
       iex> Scholar.Metrics.Distance.manhattan(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
 
-      iex> x = Nx.tensor([[1,2], [3,4]])
-      iex> y = Nx.tensor([[8,3], [2,5]])
+      iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
+      iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
       iex> Scholar.Metrics.Distance.manhattan(x, y, axes: [0])
       #Nx.Tensor<
-        f32[2]
-        [8.0, 2.0]
+        f32[3]
+        [8.0, 2.0, 5.0]
       >
   """
-  @spec manhattan(Nx.t(), Nx.t()) :: Nx.t()
+  @spec manhattan(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   defn manhattan(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
-    opts =
-      keyword!(
-        opts,
-        axes: nil
-      )
+    opts = keyword!(opts, [:axes])
 
     x
     |> Nx.subtract(y)
@@ -197,8 +185,8 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to aggregate distance over. If `:axes` set to `nil` then function does not aggregate distances.
-    Defaults to `nil`.
+  * `:axes` - Axes to calculate the distance over. By default the distance
+    is calculated between the whole tensors.
 
   ## Examples
 
@@ -223,23 +211,19 @@ defmodule Scholar.Metrics.Distance do
       iex> Scholar.Metrics.Distance.chebyshev(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
 
-      iex> x = Nx.tensor([[1,2], [3,4]])
-      iex> y = Nx.tensor([[8,3], [2,5]])
+      iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
+      iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
       iex> Scholar.Metrics.Distance.chebyshev(x, y, axes: [1])
       #Nx.Tensor<
         f32[2]
         [7.0, 1.0]
       >
   """
-  @spec chebyshev(Nx.t(), Nx.t()) :: Nx.t()
+  @spec chebyshev(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   defn chebyshev(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
-    opts =
-      keyword!(
-        opts,
-        axes: nil
-      )
+    opts = keyword!(opts, [:axes])
 
     x
     |> Nx.subtract(y)
@@ -257,8 +241,8 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to aggregate distance over. If `:axes` set to `nil` then function does not aggregate distances.
-    Defaults to `nil`.
+  * `:axes` - Axes to calculate the distance over. By default the distance
+    is calculated between the whole tensors.
 
   * `:p` - A non-negative parameter of Minkowski distance. Defaults to `2`.
 
@@ -285,15 +269,15 @@ defmodule Scholar.Metrics.Distance do
       iex> Scholar.Metrics.Distance.minkowski(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
 
-      iex> x = Nx.tensor([[1,2], [3,4]])
-      iex> y = Nx.tensor([[8,3], [2,5]])
+      iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
+      iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
       iex> Scholar.Metrics.Distance.minkowski(x, y, p: 2.5, axes: [0])
       #Nx.Tensor<
-        f32[2]
-        [7.021548271179199, 1.3195079565048218]
+        f32[3]
+        [7.021548271179199, 1.3195079565048218, 4.049539089202881]
       >
   """
-  @spec minkowski(Nx.t(), Nx.t()) :: Nx.t()
+  @spec minkowski(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   defn minkowski(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
@@ -304,33 +288,30 @@ defmodule Scholar.Metrics.Distance do
         axes: nil
       )
 
-    p = Nx.tensor(opts[:p])
-    check_p(p)
+    p = opts[:p]
 
-    case p do
-      0 ->
+    if p < 0 do
+      raise ArgumentError,
+            "expected the value of :p to be a non-negative number, got: #{inspect(p)}"
+    end
+
+    cond do
+      p == 0 ->
         chebyshev(x, y, axes: opts[:axes])
 
-      1 ->
+      p == 1 ->
         manhattan(x, y, axes: opts[:axes])
 
-      2 ->
+      p == 2 ->
         euclidean(x, y, axes: opts[:axes])
 
-      _ ->
+      true ->
         x
         |> Nx.subtract(y)
         |> Nx.abs()
         |> Nx.power(p)
         |> Nx.sum(axes: opts[:axes])
         |> Nx.power(1.0 / p)
-    end
-  end
-
-  deftransformp check_p(p) do
-    if p < 0 do
-      raise ArgumentError,
-            "The value of p must be non-negative"
     end
   end
 
@@ -343,8 +324,8 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to aggregate distance over. If `:axes` set to `nil` then function does not aggregate distances.
-    Defaults to `nil`.
+    * `:axes` - Axes to calculate the distance over. By default the distance
+      is calculated between the whole tensors.
 
   ## Examples
 
@@ -373,48 +354,58 @@ defmodule Scholar.Metrics.Distance do
       iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
       iex> Scholar.Metrics.Distance.cosine(x, y, axes: [1])
       #Nx.Tensor<
-        f32[3][3]
-        [
-          [0.1704850196838379, 0.2418246865272522, 1.0],
-          [1.0, 1.0, 0.0],
-          [0.3740193247795105, 0.2843400239944458, 1.0]
-        ]
+        f32[3]
+        [0.1704850196838379, 1.0, 1.0]
       >
   """
-  @spec cosine(Nx.t(), Nx.t()) :: Nx.t()
+  @spec cosine(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   defn cosine(x, y, opts \\ []) do
+    # Detect very small values that could lead to surprising
+    # results and numerical stability issues. Every value smaller
+    # than `cutoff` is considered small
     cutoff = 10 * 2.220446049250313e-16
     assert_same_shape!(x, y)
 
-    x = if Nx.rank(x) == 1, do: Nx.new_axis(x, 0), else: x
-    y = if Nx.rank(y) == 1, do: Nx.new_axis(y, 0), else: y
+    opts = keyword!(opts, [:axes])
 
-    {m, n} = Nx.shape(x)
+    if Nx.all(x == y) do
+      0.0
+    else
+      x_squared = x |> then(&Nx.multiply(&1, &1))
+      y_squared = y |> then(&Nx.multiply(&1, &1))
 
-    opts =
-      keyword!(
-        opts,
-        axes: nil
-      )
+      norm_x =
+        x_squared
+        |> Nx.sum(axes: opts[:axes], keep_axes: true)
+        |> Nx.sqrt()
+        |> Nx.broadcast(Nx.shape(x))
 
-    norm_x = Nx.LinAlg.norm(x, axes: opts[:axes]) |> Nx.reshape({m, 1}) |> Nx.broadcast({m, n})
-    norm_y = Nx.LinAlg.norm(y, axes: opts[:axes]) |> Nx.reshape({1, m}) |> Nx.broadcast({n, m})
+      norm_y =
+        y_squared
+        |> Nx.sum(axes: opts[:axes], keep_axes: true)
+        |> Nx.sqrt()
+        |> Nx.broadcast(Nx.shape(y))
 
-    zero_mask = norm_x == 0.0 and norm_y == 0.0
-    zero_xor_one_mask = Nx.logical_xor(norm_x == 0.0, norm_y == 0.0)
+      norm_x_mask =
+        x_squared
+        |> Nx.sum(axes: opts[:axes])
+        |> Nx.sqrt()
 
-    norm_y = Nx.transpose(norm_y)
+      norm_y_mask =
+        y_squared
+        |> Nx.sum(axes: opts[:axes])
+        |> Nx.sqrt()
 
-    norm_x = Nx.select(Nx.greater(norm_x, cutoff), norm_x, 1.0)
-    norm_y = Nx.select(Nx.greater(norm_y, cutoff), norm_y, 1.0)
+      zero_mask = norm_x_mask == 0.0 and norm_y_mask == 0.0
+      zero_xor_one_mask = Nx.logical_xor(norm_x_mask == 0.0, norm_y_mask == 0.0)
 
-    norm_x = x / norm_x
-    norm_y = y / norm_y
+      norm_x = Nx.select(Nx.greater(norm_x, cutoff), norm_x, 1.0) |> then(&(x / &1))
+      norm_y = Nx.select(Nx.greater(norm_y, cutoff), norm_y, 1.0) |> then(&(y / &1))
 
-    res = Nx.dot(norm_x, Nx.transpose(norm_y))
-    res = Nx.select(zero_xor_one_mask, 0.0, res)
-    res = 1.0 - Nx.select(zero_mask, 1.0, res)
-    if m != 1, do: res, else: res[0][0]
+      res = Nx.multiply(norm_x, norm_y) |> Nx.sum(axes: opts[:axes])
+      res = Nx.select(zero_xor_one_mask, 0.0, res)
+      1.0 - Nx.select(zero_mask, 1.0, res)
+    end
   end
 
   defnp as_float(x) do
