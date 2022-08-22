@@ -46,7 +46,7 @@ defmodule Scholar.Metrics.Distance do
       iex> Scholar.Metrics.Distance.euclidean(x, y, axes: [0])
       #Nx.Tensor<
         f32[3]
-        [7.071067810058594, 1.4142135381698608, 4.123106002807617]
+        [7.071067810058594, 1.4142135381698608, 4.123105525970459]
       >
   """
   @spec euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
@@ -56,12 +56,7 @@ defmodule Scholar.Metrics.Distance do
     opts = keyword!(opts, [:axes])
 
     diff = x - y
-
-    if Nx.all(diff == 0) do
-      0.0
-    else
-      Nx.LinAlg.norm(diff, axes: opts[:axes])
-    end
+    (diff * diff) |> Nx.sum(axes: opts[:axes]) |> Nx.sqrt()
   end
 
   @doc """
@@ -338,14 +333,6 @@ defmodule Scholar.Metrics.Distance do
       >
 
       iex> x = Nx.tensor([1, 2])
-      iex> y = Nx.tensor([1, 2])
-      iex> Scholar.Metrics.Distance.cosine(x, y)
-      #Nx.Tensor<
-        f32
-        0.0
-      >
-
-      iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.cosine(x, y)
       ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
@@ -368,44 +355,35 @@ defmodule Scholar.Metrics.Distance do
 
     opts = keyword!(opts, [:axes])
 
-    if Nx.all(x == y) do
-      0.0
-    else
-      x_squared = x * x
-      y_squared = y * y
+    x_squared = x * x
+    y_squared = y * y
 
-      norm_x =
-        x_squared
-        |> Nx.sum(axes: opts[:axes], keep_axes: true)
-        |> Nx.sqrt()
-        |> Nx.broadcast(x)
+    norm_x =
+      x_squared
+      |> Nx.sum(axes: opts[:axes], keep_axes: true)
+      |> Nx.sqrt()
 
-      norm_y =
-        y_squared
-        |> Nx.sum(axes: opts[:axes], keep_axes: true)
-        |> Nx.sqrt()
-        |> Nx.broadcast(y)
+    norm_y =
+      y_squared
+      |> Nx.sum(axes: opts[:axes], keep_axes: true)
+      |> Nx.sqrt()
 
-      norm_x_mask =
-        x_squared
-        |> Nx.sum(axes: opts[:axes])
-        |> Nx.sqrt()
+    norm_x_mask = norm_x |> Nx.squeeze()
 
-      norm_y_mask =
-        y_squared
-        |> Nx.sum(axes: opts[:axes])
-        |> Nx.sqrt()
+    norm_y_mask = norm_y |> Nx.squeeze()
 
-      zero_mask = norm_x_mask == 0.0 and norm_y_mask == 0.0
-      zero_xor_one_mask = Nx.logical_xor(norm_x_mask == 0.0, norm_y_mask == 0.0)
+    both_zero? = norm_x_mask == 0.0 and norm_y_mask == 0.0
+    one_zero? = Nx.logical_xor(norm_x_mask == 0.0, norm_y_mask == 0.0)
 
-      norm_x = Nx.select(Nx.greater(norm_x, cutoff), norm_x, 1.0) |> then(&(x / &1))
-      norm_y = Nx.select(Nx.greater(norm_y, cutoff), norm_y, 1.0) |> then(&(y / &1))
+    norm_x = Nx.select(norm_x > cutoff, norm_x, 1.0)
+    normalized_x = x / norm_x
 
-      res = Nx.multiply(norm_x, norm_y) |> Nx.sum(axes: opts[:axes])
-      res = Nx.select(zero_xor_one_mask, 0.0, res)
-      1.0 - Nx.select(zero_mask, 1.0, res)
-    end
+    norm_y = Nx.select(norm_y > cutoff, norm_y, 1.0)
+    normalized_y = y / norm_y
+
+    res = normalized_x * normalized_y |> Nx.sum(axes: opts[:axes])
+    res = Nx.select(one_zero?, 0.0, res)
+    1.0 - Nx.select(both_zero?, 1.0, res)
   end
 
   defnp as_float(x) do
