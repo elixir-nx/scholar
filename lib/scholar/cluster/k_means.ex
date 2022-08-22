@@ -27,13 +27,13 @@ defmodule Scholar.Cluster.KMeans do
     * `:weights` - The weights for each observation in x. If equals to `nil`, all observations
       are assigned equal weight.
 
-    * `:init` - Method for initialization (Defaults to `:k_means_plus_plus`):
+    * `:init` - Method for centroid initialization, either of:
 
-        * `:k_means_plus_plus` -  selects initial cluster centroids using sampling based on an empirical probability
-         distribution of the points’ contribution to the overall inertia.
+        * `:k_means_plus_plus` (default) -  selects initial cluster centroids using sampling based on
+          an empirical probability distribution of the points’ contribution to the overall inertia.
          This technique speeds up convergence, and is theoretically proven to be O(log(k))-optimal.
 
-        * `:random` - choose :num_clusters observations (rows) at random from data for the initial centroids.
+        * `:random` - choose `:num_clusters` observations (rows) at random from data for the initial centroids.
 
   ## Returns
 
