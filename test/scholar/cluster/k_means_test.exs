@@ -1,37 +1,54 @@
 defmodule Scholar.Cluster.KMeansTest do
   use ExUnit.Case, async: true
 
+  import Nx.Defn
+
+  # Reorders clusters according to the first coordinate
+  defnp sort_clusters(clusters, labels) do
+    order = Nx.argsort(clusters[0..-1//1], axis: 0)
+            |> Nx.slice_along_axis(0, 1, axis: 1)
+            |> Nx.squeeze()
+    labels_maping = Nx.argsort(order)
+    {Nx.take(clusters, order), Nx.take(labels_maping, labels)}
+  end
+
   test "without weights" do
     model =
       Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
-        num_clusters: 2,
-        random_state: 42
+        num_clusters: 2
       )
 
-    assert model.clusters == Nx.tensor([[2.0, 4.5], [1.0, 2.5]])
+    {oredered_clusters, ordered_labels} = sort_clusters(model.clusters, model.labels)
+    model = %{model | :labels => ordered_labels}
+    model = %{model | :clusters => oredered_clusters}
+
+    assert model.clusters == Nx.tensor([[1.0, 2.5], [2.0, 4.5]])
     assert model.inertia == Nx.tensor(1.0, type: {:f, 32})
-    assert model.labels == Nx.tensor([1, 0, 1, 0])
+    assert model.labels == Nx.tensor([0, 1, 0, 1])
     assert model.num_iterations == Nx.tensor(2)
 
     predictions = Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
-    assert predictions == Nx.tensor([0, 1])
+    assert predictions == Nx.tensor([1, 0])
   end
 
   test "with weights" do
     model =
       Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
         num_clusters: 2,
-        random_state: 42,
         weights: [1, 2, 3, 4]
       )
 
-    assert model.clusters == Nx.tensor([[2.0, 4.75], [1.0, 2.75]])
+    {oredered_clusters, ordered_labels} = sort_clusters(model.clusters, model.labels)
+    model = %{model | :labels => ordered_labels}
+    model = %{model | :clusters => oredered_clusters}
+
+    assert model.clusters == Nx.tensor([[1.0, 2.75], [2.0, 4.75]])
     assert model.inertia == Nx.tensor(1.5, type: {:f, 32})
-    assert model.labels == Nx.tensor([1, 0, 1, 0])
+    assert model.labels == Nx.tensor([0, 1, 0, 1])
     assert model.num_iterations == Nx.tensor(2)
 
     predictions = Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
-    assert predictions == Nx.tensor([0, 1])
+    assert predictions == Nx.tensor([1, 0])
   end
 
   describe "errors" do
@@ -114,16 +131,6 @@ defmodule Scholar.Cluster.KMeansTest do
                    "expected :tol to be a non-negative number, got: -0.1",
                    fn ->
                      Scholar.Cluster.KMeans.fit(x, num_clusters: 2, tol: -0.1)
-                   end
-    end
-
-    test "when :random_state is neither nil nor a positive integer" do
-      x = Nx.tensor([[1, 2], [3, 4]])
-
-      assert_raise ArgumentError,
-                   "expected :random_state to be an integer or nil, got: :abc",
-                   fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, random_state: :abc)
                    end
     end
 

@@ -24,10 +24,6 @@ defmodule Scholar.Cluster.KMeans do
     * `:tol` - Relative tolerance with regards to Frobenius norm of the difference in the cluster centers of two
       consecutive iterations to declare convergence. Defaults to `1e-4`.
 
-    * `:random_state` - Determines random number generation for centroid initialization.
-      Use an int to make the randomness deterministic.
-      The argument `nil` is special and means that the seed is not set. Defaults to `nil`.
-
     * `:weights` - The weights for each observation in x. If equals to `nil`, all observations
       are assigned equal weight.
 
@@ -61,7 +57,6 @@ defmodule Scholar.Cluster.KMeans do
           max_iterations: 300,
           num_runs: 10,
           tol: 1.0e-4,
-          random_state: nil,
           init: :k_means_plus_plus,
           weights: nil
         ]
@@ -277,15 +272,6 @@ defmodule Scholar.Cluster.KMeans do
     unless is_number(opts[:tol]) and opts[:tol] >= 0 do
       raise ArgumentError,
             "expected :tol to be a non-negative number, got: #{inspect(opts[:tol])}"
-    end
-
-    unless is_integer(opts[:random_state]) or is_nil(opts[:random_state]) do
-      raise ArgumentError,
-            "expected :random_state to be an integer or nil, got: #{inspect(opts[:random_state])}"
-    end
-
-    if opts[:random_state] != nil do
-      :rand.seed(:exsss, opts[:random_state])
     end
   end
 
