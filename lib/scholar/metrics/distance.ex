@@ -108,9 +108,7 @@ defmodule Scholar.Metrics.Distance do
 
     opts = keyword!(opts, [:axes])
 
-    x
-    |> Nx.subtract(y)
-    |> Nx.power(2)
+    ((x - y) ** 2)
     |> Nx.sum(axes: opts[:axes])
     |> as_float()
   end
@@ -164,8 +162,7 @@ defmodule Scholar.Metrics.Distance do
 
     opts = keyword!(opts, [:axes])
 
-    x
-    |> Nx.subtract(y)
+    (x - y)
     |> Nx.abs()
     |> Nx.sum(axes: opts[:axes])
     |> as_float()
@@ -220,8 +217,7 @@ defmodule Scholar.Metrics.Distance do
 
     opts = keyword!(opts, [:axes])
 
-    x
-    |> Nx.subtract(y)
+    (x - y)
     |> Nx.abs()
     |> Nx.reduce_max(axes: opts[:axes])
     |> as_float()
@@ -301,8 +297,7 @@ defmodule Scholar.Metrics.Distance do
         euclidean(x, y, axes: opts[:axes])
 
       true ->
-        x
-        |> Nx.subtract(y)
+        (x - y)
         |> Nx.abs()
         |> Nx.power(p)
         |> Nx.sum(axes: opts[:axes])
