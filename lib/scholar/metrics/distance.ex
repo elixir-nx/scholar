@@ -381,7 +381,7 @@ defmodule Scholar.Metrics.Distance do
     norm_y = Nx.select(norm_y > cutoff, norm_y, 1.0)
     normalized_y = y / norm_y
 
-    res = normalized_x * normalized_y |> Nx.sum(axes: opts[:axes])
+    res = (normalized_x * normalized_y) |> Nx.sum(axes: opts[:axes])
     res = Nx.select(one_zero?, 0.0, res)
     1.0 - Nx.select(both_zero?, 1.0, res)
   end
