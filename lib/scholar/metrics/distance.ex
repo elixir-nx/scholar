@@ -372,8 +372,11 @@ defmodule Scholar.Metrics.Distance do
     norm_x = Nx.squeeze(norm_x, axes: opts[:axes])
     norm_y = Nx.squeeze(norm_y, axes: opts[:axes])
 
-    both_zero? = norm_x == 0.0 and norm_y == 0.0
-    one_zero? = Nx.logical_xor(norm_x == 0.0, norm_y == 0.0)
+    x_zero? = norm_x == 0.0
+    y_zero? = norm_y == 0.0
+
+    both_zero? = x_zero? and y_zero?
+    one_zero? = Nx.logical_xor(x_zero?, y_zero?)
 
     res = (normalized_x * normalized_y) |> Nx.sum(axes: opts[:axes])
     res = Nx.select(one_zero?, 0.0, res)
