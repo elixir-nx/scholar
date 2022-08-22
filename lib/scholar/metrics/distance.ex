@@ -371,20 +371,20 @@ defmodule Scholar.Metrics.Distance do
     if Nx.all(x == y) do
       0.0
     else
-      x_squared = x |> then(&Nx.multiply(&1, &1))
-      y_squared = y |> then(&Nx.multiply(&1, &1))
+      x_squared = x * x
+      y_squared = y * y
 
       norm_x =
         x_squared
         |> Nx.sum(axes: opts[:axes], keep_axes: true)
         |> Nx.sqrt()
-        |> Nx.broadcast(Nx.shape(x))
+        |> Nx.broadcast(x)
 
       norm_y =
         y_squared
         |> Nx.sum(axes: opts[:axes], keep_axes: true)
         |> Nx.sqrt()
-        |> Nx.broadcast(Nx.shape(y))
+        |> Nx.broadcast(y)
 
       norm_x_mask =
         x_squared
