@@ -5,11 +5,7 @@ defmodule Scholar.Cluster.KMeansTest do
 
   # Reorders clusters according to the first coordinate
   defnp sort_clusters(clusters, labels) do
-    order =
-      Nx.argsort(clusters[0..-1//1], axis: 0)
-      |> Nx.slice_along_axis(0, 1, axis: 1)
-      |> Nx.squeeze()
-
+    order = Nx.argsort(clusters[[0..-1//1, 0]])
     labels_maping = Nx.argsort(order)
     {Nx.take(clusters, order), Nx.take(labels_maping, labels)}
   end
