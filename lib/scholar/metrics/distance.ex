@@ -368,18 +368,17 @@ defmodule Scholar.Metrics.Distance do
       |> Nx.sum(axes: opts[:axes], keep_axes: true)
       |> Nx.sqrt()
 
-    norm_x_mask = norm_x |> Nx.squeeze()
-
-    norm_y_mask = norm_y |> Nx.squeeze()
-
-    both_zero? = norm_x_mask == 0.0 and norm_y_mask == 0.0
-    one_zero? = Nx.logical_xor(norm_x_mask == 0.0, norm_y_mask == 0.0)
-
     norm_x = Nx.select(norm_x > cutoff, norm_x, 1.0)
     normalized_x = x / norm_x
 
     norm_y = Nx.select(norm_y > cutoff, norm_y, 1.0)
     normalized_y = y / norm_y
+
+    norm_x = Nx.squeeze(norm_x, axes: opts[:axes])
+    norm_y = Nx.squeeze(norm_y, axes: opts[:axes])
+
+    both_zero? = norm_x == 0.0 and norm_y == 0.0
+    one_zero? = Nx.logical_xor(norm_x == 0.0, norm_y == 0.0)
 
     res = (normalized_x * normalized_y) |> Nx.sum(axes: opts[:axes])
     res = Nx.select(one_zero?, 0.0, res)
