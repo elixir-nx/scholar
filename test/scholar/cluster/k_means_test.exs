@@ -4,10 +4,15 @@ defmodule Scholar.Cluster.KMeansTest do
   import Nx.Defn
 
   # Reorders clusters according to the first coordinate
-  defnp sort_clusters(clusters, labels) do
-    order = Nx.argsort(clusters[[0..-1//1, 0]])
+  defnp sort_clusters(model) do
+    order = Nx.argsort(model.clusters[[0..-1//1, 0]])
     labels_maping = Nx.argsort(order)
-    {Nx.take(clusters, order), Nx.take(labels_maping, labels)}
+
+    %{
+      model
+      | labels: Nx.take(labels_maping, model.labels),
+        clusters: Nx.take(model.clusters, order)
+    }
   end
 
   test "without weights" do
@@ -16,10 +21,7 @@ defmodule Scholar.Cluster.KMeansTest do
         num_clusters: 2
       )
 
-    {oredered_clusters, ordered_labels} = sort_clusters(model.clusters, model.labels)
-    model = %{model | :labels => ordered_labels}
-    model = %{model | :clusters => oredered_clusters}
-
+    model = sort_clusters(model)
     assert model.clusters == Nx.tensor([[1.0, 2.5], [2.0, 4.5]])
     assert model.inertia == Nx.tensor(1.0, type: {:f, 32})
     assert model.labels == Nx.tensor([0, 1, 0, 1])
@@ -36,9 +38,7 @@ defmodule Scholar.Cluster.KMeansTest do
         weights: [1, 2, 3, 4]
       )
 
-    {oredered_clusters, ordered_labels} = sort_clusters(model.clusters, model.labels)
-    model = %{model | :labels => ordered_labels}
-    model = %{model | :clusters => oredered_clusters}
+    model = sort_clusters(model)
 
     assert model.clusters == Nx.tensor([[1.0, 2.75], [2.0, 4.75]])
     assert model.inertia == Nx.tensor(1.5, type: {:f, 32})
