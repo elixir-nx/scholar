@@ -83,7 +83,7 @@ defmodule Scholar.Cluster.KMeans do
     distance = Nx.broadcast(inf, {num_runs})
     tol = (x |> Nx.variance(axes: [0]) |> Nx.mean()) * opts[:tol]
 
-    {i,_, _, _, _, _, _, _, _, final_centroids, nearest_centroids} =
+    {i, _, _, _, _, _, _, _, _, final_centroids, nearest_centroids} =
       while {i = 0, tol, x, previous_iteration_centroids = Nx.broadcast(inf, centroids), distance,
              inertia = Nx.broadcast(0.0, {num_runs}), weights, broadcast_weights, broadcast_x,
              centroids, nearest_centroids = Nx.broadcast(-1, {num_runs, num_samples})},
@@ -111,8 +111,8 @@ defmodule Scholar.Cluster.KMeans do
 
         distance = Nx.sum((centroids - previous_iteration_centroids) ** 2, axes: [1, 2])
 
-        {i + 1, tol, x, previous_iteration_centroids, distance, inertia, weights, broadcast_weights,
-         broadcast_x, centroids, nearest_centroids}
+        {i + 1, tol, x, previous_iteration_centroids, distance, inertia, weights,
+         broadcast_weights, broadcast_x, centroids, nearest_centroids}
       end
 
     {_inertia_for_centroids, min_inertia} =
