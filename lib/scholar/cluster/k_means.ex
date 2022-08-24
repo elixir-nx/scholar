@@ -132,6 +132,7 @@ defmodule Scholar.Cluster.KMeans do
   defnp initialize_centroids(x, opts) do
     num_clusters = opts[:num_clusters]
     {num_samples, _num_features} = Nx.shape(x)
+    x = Scholar.Cluster.Utils.to_float(x)
     num_runs = opts[:num_runs]
 
     case opts[:init] do
@@ -183,58 +184,23 @@ defmodule Scholar.Cluster.KMeans do
     {num_samples, num_features} = Nx.shape(x)
     centroids = Nx.broadcast(inf, {num_runs, num_clusters, num_features})
     inertia = Nx.broadcast(0.0, {num_runs, num_samples})
-    centroid_mask = Nx.broadcast(1, {num_runs, num_samples})
 
     first_centroid_idx = Nx.random_uniform({num_runs}, 0, num_samples - 1, type: {:u, 32})
+    first_centroid = Nx.take(x, first_centroid_idx)
+    centroids = Nx.put_slice(centroids, [0, 0, 0], Nx.new_axis(first_centroid, 1))
 
-    first_centroid = Nx.take(x, first_centroid_idx) |> Nx.flatten()
-
-    indices_centroids =
-      Nx.stack(
-        [
-          Nx.flatten(Nx.iota({num_runs, num_features}, axis: 0)),
-          Nx.broadcast(0, {num_runs * num_features}),
-          Nx.tile(Nx.iota({num_features}), [num_runs])
-        ],
-        axis: -1
-      )
-
-    centroids = Nx.indexed_put(centroids, indices_centroids, first_centroid)
-
-    indices_mask = Nx.stack([Nx.iota({num_runs}), first_centroid_idx], axis: -1)
-
-    centroid_mask = Nx.indexed_put(centroid_mask, indices_mask, Nx.broadcast(0, {num_runs}))
-
-    {_, _, _, _, final_centroids} =
-      while {idx = 1, centroid_mask, x, inertia, centroids},
-            Nx.less(idx, num_clusters) do
+    {_, _, _, final_centroids} =
+      while {idx = 1, x, inertia, centroids}, idx < num_clusters do
         {_inertia_for_centroids, min_inertia} =
           calculate_inertia(x, centroids, num_clusters, num_runs)
 
-        {new_centroid, centroid_idx} = find_new_centroid(min_inertia, x, num_clusters, num_runs)
-
-        indices_centroids =
-          Nx.stack(
-            [
-              Nx.flatten(Nx.iota({num_runs, num_features}, axis: 0)),
-              Nx.broadcast(idx, {num_runs * num_features}),
-              Nx.tile(Nx.iota({num_features}), [num_runs])
-            ],
-            axis: -1
-          )
-
-        centroids = Nx.indexed_put(centroids, indices_centroids, Nx.flatten(new_centroid))
-
-        indices_mask = Nx.stack([Nx.iota({num_runs}), centroid_idx], axis: -1)
-
-        centroid_mask = Nx.indexed_put(centroid_mask, indices_mask, Nx.broadcast(0, {num_runs}))
-        {idx + 1, centroid_mask, x, inertia, centroids}
+        {new_centroid, _centroid_idx} = find_new_centroid(min_inertia, x, num_clusters, num_runs)
+        centroids = Nx.put_slice(centroids, [0, idx, 0], Nx.new_axis(new_centroid, 1))
+        {idx + 1, x, inertia, centroids}
       end
 
     final_centroids
   end
-
-  # Function checks validity of the provided data
 
   deftransformp verify(x, opts) do
     if Nx.rank(x) != 2 do
