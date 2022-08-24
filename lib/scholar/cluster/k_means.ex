@@ -166,17 +166,12 @@ defmodule Scholar.Cluster.KMeans do
     {inertia_for_centroids, Nx.reduce_min(inertia_for_centroids, axes: [1])}
   end
 
-  defnp generate_idx(mod_weights, num_runs) do
+  defnp find_new_centroid(weights, x, num_runs) do
     rand = Nx.random_uniform({num_runs}, 0, 1, type: {:f, 32})
-    val = (rand * Nx.sum(mod_weights, axes: [1])) |> Nx.new_axis(-1)
-    cumulative_weights = Nx.cumulative_sum(mod_weights, axis: 1)
-    (val <= cumulative_weights) |> Nx.argmax(tie_break: :low, axis: 1)
-  end
-
-  defnp find_new_centroid(weights, x, centroid_mask, num_runs) do
-    mod_weights = weights * centroid_mask
-    idx = generate_idx(mod_weights, num_runs)
-    {Nx.take(x, idx), idx}
+    val = (rand * Nx.sum(weights, axes: [1])) |> Nx.new_axis(-1)
+    cumulative_weights = Nx.cumulative_sum(weights, axis: 1)
+    idx = (val <= cumulative_weights) |> Nx.argmax(tie_break: :low, axis: 1)
+    Nx.take(x, idx)
   end
 
   defnp k_means_plus_plus(x, num_clusters, num_runs) do
@@ -194,7 +189,7 @@ defmodule Scholar.Cluster.KMeans do
         {_inertia_for_centroids, min_inertia} =
           calculate_inertia(x, centroids, num_clusters, num_runs)
 
-        {new_centroid, _centroid_idx} = find_new_centroid(min_inertia, x, num_clusters, num_runs)
+        new_centroid = find_new_centroid(min_inertia, x, num_runs)
         centroids = Nx.put_slice(centroids, [0, idx, 0], Nx.new_axis(new_centroid, 1))
         {idx + 1, x, inertia, centroids}
       end
