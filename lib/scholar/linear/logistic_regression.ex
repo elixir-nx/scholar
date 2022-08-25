@@ -109,7 +109,7 @@ defmodule Scholar.Linear.LogisticRegression do
     {_, _, _, _, _, _, _, final_coeff} =
       while {iter = 0, x, learning_rate, n, iterations, one_hot, x_t,
              coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n, num_classes})},
-            Nx.less(iter, iterations) do
+            iter < iterations do
         coeff = update_coefficients_multinomial(x, x_t, one_hot, coeff, learning_rate)
         {iter + 1, x, learning_rate, n, iterations, one_hot, x_t, coeff}
       end
@@ -139,8 +139,7 @@ defmodule Scholar.Linear.LogisticRegression do
       |> then(&(1 / &1))
 
     diff =
-      logit
-      |> Nx.subtract(y_t)
+      (logit - y_t)
       |> Nx.reshape({m})
 
     coeff_diff =
@@ -201,7 +200,6 @@ defmodule Scholar.Linear.LogisticRegression do
 
   defnp predict_multinomial(%__MODULE__{coefficients: coeff}, x) do
     dot_prod = Nx.dot(x, coeff)
-    prob = softmax(dot_prod)
-    Nx.argmax(prob, axis: 1)
+    Nx.argmax(dot_prod, axis: 1)
   end
 end
