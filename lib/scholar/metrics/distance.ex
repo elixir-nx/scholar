@@ -46,7 +46,7 @@ defmodule Scholar.Metrics.Distance do
       iex> Scholar.Metrics.Distance.euclidean(x, y, axes: [0])
       #Nx.Tensor<
         f32[3]
-        [7.071067810058594, 1.4142135381698608, 4.123106002807617]
+        [7.071067810058594, 1.4142135381698608, 4.123105525970459]
       >
   """
   @spec euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
@@ -56,7 +56,10 @@ defmodule Scholar.Metrics.Distance do
     opts = keyword!(opts, [:axes])
 
     diff = x - y
-    Nx.LinAlg.norm(diff, axes: opts[:axes])
+
+    (diff * diff)
+    |> Nx.sum(axes: opts[:axes])
+    |> Nx.sqrt()
   end
 
   @doc """
@@ -108,7 +111,9 @@ defmodule Scholar.Metrics.Distance do
 
     opts = keyword!(opts, [:axes])
 
-    ((x - y) ** 2)
+    diff = x - y
+
+    (diff * diff)
     |> Nx.sum(axes: opts[:axes])
     |> as_float()
   end
