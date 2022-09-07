@@ -243,7 +243,7 @@ defmodule Scholar.Cluster.KMeans do
   It returns a tensor with clusters corresponding to the input.
   """
 
-  defn predict(%__MODULE__{clusters: clusters} = _module, x) do
+  defn predict(%__MODULE__{clusters: clusters}, x) do
     assert_same_shape!(x[0], clusters[0])
     {num_clusters, _} = Nx.shape(clusters)
     {num_samples, num_features} = Nx.shape(x)
@@ -263,6 +263,20 @@ defmodule Scholar.Cluster.KMeans do
       |> Nx.reshape({num_clusters, num_samples})
 
     inertia_for_centroids |> Nx.argmin(axis: 0)
+  end
+
+  @doc """
+  For model and input `x` function calculate distances between each sample from `x` and centroids
+  """
+
+  defn transform(%__MODULE__{clusters: clusters}, x) do
+    Nx.subtract(
+      Nx.new_axis(x, 1),
+      Nx.new_axis(clusters, 0)
+    )
+    |> Nx.power(2)
+    |> Nx.sum(axes: [-1])
+    |> Nx.sqrt()
   end
 
   deftransformp validate_weights(weights, num_samples, num_runs) do

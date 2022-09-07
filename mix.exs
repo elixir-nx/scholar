@@ -5,7 +5,7 @@ defmodule Scholar.MixProject do
     [
       app: :scholar,
       version: "0.1.0",
-      elixir: "~> 1.13",
+      elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       docs: docs()
@@ -21,8 +21,8 @@ defmodule Scholar.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
-      {:nx, "~> 0.3"},
-      {:explorer, "~> 0.2.0", only: [:test, :dev]}
+      {:nx, github: "elixir-nx/nx", sparse: "nx"},
+      {:explorer, "~> 0.3.0", only: [:test, :dev]}
     ]
   end
 
