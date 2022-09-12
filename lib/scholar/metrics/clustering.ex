@@ -7,6 +7,7 @@ defmodule Scholar.Metrics.Clustering do
 
   @doc """
   Compute the Silhouette Coefficient for each sample.
+
   The silhouette value is a measure of how similar an object is to its own cluster (cohesion)
   compared to other clusters (separation). The silhouette ranges from −1 to +1, where a high
   value indicates that the object is well matched to its own cluster and poorly
