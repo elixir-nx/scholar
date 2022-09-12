@@ -130,7 +130,7 @@ defmodule Scholar.Cluster.KMeans do
   defnp initialize_centroids(x, opts) do
     num_clusters = opts[:num_clusters]
     {num_samples, _num_features} = Nx.shape(x)
-    x = Scholar.Cluster.Utils.to_float(x)
+    x = to_float(x)
     num_runs = opts[:num_runs]
 
     case opts[:init] do
@@ -155,9 +155,10 @@ defmodule Scholar.Cluster.KMeans do
       |> Nx.reshape({num_runs, num_clusters * num_samples, num_features})
 
     inertia_for_centroids =
-      Scholar.Cluster.Utils.squared_euclidean(
+      Scholar.Metrics.Distance.squared_euclidean(
         Nx.tile(x, [num_runs, num_clusters, 1]),
-        modified_centroids
+        modified_centroids,
+        axes: [2]
       )
       |> Nx.reshape({num_runs, num_clusters, num_samples})
 
@@ -258,10 +259,10 @@ defmodule Scholar.Cluster.KMeans do
       |> Nx.reshape({num_clusters * num_samples, num_features})
 
     inertia_for_centroids =
-      Scholar.Cluster.Utils.squared_euclidean(
+      Scholar.Metrics.Distance.squared_euclidean(
         Nx.tile(x, [num_clusters, 1]),
         clusters,
-        axes: 1
+        axes: [1]
       )
       |> Nx.reshape({num_clusters, num_samples})
 
@@ -298,5 +299,10 @@ defmodule Scholar.Cluster.KMeans do
       raise ArgumentError,
             "expected :weights to be a list of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
     end
+  end
+
+  deftransform to_float(tensor) do
+    type = tensor |> Nx.type() |> Nx.Type.to_floating()
+    Nx.as_type(tensor, type)
   end
 end
