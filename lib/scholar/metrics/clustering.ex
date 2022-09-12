@@ -70,7 +70,6 @@ defmodule Scholar.Metrics.Clustering do
         -0.35132789611816406
       >
   """
-
   defn silhouette_score(x, labels, opts \\ []) do
     Nx.mean(silhouette_samples(x, labels, opts))
   end
