@@ -8,7 +8,7 @@ Mix.install(
     {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
     {:exla, "~> 0.3"},
     {:explorer, "~> 0.2.0"},
-    {:scholar, path: "/home/mateusz/Dashbit/scholar"},
+    {:scholar, github: "elixir-nx/scholar"},
     {:vega_lite, "~> 0.1.6"},
     {:jason, "~> 1.2"},
     {:kino_vega_lite, "~> 0.1.3"},
