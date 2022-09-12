@@ -11,7 +11,9 @@ Mix.install(
     {:scholar, path: "/home/mateusz/Dashbit/scholar"},
     {:vega_lite, "~> 0.1.6"},
     {:jason, "~> 1.2"},
-    {:kino_vega_lite, "~> 0.1.3"}
+    {:kino_vega_lite, "~> 0.1.3"},
+    {:scidata, "~> 0.1.9"},
+    {:req, "~> 0.2.0"}
   ],
   config: [
     nx: [default_defn_options: [compiler: EXLA]]
@@ -182,9 +184,7 @@ coords = [
   x_coords: for(i <- [0, 2, 4], do: Enum.at(coords, i)),
   y_coords: for(i <- [1, 3, 5], do: Enum.at(coords, i))
 ]
-```
 
-```elixir
 Vl.new(
   width: 300,
   height: 300,
@@ -220,26 +220,29 @@ The other interesting use case of KMeans clustering is pixel clustering. This te
 Let us start with loading the referral image.
 
 ```elixir
-{:ok, img} = StbImage.read_file("../scholar/test/data/taj_mahal.jpg")
-content = StbImage.to_binary(img, :jpg)
-shape = img.shape
-original_image = Kino.Image.new(content, :jpeg)
+url =
+  "https://pix4free.org/assets/library/2021-01-12/originals/san_francisco_california_golden_gate_bridge_water.jpg"
+
+%{body: raw_image} = Req.get!(url)
+image = StbImage.read_binary!(raw_image)
+{height, width, num_channels} = image.shape
+new_height = div(height, 3)
+new_width = div(width, 3)
+new_shape = {new_height, new_width, 3}
+image = StbImage.resize(image, new_height, new_width)
+binary_image = StbImage.to_binary(image, :jpg)
+original_image = Kino.Image.new(binary_image, :jpeg)
 ```
 
 Now we will try to use only ten colors to represent the same picture.
 
 ```elixir
-x = StbImage.to_nx(img) |> Nx.reshape({:auto, 3})
-
+x = image |> StbImage.to_nx() |> Nx.reshape({:auto, 3})
 k_means = Scholar.Cluster.KMeans.fit(x, num_clusters: 10, num_runs: 10, max_iterations: 200)
-```
 
-```elixir
 new_img = Nx.take(k_means.clusters, k_means.labels)
-new_img_reshaped = new_img |> Nx.reshape(shape) |> Nx.round() |> Nx.as_type({:u, 8})
-```
+new_img_reshaped = new_img |> Nx.reshape(new_shape) |> Nx.round() |> Nx.as_type({:u, 8})
 
-```elixir
 binary_new_img = StbImage.from_nx(new_img_reshaped)
 new_content = StbImage.to_binary(binary_new_img, :jpg)
 Kino.Image.new(new_content, :jpeg)
@@ -253,25 +256,19 @@ models = for i <- [5, 10, 15, 20, 40], do: Scholar.Cluster.KMeans.fit(x, num_clu
 
 ```elixir
 new_images = for model <- models, do: Nx.take(model.clusters, model.labels)
-```
 
-```elixir
 results =
   Enum.map_every(new_images, 1, fn x ->
     x
-    |> Nx.reshape(shape)
+    |> Nx.reshape(new_shape)
     |> Nx.round()
     |> Nx.as_type({:u, 8})
     |> StbImage.from_nx()
     |> StbImage.to_binary(:jpg)
   end)
-```
 
-```elixir
 kino_images = Enum.map_every(results, 1, fn x -> Kino.Image.new(x, :jpeg) end)
-```
 
-```elixir
 grid_content =
   Enum.zip(
     for(i <- [5, 10, 15, 20, 40], do: Kino.Markdown.new("### Number of colors: #{i}")) ++
@@ -283,37 +280,74 @@ grid_content =
   Enum.reduce(grid_content, [], fn {x, y}, acc ->
     acc ++ [Kino.Layout.grid([x, y], boxed: true)]
   end)
-```
 
-```elixir
 Kino.Layout.grid(grid_content, columns: 2)
 ```
 
-Look that even with only five colors can recognize the Taj Mahal in the image. On the other hand with only 40 colors we keep almost all details except the sky and water surface. The reason why these two spaces do not map well is that there is a small gradient in changing colors. Pixel clustering is a great way to compress images drastically with small integration in them.
+Look that even with only five colors can recognize the Golden Gate Bridge in the image. On the other hand with only 40 colors we keep almost all details except the sky and water surface. The reason why these two spaces do not map well is that there is a small gradient in changing colors. Pixel clustering is a great way to compress images drastically with small integration in them.
 
-## Clustering Face Images from Olivetti Dataset
+## Clustering Face Images from Fashion-MNIST
 
-The last example is the clustering problem on Olivetti Dataset. The dataset consists of four hundred images 64 by 64 pixels. They present forty people with ten images per each one. Let's dive into this clustering problem.
+The last example is the clustering problem on Fashion-MNIST Dataset. The dataset consists of 60000 images 28 by 28 pixels. They present ten different parts of clothing. Let's dive into this clustering problem.
 
 <!-- livebook:{"break_markdown":true} -->
+
+Before we start, we define the StratifiedSplit module. The module trims input data and splits it, so the number of samples per class is the same for each.
+
+```elixir
+defmodule StratifiedSplit do
+  defn trim_samples(x, labels, opts \\ []) do
+    opts = keyword!(opts, [:num_classes, :samples_per_class])
+
+    num_classes = opts[:num_classes]
+    samples_per_class = opts[:samples_per_class]
+
+    membership_mask = Nx.iota({1, num_classes}) == Nx.reshape(labels, {:auto, 1})
+
+    indices =
+      membership_mask
+      |> Nx.argsort(axis: 0, direction: :desc)
+      |> Nx.slice_along_axis(0, samples_per_class, axis: 0)
+      |> Nx.flatten()
+
+    {Nx.take(x, indices), Nx.take(labels, indices)}
+  end
+end
+```
 
 Firstly, load the data and cast it into Nx tensors.
 
 ```elixir
-olivetti_data = Explorer.DataFrame.from_csv!("../scholar/test/data/olivetti_data.csv")
-olivetti_target = Explorer.DataFrame.from_csv!("../scholar/test/data/olivetti_target.csv")
-```
+{data, target} = Scidata.FashionMNIST.download()
+{images_binary, images_type, images_shape} = data
 
-```elixir
-olivetti_data = olivetti_data |> Datasets.df_to_matrix() |> Nx.transpose()
-olivetti_target = olivetti_target |> Datasets.df_to_matrix() |> Nx.transpose()
-```
+{num_samples, _, image_height, image_width} = images_shape
 
-```elixir
-image_width = 64
-image_height = 64
+num_classes = 10
+samples_per_class = 20
 
-num_images = 400
+images =
+  images_binary
+  |> Nx.from_binary(images_type)
+  |> Nx.reshape({num_samples, :auto})
+  |> Nx.divide(255)
+
+{labels_binary, labels_type, _shape} = target
+
+target =
+  labels_binary
+  |> Nx.from_binary(labels_type)
+
+{images, target} =
+  StratifiedSplit.trim_samples(images, target,
+    num_classes: num_classes,
+    samples_per_class: samples_per_class
+  )
+
+num_images = num_classes * samples_per_class
+
+images = images[[0..(num_images - 1)]]
+target = target[[0..(num_images - 1)]]
 ```
 
 The `ToImage` module will provide us with a function that will cast tensors into Kino.Image objects.
@@ -328,7 +362,7 @@ defmodule ToImage do
     |> Nx.multiply(255)
     |> Nx.as_type({:u, 8})
     |> StbImage.from_nx()
-    |> StbImage.resize(200, 200)
+    |> StbImage.resize(112, 112)
     |> StbImage.to_binary(:png)
     |> Kino.Image.new(:png)
   end
@@ -338,140 +372,53 @@ end
 Here is one of the images.
 
 ```elixir
-olivetti_data[[0, 0..-1//1]] |> ToImage.tensor_to_image(image_height, image_width)
+images[[0, 0..-1//1]] |> ToImage.tensor_to_image(image_height, image_width)
 ```
 
-We define the `Dist` module, which helps us implement Silhouette scoring. Function `euclidean` simply calculates the euclidean distance between a pair of tensors.
+We will try some different numbers of clusters and then measure the quality of clustering.
 
 ```elixir
-defmodule Dist do
-  deftransform assert_same_shape!(lhs, rhs) do
-    lhs = Nx.shape(lhs)
-    rhs = Nx.shape(rhs)
+nums_clusters = 2..20
 
-    unless lhs == rhs do
-      raise ArgumentError,
-            "expected input shapes to be equal," <>
-              " got #{inspect(lhs)} != #{inspect(rhs)}"
-    end
-  end
-
-  @spec euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
-  defn euclidean(x, y, opts \\ []) do
-    assert_same_shape!(x, y)
-
-    opts = keyword!(opts, [:axes])
-
-    diff = x - y
-
-    (diff * diff)
-    |> Nx.sum(axes: opts[:axes])
-    |> Nx.sqrt()
-  end
-end
-```
-
-Now we can implement the `Silhouette` module, which will enable us to calculate the silhouette score - the indicator of how good given clustering is.
-
-```elixir
-defmodule Silhouette do
-  defnp inner_dist(labels, x) do
-    {num_samples, num_features} = Nx.shape(x)
-
-    expanded_points =
-      Nx.tile(x, [1, num_samples]) |> Nx.reshape({num_samples, num_samples, num_features})
-
-    labels_vectorize = Nx.broadcast(labels, {num_samples, num_samples}) |> Nx.transpose()
-
-    mask_zero_one =
-      labels_vectorize ==
-        Nx.tile(labels, [1, num_samples]) |> Nx.reshape({num_samples, num_samples})
-
-    denominator = Nx.sum(mask_zero_one, axes: [1]) |> Nx.reshape({num_samples, 1}) |> Nx.squeeze()
-
-    indices_to_zero = Nx.equal(denominator, 1)
-
-    denominator = Nx.select(Nx.greater(denominator, 1), denominator - 1, 1)
-
-    mask =
-      mask_zero_one
-      |> Nx.select(
-        Nx.tile(Nx.iota({num_samples}), [num_samples, 1]),
-        Nx.broadcast(Nx.iota({num_samples, 1}), {num_samples, num_samples})
-      )
-
-    points = Nx.take(x, mask)
-
-    {Nx.sum(
-       Dist.euclidean(
-         expanded_points,
-         points,
-         axes: [2]
-       ),
-       axes: [1]
-     ) / denominator, indices_to_zero}
-  end
-
-  defnp outer_dist(labels, x, opts \\ []) do
-    num_clusters = opts[:num_clusters]
-    {num_samples, num_features} = Nx.shape(x)
-    inf = Nx.Constants.infinity()
-
-    x_a =
-      x
-      |> Nx.reshape({1, num_samples, num_features})
-      |> Nx.broadcast({num_samples, num_samples, num_features})
-
-    x_b =
-      x
-      |> Nx.reshape({num_samples, 1, num_features})
-      |> Nx.broadcast({num_samples, num_samples, num_features})
-
-    pairwise_dist = Dist.euclidean(x_a, x_b, axes: [2])
-
-    labels_vectorize = Nx.tile(labels, [num_clusters, 1])
-    Nx.iota({num_clusters, num_samples}, axis: 0)
-    mask = labels_vectorize == Nx.iota({num_clusters, num_samples}, axis: 0)
-    denominator = mask |> Nx.sum(axes: [1]) |> Nx.broadcast({num_samples, num_clusters})
-    results = Nx.dot(mask, pairwise_dist) |> Nx.transpose()
-    results = Nx.select(Nx.transpose(mask), inf, results)
-    results = results / denominator
-
-    Nx.reduce_min(results, axes: [1])
-  end
-
-  defn silhouette_samples(labels, x, opts \\ []) do
-    outer = outer_dist(labels, x, opts)
-    {inner, indices_to_zero} = inner_dist(labels, x)
-    result = (outer - inner) / Nx.max(outer, inner)
-    Nx.select(indices_to_zero, 0, result)
-  end
-
-  defn silhouette_score(labels, x, opts \\ []) do
-    Nx.mean(silhouette_samples(labels, x, opts))
-  end
-end
-```
-
-We will try some different numbers of clusters and then compare which clustering was the best with `silhouette_score`. The following cell might calculate a while.
-
-```elixir
 models =
-  for num_clusters <- [40, 80, 120, 160],
-      do: Scholar.Cluster.KMeans.fit(olivetti_data, num_clusters: num_clusters)
+  for num_clusters <- nums_clusters,
+      do: Scholar.Cluster.KMeans.fit(images, num_clusters: num_clusters)
 ```
+
+```elixir
+inertia_of_models = for model <- models, do: Nx.to_number(model.inertia)
+data = [num_clusters: nums_clusters, inertia: inertia_of_models]
+
+Vl.new(width: 600, height: 300, title: "Elbow Plot")
+|> Vl.data_from_values(data)
+|> Vl.mark(:line)
+|> Vl.encode_field(:x, "num_clusters",
+  title: "Number of Clusters",
+  type: :ordinal,
+  axis: [label_angle: 0]
+)
+|> Vl.encode_field(:y, "inertia",
+  title: "Inertia",
+  type: :quantitative,
+  scale: [domain: [4800, 11500]]
+)
+```
+
+Look that this time there is no elbow on a plot. We need to use a different method to predict the number of classes. Now we will use *Silhouette Score*. It is a metric that indicates the quality of clustering. The higher score the better clustering. However, we should be aware that Silhouette Score is just a heuristic and not always works.
 
 ```elixir
 silhouette_scores =
-  for {model, num_clusters} <- Enum.zip(models, [40, 80, 120, 160]),
+  for {model, num_clusters} <- Enum.zip(models, nums_clusters),
       do:
         Nx.to_number(
-          Silhouette.silhouette_score(model.labels, olivetti_data, num_clusters: num_clusters)
+          Scholar.Metrics.Clustering.silhouette_score(images, model.labels,
+            num_clusters: num_clusters
+          )
         )
 ```
 
 ```elixir
-data = [num_clusters: [40, 80, 120, 160], silhouette_scores: silhouette_scores]
+data = [num_clusters: nums_clusters, silhouette_scores: silhouette_scores]
 
 Vl.new(width: 600, height: 300, title: "Silhouette score vs Number of Clusters")
 |> Vl.data_from_values(data)
@@ -486,7 +433,7 @@ Vl.new(width: 600, height: 300, title: "Silhouette score vs Number of Clusters")
   |> Vl.encode_field(:y, "silhouette_scores",
     title: "Silhouette score",
     type: :quantitative,
-    scale: [domain: [0.12, 0.165]]
+    scale: [domain: [0.088, 0.205]]
   ),
   Vl.new()
   |> Vl.mark(:circle, size: 50, color: :dark_blue)
@@ -495,39 +442,31 @@ Vl.new(width: 600, height: 300, title: "Silhouette score vs Number of Clusters")
 ])
 ```
 
-As we can see, the model with num_clusters equal to 120 has the best performance. It might be a little surprise since we have only forty classes originally. But with forty clusters, lots of images are misclassified. Now we will visualize the best clusterization.
+As we can see, the model with num_clusters equal to 3 has the highest Silhouette Score. Now we will visualize this clusterization.
 
 ```elixir
-num_clusters = 120
-best_model = Enum.at(models, 2)
+best_num_clusters = 3
+best_model = Enum.at(models, best_num_clusters - 2)
 ```
 
 ```elixir
 labels = Nx.to_flat_list(best_model.labels)
-```
+labels = Enum.zip([labels, 0..(num_images - 1), Nx.to_flat_list(target)])
 
-```elixir
-labels = Enum.zip([labels, 0..(num_images - 1), Nx.to_flat_list(olivetti_target)])
-```
-
-```elixir
-clustering_map = Map.new(0..(num_clusters - 1), &{&1, []})
+clustering_map = Map.new(0..(best_num_clusters - 1), &{&1, []})
 
 mapping =
   Enum.reduce(labels, clustering_map, fn {x, idx, ref}, acc ->
     Map.update(acc, x, nil, fn x ->
       x ++
         [
-          {ToImage.tensor_to_image(olivetti_data[[idx, 0..-1//1]], image_height, image_width),
-           ref}
+          {ToImage.tensor_to_image(images[[idx, 0..-1//1]], image_height, image_width), ref}
         ]
     end)
   end)
-```
 
-```elixir
 preprocessing =
-  Enum.reduce(0..(num_clusters - 1), [], fn i, acc ->
+  Enum.reduce(0..(best_num_clusters - 1), [], fn i, acc ->
     acc ++
       [
         Kino.Layout.grid(
@@ -543,17 +482,38 @@ preprocessing =
                       ])
                     ]
                 end),
-                columns: 3
+                columns: 5
               )
             ],
           boxed: true
         )
       ]
   end)
-```
 
-```elixir
 Kino.Layout.grid(preprocessing)
 ```
 
-There are clusters which seem to be ok, but unfortunately, a few of them are wrong or contain only one image. KMeans is a powerful tool, but in this task, CNNs might perform much better.
+Ups, doesn't it seem ok? That's because our algorithm for three clusters gathers images by colors rather than shapes. To spot this, let's plot the average image of each cluster.
+
+```elixir
+mapping_tensors =
+  Enum.reduce(labels, clustering_map, fn {x, idx, _ref}, acc ->
+    Map.update(acc, x, nil, fn x ->
+      x ++
+        [
+          images[[idx, 0..-1//1]]
+        ]
+    end)
+  end)
+
+mean_images =
+  for i <- 0..(best_num_clusters - 1),
+      do:
+        Nx.stack(mapping_tensors[i])
+        |> Nx.mean(axes: [0])
+        |> ToImage.tensor_to_image(image_height, image_width)
+
+Kino.Layout.grid(mean_images, columns: 3)
+```
+
+One of the images has a vertical line (something like trousers) while another is almost all white (similar to a jumper) and the last one has lots of dark color. This time Silhouette Score turns out to be not the best indicator. To get better clustering, try to rerun the code with a higher number of clusters.
