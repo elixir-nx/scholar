@@ -30,8 +30,6 @@ defmodule Scholar.Metrics.ClusteringTest do
 
   @y_one Nx.tensor([2, 2, 2, 2, 0, 2, 1, 3, 2, 2, 2, 2, 2, 1, 4, 0, 1, 2, 1, 2])
 
-  -0.17424359382143964
-
   test "silhouette_score test" do
     assert Clustering.silhouette_score(@x, @y, num_clusters: 3) == Nx.tensor(-0.17424359382143964)
   end
