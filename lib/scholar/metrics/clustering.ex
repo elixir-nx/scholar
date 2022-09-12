@@ -13,9 +13,13 @@ defmodule Scholar.Metrics.Clustering do
   matched to neighboring clusters. If most objects have a high value, then the
   clustering configuration is appropriate. If many points have a low or negative
   value, then the clustering configuration may have too many or too few clusters.
+
   ## Options
+
     * `:num_clusters` - Number of clusters in clustering. Required.
+
   ## Examples
+
       iex> x = Nx.tensor([[0, 0], [1, 0], [1, 1], [3, 3], [4, 4.5]])
       iex> labels = Nx.tensor([0, 0, 0, 1, 1])
       iex> Scholar.Metrics.Clustering.silhouette_samples(x, labels, num_clusters: 2)
@@ -23,6 +27,7 @@ defmodule Scholar.Metrics.Clustering do
         f32[5]
         [0.7647753357887268, 0.7781199216842651, 0.6754303574562073, 0.49344196915626526, 0.6627992987632751]
       >
+
       iex> x = Nx.tensor([[0.1, 0], [0, 1], [22, 65], [42, 3], [4.2, 51]])
       iex> labels = Nx.tensor([0, 1, 2, 1, 1])
       iex> Scholar.Metrics.Clustering.silhouette_samples(x, labels, num_clusters: 3)
@@ -34,17 +39,20 @@ defmodule Scholar.Metrics.Clustering do
 
   defn silhouette_samples(x, labels, opts \\ []) do
     verify_num_clusters(x, opts)
-    {inner, indices_to_zero, outer} = inner_and_outer_dist(x, labels, opts)
+    {inner, alone?, outer} = inner_and_outer_dist(x, labels, opts)
     result = (outer - inner) / Nx.max(outer, inner)
-    Nx.select(indices_to_zero, 0, result)
+    Nx.select(alone?, 0, result)
   end
 
-  @spec silhouette_score(any, any, any) :: any
   @doc """
   Compute the mean Silhouette Coefficient of all samples.
+
   ## Options
+
     * `:num_clusters` - Number of clusters in clustering. Required.
+
   ## Examples
+
       iex> x = Nx.tensor([[0, 0], [1, 0], [1, 1], [3, 3], [4, 4.5]])
       iex> labels = Nx.tensor([0, 0, 0, 1, 1])
       iex> Scholar.Metrics.Clustering.silhouette_score(x, labels, num_clusters: 2)
@@ -52,6 +60,7 @@ defmodule Scholar.Metrics.Clustering do
         f32
         0.6749133467674255
       >
+
       iex> x = Nx.tensor([[0.1, 0], [0, 1], [22, 65], [42, 3], [4.2, 51]])
       iex> labels = Nx.tensor([0, 1, 2, 1, 1])
       iex> Scholar.Metrics.Clustering.silhouette_score(x, labels, num_clusters: 3)
@@ -86,7 +95,7 @@ defmodule Scholar.Metrics.Clustering do
     dist_in_cluster = Nx.dot(pairwise_dist, membership_mask)
     mean_dist_in_cluster = dist_in_cluster / cluster_size
 
-    indices_to_zero = Nx.equal(cluster_size, 1) |> Nx.squeeze() |> Nx.take(labels)
+    alone? = Nx.equal(cluster_size, 1) |> Nx.squeeze() |> Nx.take(labels)
 
     inner_dist =
       dist_in_cluster
@@ -94,10 +103,12 @@ defmodule Scholar.Metrics.Clustering do
       |> Nx.take_along_axis(Nx.reshape(labels, {num_samples, 1}), axis: 1)
       |> Nx.squeeze(axes: [1])
 
-    {inner_dist, indices_to_zero,
-     membership_mask
-     |> Nx.select(inf, mean_dist_in_cluster)
-     |> Nx.reduce_min(axes: [1])}
+    outer_dist =
+      membership_mask
+      |> Nx.select(inf, mean_dist_in_cluster)
+      |> Nx.reduce_min(axes: [1])
+
+    {inner_dist, alone?, outer_dist}
   end
 
   deftransformp verify_num_clusters(x, opts) do
