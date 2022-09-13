@@ -12,6 +12,7 @@ defmodule Scholar.Metrics do
   """
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
+  import Scholar.Shared
 
   # Standard Metrics
 
@@ -36,11 +37,10 @@ defmodule Scholar.Metrics do
 
   """
   defn accuracy(y_true, y_pred) do
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
-    y_pred
-    |> Nx.equal(y_true)
+    (y_pred == y_true)
     |> Nx.mean()
   end
 
@@ -58,14 +58,13 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_precision(y_true, y_pred) do
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
     true_positives = binary_true_positives(y_true, y_pred)
     false_positives = binary_false_positives(y_true, y_pred)
 
-    true_positives
-    |> Nx.divide(true_positives + false_positives + 1.0e-16)
+    true_positives / (true_positives + false_positives + 1.0e-16)
   end
 
   @doc ~S"""
@@ -89,15 +88,14 @@ defmodule Scholar.Metrics do
   """
   defn precision(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positives = Nx.take_diagonal(cm)
-    false_positives = Nx.subtract(Nx.sum(cm, axes: [0]), true_positives)
+    false_positives = Nx.sum(cm, axes: [0]) - true_positives
 
-    true_positives
-    |> Nx.divide(true_positives + false_positives + 1.0e-16)
+    true_positives / (true_positives + false_positives + 1.0e-16)
   end
 
   @doc ~S"""
@@ -114,13 +112,13 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_recall(y_true, y_pred) do
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
     true_positives = binary_true_positives(y_true, y_pred)
     false_negatives = binary_false_negatives(y_true, y_pred)
 
-    Nx.divide(true_positives, false_negatives + true_positives + 1.0e-16)
+    true_positives / (false_negatives + true_positives + 1.0e-16)
   end
 
   @doc ~S"""
@@ -144,52 +142,44 @@ defmodule Scholar.Metrics do
   """
   defn recall(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_rank(y_true, 1)
-    assert_same_shape(y_pred, y_true)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_pred, y_true)
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positive = Nx.take_diagonal(cm)
-    false_negative = Nx.subtract(Nx.sum(cm, axes: [1]), true_positive)
-    Nx.divide(true_positive, true_positive + false_negative + 1.0e-16)
+    false_negative = Nx.sum(cm, axes: [1]) - true_positive
+    true_positive / (true_positive + false_negative + 1.0e-16)
   end
 
   defnp binary_true_positives(y_true, y_pred) do
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
-    y_pred
-    |> Nx.equal(y_true)
-    |> Nx.logical_and(Nx.equal(y_pred, 1))
+    (y_pred == y_true and y_pred == 1)
     |> Nx.sum()
   end
 
   defnp binary_false_negatives(y_true, y_pred) do
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
-    y_pred
-    |> Nx.not_equal(y_true)
-    |> Nx.logical_and(Nx.equal(y_pred, 0))
+    (y_pred != y_true and y_pred == 0)
     |> Nx.sum()
   end
 
   defnp binary_true_negatives(y_true, y_pred) do
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
-    y_pred
-    |> Nx.equal(y_true)
-    |> Nx.logical_and(Nx.equal(y_pred, 0))
+    (y_pred == y_true and y_pred == 0)
     |> Nx.sum()
   end
 
   defnp binary_false_positives(y_true, y_pred) do
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
-    y_pred
-    |> Nx.not_equal(y_true)
-    |> Nx.logical_and(Nx.equal(y_pred, 1))
+    (y_pred != y_true and y_pred == 1)
     |> Nx.sum()
   end
 
@@ -207,8 +197,8 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_sensitivity(y_true, y_pred) do
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
     binary_recall(y_true, y_pred)
   end
@@ -234,8 +224,8 @@ defmodule Scholar.Metrics do
   """
   defn sensitivity(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_rank(y_true, 1)
-    assert_same_shape(y_pred, y_true)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_pred, y_true)
 
     recall(y_true, y_pred, opts)
   end
@@ -254,13 +244,13 @@ defmodule Scholar.Metrics do
 
   """
   defn binary_specificity(y_true, y_pred) do
-    assert_rank(y_true, 1)
-    assert_same_shape(y_true, y_pred)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
 
     true_negatives = binary_true_negatives(y_true, y_pred)
     false_positives = binary_false_positives(y_true, y_pred)
 
-    Nx.divide(true_negatives, false_positives + true_negatives + 1.0e-16)
+    true_negatives / (false_positives + true_negatives + 1.0e-16)
   end
 
   @doc ~S"""
@@ -284,16 +274,16 @@ defmodule Scholar.Metrics do
   """
   defn specificity(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_rank(y_true, 1)
-    assert_same_shape(y_pred, y_true)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_pred, y_true)
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positive = Nx.take_diagonal(cm)
-    false_positive = Nx.subtract(Nx.sum(cm, axes: [0]), true_positive)
-    false_negative = Nx.subtract(Nx.sum(cm, axes: [1]), true_positive)
-    true_negative = Nx.subtract(Nx.sum(cm), false_negative + false_positive + true_positive)
+    false_positive = Nx.sum(cm, axes: [0]) - true_positive
+    false_negative = Nx.sum(cm, axes: [1]) - true_positive
+    true_negative = Nx.sum(cm) - (false_negative + false_positive + true_positive)
 
-    Nx.divide(true_negative, false_positive + true_negative + 1.0e-16)
+    true_negative / (false_positive + true_negative + 1.0e-16)
   end
 
   @doc ~S"""
@@ -321,13 +311,10 @@ defmodule Scholar.Metrics do
   """
   defn confusion_matrix(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes])
-    assert_rank(y_true, 1)
-    assert_same_shape(y_pred, y_true)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_pred, y_true)
 
-    num_classes =
-      transform(opts[:num_classes], fn num_classes ->
-        num_classes || raise ArgumentError, "missing option :num_classes"
-      end)
+    num_classes = check_num_classes(opts[:num_classes])
 
     zeros = Nx.broadcast(0, {num_classes, num_classes})
     indices = Nx.stack([y_true, y_pred], axis: 1)
@@ -369,7 +356,7 @@ defmodule Scholar.Metrics do
       iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: :weighted)
       #Nx.Tensor<
         f32
-        0.64000004529953
+        0.6399999856948853
       >
       iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: :micro)
       #Nx.Tensor<
@@ -380,44 +367,11 @@ defmodule Scholar.Metrics do
   defn f1_score(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes, :average])
 
-    assert_rank(y_true, 1)
-    assert_same_shape(y_pred, y_true)
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_pred, y_true)
 
-    num_classes =
-      transform(opts[:num_classes], fn num_classes ->
-        num_classes || raise ArgumentError, "missing option :num_classes"
-      end)
-
-    transform(opts[:average], fn average ->
-      if Elixir.Kernel.==(average, :micro) do
-        accuracy(y_true, y_pred)
-      else
-        cm = confusion_matrix(y_true, y_pred, num_classes: num_classes)
-        true_positive = Nx.take_diagonal(cm)
-        false_positive = Nx.subtract(Nx.sum(cm, axes: [0]), true_positive)
-        false_negative = Nx.subtract(Nx.sum(cm, axes: [1]), true_positive)
-        precision = Nx.divide(true_positive, true_positive + false_positive + 1.0e-16)
-        recall = Nx.divide(true_positive, true_positive + false_negative + 1.0e-16)
-
-        per_class_f1 =
-          Nx.divide(
-            Nx.multiply(2, Nx.multiply(precision, recall)),
-            precision + recall + 1.0e-16
-          )
-
-        case average do
-          nil ->
-            per_class_f1
-
-          :macro ->
-            Nx.mean(per_class_f1)
-
-          :weighted ->
-            support = Nx.sum(Nx.equal(y_true, Nx.iota({num_classes, 1})), axes: [1])
-            Nx.sum(Nx.multiply(per_class_f1, Nx.divide(support, Nx.sum(support) + 1.0e-16)))
-        end
-      end
-    end)
+    num_classes = check_num_classes(opts[:num_classes])
+    compute_f1_score(y_true, y_pred, opts[:average], num_classes)
   end
 
   @doc ~S"""
@@ -437,30 +391,49 @@ defmodule Scholar.Metrics do
       >
   """
   defn mean_absolute_error(y_true, y_pred) do
-    assert_same_shape(y_true, y_pred)
+    assert_same_shape!(y_true, y_pred)
 
-    y_true
-    |> Nx.subtract(y_pred)
+    (y_true - y_pred)
     |> Nx.abs()
     |> Nx.mean()
   end
 
-  deftransformp assert_rank(tensor, target_rank) do
-    rank = Nx.rank(tensor)
+  deftransformp compute_f1_score(y_true, y_pred, average, num_classes) do
+    if average == :micro do
+      accuracy(y_true, y_pred)
+    else
+      cm = confusion_matrix(y_true, y_pred, num_classes: num_classes)
+      true_positive = Nx.take_diagonal(cm)
+      false_positive = Nx.sum(cm, axes: [0]) |> Nx.subtract(true_positive)
+      false_negative = Nx.sum(cm, axes: [1]) |> Nx.subtract(true_positive)
+      precision = true_positive |> Nx.divide(Nx.add(Nx.add(true_positive, false_positive), 1.0e-16))
+      recall = true_positive |> Nx.divide(Nx.add(Nx.add(true_positive, false_negative), 1.0e-16))
 
-    unless rank == target_rank do
-      raise ArgumentError,
-            "expected tensor to have rank #{target_rank}, got tensor with rank #{rank}"
+      per_class_f1 =
+        2
+        |> Nx.multiply(precision)
+        |> Nx.multiply(recall)
+        |> Nx.divide(Nx.add(Nx.add(precision , recall), 1.0e-16))
+
+      case average do
+        nil ->
+          per_class_f1
+
+        :macro ->
+          Nx.mean(per_class_f1)
+
+        :weighted ->
+          support = Nx.equal(y_true, Nx.iota({num_classes, 1})) |> Nx.sum(axes: [1])
+
+          per_class_f1
+          |> Nx.multiply(support)
+          |> Nx.divide(Nx.add(Nx.sum(support), 1.0e-16))
+          |> Nx.sum()
+      end
     end
   end
 
-  deftransformp assert_same_shape(left, right) do
-    left_shape = Nx.shape(left)
-    right_shape = Nx.shape(right)
-
-    unless left_shape == right_shape do
-      raise ArgumentError,
-            "expected tensor to have shape #{inspect(right_shape)}, got tensor with shape #{inspect(left_shape)}"
-    end
+  deftransformp check_num_classes(num_classes) do
+    num_classes || raise ArgumentError, "missing option :num_classes"
   end
 end
