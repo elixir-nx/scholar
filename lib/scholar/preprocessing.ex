@@ -51,13 +51,13 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  Boolean thresholding of tensor.
+  Converts a tensor into binary values based on the given threshold.
 
   ## Options
 
-    * `:threshold` - Feature values below or equal to this are replaced by 0, above it by 1. Defaults to 0.
+    * `:threshold` - Feature values below or equal to this are replaced by 0, above it by 1. Defaults to `0`.
 
-    * `:type` - Type of the resultant tensor. Defaults to {:f, 32}.
+    * `:type` - Type of the resultant tensor. Defaults to `{:f, 32}`.
 
   ## Examples
 
