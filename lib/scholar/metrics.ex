@@ -430,7 +430,6 @@ defmodule Scholar.Metrics do
           |> Nx.divide(Nx.add(Nx.sum(support), 1.0e-16))
           |> Nx.sum()
       end
-    end
   end
 
   deftransformp check_num_classes(num_classes) do
