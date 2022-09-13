@@ -38,7 +38,7 @@ defmodule Scholar.Preprocessing do
           42.0
         >
   """
-  @spec standard_scaler(tensor :: Nx.Tensor.t()) :: Nx.Tensor.t()
+  @spec standard_scale(tensor :: Nx.Tensor.t()) :: Nx.Tensor.t()
   defn standard_scaler(tensor) do
     tensor = Nx.to_tensor(tensor)
     std = Nx.standard_deviation(tensor)
@@ -104,7 +104,7 @@ defmodule Scholar.Preprocessing do
       >
   """
 
-  @spec ordinal_encoding(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
+  @spec ordinal_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
   defn ordinal_encoding(tensor, opts \\ []) do
     {num_samples} = Nx.shape(tensor)
     opts = keyword!(opts, [:num_classes])
@@ -154,7 +154,7 @@ defmodule Scholar.Preprocessing do
       >
   """
 
-  @spec one_hot_encoding(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
+  @spec one_hot_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
   defn one_hot_encoding(tensor, opts \\ []) do
     Nx.equal(Nx.new_axis(tensor, -1), Nx.iota({1, opts[:num_classes]}))
   end
