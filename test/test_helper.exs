@@ -50,10 +50,10 @@ test_ids = for n <- 0..149, rem(n, 5) == 0, do: n
 x = Explorer.DataFrame.select(df, ["species"], :drop)
 y = Explorer.DataFrame.select(df, ["species"]) |> Explorer.DataFrame.dummies(["species"])
 
-x_train = Explorer.DataFrame.take(x, train_ids)
-x_test = Explorer.DataFrame.take(x, test_ids)
+x_train = Explorer.DataFrame.slice(x, train_ids)
+x_test = Explorer.DataFrame.slice(x, test_ids)
 
-y_train = Explorer.DataFrame.take(y, train_ids)
-y_test = Explorer.DataFrame.take(y, test_ids)
+y_train = Explorer.DataFrame.slice(y, train_ids)
+y_test = Explorer.DataFrame.slice(y, test_ids)
 
 Datasets.put(:iris, x_train, x_test, y_train, y_test)
