@@ -132,8 +132,10 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  Encode labels as a one-hot numeric tensor. Labels must be integers from 0 to `:num_classes - 1`.
-  If the data does not meet the condition, please use ordinal_encoding first.
+  Encode labels as a one-hot numeric tensor.
+  
+  Labels must be integers from 0 to `:num_classes - 1`. If the data does
+  not meet the condition, please use `ordinal_encoding/2` first.
 
   ## Options
 
