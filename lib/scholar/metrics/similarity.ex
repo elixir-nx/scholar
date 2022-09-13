@@ -37,7 +37,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Similarity.jaccard(x, y)
-      ** (ArgumentError) expected input shapes to be equal, got {2} != {3}
+      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
   """
   defn jaccard(x, y) do
     # We're requiring the same shape because usual use cases will have the same shape.
@@ -64,7 +64,7 @@ defmodule Scholar.Metrics.Similarity do
       _ ->
         sorted = Nx.sort(tensor)
 
-        different_from_successor? = Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1])
+        different_from_successor? = sorted[0..-2//1] != sorted[1..-1//1]
 
         different_from_successor?
         |> Nx.sum()

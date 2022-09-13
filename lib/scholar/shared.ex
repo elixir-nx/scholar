@@ -8,16 +8,29 @@ defmodule Scholar.Shared do
   import Nx.Defn
 
   @doc """
-  Asserts `lhs` has same shape as `rhs`.
+  Asserts `left` has same shape as `right`.
   """
-  deftransform assert_same_shape!(lhs, rhs) do
-    lhs = Nx.shape(lhs)
-    rhs = Nx.shape(rhs)
 
-    unless lhs == rhs do
+  deftransform assert_same_shape!(left, right) do
+    left_shape = Nx.shape(left)
+    right_shape = Nx.shape(right)
+
+    unless left_shape == right_shape do
       raise ArgumentError,
-            "expected input shapes to be equal," <>
-              " got #{inspect(lhs)} != #{inspect(rhs)}"
+            "expected tensor to have shape #{inspect(left_shape)}, got tensor with shape #{inspect(right_shape)}"
+    end
+  end
+
+  @doc """
+  Asserts `tensor` has rank `target_rank`.
+  """
+
+  deftransform assert_rank!(tensor, target_rank) do
+    rank = Nx.rank(tensor)
+
+    unless rank == target_rank do
+      raise ArgumentError,
+            "expected tensor to have rank #{target_rank}, got tensor with rank #{rank}"
     end
   end
 end
