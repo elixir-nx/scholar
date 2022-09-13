@@ -3,17 +3,17 @@
 ```elixir
 Mix.install(
   [
-    {:stb_image, "~> 0.5.2"},
-    {:kino, github: "livebook-dev/kino", override: true},
+    {:scholar, github: "elixir-nx/scholar"},
     {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
     {:exla, "~> 0.3"},
     {:explorer, "~> 0.2.0"},
-    {:scholar, github: "elixir-nx/scholar"},
-    {:vega_lite, "~> 0.1.6"},
-    {:jason, "~> 1.2"},
-    {:kino_vega_lite, "~> 0.1.3"},
+    {:stb_image, "~> 0.5.2"},
     {:scidata, "~> 0.1.9"},
-    {:req, "~> 0.2.0"}
+    {:jason, "~> 1.2"},
+    {:req, "~> 0.2.0"},
+    {:kino, github: "livebook-dev/kino", override: true},
+    {:vega_lite, "~> 0.1.6"},
+    {:kino_vega_lite, "~> 0.1.3"}
   ],
   config: [
     nx: [default_defn_options: [compiler: EXLA]]
@@ -21,14 +21,15 @@ Mix.install(
 )
 ```
 
-## General Info
+## Introduction
 
 The main purpose of this livebook is to introduce the KMeans clustering algorithm. We will explore KMeans in three different use cases.
 
 ```elixir
-import Nx.Defn
 alias VegaLite, as: Vl
 ```
+
+<!-- livebook:{"branch_parent_index":0} -->
 
 ## Iris Dataset
 
@@ -36,59 +37,50 @@ The first example we will focus on is the **Iris Dataset**. It is one of the mos
 
 <!-- livebook:{"break_markdown":true} -->
 
-Let's define module `Datasets` which will help us load data from Explorer Dataframe into the Nx tensor.
+Let's define some utility functions that will help us load data from Explorer Dataframe into Nx tensors.
 
 ```elixir
-defmodule Datasets do
+defmodule Iris.Data do
   def df_to_matrix(df) do
     df
     |> Explorer.DataFrame.names()
-    |> Enum.map(&(Explorer.Series.to_tensor(df[&1]) |> Nx.new_axis(-1)))
-    |> Nx.concatenate(axis: 1)
+    |> Enum.map(&Explorer.Series.to_tensor(df[&1]))
+    |> Nx.stack(axis: 1)
   end
 
-  def df_to_vector(df) do
-    case Explorer.DataFrame.names(df) do
-      [name] -> Explorer.Series.to_tensor(df[name])
-      _several -> df |> df_to_matrix() |> Nx.argmax(axis: 1)
-    end
-  end
-
-  defn sort_clusters(model) do
-    order = Nx.argsort(model.clusters[[0..-1//1, 0]])
-    labels_maping = Nx.argsort(order)
-
-    %{
-      model
-      | labels: Nx.take(labels_maping, model.labels),
-        clusters: Nx.take(model.clusters, order)
-    }
+  def df_to_label_vector(df, name) do
+    Explorer.DataFrame.dummies(df, [name])
+    |> df_to_matrix()
+    |> Nx.argmax(axis: 1)
   end
 end
 ```
 
-Firstly, we load the data, then we split it into Training Data (df) and Target (y) and cast it into Nx tensors.
+Firstly, we load the data, then we split it into Training Data (x) and Target (y) and cast those into Nx tensors.
 
 ```elixir
-df_raw = Explorer.Datasets.iris()
-y = Explorer.DataFrame.select(df_raw, ["species"]) |> Explorer.DataFrame.dummies(["species"])
-y = Datasets.df_to_vector(y)
-df = Explorer.DataFrame.select(df_raw, ["species"], :drop)
-df = Datasets.df_to_matrix(df)
+df = Explorer.Datasets.iris()
+
+y = Iris.Data.df_to_label_vector(df, "species")
+
+x =
+  df
+  |> Explorer.DataFrame.select(["species"], :drop)
+  |> Iris.Data.df_to_matrix()
 ```
 
 ### Exploratory Data Analysis
 
 <!-- livebook:{"break_markdown":true} -->
 
-Important part of Data Science workflow is something called **Exploratory Data Analysis**. The EDA helps us understand the data in a better way and suggests some efficient strategies to solve problems. There is no one specific course of action which defines good EDA. It should contain tabular summaries and plots showing relations between features.
+There is an important part of Data Science workflow is called **Exploratory Data Analysis**. EDA helps us understand the data in a better way and suggests some efficient strategies to solve problems. There is no one specific course of action which defines good EDA. It should contain tabular summaries and plots showing relations between features.
 
 <!-- livebook:{"break_markdown":true} -->
 
-We start our EDA by finding the mean values of each feature by specie.
+iWe start our EDA by finding the mean values of each feature by species.
 
 ```elixir
-grouped_data = Explorer.DataFrame.group_by(df_raw, ["species"])
+grouped_data = Explorer.DataFrame.group_by(df, ["species"])
 
 grouped_data
 |> Explorer.DataFrame.summarise(
@@ -99,17 +91,17 @@ grouped_data
 )
 ```
 
-We see that `petal_length` and `petal_width` are the most distinguishing features. Explore them a little bit more.
+We see that `petal_length` and `petal_width` are the most distinguishing features. Let's explore them a little bit more.
 
 ```elixir
-Vl.new(title: [text: "Histograms of petal_length column by specie", offset: 25])
-|> Vl.data_from_values(df_raw)
+Vl.new(title: [text: "Histograms of petal_length column by species", offset: 25])
+|> Vl.data_from_values(df)
 |> Vl.facet(
   [field: "species"],
   Vl.new(width: 200, height: 200)
   |> Vl.mark(:bar)
   |> Vl.encode_field(:x, "petal_length", type: :quantitative, bin: true)
-  |> Vl.encode_field(:y, "Frequency", aggregate: "count", scale: [domain: [0, 55]])
+  |> Vl.encode(:y, aggregate: :count, scale: [domain: [0, 55]])
 )
 ```
 
@@ -122,7 +114,7 @@ Vl.new(
     offset: 25
   ]
 )
-|> Vl.data_from_values(df_raw)
+|> Vl.data_from_values(df)
 |> Vl.mark(:circle)
 |> Vl.encode_field(:x, "petal_length", type: :quantitative)
 |> Vl.encode_field(:y, "petal_width", type: :quantitative)
@@ -132,11 +124,11 @@ Vl.new(
 ```elixir
 Vl.new(
   title: [
-    text: "Scatterplot of data samples pojected on plane petal_width x petal_length by specie",
+    text: "Scatterplot of data samples pojected on plane petal_width x petal_length by species",
     offset: 25
   ]
 )
-|> Vl.data_from_values(df_raw)
+|> Vl.data_from_values(df)
 |> Vl.facet(
   [field: "species"],
   Vl.new(width: 200, height: 200)
@@ -146,18 +138,22 @@ Vl.new(
 )
 ```
 
-Now we have a better understanding of data. Iris species have different petal widths and petal lengths. Iris *Setosa* has the smallest petal *Versicolor* is medium size and *Virginica* has the biggest petal. We can make sure even further that our analysis is correct and plot the so-called **Elbow plot**. The Elbow plot is a plot which presents Inertia vs the number of clusters. If there is a characteristic elbow on, then we have a strong suggestion about the right number of clusters. Let's train KMeans models for a different number of clusters from range 1 to 11.
+Now we have a better understanding of the data. Iris species have different petal widths and petal lengths. Iris *Setosa* has the smallest petal, *Versicolor* is medium size and *Virginica* has the biggest petal. We can make sure even further that our analysis is correct and plot the so-called **Elbow plot**. The Elbow plot is a plot which presents Inertia vs the number of clusters. If there is a characteristic elbow on, then we have a strong suggestion about the right number of clusters. Let's train KMeans models for a different number of clusters from range 1 to 11.
 
 ```elixir
-models = for i <- 1..11, do: Scholar.Cluster.KMeans.fit(df, num_clusters: i)
-inertia_of_models = for model <- models, do: Nx.to_number(model.inertia)
+clusterings = 1..11
+
+models =
+  for num_clusters <- clusterings do
+    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters)
+  end
+
+inertias = for model <- models, do: Nx.to_number(model.inertia)
 ```
 
 ```elixir
-data = [num_clusters: 1..11, inertia: inertia_of_models]
-
 Vl.new(width: 600, height: 300, title: "Elbow Plot")
-|> Vl.data_from_values(data)
+|> Vl.data_from_values(num_clusters: clusterings, inertia: inertias)
 |> Vl.mark(:line)
 |> Vl.encode_field(:x, "num_clusters",
   title: "Number of Clusters",
@@ -169,20 +165,40 @@ Vl.new(width: 600, height: 300, title: "Elbow Plot")
 
 As you can see, we have the elbow when the number of clusters equals three. So this value of the parameter seems to be the best.
 
+<!-- livebook:{"break_markdown":true} -->
+
+In order to compare our clustering with the target labels, we need to ensure our clusters are in a matching order.
+
+```elixir
+defmodule Iris.Clusters do
+  import Nx.Defn
+
+  defn sort_clusters(model) do
+    # We sort clusters by the first coordinate
+    order = Nx.argsort(model.clusters[[0..-1//1, 0]])
+    labels_maping = Nx.argsort(order)
+
+    %{
+      model
+      | labels: Nx.take(labels_maping, model.labels),
+        clusters: Nx.take(model.clusters, order)
+    }
+  end
+end
+```
+
 ```elixir
 best_model = Enum.at(models, 2)
-best_model = Datasets.sort_clusters(best_model)
+best_model = Iris.Clusters.sort_clusters(best_model)
 accuracy = Scholar.Metrics.accuracy(best_model.labels, y)
 ```
 
-Accuracy is nearly 90%, that pretty decent! Let's look at our results plotted on one of the previous plots.
+Accuracy is nearly 90%, that's pretty decent! Let's look at our results plotted on one of the previous plots.
 
 ```elixir
-coords = best_model.clusters[[0..-1//1, 2..-1//1]] |> Nx.to_flat_list()
-
 coords = [
-  x_coords: for(i <- [0, 2, 4], do: Enum.at(coords, i)),
-  y_coords: for(i <- [1, 3, 5], do: Enum.at(coords, i))
+  cluster_petal_length: best_model.clusters[[0..-1//1, 2]] |> Nx.to_flat_list(),
+  cluster_petal_width: best_model.clusters[[0..-1//1, 3]] |> Nx.to_flat_list()
 ]
 
 Vl.new(
@@ -196,7 +212,7 @@ Vl.new(
 )
 |> Vl.layers([
   Vl.new()
-  |> Vl.data_from_values(df_raw)
+  |> Vl.data_from_values(df)
   |> Vl.mark(:circle)
   |> Vl.encode_field(:x, "petal_length", type: :quantitative)
   |> Vl.encode_field(:y, "petal_width", type: :quantitative)
@@ -204,14 +220,16 @@ Vl.new(
   Vl.new()
   |> Vl.data_from_values(coords)
   |> Vl.mark(:circle, color: :green, size: 100)
-  |> Vl.encode_field(:x, "x_coords", type: :quantitative)
-  |> Vl.encode_field(:y, "y_coords", type: :quantitative)
+  |> Vl.encode_field(:x, "cluster_petal_length", type: :quantitative)
+  |> Vl.encode_field(:y, "cluster_petal_width", type: :quantitative)
 ])
 ```
 
 As we expect 😎
 
-## Clustering of pixels' colors
+<!-- livebook:{"branch_parent_index":0} -->
+
+## Clustering of pixel colors
 
 The other interesting use case of KMeans clustering is pixel clustering. This technique replaces all pixels with similar colors (similar in terms of euclidean distance between RGB) with a centroid related to them.
 
@@ -225,70 +243,78 @@ url =
 
 %{body: raw_image} = Req.get!(url)
 image = StbImage.read_binary!(raw_image)
-{height, width, num_channels} = image.shape
-new_height = div(height, 3)
-new_width = div(width, 3)
-new_shape = {new_height, new_width, 3}
-image = StbImage.resize(image, new_height, new_width)
-binary_image = StbImage.to_binary(image, :jpg)
-original_image = Kino.Image.new(binary_image, :jpeg)
+
+{height, width, _num_channels} = image.shape
+image = StbImage.resize(image, div(height, 3), div(width, 3))
+shape = image.shape
+
+image_kino = image |> StbImage.to_binary(:jpg) |> Kino.Image.new(:jpeg)
 ```
 
 Now we will try to use only ten colors to represent the same picture.
 
 ```elixir
 x = image |> StbImage.to_nx() |> Nx.reshape({:auto, 3})
-k_means = Scholar.Cluster.KMeans.fit(x, num_clusters: 10, num_runs: 10, max_iterations: 200)
+model = Scholar.Cluster.KMeans.fit(x, num_clusters: 10, num_runs: 10, max_iterations: 200)
 
-new_img = Nx.take(k_means.clusters, k_means.labels)
-new_img_reshaped = new_img |> Nx.reshape(new_shape) |> Nx.round() |> Nx.as_type({:u, 8})
+repainted_x = Nx.take(model.clusters, model.labels)
 
-binary_new_img = StbImage.from_nx(new_img_reshaped)
-new_content = StbImage.to_binary(binary_new_img, :jpg)
-Kino.Image.new(new_content, :jpeg)
+repainted_x
+|> Nx.reshape(shape)
+|> Nx.round()
+|> Nx.as_type({:u, 8})
+|> StbImage.from_nx()
+|> StbImage.to_binary(:jpg)
+|> Kino.Image.new(:jpeg)
 ```
 
 Look that even though we use only ten colors, we can say without any doubt that this is the same image. Let's experiment more deeply. Now we will try 5, 10, 15, 20 and 40 colors and then compare the processed images with the original one.
 
 ```elixir
-models = for i <- [5, 10, 15, 20, 40], do: Scholar.Cluster.KMeans.fit(x, num_clusters: i)
+clusterings = [5, 10, 15, 20, 40]
+
+models =
+  for num_clusters <- clusterings do
+    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters)
+  end
 ```
 
 ```elixir
-new_images = for model <- models, do: Nx.take(model.clusters, model.labels)
+image_boxes =
+  for {model, num_clusters} <- Enum.zip(models, clusterings) do
+    repainted_x = Nx.take(model.clusters, model.labels)
 
-results =
-  Enum.map_every(new_images, 1, fn x ->
-    x
-    |> Nx.reshape(new_shape)
-    |> Nx.round()
-    |> Nx.as_type({:u, 8})
-    |> StbImage.from_nx()
-    |> StbImage.to_binary(:jpg)
-  end)
+    image_kino =
+      repainted_x
+      |> Nx.reshape(shape)
+      |> Nx.round()
+      |> Nx.as_type({:u, 8})
+      |> StbImage.from_nx()
+      |> StbImage.to_binary(:jpg)
+      |> Kino.Image.new(:jpeg)
 
-kino_images = Enum.map_every(results, 1, fn x -> Kino.Image.new(x, :jpeg) end)
+    Kino.Layout.grid(
+      [Kino.Markdown.new("### Number of colors: #{num_clusters}"), image_kino],
+      boxed: true
+    )
+  end
 
-grid_content =
-  Enum.zip(
-    for(i <- [5, 10, 15, 20, 40], do: Kino.Markdown.new("### Number of colors: #{i}")) ++
-      [Kino.Markdown.new("### Original Image")],
-    kino_images ++ [original_image]
+image_box =
+  Kino.Layout.grid(
+    [Kino.Markdown.new("### Original image"), image_kino],
+    boxed: true
   )
 
-grid_content =
-  Enum.reduce(grid_content, [], fn {x, y}, acc ->
-    acc ++ [Kino.Layout.grid([x, y], boxed: true)]
-  end)
-
-Kino.Layout.grid(grid_content, columns: 2)
+Kino.Layout.grid(image_boxes ++ [image_box], columns: 2)
 ```
 
 Look that even with only five colors can recognize the Golden Gate Bridge in the image. On the other hand with only 40 colors we keep almost all details except the sky and water surface. The reason why these two spaces do not map well is that there is a small gradient in changing colors. Pixel clustering is a great way to compress images drastically with small integration in them.
 
-## Clustering Face Images from Fashion-MNIST
+<!-- livebook:{"branch_parent_index":0} -->
 
-The last example is the clustering problem on Fashion-MNIST Dataset. The dataset consists of 60000 images 28 by 28 pixels. They present ten different parts of clothing. Let's dive into this clustering problem.
+## Clustering images from Fashion-MNIST
+
+The last example is the clustering problem on the Fashion-MNIST Dataset. The dataset consists of 60000 images 28 by 28 pixels. They present ten different parts of clothing. Let's dive into this clustering problem.
 
 <!-- livebook:{"break_markdown":true} -->
 
@@ -296,6 +322,8 @@ Before we start, we define the StratifiedSplit module. The module trims input da
 
 ```elixir
 defmodule StratifiedSplit do
+  import Nx.Defn
+
   defn trim_samples(x, labels, opts \\ []) do
     opts = keyword!(opts, [:num_classes, :samples_per_class])
 
@@ -318,13 +346,10 @@ end
 Firstly, load the data and cast it into Nx tensors.
 
 ```elixir
-{data, target} = Scidata.FashionMNIST.download()
-{images_binary, images_type, images_shape} = data
+{image_data, labels_data} = Scidata.FashionMNIST.download()
 
-{num_samples, _, image_height, image_width} = images_shape
-
-num_classes = 10
-samples_per_class = 20
+{images_binary, images_type, images_shape} = image_data
+{num_samples, _num_channels = 1, image_height, image_width} = images_shape
 
 images =
   images_binary
@@ -332,11 +357,11 @@ images =
   |> Nx.reshape({num_samples, :auto})
   |> Nx.divide(255)
 
-{labels_binary, labels_type, _shape} = target
+{labels_binary, labels_type, _shape} = labels_data
+target = Nx.from_binary(labels_binary, labels_type)
 
-target =
-  labels_binary
-  |> Nx.from_binary(labels_type)
+num_classes = 10
+samples_per_class = 20
 
 {images, target} =
   StratifiedSplit.trim_samples(images, target,
@@ -345,34 +370,29 @@ target =
   )
 
 num_images = num_classes * samples_per_class
-
-images = images[[0..(num_images - 1)]]
-target = target[[0..(num_images - 1)]]
 ```
 
-The `ToImage` module will provide us with a function that will cast tensors into Kino.Image objects.
+Let's also define a function that will visualize an image in the tensor format for us.
 
 ```elixir
-defmodule ToImage do
-  def tensor_to_image(x, image_height, image_width) do
-    x
-    |> Nx.reshape({image_height, image_width, 1})
-    # 3 channels of png
-    |> Nx.broadcast({image_height, image_width, 3})
-    |> Nx.multiply(255)
-    |> Nx.as_type({:u, 8})
-    |> StbImage.from_nx()
-    |> StbImage.resize(112, 112)
-    |> StbImage.to_binary(:png)
-    |> Kino.Image.new(:png)
-  end
+tensor_to_kino = fn x ->
+  x
+  |> Nx.reshape({image_height, image_width, 1})
+  # Replicate the value into 3 channels for PNG
+  |> Nx.broadcast({image_height, image_width, 3})
+  |> Nx.multiply(255)
+  |> Nx.as_type({:u, 8})
+  |> StbImage.from_nx()
+  |> StbImage.resize(112, 112)
+  |> StbImage.to_binary(:png)
+  |> Kino.Image.new(:png)
 end
 ```
 
 Here is one of the images.
 
 ```elixir
-images[[0, 0..-1//1]] |> ToImage.tensor_to_image(image_height, image_width)
+tensor_to_kino.(images[0])
 ```
 
 We will try some different numbers of clusters and then measure the quality of clustering.
@@ -381,13 +401,16 @@ We will try some different numbers of clusters and then measure the quality of c
 nums_clusters = 2..20
 
 models =
-  for num_clusters <- nums_clusters,
-      do: Scholar.Cluster.KMeans.fit(images, num_clusters: num_clusters)
+  for num_clusters <- 2..20 do
+    Scholar.Cluster.KMeans.fit(images, num_clusters: num_clusters)
+  end
 ```
 
 ```elixir
-inertia_of_models = for model <- models, do: Nx.to_number(model.inertia)
-data = [num_clusters: nums_clusters, inertia: inertia_of_models]
+data = [
+  num_clusters: nums_clusters,
+  inertia: for(model <- models, do: Nx.to_number(model.inertia))
+]
 
 Vl.new(width: 600, height: 300, title: "Elbow Plot")
 |> Vl.data_from_values(data)
@@ -408,13 +431,10 @@ Look that this time there is no elbow on a plot. We need to use a different meth
 
 ```elixir
 silhouette_scores =
-  for {model, num_clusters} <- Enum.zip(models, nums_clusters),
-      do:
-        Nx.to_number(
-          Scholar.Metrics.Clustering.silhouette_score(images, model.labels,
-            num_clusters: num_clusters
-          )
-        )
+  for {model, num_clusters} <- Enum.zip(models, nums_clusters) do
+    Scholar.Metrics.Clustering.silhouette_score(images, model.labels, num_clusters: num_clusters)
+    |> Nx.to_number()
+  end
 ```
 
 ```elixir
@@ -446,74 +466,55 @@ As we can see, the model with num_clusters equal to 3 has the highest Silhouette
 
 ```elixir
 best_num_clusters = 3
-best_model = Enum.at(models, best_num_clusters - 2)
+best_model = Enum.at(models, 1)
 ```
 
 ```elixir
-labels = Nx.to_flat_list(best_model.labels)
-labels = Enum.zip([labels, 0..(num_images - 1), Nx.to_flat_list(target)])
+predicted_cluster_with_indices =
+  best_model.labels
+  |> Nx.to_flat_list()
+  |> Enum.with_index()
+  |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
-clustering_map = Map.new(0..(best_num_clusters - 1), &{&1, []})
+for cluster <- 0..(best_num_clusters - 1) do
+  indices = predicted_cluster_with_indices[cluster]
 
-mapping =
-  Enum.reduce(labels, clustering_map, fn {x, idx, ref}, acc ->
-    Map.update(acc, x, nil, fn x ->
-      x ++
-        [
-          {ToImage.tensor_to_image(images[[idx, 0..-1//1]], image_height, image_width), ref}
-        ]
-    end)
-  end)
+  boxes =
+    for index <- indices do
+      original_cluster = Nx.to_number(target[index])
 
-preprocessing =
-  Enum.reduce(0..(best_num_clusters - 1), [], fn i, acc ->
-    acc ++
-      [
-        Kino.Layout.grid(
-          [Kino.Markdown.new("## Cluster no. #{i}")] ++
-            [
-              Kino.Layout.grid(
-                Enum.reduce(mapping[i], [], fn {image, idx}, acc1 ->
-                  acc1 ++
-                    [
-                      Kino.Layout.grid([
-                        Kino.Markdown.new("Reference Cluster no. #{idx}"),
-                        image
-                      ])
-                    ]
-                end),
-                columns: 5
-              )
-            ],
-          boxed: true
-        )
-      ]
-  end)
+      Kino.Layout.grid([
+        Kino.Markdown.new("Original cluster: #{original_cluster}"),
+        tensor_to_kino.(images[index])
+      ])
+    end
 
-Kino.Layout.grid(preprocessing)
+  Kino.Layout.grid(
+    [
+      Kino.Markdown.new("## Cluster #{cluster}"),
+      Kino.Layout.grid(boxes, columns: 5)
+    ],
+    boxed: true
+  )
+end
+|> Kino.Layout.grid()
 ```
 
-Ups, doesn't it seem ok? That's because our algorithm for three clusters gathers images by colors rather than shapes. To spot this, let's plot the average image of each cluster.
+Oops, it doesn't look right! That's because our algorithm for three clusters gathers images by colors rather than shapes. To spot this, let's plot the average image of each cluster.
 
 ```elixir
-mapping_tensors =
-  Enum.reduce(labels, clustering_map, fn {x, idx, _ref}, acc ->
-    Map.update(acc, x, nil, fn x ->
-      x ++
-        [
-          images[[idx, 0..-1//1]]
-        ]
-    end)
-  end)
+for cluster <- 0..(best_num_clusters - 1) do
+  indices = predicted_cluster_with_indices[cluster]
 
-mean_images =
-  for i <- 0..(best_num_clusters - 1),
-      do:
-        Nx.stack(mapping_tensors[i])
-        |> Nx.mean(axes: [0])
-        |> ToImage.tensor_to_image(image_height, image_width)
+  mean_image =
+    indices
+    |> Enum.map(&images[&1])
+    |> Nx.stack()
+    |> Nx.mean(axes: [0])
 
-Kino.Layout.grid(mean_images, columns: 3)
+  tensor_to_kino.(mean_image)
+end
+|> Kino.Layout.grid(columns: 3)
 ```
 
 One of the images has a vertical line (something like trousers) while another is almost all white (similar to a jumper) and the last one has lots of dark color. This time Silhouette Score turns out to be not the best indicator. To get better clustering, try to rerun the code with a higher number of clusters.
