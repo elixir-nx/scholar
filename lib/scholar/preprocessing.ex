@@ -89,7 +89,7 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  Encodes a tensor's values into integers from range 0 to `:num_classes - 1`
+  Encodes a tensor's values into integers from range 0 to `:num_classes - 1`.
 
   ## Options
 
@@ -105,33 +105,38 @@ defmodule Scholar.Preprocessing do
   """
 
   @spec ordinal_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
-  defn ordinal_encoding(tensor, opts \\ []) do
+  defn ordinal_encode(tensor, opts \\ []) do
     {num_samples} = Nx.shape(tensor)
     opts = keyword!(opts, [:num_classes])
     sorted = Nx.sort(tensor)
     num_classes = opts[:num_classes]
 
-    # A mask with indices to aggregate a set of values in a tensor
+    # A mask with a single 1 in every group of equal values
     representative_mask =
       Nx.concatenate([
         Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1]),
         Nx.tensor([1])
       ])
-      |> Nx.argsort(direction: :desc)
-      |> then(fn x -> x[[0..(num_classes - 1)]] end)
 
-    unique_values = Nx.take(sorted, representative_mask)
+    representative_indices =
+      representative_mask
+      |> Nx.argsort(direction: :desc)
+      |> Nx.slice_along_axis(0, num_classes)
+
+    representative_values = Nx.take(sorted, representative_indices)
 
     Nx.equal(
       Nx.reshape(tensor, {num_samples, 1}),
-      Nx.broadcast(unique_values, {num_samples, num_classes})
+      Nx.reshape(representative_values, {1, num_classes})
     )
     |> Nx.argmax(axis: 1)
   end
 
   @doc """
-  Encode labels as a one-hot numeric tensor. Labels must be integers from 0 to `:num_classes - 1`.
-  If the data does not meet the condition, please use ordinal_encoding first.
+  Encode labels as a one-hot numeric tensor.
+
+  Labels must be integers from 0 to `:num_classes - 1`. If the data does
+  not meet the condition, please use `ordinal_encoding/2` first.
 
   ## Options
 
@@ -155,7 +160,7 @@ defmodule Scholar.Preprocessing do
   """
 
   @spec one_hot_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
-  defn one_hot_encoding(tensor, opts \\ []) do
+  defn one_hot_encode(tensor, opts \\ []) do
     Nx.equal(Nx.new_axis(tensor, -1), Nx.iota({1, opts[:num_classes]}))
   end
 end
