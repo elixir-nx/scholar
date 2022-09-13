@@ -16,13 +16,13 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-        iex> Scholar.Preprocessing.standard_scaler(Nx.tensor([1,2,3]))
+        iex> Scholar.Preprocessing.standard_scale(Nx.tensor([1,2,3]))
         #Nx.Tensor<
           f32[3]
           [-1.2247447967529297, 0.0, 1.2247447967529297]
         >
 
-        iex> Scholar.Preprocessing.standard_scaler(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]))
+        iex> Scholar.Preprocessing.standard_scale(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]))
         #Nx.Tensor<
           f32[3][3]
           [
@@ -32,14 +32,14 @@ defmodule Scholar.Preprocessing do
           ]
         >
 
-        iex> Scholar.Preprocessing.standard_scaler(42)
+        iex> Scholar.Preprocessing.standard_scale(42)
         #Nx.Tensor<
           f32
           42.0
         >
   """
   @spec standard_scale(tensor :: Nx.Tensor.t()) :: Nx.Tensor.t()
-  defn standard_scaler(tensor) do
+  defn standard_scale(tensor) do
     tensor = Nx.to_tensor(tensor)
     std = Nx.standard_deviation(tensor)
 
@@ -97,7 +97,7 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-      iex> Scholar.Preprocessing.ordinal_encoding(Nx.tensor([3, 2, 4, 56, 2, 4, 2]), num_classes: 4)
+      iex> Scholar.Preprocessing.ordinal_encode(Nx.tensor([3, 2, 4, 56, 2, 4, 2]), num_classes: 4)
       #Nx.Tensor<
         s64[7]
         [1, 0, 2, 3, 0, 2, 0]
@@ -144,7 +144,7 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-      iex> Scholar.Preprocessing.one_hot_encoding(Nx.tensor([2, 0, 3, 2, 1, 1, 0]), num_classes: 4)
+      iex> Scholar.Preprocessing.one_hot_encode(Nx.tensor([2, 0, 3, 2, 1, 1, 0]), num_classes: 4)
       #Nx.Tensor<
         u8[7][4]
         [
