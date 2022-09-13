@@ -15,13 +15,13 @@ defmodule Scholar.PreprocessingTest do
           [-0.4170288145542145, 0.5212860703468323, -1.3553436994552612]
         ])
 
-      assert expected == Preprocessing.standard_scaler(data)
+      assert expected == Preprocessing.standard_scale(data)
     end
 
     test "leaves data as it is when variance is zero" do
       data = 42.0
       expected = Nx.tensor(data)
-      assert expected == Preprocessing.standard_scaler(data)
+      assert expected == Preprocessing.standard_scale(data)
     end
   end
 end

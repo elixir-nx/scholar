@@ -16,13 +16,13 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-        iex> Scholar.Preprocessing.standard_scaler(Nx.tensor([1,2,3]))
+        iex> Scholar.Preprocessing.standard_scale(Nx.tensor([1,2,3]))
         #Nx.Tensor<
           f32[3]
           [-1.2247447967529297, 0.0, 1.2247447967529297]
         >
 
-        iex> Scholar.Preprocessing.standard_scaler(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]))
+        iex> Scholar.Preprocessing.standard_scale(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]))
         #Nx.Tensor<
           f32[3][3]
           [
@@ -32,14 +32,14 @@ defmodule Scholar.Preprocessing do
           ]
         >
 
-        iex> Scholar.Preprocessing.standard_scaler(42)
+        iex> Scholar.Preprocessing.standard_scale(42)
         #Nx.Tensor<
           f32
           42.0
         >
   """
-  @spec standard_scaler(tensor :: Nx.Tensor.t()) :: Nx.Tensor.t()
-  defn standard_scaler(tensor) do
+  @spec standard_scale(tensor :: Nx.Tensor.t()) :: Nx.Tensor.t()
+  defn standard_scale(tensor) do
     tensor = Nx.to_tensor(tensor)
     std = Nx.standard_deviation(tensor)
 
@@ -86,5 +86,81 @@ defmodule Scholar.Preprocessing do
   defn binarize(tensor, opts \\ []) do
     opts = keyword!(opts, threshold: 0, type: {:f, 32})
     (tensor > opts[:threshold]) |> Nx.as_type(opts[:type])
+  end
+
+  @doc """
+  Encodes a tensor's values into integers from range 0 to `:num_classes - 1`.
+
+  ## Options
+
+    * `:num_classes` - Number of classes to be encoded. Required.
+
+  ## Examples
+
+      iex> Scholar.Preprocessing.ordinal_encode(Nx.tensor([3, 2, 4, 56, 2, 4, 2]), num_classes: 4)
+      #Nx.Tensor<
+        s64[7]
+        [1, 0, 2, 3, 0, 2, 0]
+      >
+  """
+
+  @spec ordinal_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
+  defn ordinal_encode(tensor, opts \\ []) do
+    {num_samples} = Nx.shape(tensor)
+    opts = keyword!(opts, [:num_classes])
+    sorted = Nx.sort(tensor)
+    num_classes = opts[:num_classes]
+
+    # A mask with a single 1 in every group of equal values
+    representative_mask =
+      Nx.concatenate([
+        Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1]),
+        Nx.tensor([1])
+      ])
+
+    representative_indices =
+      representative_mask
+      |> Nx.argsort(direction: :desc)
+      |> Nx.slice_along_axis(0, num_classes)
+
+    representative_values = Nx.take(sorted, representative_indices)
+
+    Nx.equal(
+      Nx.reshape(tensor, {num_samples, 1}),
+      Nx.reshape(representative_values, {1, num_classes})
+    )
+    |> Nx.argmax(axis: 1)
+  end
+
+  @doc """
+  Encode labels as a one-hot numeric tensor.
+
+  Labels must be integers from 0 to `:num_classes - 1`. If the data does
+  not meet the condition, please use `ordinal_encoding/2` first.
+
+  ## Options
+
+    * `:num_classes` - Number of classes to be encoded. Required.
+
+  ## Examples
+
+      iex> Scholar.Preprocessing.one_hot_encode(Nx.tensor([2, 0, 3, 2, 1, 1, 0]), num_classes: 4)
+      #Nx.Tensor<
+        u8[7][4]
+        [
+          [0, 0, 1, 0],
+          [1, 0, 0, 0],
+          [0, 0, 0, 1],
+          [0, 0, 1, 0],
+          [0, 1, 0, 0],
+          [0, 1, 0, 0],
+          [1, 0, 0, 0]
+        ]
+      >
+  """
+
+  @spec one_hot_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
+  defn one_hot_encode(tensor, opts \\ []) do
+    Nx.equal(Nx.new_axis(tensor, -1), Nx.iota({1, opts[:num_classes]}))
   end
 end
