@@ -89,7 +89,7 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  Encodes a tensor's values into integers from range 0 to `:num_classes - 1`
+  Encodes a tensor's values into integers from range 0 to `:num_classes - 1`.
 
   ## Options
 
@@ -103,7 +103,6 @@ defmodule Scholar.Preprocessing do
         [1, 0, 2, 3, 0, 2, 0]
       >
   """
-
   @spec ordinal_encoding(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
   defn ordinal_encoding(tensor, opts \\ []) do
     {num_samples} = Nx.shape(tensor)
@@ -111,20 +110,23 @@ defmodule Scholar.Preprocessing do
     sorted = Nx.sort(tensor)
     num_classes = opts[:num_classes]
 
-    # A mask with indices to aggregate a set of values in a tensor
+    # A mask with a single 1 in every group of equal values,
     representative_mask =
       Nx.concatenate([
         Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1]),
         Nx.tensor([1])
       ])
+      
+    representative_indices =
+      representative_mask
       |> Nx.argsort(direction: :desc)
-      |> then(fn x -> x[[0..(num_classes - 1)]] end)
+      |> Nx.slice_along_axis(0, num_classes)
 
-    unique_values = Nx.take(sorted, representative_mask)
+    representative_values = Nx.take(sorted, representative_indices)
 
     Nx.equal(
       Nx.reshape(tensor, {num_samples, 1}),
-      Nx.broadcast(unique_values, {num_samples, num_classes})
+      Nx.reshape(representative_values, {1, num_classes})
     )
     |> Nx.argmax(axis: 1)
   end
@@ -153,7 +155,6 @@ defmodule Scholar.Preprocessing do
         ]
       >
   """
-
   @spec one_hot_encoding(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
   defn one_hot_encoding(tensor, opts \\ []) do
     Nx.equal(Nx.new_axis(tensor, -1), Nx.iota({1, opts[:num_classes]}))
