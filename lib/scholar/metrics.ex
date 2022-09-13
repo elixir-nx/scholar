@@ -406,14 +406,17 @@ defmodule Scholar.Metrics do
       true_positive = Nx.take_diagonal(cm)
       false_positive = Nx.sum(cm, axes: [0]) |> Nx.subtract(true_positive)
       false_negative = Nx.sum(cm, axes: [1]) |> Nx.subtract(true_positive)
-      precision = true_positive |> Nx.divide(Nx.add(Nx.add(true_positive, false_positive), 1.0e-16))
+
+      precision =
+        true_positive |> Nx.divide(Nx.add(Nx.add(true_positive, false_positive), 1.0e-16))
+
       recall = true_positive |> Nx.divide(Nx.add(Nx.add(true_positive, false_negative), 1.0e-16))
 
       per_class_f1 =
         2
         |> Nx.multiply(precision)
         |> Nx.multiply(recall)
-        |> Nx.divide(Nx.add(Nx.add(precision , recall), 1.0e-16))
+        |> Nx.divide(Nx.add(Nx.add(precision, recall), 1.0e-16))
 
       case average do
         nil ->
@@ -430,6 +433,7 @@ defmodule Scholar.Metrics do
           |> Nx.divide(Nx.add(Nx.sum(support), 1.0e-16))
           |> Nx.sum()
       end
+    end
   end
 
   deftransformp check_num_classes(num_classes) do
