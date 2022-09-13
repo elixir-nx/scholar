@@ -111,8 +111,7 @@ defmodule Scholar.Preprocessing do
     sorted = Nx.sort(tensor)
     num_classes = opts[:num_classes]
 
-    # A mask with a single 1 in every group of equal values,
-    # computed by placing 1 where an element differs from its successor
+    # A mask with indices to aggregate a set of values in a tensor
     representative_mask =
       Nx.concatenate([
         Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1]),
