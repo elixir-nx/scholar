@@ -371,7 +371,37 @@ defmodule Scholar.Metrics do
     assert_same_shape!(y_pred, y_true)
 
     num_classes = check_num_classes(opts[:num_classes])
-    compute_f1_score(y_true, y_pred, opts[:average], num_classes)
+
+    case opts[:average] do
+      :micro ->
+        accuracy(y_true, y_pred)
+
+      _ ->
+        cm = confusion_matrix(y_true, y_pred, num_classes: num_classes)
+        true_positive = Nx.take_diagonal(cm)
+        false_positive = Nx.sum(cm, axes: [0]) - true_positive
+        false_negative = Nx.sum(cm, axes: [1]) - true_positive
+
+        precision = true_positive / (true_positive + false_positive + 1.0e-16)
+
+        recall = true_positive / (true_positive + false_negative + 1.0e-16)
+
+        per_class_f1 = 2 * precision * recall / (precision + recall + 1.0e-16)
+
+        case opts[:average] do
+          nil ->
+            per_class_f1
+
+          :macro ->
+            Nx.mean(per_class_f1)
+
+          :weighted ->
+            support = (y_true == Nx.iota({num_classes, 1})) |> Nx.sum(axes: [1])
+
+            (per_class_f1 * support / (Nx.sum(support) + 1.0e-16))
+            |> Nx.sum()
+        end
+    end
   end
 
   @doc ~S"""
@@ -396,44 +426,6 @@ defmodule Scholar.Metrics do
     (y_true - y_pred)
     |> Nx.abs()
     |> Nx.mean()
-  end
-
-  deftransformp compute_f1_score(y_true, y_pred, average, num_classes) do
-    if average == :micro do
-      accuracy(y_true, y_pred)
-    else
-      cm = confusion_matrix(y_true, y_pred, num_classes: num_classes)
-      true_positive = Nx.take_diagonal(cm)
-      false_positive = Nx.sum(cm, axes: [0]) |> Nx.subtract(true_positive)
-      false_negative = Nx.sum(cm, axes: [1]) |> Nx.subtract(true_positive)
-
-      precision =
-        true_positive |> Nx.divide(Nx.add(Nx.add(true_positive, false_positive), 1.0e-16))
-
-      recall = true_positive |> Nx.divide(Nx.add(Nx.add(true_positive, false_negative), 1.0e-16))
-
-      per_class_f1 =
-        2
-        |> Nx.multiply(precision)
-        |> Nx.multiply(recall)
-        |> Nx.divide(Nx.add(Nx.add(precision, recall), 1.0e-16))
-
-      case average do
-        nil ->
-          per_class_f1
-
-        :macro ->
-          Nx.mean(per_class_f1)
-
-        :weighted ->
-          support = Nx.equal(y_true, Nx.iota({num_classes, 1})) |> Nx.sum(axes: [1])
-
-          per_class_f1
-          |> Nx.multiply(support)
-          |> Nx.divide(Nx.add(Nx.sum(support), 1.0e-16))
-          |> Nx.sum()
-      end
-    end
   end
 
   deftransformp check_num_classes(num_classes) do
