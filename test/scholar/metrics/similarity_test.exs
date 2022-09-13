@@ -50,9 +50,11 @@ defmodule Scholar.Metrics.SimilarityTest do
       x = Nx.tensor([1, 2, 3, 5])
       y = Nx.tensor([1, 30, 4, 8, 9])
 
-      assert_raise ArgumentError, "expected tensor to have shape {4}, got tensor with shape {5}", fn ->
-        Similarity.jaccard(x, y)
-      end
+      assert_raise ArgumentError,
+                   "expected tensor to have shape {4}, got tensor with shape {5}",
+                   fn ->
+                     Similarity.jaccard(x, y)
+                   end
     end
 
     test "raises exception when tensors have shape zero" do
