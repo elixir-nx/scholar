@@ -9,8 +9,7 @@ defmodule Scholar.Cluster.KMeans do
   defstruct [:num_iterations, :clusters, :inertia, :labels]
 
   @doc """
-  Fits a K-Means model for sample inputs `x`
-
+  Fits a K-Means model for sample inputs `x`.
 
   ## Options
 
