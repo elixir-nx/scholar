@@ -2,6 +2,7 @@ defmodule Scholar.PreprocessingTest do
   use ExUnit.Case, async: true
 
   alias Scholar.Preprocessing
+  doctest Preprocessing
 
   describe "standard_scaler/1" do
     test "applies standard scaling to data" do

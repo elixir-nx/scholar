@@ -35,7 +35,7 @@ defmodule Scholar.Preprocessing do
         iex> Scholar.Preprocessing.standard_scaler(42)
         #Nx.Tensor<
           f32
-          42
+          42.0
         >
   """
   @spec standard_scaler(tensor :: Nx.Tensor.t()) :: Nx.Tensor.t()
@@ -43,12 +43,48 @@ defmodule Scholar.Preprocessing do
     tensor = Nx.to_tensor(tensor)
     std = Nx.standard_deviation(tensor)
 
-    if std == Nx.tensor(0.0) do
+    if std == 0.0 do
       tensor
     else
-      tensor
-      |> Nx.subtract(Nx.mean(tensor))
-      |> Nx.divide(std)
+      (tensor - Nx.mean(tensor)) / std
     end
+  end
+
+  @doc """
+  Boolean thresholding of tensor.
+
+  ## Options
+
+    * `:threshold` - Feature values below or equal to this are replaced by 0, above it by 1. Defaults to 0.
+
+    * `:type` - Type of the resultant tensor. Defaults to {:f, 32}.
+
+  ## Examples
+
+      iex> Scholar.Preprocessing.binarize(Nx.tensor([[1.0, -1.0, 2.0], [2.0, 0.0, 0.0], [0.0, 1.0, -1.0]]))
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [1.0, 0.0, 1.0],
+          [1.0, 0.0, 0.0],
+          [0.0, 1.0, 0.0]
+        ]
+      >
+
+      iex> Scholar.Preprocessing.binarize(Nx.tensor([[1.0, -1.0, 2.0], [2.0, 0.0, 0.0], [0.0, 1.0, -1.0]]), threshold: 1.3, type: {:u, 8})
+      #Nx.Tensor<
+        u8[3][3]
+        [
+          [0, 0, 1],
+          [1, 0, 0],
+          [0, 0, 0]
+        ]
+      >
+  """
+
+  @spec binarize(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
+  defn binarize(tensor, opts \\ []) do
+    opts = keyword!(opts, threshold: 0, type: {:f, 32})
+    (tensor > opts[:threshold]) |> Nx.as_type(opts[:type])
   end
 end
