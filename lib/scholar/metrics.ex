@@ -445,61 +445,6 @@ defmodule Scholar.Metrics do
     |> Nx.mean()
   end
 
-  # Combinators
-
-  @doc """
-  Returns a function which computes a running average given current average,
-  new observation, and current iteration.
-
-  ## Examples
-
-      iex> cur_avg = 0.5
-      iex> iteration = 1
-      iex> y_true = Nx.tensor([0, 1, 1])
-      iex> y_pred = Nx.tensor([0, 1, 1])
-      iex> avg_acc = Scholar.Metrics.running_average(&Scholar.Metrics.accuracy/2)
-      iex> avg_acc.(cur_avg, [y_true, y_pred], iteration)
-      #Nx.Tensor<
-        f32
-        0.75
-      >
-  """
-  def running_average(metric) do
-    &running_average_impl(&1, apply(metric, &2), &3)
-  end
-
-  defnp running_average_impl(avg, obs, i) do
-    avg
-    |> Nx.multiply(i)
-    |> Nx.add(obs)
-    |> Nx.divide(Nx.add(i, 1))
-  end
-
-  @doc """
-  Returns a function which computes a running sum given current sum,
-  new observation, and current iteration.
-
-  ## Examples
-
-      iex> cur_sum = 12
-      iex> iteration = 2
-      iex> y_true = Nx.tensor([0, 1, 0, 1])
-      iex> y_pred = Nx.tensor([1, 1, 0, 1])
-      iex> fps = Scholar.Metrics.running_sum(&Scholar.Metrics.mean_absolute_error/2)
-      iex> fps.(cur_sum, [y_true, y_pred], iteration)
-      #Nx.Tensor<
-        f32
-        12.25
-      >
-  """
-  def running_sum(metric) do
-    &running_sum_impl(&1, apply(metric, &2), &3)
-  end
-
-  defnp running_sum_impl(sum, obs, _) do
-    Nx.add(sum, obs)
-  end
-
   deftransformp assert_rank(tensor, target_rank) do
     rank = Nx.rank(tensor)
 
