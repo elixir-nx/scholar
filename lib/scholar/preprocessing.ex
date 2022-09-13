@@ -130,7 +130,6 @@ defmodule Scholar.Preprocessing do
     |> Nx.argmax(axis: 1)
   end
 
-
   @doc """
   Encode labels as a one-hot numeric tensor. Labels must be integers from 0 to `:num_classes - 1`.
   If the data does not meet the condition, please use ordinal_encoding first.
@@ -160,5 +159,4 @@ defmodule Scholar.Preprocessing do
   defn one_hot_encoding(tensor, opts \\ []) do
     Nx.equal(Nx.new_axis(tensor, -1), Nx.iota({1, opts[:num_classes]}))
   end
-
 end
