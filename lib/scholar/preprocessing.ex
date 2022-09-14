@@ -205,7 +205,6 @@ defmodule Scholar.Preprocessing do
   @spec normalize(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
   defn normalize(tensor, opts \\ []) do
     opts = keyword!(opts, [:axes, norm: :euclidean])
-    check_norm(opts[:norm])
     zeros = Nx.broadcast(0.0, Nx.shape(tensor))
 
     norm =
@@ -218,6 +217,10 @@ defmodule Scholar.Preprocessing do
 
         :chebyshev ->
           Scholar.Metrics.Distance.chebyshev(tensor, zeros, axes: opts[:axes])
+
+        _ ->
+          raise ArgumentError,
+                "expected :norm to be one of: :euclidean, :manhattan, and :chebyshev, got: #{inspect(opts[:norm])}"
       end
 
     shape = Nx.shape(tensor)
@@ -226,18 +229,11 @@ defmodule Scholar.Preprocessing do
     tensor / norm
   end
 
-  deftransformp get_shape(shape, axes) do
+  deftransformp unsqueezed_reduced_shape(shape, axes) do
     if axes != nil do
       Enum.reduce(axes, shape, &put_elem(&2, &1, 1))
     else
       Tuple.duplicate(1, length(Tuple.to_list(shape)))
-    end
-  end
-
-  deftransformp check_norm(norm) do
-    unless norm in [:euclidean, :manhattan, :chebyshev] do
-      raise ArgumentError,
-            "expected :norm to be one of: :euclidean, :manhattan, and :chebyshev, got: #{inspect(norm)}"
     end
   end
 end
