@@ -345,12 +345,8 @@ defmodule Scholar.Metrics do
   Calculates F1 score given rank-1 tensors which represent
   the expected (`y_true`) and predicted (`y_pred`) classes.
 
-  If the sum of true positives and false positives is 0, then the
-  precision is 0 to avoid zero division.
-  If the sum of true positives and false negatives is 0, then the
-  recall is 0 to avoid zero division.
-  If the sum of precision and recall is 0, then the
-  F1 score is 0 to avoid zero division.
+  If all examples are true negatives, then the result is 0 to
+  avoid zero division.
 
   ## Options
 
