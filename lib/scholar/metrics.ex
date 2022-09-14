@@ -48,7 +48,8 @@ defmodule Scholar.Metrics do
   Computes the precision of the given predictions with respect to
   the given targets for binary classification problems.
 
-  If the sum of true positive and false positive examples equals to 0, then the result is set to 0.
+  If the sum of true positives and false positives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Examples
 
@@ -73,7 +74,8 @@ defmodule Scholar.Metrics do
   Computes the precision of the given predictions with respect to
   the given targets for multi-class classification problems.
 
-  If the sum of true positive and false positive examples equals to 0, then the result is set to 0.
+  If the sum of true positives and false positives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Options
 
@@ -106,7 +108,8 @@ defmodule Scholar.Metrics do
   Computes the recall of the given predictions with respect to
   the given targets for binary classification problems.
 
-  If the sum of true positives and false negative examples equals to 0, then the result is set to 0.
+  If the sum of true positives and false negatives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Examples
 
@@ -131,7 +134,8 @@ defmodule Scholar.Metrics do
   Computes the recall of the given predictions with respect to
   the given targets for multi-class classification problems.
 
-  If the sum of true positive and false positive examples equals to 0, then the result is set to 0.
+  If the sum of true positives and false negatives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Options
 
@@ -242,7 +246,8 @@ defmodule Scholar.Metrics do
   Computes the specificity of the given predictions with respect
   to the given targets for binary classification problems.
 
-  If the sum of true negative and false positive examples equals to 0, then the result is set to 0.
+  If the sum of true negatives and false positives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Examples
 
@@ -267,7 +272,8 @@ defmodule Scholar.Metrics do
   Computes the specificity of the given predictions with respect
   to the given targets for multi-class classification problems.
 
-  If the sum of true negative and false positive examples equals to 0, then the result is set to 0.
+  If the sum of true negatives and false positives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Options
 
@@ -339,9 +345,12 @@ defmodule Scholar.Metrics do
   Calculates F1 score given rank-1 tensors which represent
   the expected (`y_true`) and predicted (`y_pred`) classes.
 
-  If the sum of true positive and false positive examples equals to 0, then the precision is set to 0.
-  If the sum of true positive and false negative examples equals to 0, then the recall is set to 0.
-  If the sum of precision and recall equals to 0, then the F1 score is set to 0.
+  If the sum of true positives and false positives is 0, then the
+  precision is 0 to avoid zero division.
+  If the sum of true positives and false negatives is 0, then the
+  recall is 0 to avoid zero division.
+  If the sum of precision and recall is 0, then the
+  F1 score is 0 to avoid zero division.
 
   ## Options
 
