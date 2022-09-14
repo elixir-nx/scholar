@@ -163,4 +163,81 @@ defmodule Scholar.Preprocessing do
   defn one_hot_encode(tensor, opts \\ []) do
     Nx.equal(Nx.new_axis(tensor, -1), Nx.iota({1, opts[:num_classes]}))
   end
+
+  @doc """
+  Normalize samples individually to unit norm.
+
+  The zero-tensors cannot be normalized and they stay the same
+  after normalization.
+
+  ## Options
+
+    * `:axes` - Axes to normalize a tensor over. By default the
+    whole tensor is normalized.
+
+    * `:norm` - The norm to use to normalize each non zero sample.
+    Possible options are `:euclidean`, `:manhattan`, and `:chebyshev`
+    Defaults to `:euclidean`.
+
+  ## Examples
+
+      iex> Scholar.Preprocessing.normalize(Nx.tensor([[0, 0, 0], [3, 4, 5], [-2, 4, 3]]), axes: [1])
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [0.0, 0.0, 0.0],
+          [0.4242640733718872, 0.5656854510307312, 0.7071067690849304],
+          [-0.3713906705379486, 0.7427813410758972, 0.5570860505104065]
+        ]
+      >
+
+      iex> Scholar.Preprocessing.normalize(Nx.tensor([[0, 0, 0], [3, 4, 5], [-2, 4, 3]]))
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [0.0, 0.0, 0.0],
+          [0.3375263810157776, 0.4500351846218109, 0.5625439882278442],
+          [-0.22501759231090546, 0.4500351846218109, 0.3375263810157776]
+        ]
+      >
+  """
+
+  @spec normalize(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
+  defn normalize(tensor, opts \\ []) do
+    opts = keyword!(opts, [:axes, norm: :euclidean])
+    check_norm(opts[:norm])
+    zeros = Nx.broadcast(0.0, Nx.shape(tensor))
+
+    norm =
+      case opts[:norm] do
+        :euclidean ->
+          Scholar.Metrics.Distance.euclidean(tensor, zeros, axes: opts[:axes])
+
+        :manhattan ->
+          Scholar.Metrics.Distance.manhattan(tensor, zeros, axes: opts[:axes])
+
+        :chebyshev ->
+          Scholar.Metrics.Distance.chebyshev(tensor, zeros, axes: opts[:axes])
+      end
+
+    shape = Nx.shape(tensor)
+    shape_to_broadcast = get_shape(shape, opts[:axes])
+    norm = Nx.select(norm == 0.0, 1.0, norm) |> Nx.reshape(shape_to_broadcast)
+    tensor / norm
+  end
+
+  deftransformp get_shape(shape, axes) do
+    if axes != nil do
+      Enum.reduce(axes, shape, &put_elem(&2, &1, 1))
+    else
+      Tuple.duplicate(1, length(Tuple.to_list(shape)))
+    end
+  end
+
+  deftransformp check_norm(norm) do
+    unless norm in [:euclidean, :manhattan, :chebyshev] do
+      raise ArgumentError,
+            "expected :norm to be one of: :euclidean, :manhattan, and :chebyshev, got: #{inspect(norm)}"
+    end
+  end
 end
