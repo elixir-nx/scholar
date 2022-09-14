@@ -48,6 +48,9 @@ defmodule Scholar.Metrics do
   Computes the precision of the given predictions with respect to
   the given targets for binary classification problems.
 
+  If the sum of true positives and false positives is 0, then the
+  result is 0 to avoid zero division.
+
   ## Examples
 
       iex> Scholar.Metrics.binary_precision(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -64,12 +67,15 @@ defmodule Scholar.Metrics do
     true_positives = binary_true_positives(y_true, y_pred)
     false_positives = binary_false_positives(y_true, y_pred)
 
-    true_positives / (true_positives + false_positives + 1.0e-16)
+    safe_division(true_positives, true_positives + false_positives)
   end
 
   @doc ~S"""
   Computes the precision of the given predictions with respect to
   the given targets for multi-class classification problems.
+
+  If the sum of true positives and false positives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Options
 
@@ -95,12 +101,15 @@ defmodule Scholar.Metrics do
     true_positives = Nx.take_diagonal(cm)
     false_positives = Nx.sum(cm, axes: [0]) - true_positives
 
-    true_positives / (true_positives + false_positives + 1.0e-16)
+    safe_division(true_positives, true_positives + false_positives)
   end
 
   @doc ~S"""
   Computes the recall of the given predictions with respect to
   the given targets for binary classification problems.
+
+  If the sum of true positives and false negatives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Examples
 
@@ -118,12 +127,15 @@ defmodule Scholar.Metrics do
     true_positives = binary_true_positives(y_true, y_pred)
     false_negatives = binary_false_negatives(y_true, y_pred)
 
-    true_positives / (false_negatives + true_positives + 1.0e-16)
+    safe_division(true_positives, false_negatives + true_positives)
   end
 
   @doc ~S"""
   Computes the recall of the given predictions with respect to
   the given targets for multi-class classification problems.
+
+  If the sum of true positives and false negatives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Options
 
@@ -148,7 +160,7 @@ defmodule Scholar.Metrics do
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positive = Nx.take_diagonal(cm)
     false_negative = Nx.sum(cm, axes: [1]) - true_positive
-    true_positive / (true_positive + false_negative + 1.0e-16)
+    safe_division(true_positive, true_positive + false_negative)
   end
 
   defnp binary_true_positives(y_true, y_pred) do
@@ -234,6 +246,9 @@ defmodule Scholar.Metrics do
   Computes the specificity of the given predictions with respect
   to the given targets for binary classification problems.
 
+  If the sum of true negatives and false positives is 0, then the
+  result is 0 to avoid zero division.
+
   ## Examples
 
       iex> Scholar.Metrics.binary_specificity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
@@ -250,12 +265,15 @@ defmodule Scholar.Metrics do
     true_negatives = binary_true_negatives(y_true, y_pred)
     false_positives = binary_false_positives(y_true, y_pred)
 
-    true_negatives / (false_positives + true_negatives + 1.0e-16)
+    safe_division(true_negatives, false_positives + true_negatives)
   end
 
   @doc ~S"""
   Computes the specificity of the given predictions with respect
   to the given targets for multi-class classification problems.
+
+  If the sum of true negatives and false positives is 0, then the
+  result is 0 to avoid zero division.
 
   ## Options
 
@@ -283,7 +301,7 @@ defmodule Scholar.Metrics do
     false_negative = Nx.sum(cm, axes: [1]) - true_positive
     true_negative = Nx.sum(cm) - (false_negative + false_positive + true_positive)
 
-    true_negative / (false_positive + true_negative + 1.0e-16)
+    safe_division(true_negative, false_positive + true_negative)
   end
 
   @doc ~S"""
@@ -327,6 +345,9 @@ defmodule Scholar.Metrics do
   Calculates F1 score given rank-1 tensors which represent
   the expected (`y_true`) and predicted (`y_pred`) classes.
 
+  If all examples are true negatives, then the result is 0 to
+  avoid zero division.
+
   ## Options
 
     * `:num_classes` - required. Number of classes contained in the input tensors
@@ -363,6 +384,11 @@ defmodule Scholar.Metrics do
         f32
         0.6000000238418579
       >
+      iex> Scholar.Metrics.f1_score(Nx.tensor([1,0,1,0]), Nx.tensor([0, 1, 0, 1]), num_classes: 2, average: nil)
+      #Nx.Tensor<
+        f32[2]
+        [0.0, 0.0]
+      >
   """
   defn f1_score(y_true, y_pred, opts \\ []) do
     opts = keyword!(opts, [:num_classes, :average])
@@ -382,11 +408,11 @@ defmodule Scholar.Metrics do
         false_positive = Nx.sum(cm, axes: [0]) - true_positive
         false_negative = Nx.sum(cm, axes: [1]) - true_positive
 
-        precision = true_positive / (true_positive + false_positive + 1.0e-16)
+        precision = safe_division(true_positive, true_positive + false_positive)
 
-        recall = true_positive / (true_positive + false_negative + 1.0e-16)
+        recall = safe_division(true_positive, true_positive + false_negative)
 
-        per_class_f1 = 2 * precision * recall / (precision + recall + 1.0e-16)
+        per_class_f1 = safe_division(2 * precision * recall, precision + recall)
 
         case opts[:average] do
           nil ->
@@ -398,7 +424,7 @@ defmodule Scholar.Metrics do
           :weighted ->
             support = (y_true == Nx.iota({num_classes, 1})) |> Nx.sum(axes: [1])
 
-            (per_class_f1 * support / (Nx.sum(support) + 1.0e-16))
+            safe_division(per_class_f1 * support, Nx.sum(support))
             |> Nx.sum()
         end
     end
@@ -430,5 +456,12 @@ defmodule Scholar.Metrics do
 
   deftransformp check_num_classes(num_classes) do
     num_classes || raise ArgumentError, "missing option :num_classes"
+  end
+
+  defnp safe_division(nominator, denominator) do
+    is_zero? = denominator == 0
+    nominator = Nx.select(is_zero?, 0, nominator)
+    denominator = Nx.select(is_zero?, 1, denominator)
+    nominator / denominator
   end
 end
