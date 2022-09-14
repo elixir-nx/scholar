@@ -221,7 +221,7 @@ defmodule Scholar.Preprocessing do
       end
 
     shape = Nx.shape(tensor)
-    shape_to_broadcast = get_shape(shape, opts[:axes])
+    shape_to_broadcast = unsqueezed_reduced_shape(shape, opts[:axes])
     norm = Nx.select(norm == 0.0, 1.0, norm) |> Nx.reshape(shape_to_broadcast)
     tensor / norm
   end
