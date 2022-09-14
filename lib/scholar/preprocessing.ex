@@ -218,9 +218,9 @@ defmodule Scholar.Preprocessing do
         :chebyshev ->
           Scholar.Metrics.Distance.chebyshev(tensor, zeros, axes: opts[:axes])
 
-        _ ->
+        other ->
           raise ArgumentError,
-                "expected :norm to be one of: :euclidean, :manhattan, and :chebyshev, got: #{inspect(opts[:norm])}"
+                "expected :norm to be one of: :euclidean, :manhattan, and :chebyshev, got: #{inspect(other)}"
       end
 
     shape = Nx.shape(tensor)
