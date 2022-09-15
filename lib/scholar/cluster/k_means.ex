@@ -47,7 +47,7 @@ defmodule Scholar.Cluster.KMeans do
     * `:labels` - Labels of each point.
   """
 
-  @schema [
+  @schema NimbleOptions.new!(
     num_clusters: [required: true, type: :pos_integer],
     max_iterations: [
       type: :pos_integer,
@@ -57,7 +57,7 @@ defmodule Scholar.Cluster.KMeans do
     tol: [type: :float, default: 1.0e-4],
     weights: [type: {:or, [:atom, {:list, {:or, [:float, :non_neg_integer]}}]}],
     init: [type: :atom, default: :k_means_plus_plus]
-  ]
+  )
 
   deftransform train(x, opts \\ []) do
     ntrain(x, NimbleOptions.validate!(opts, @schema))
