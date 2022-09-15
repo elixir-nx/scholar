@@ -61,7 +61,7 @@ defmodule Scholar.Preprocessing do
     std = Nx.standard_deviation(tensor, axes: opts[:axes])
     mean_reduced = Nx.mean(tensor, axes: opts[:axes])
     mean_reduced = Nx.select(std == 0, 0.0, mean_reduced)
-    std = std |> Nx.reshape(shape_to_broadcast)
+    std = Nx.reshape(std, shape_to_broadcast)
     mean_reduced = mean_reduced |> Nx.reshape(shape_to_broadcast)
     (tensor - mean_reduced) / Nx.select(std == 0, 1.0, std)
   end
@@ -106,7 +106,7 @@ defmodule Scholar.Preprocessing do
     shape = Nx.shape(tensor)
     shape_to_broadcast = unsqueezed_reduced_shape(shape, opts[:axes])
     max_abs = Nx.abs(tensor) |> Nx.reduce_max(axes: opts[:axes])
-    max_abs = max_abs |> Nx.reshape(shape_to_broadcast)
+    max_abs = Nx.reshape(max_abs, shape_to_broadcast)
     tensor / Nx.select(max_abs == 0, 1, max_abs)
   end
 
