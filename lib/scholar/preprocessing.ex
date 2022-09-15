@@ -113,13 +113,6 @@ defmodule Scholar.Preprocessing do
   @doc """
   Transform a tensor by scaling each batch to the given range.
 
-  The transformation is given by (e.g. when axis is 0):
-
-  X_std = (X - X.min(axes=[0])) / (X.max(axes=[0]) - X.min(axes=[0]))
-  X_scaled = X_std * (max - min) + min
-
-  Where min and max are feature ranges after transformation.
-
   ## Options
 
     * `:axes` - Axes to scale a tensor over. By default the
