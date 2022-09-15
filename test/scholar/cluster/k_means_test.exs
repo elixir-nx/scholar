@@ -135,8 +135,8 @@ defmodule Scholar.Cluster.KMeansTest do
     test "when :init is neither :random nor a :k_means_plus_plus" do
       x = Nx.tensor([[1, 2], [3, 4]])
 
-      assert_raise ArgumentError,
-                   "expected :init to be either :random or :k_means_plus_plus, got: :abc",
+      assert_raise NimbleOptions.ValidationError,
+                   "expected :init to be in [:k_means_plus_plus, :random], got: :abc",
                    fn ->
                      Scholar.Cluster.KMeans.train(x, num_clusters: 2, init: :abc)
                    end
@@ -152,7 +152,7 @@ defmodule Scholar.Cluster.KMeansTest do
                    end
 
       assert_raise NimbleOptions.ValidationError,
-  "expected :weights to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
+                   "expected :weights to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
 
   * list element at position 1 in :weights failed validation: expected \"list element\" to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
 
@@ -164,7 +164,7 @@ defmodule Scholar.Cluster.KMeansTest do
                    end
 
       assert_raise NimbleOptions.ValidationError,
-  "expected :weights to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
+                   "expected :weights to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
 
   * expected :weights to be a list, got: {1, 2}
   * expected :weights to be an atom, got: {1, 2}",

@@ -8,31 +8,70 @@ defmodule Scholar.Cluster.KMeans do
   @derive {Nx.Container, containers: [:num_iterations, :clusters, :inertia, :labels]}
   defstruct [:num_iterations, :clusters, :inertia, :labels]
 
+  @initialization_schema NimbleOptions.new!(
+                           k_means_plus_plus: [
+                             doc:
+                               "selects initial cluster centroids using sampling based on an empirical probability distribution of the points’ contribution to the overall inertia. This technique speeds up convergence, and is theoretically proven to be O(log(k))-optimal.
+                             "
+                           ],
+                           random: [
+                             doc: """
+                             choose `:num_clusters` observations (rows) at random from data for the initial centroids.
+                             """
+                           ]
+                         )
+
+  @opts_schema NimbleOptions.new!(
+                 num_clusters: [
+                   required: true,
+                   type: :pos_integer,
+                   doc:
+                     "The number of clusters to form as well as the number of centroids to generate."
+                 ],
+                 max_iterations: [
+                   type: :pos_integer,
+                   default: 300,
+                   doc: "Maximum number of iterations of the k-means algorithm for a single run."
+                 ],
+                 num_runs: [
+                   type: :pos_integer,
+                   default: 10,
+                   doc: """
+                    Number of time the k-means algorithm will be run with different centroid seeds.
+                     The final results will be the best output of num_runs runs in terms of inertia.
+                   """
+                 ],
+                 tol: [
+                   type: :float,
+                   default: 1.0e-4,
+                   doc: """
+                    Relative tolerance with regards to Frobenius norm of the difference in
+                    the cluster centers of two consecutive iterations to declare convergence.
+                   """
+                 ],
+                 weights: [
+                   default: nil,
+                   type: {:or, [:atom, {:list, {:or, [:float, :non_neg_integer]}}]},
+                   doc: """
+                   The weights for each observation in x. If equals to `nil`,
+                   all observations are assigned equal weight.
+                   """
+                 ],
+                 init: [
+                   type: {:in, [:k_means_plus_plus, :random]},
+                   default: :k_means_plus_plus,
+                   doc: """
+                   Method for centroid initialization, either of:
+
+                   #{NimbleOptions.docs(@initialization_schema, nest_level: 1)}
+                   """
+                 ]
+               )
+
   @doc """
   Fits a K-Means model for sample inputs `x`.
 
-  ## Options
-
-    * `:num_clusters` - The number of clusters to form as well as the number of centroids to generate. Required.
-
-    * `:max_iterations` - Maximum number of iterations of the k-means algorithm for a single run. Defaults to `300`.
-
-    * `:num_runs` - Number of time the k-means algorithm will be run with different centroid seeds.
-      The final results will be the best output of num_runs runs in terms of inertia. Defaults to `10`.
-
-    * `:tol` - Relative tolerance with regards to Frobenius norm of the difference in the cluster centers of two
-      consecutive iterations to declare convergence. Defaults to `1e-4`.
-
-    * `:weights` - The weights for each observation in x. If equals to `nil`, all observations
-      are assigned equal weight. Defaults to `nil`
-
-    * `:init` - Method for centroid initialization, either of:
-
-        * `:k_means_plus_plus` (default) -  selects initial cluster centroids using sampling based on
-          an empirical probability distribution of the points’ contribution to the overall inertia.
-         This technique speeds up convergence, and is theoretically proven to be O(log(k))-optimal.
-
-        * `:random` - choose `:num_clusters` observations (rows) at random from data for the initial centroids.
+  ## Options \n#{NimbleOptions.docs(@opts_schema)}
 
   ## Returns
 
@@ -46,24 +85,11 @@ defmodule Scholar.Cluster.KMeans do
 
     * `:labels` - Labels of each point.
   """
-
-  @schema NimbleOptions.new!(
-    num_clusters: [required: true, type: :pos_integer],
-    max_iterations: [
-      type: :pos_integer,
-      default: 300
-    ],
-    num_runs: [type: :pos_integer, default: 10],
-    tol: [type: :float, default: 1.0e-4],
-    weights: [type: {:or, [:atom, {:list, {:or, [:float, :non_neg_integer]}}]}],
-    init: [type: :atom, default: :k_means_plus_plus]
-  )
-
   deftransform train(x, opts \\ []) do
-    ntrain(x, NimbleOptions.validate!(opts, @schema))
+    ntrain(x, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defn ntrain(x, opts \\ []) do
+  defnp ntrain(x, opts \\ []) do
     verify(x, opts)
     inf = Nx.Constants.infinity({:f, 32})
     {num_samples, num_features} = Nx.shape(x)
@@ -211,30 +237,9 @@ defmodule Scholar.Cluster.KMeans do
 
     {num_samples, _num_features} = Nx.shape(x)
 
-    unless opts[:num_clusters] do
-      raise ArgumentError,
-            "missing option :num_clusters"
-    end
-
-    unless is_integer(opts[:num_clusters]) and opts[:num_clusters] > 0 and
-             opts[:num_clusters] <= num_samples do
+    unless opts[:num_clusters] <= num_samples do
       raise ArgumentError,
             "expected :num_clusters to to be a positive integer in range 1 to #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
-    end
-
-    unless opts[:init] in [:random, :k_means_plus_plus] do
-      raise ArgumentError,
-            "expected :init to be either :random or :k_means_plus_plus, got: #{inspect(opts[:init])}"
-    end
-
-    unless is_integer(opts[:max_iterations]) and opts[:max_iterations] > 0 do
-      raise ArgumentError,
-            "expected :max_iterations to be a positive integer, got: #{inspect(opts[:max_iterations])}"
-    end
-
-    unless is_integer(opts[:num_runs]) and opts[:num_runs] > 0 do
-      raise ArgumentError,
-            "expected :num_runs to be a positive integer, got: #{inspect(opts[:num_runs])}"
     end
 
     unless is_number(opts[:tol]) and opts[:tol] >= 0 do
@@ -249,7 +254,7 @@ defmodule Scholar.Cluster.KMeans do
   It returns a tensor with clusters corresponding to the input.
   """
 
-  defn predict(%__MODULE__{clusters: clusters}, x) do
+  defn predict(%__MODULE__{clusters: clusters} = _model, x) do
     assert_same_shape!(x[0], clusters[0])
     {num_clusters, _} = Nx.shape(clusters)
     {num_samples, num_features} = Nx.shape(x)
@@ -275,7 +280,7 @@ defmodule Scholar.Cluster.KMeans do
   For model and input `x` function calculate distances between each sample from `x` and centroids
   """
 
-  defn transform(%__MODULE__{clusters: clusters}, x) do
+  defn transform(%__MODULE__{clusters: clusters} = _model, x) do
     Nx.subtract(
       Nx.new_axis(x, 1),
       Nx.new_axis(clusters, 0)
@@ -303,7 +308,7 @@ defmodule Scholar.Cluster.KMeans do
     end
   end
 
-  deftransform to_float(tensor) do
+  deftransformp to_float(tensor) do
     type = tensor |> Nx.type() |> Nx.Type.to_floating()
     Nx.as_type(tensor, type)
   end
