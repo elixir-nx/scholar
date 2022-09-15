@@ -24,7 +24,7 @@ defmodule Scholar.Cluster.KMeans do
       consecutive iterations to declare convergence. Defaults to `1e-4`.
 
     * `:weights` - The weights for each observation in x. If equals to `nil`, all observations
-      are assigned equal weight.
+      are assigned equal weight. Defaults to `nil`
 
     * `:init` - Method for centroid initialization, either of:
 
@@ -47,7 +47,23 @@ defmodule Scholar.Cluster.KMeans do
     * `:labels` - Labels of each point.
   """
 
-  defn fit(x, opts \\ []) do
+  @schema [
+    num_clusters: [required: true, type: :pos_integer],
+    max_iterations: [
+      type: :pos_integer,
+      default: 300
+    ],
+    num_runs: [type: :pos_integer, default: 10],
+    tol: [type: :float, default: 1.0e-4],
+    weights: [type: {:or, [:atom, {:list, {:or, [:float, :non_neg_integer]}}]}],
+    init: [type: :atom, default: :k_means_plus_plus]
+  ]
+
+  deftransform train(x, opts \\ []) do
+    ntrain(x, NimbleOptions.validate!(opts, @schema))
+  end
+
+  defn ntrain(x, opts \\ []) do
     opts =
       keyword!(
         opts,

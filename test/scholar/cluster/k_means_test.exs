@@ -17,7 +17,7 @@ defmodule Scholar.Cluster.KMeansTest do
 
   test "without weights" do
     model =
-      Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
+      Scholar.Cluster.KMeans.train(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
         num_clusters: 2
       )
 
@@ -33,7 +33,7 @@ defmodule Scholar.Cluster.KMeansTest do
 
   test "with weights" do
     model =
-      Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
+      Scholar.Cluster.KMeans.train(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
         num_clusters: 2,
         weights: [1, 2, 3, 4]
       )
@@ -53,10 +53,10 @@ defmodule Scholar.Cluster.KMeansTest do
     test "when :num_clusters is not provided" do
       x = Nx.tensor([[1, 2], [3, 4], [5, 6]])
 
-      assert_raise ArgumentError,
-                   "missing option :num_clusters",
+      assert_raise NimbleOptions.ValidationError,
+                   "required option :num_clusters not found, received options: []",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x)
+                     Scholar.Cluster.KMeans.train(x)
                    end
     end
 
@@ -66,19 +66,19 @@ defmodule Scholar.Cluster.KMeansTest do
       assert_raise ArgumentError,
                    "expected :num_clusters to to be a positive integer in range 1 to 3, got: 4",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 4)
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 4)
                    end
 
-      assert_raise ArgumentError,
-                   "expected :num_clusters to to be a positive integer in range 1 to 3, got: 2.0",
+      assert_raise NimbleOptions.ValidationError,
+                   "expected :num_clusters to be a positive integer, got: 2.0",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2.0)
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2.0)
                    end
 
-      assert_raise ArgumentError,
-                   "expected :num_clusters to to be a positive integer in range 1 to 3, got: -1",
+      assert_raise NimbleOptions.ValidationError,
+                   "expected :num_clusters to be a positive integer, got: -1",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: -1)
+                     Scholar.Cluster.KMeans.train(x, num_clusters: -1)
                    end
     end
 
@@ -87,38 +87,38 @@ defmodule Scholar.Cluster.KMeansTest do
 
       assert_raise ArgumentError,
                    "expected x to have shape {n_samples, n_features}, got tensor with shape: {2}",
-                   fn -> Scholar.Cluster.KMeans.fit(x, num_clusters: 2) end
+                   fn -> Scholar.Cluster.KMeans.train(x, num_clusters: 2) end
     end
 
     test "when :max_iterations is not a positive integer" do
       x = Nx.tensor([[1, 2], [3, 4]])
 
-      assert_raise ArgumentError,
+      assert_raise NimbleOptions.ValidationError,
                    "expected :max_iterations to be a positive integer, got: 0",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, max_iterations: 0)
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2, max_iterations: 0)
                    end
 
-      assert_raise ArgumentError,
+      assert_raise NimbleOptions.ValidationError,
                    "expected :max_iterations to be a positive integer, got: 200.0",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, max_iterations: 200.0)
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2, max_iterations: 200.0)
                    end
     end
 
     test "when :num_runs is not a positive integer" do
       x = Nx.tensor([[1, 2], [3, 4]])
 
-      assert_raise ArgumentError,
+      assert_raise NimbleOptions.ValidationError,
                    "expected :num_runs to be a positive integer, got: 0",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, num_runs: 0)
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2, num_runs: 0)
                    end
 
-      assert_raise ArgumentError,
+      assert_raise NimbleOptions.ValidationError,
                    "expected :num_runs to be a positive integer, got: 10.0",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, num_runs: 10.0)
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2, num_runs: 10.0)
                    end
     end
 
@@ -128,7 +128,7 @@ defmodule Scholar.Cluster.KMeansTest do
       assert_raise ArgumentError,
                    "expected :tol to be a non-negative number, got: -0.1",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, tol: -0.1)
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2, tol: -0.1)
                    end
     end
 
@@ -138,7 +138,7 @@ defmodule Scholar.Cluster.KMeansTest do
       assert_raise ArgumentError,
                    "expected :init to be either :random or :k_means_plus_plus, got: :abc",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, init: :abc)
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2, init: :abc)
                    end
     end
 
@@ -148,19 +148,28 @@ defmodule Scholar.Cluster.KMeansTest do
       assert_raise ArgumentError,
                    "expected :weights to be a list of positive numbers of size 2, got: [1, 2, 3]",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, weights: [1, 2, 3])
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2, weights: [1, 2, 3])
                    end
 
-      assert_raise ArgumentError,
-                   "expected :weights to be a list of positive numbers of size 2, got: [1, -2]",
+      assert_raise NimbleOptions.ValidationError,
+  "expected :weights to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
+
+  * list element at position 1 in :weights failed validation: expected \"list element\" to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
+
+  * expected \"list element\" to be a non negative integer, got: -2
+  * expected \"list element\" to be a float, got: -2
+  * expected :weights to be an atom, got: [1, -2]",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, weights: [1, -2])
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2, weights: [1, -2])
                    end
 
-      assert_raise ArgumentError,
-                   "expected :weights to be a list of positive numbers of size 2, got: {1, 2}",
+      assert_raise NimbleOptions.ValidationError,
+  "expected :weights to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
+
+  * expected :weights to be a list, got: {1, 2}
+  * expected :weights to be an atom, got: {1, 2}",
                    fn ->
-                     Scholar.Cluster.KMeans.fit(x, num_clusters: 2, weights: {1, 2})
+                     Scholar.Cluster.KMeans.train(x, num_clusters: 2, weights: {1, 2})
                    end
     end
   end
