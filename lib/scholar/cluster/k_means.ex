@@ -64,19 +64,6 @@ defmodule Scholar.Cluster.KMeans do
   end
 
   defn ntrain(x, opts \\ []) do
-    opts =
-      keyword!(
-        opts,
-        [
-          :num_clusters,
-          max_iterations: 300,
-          num_runs: 10,
-          tol: 1.0e-4,
-          init: :k_means_plus_plus,
-          weights: nil
-        ]
-      )
-
     verify(x, opts)
     inf = Nx.Constants.infinity({:f, 32})
     {num_samples, num_features} = Nx.shape(x)
