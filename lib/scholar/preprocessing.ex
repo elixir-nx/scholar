@@ -172,7 +172,7 @@ defmodule Scholar.Preprocessing do
   defn min_max_scale(tensor, opts \\ []) do
     opts = keyword!(opts, [:axes, min: 0, max: 1])
 
-    if opts[:max] < opts[:min] do
+    if opts[:max] <= opts[:min] do
       raise ArgumentError,
             "expected :max to be greater than :min"
     else
