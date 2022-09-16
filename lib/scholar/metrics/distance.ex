@@ -6,32 +6,35 @@ defmodule Scholar.Metrics.Distance do
   import Nx.Defn
   import Scholar.Shared
 
-  @general_schema NimbleOptions.new!(
-                    axes: [
-                      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
-                      doc: """
-                      Axes to calculate the distance over. By default the distance
-                      is calculated between the whole tensors.
-                      """
-                    ]
-                  )
+  general_schema = [
+    axes: [
+      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      doc: """
+      Axes to calculate the distance over. By default the distance
+      is calculated between the whole tensors.
+      """
+    ]
+  ]
 
-  @minkowski_schema NimbleOptions.new!(
-                      axes: [
-                        type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
-                        doc: """
-                        Axes to calculate the distance over. By default the distance
-                        is calculated between the whole tensors.
-                        """
-                      ],
-                      p: [
-                        type: {:custom, Scholar.Shared, :check_if_non_negative_float, [:p]},
-                        default: 2.0,
-                        doc: """
-                        A non-negative parameter of Minkowski distance.
-                        """
-                      ]
-                    )
+  minkowski_schema = [
+    axes: [
+      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      doc: """
+      Axes to calculate the distance over. By default the distance
+      is calculated between the whole tensors.
+      """
+    ],
+    p: [
+      type: {:custom, Scholar.Shared, :check_if_non_negative_float, [:p]},
+      default: 2.0,
+      doc: """
+      A non-negative parameter of Minkowski distance.
+      """
+    ]
+  ]
+
+  @general_schema NimbleOptions.new!(general_schema)
+  @minkowski_schema NimbleOptions.new!(minkowski_schema)
 
   @doc """
   Standard euclidean distance.

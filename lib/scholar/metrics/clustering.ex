@@ -5,13 +5,15 @@ defmodule Scholar.Metrics.Clustering do
 
   import Nx.Defn
 
-  @opts_schema NimbleOptions.new!(
-                 num_clusters: [
-                   required: true,
-                   type: :pos_integer,
-                   doc: "Number of clusters in clustering."
-                 ]
-               )
+  opts = [
+    num_clusters: [
+      required: true,
+      type: :pos_integer,
+      doc: "Number of clusters in clustering."
+    ]
+  ]
+
+  @opts_schema NimbleOptions.new!(opts)
 
   @doc """
   Compute the Silhouette Coefficient for each sample.

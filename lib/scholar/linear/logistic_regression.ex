@@ -7,28 +7,30 @@ defmodule Scholar.Linear.LogisticRegression do
   @derive {Nx.Container, containers: [:coefficients, :bias], keep: [:mode]}
   defstruct [:coefficients, :bias, :mode]
 
-  @opts_schema NimbleOptions.new!(
-                 num_classes: [
-                   required: true,
-                   type: :pos_integer,
-                   doc: "number of classes contained in the input tensors."
-                 ],
-                 learning_rate: [
-                   type: {:custom, Scholar.Shared, :check_if_positive_float, [:learning_rate]},
-                   default: 0.01,
-                   doc: """
-                   learning rate used by gradient descent.
-                   """
-                 ],
-                 iterations: [
-                   type: :pos_integer,
-                   default: 1000,
-                   doc: """
-                   number of iterations of gradient descent performed inside logistic
-                   regression.
-                   """
-                 ]
-               )
+  opts = [
+    num_classes: [
+      required: true,
+      type: :pos_integer,
+      doc: "number of classes contained in the input tensors."
+    ],
+    learning_rate: [
+      type: {:custom, Scholar.Shared, :check_if_positive_float, [:learning_rate]},
+      default: 0.01,
+      doc: """
+      learning rate used by gradient descent.
+      """
+    ],
+    iterations: [
+      type: :pos_integer,
+      default: 1000,
+      doc: """
+      number of iterations of gradient descent performed inside logistic
+      regression.
+      """
+    ]
+  ]
+
+  @opts_schema NimbleOptions.new!(opts)
 
   @doc """
   Fits a logistic regression model for sample inputs `x` and sample

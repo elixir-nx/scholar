@@ -14,39 +14,42 @@ defmodule Scholar.Metrics do
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
 
-  @opts_schema NimbleOptions.new!(
-                 num_classes: [
-                   required: true,
-                   type: :pos_integer,
-                   doc: "Number of classes contained in the input tensors"
-                 ]
-               )
+  general_schema = [
+    num_classes: [
+      required: true,
+      type: :pos_integer,
+      doc: "Number of classes contained in the input tensors"
+    ]
+  ]
 
-  @f1_score_schema NimbleOptions.new!(
-                     num_classes: [
-                       required: true,
-                       type: :pos_integer,
-                       doc: "Number of classes contained in the input tensors"
-                     ],
-                     average: [
-                       type: {:in, [:micro, :macro, nil, :weighted]},
-                       default: nil,
-                       doc: """
-                       This determines the type of averaging performed on the data.
+  f1_score_schema = [
+    num_classes: [
+      required: true,
+      type: :pos_integer,
+      doc: "Number of classes contained in the input tensors"
+    ],
+    average: [
+      type: {:in, [:micro, :macro, nil, :weighted]},
+      default: nil,
+      doc: """
+      This determines the type of averaging performed on the data.
 
-                       * `:macro`. Calculate metrics for each label, and find their unweighted mean.
-                       This does not take label imbalance into account.
+      * `:macro`. Calculate metrics for each label, and find their unweighted mean.
+      This does not take label imbalance into account.
 
-                       * `:weighted`. Calculate metrics for each label, and find their average weighted by
-                       support (the number of true instances for each label).
+      * `:weighted`. Calculate metrics for each label, and find their average weighted by
+      support (the number of true instances for each label).
 
-                       * `:micro`. Calculate metrics globally by counting the total true positives,
-                       false negatives and false positives.
+      * `:micro`. Calculate metrics globally by counting the total true positives,
+      false negatives and false positives.
 
-                       * `nil`. The f1 scores for each class are returned.
-                       """
-                     ]
-                   )
+      * `nil`. The f1 scores for each class are returned.
+      """
+    ]
+  ]
+
+  @general_schema NimbleOptions.new!(general_schema)
+  @f1_score_schema NimbleOptions.new!(f1_score_schema)
 
   # Standard Metrics
 
@@ -113,7 +116,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -173,7 +176,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -255,7 +258,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -311,7 +314,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -344,7 +347,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
