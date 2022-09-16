@@ -14,6 +14,11 @@ defmodule Scholar.Preprocessing do
   Standardization can be helpful in cases where the data follows a Gaussian distribution
   (or Normal distribution) without outliers.
 
+  ## Options
+
+    * `:axes` - Axes to standarize a tensor over. By default the
+    whole tensor is standarized.
+
   ## Examples
 
         iex> Scholar.Preprocessing.standard_scale(Nx.tensor([1,2,3]))
@@ -32,21 +37,137 @@ defmodule Scholar.Preprocessing do
           ]
         >
 
+        iex> Scholar.Preprocessing.standard_scale(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]), axes: [1])
+        #Nx.Tensor<
+          f32[3][3]
+          [
+            [0.26726120710372925, -1.3363062143325806, 1.069044828414917],
+            [1.4142135381698608, -0.7071068286895752, -0.7071068286895752],
+            [0.0, 1.2247447967529297, -1.2247447967529297]
+          ]
+        >
+
         iex> Scholar.Preprocessing.standard_scale(42)
         #Nx.Tensor<
           f32
           42.0
         >
   """
-  @spec standard_scale(tensor :: Nx.Tensor.t()) :: Nx.Tensor.t()
-  defn standard_scale(tensor) do
-    tensor = Nx.to_tensor(tensor)
-    std = Nx.standard_deviation(tensor)
+  @spec standard_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
+  defn standard_scale(tensor, opts \\ []) do
+    opts = keyword!(opts, [:axes])
+    std = Nx.standard_deviation(tensor, axes: opts[:axes], keep_axes: true)
+    mean_reduced = Nx.mean(tensor, axes: opts[:axes], keep_axes: true)
+    mean_reduced = Nx.select(std == 0, 0.0, mean_reduced)
+    (tensor - mean_reduced) / Nx.select(std == 0, 1.0, std)
+  end
 
-    if std == 0.0 do
-      tensor
+  @doc """
+  Scales a tensor by dividing each sample in batch by maximum absolute value in the batch
+
+  ## Options
+
+    * `:axes` - Axes to scale a tensor over. By default the
+    whole tensor is scaled.
+
+  ## Examples
+
+        iex> Scholar.Preprocessing.max_abs_scale(Nx.tensor([1, 2, 3]))
+        #Nx.Tensor<
+          f32[3]
+          [0.3333333432674408, 0.6666666865348816, 1.0]
+        >
+
+        iex> Scholar.Preprocessing.max_abs_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0])
+        #Nx.Tensor<
+          f32[4][3]
+          [
+            [0.3333333432674408, -0.3333333432674408, 1.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 0.3333333432674408, -0.5],
+            [0.6666666865348816, 1.0, 0.5]
+          ]
+        >
+
+        iex> Scholar.Preprocessing.max_abs_scale(42)
+        #Nx.Tensor<
+          f32
+          1.0
+        >
+  """
+
+  @spec max_abs_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
+  defn max_abs_scale(tensor, opts \\ []) do
+    opts = keyword!(opts, [:axes])
+    max_abs = Nx.abs(tensor) |> Nx.reduce_max(axes: opts[:axes], keep_axes: true)
+    tensor / Nx.select(max_abs == 0, 1, max_abs)
+  end
+
+  @doc """
+  Transform a tensor by scaling each batch to the given range.
+
+  ## Options
+
+    * `:axes` - Axes to scale a tensor over. By default the
+    whole tensor is scaled.
+
+    * `:min` - The lower boundary of the desired range of transformed data.
+    Defaults to 0.
+
+    * `:max` - The upper boundary of the desired range of transformed data.
+    Defautls to 1.
+
+  ## Examples
+
+        iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([1, 2, 3]))
+        #Nx.Tensor<
+          f32[3]
+          [0.0, 0.5, 1.0]
+        >
+
+        iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0])
+        #Nx.Tensor<
+          f32[4][3]
+          [
+            [0.3333333432674408, 0.0, 1.0],
+            [1.0, 0.25, 0.3333333432674408],
+            [0.0, 0.5, 0.0],
+            [0.6666666865348816, 1.0, 0.6666666865348816]
+          ]
+        >
+
+        iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0], min: 1, max: 3)
+        #Nx.Tensor<
+          f32[4][3]
+          [
+            [1.6666667461395264, 1.0, 3.0],
+            [3.0, 1.5, 1.6666667461395264],
+            [1.0, 2.0, 1.0],
+            [2.3333334922790527, 3.0, 2.3333334922790527]
+          ]
+        >
+
+        iex> Scholar.Preprocessing.min_max_scale(42)
+        #Nx.Tensor<
+          f32
+          0.0
+        >
+  """
+
+  @spec min_max_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
+  defn min_max_scale(tensor, opts \\ []) do
+    opts = keyword!(opts, [:axes, min: 0, max: 1])
+
+    if opts[:max] <= opts[:min] do
+      raise ArgumentError,
+            "expected :max to be greater than :min"
     else
-      (tensor - Nx.mean(tensor)) / std
+      reduced_max = Nx.reduce_max(tensor, axes: opts[:axes], keep_axes: true)
+      reduced_min = Nx.reduce_min(tensor, axes: opts[:axes], keep_axes: true)
+      denominator = reduced_max - reduced_min
+      denominator = Nx.select(denominator == 0, 1, denominator)
+      x_std = (tensor - reduced_min) / denominator
+      x_std * (opts[:max] - opts[:min]) + opts[:min]
     end
   end
 

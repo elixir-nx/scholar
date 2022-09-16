@@ -8,6 +8,7 @@ defmodule Scholar.Cluster.KMeans do
   @derive {Nx.Container, containers: [:num_iterations, :clusters, :inertia, :labels]}
   defstruct [:num_iterations, :clusters, :inertia, :labels]
 
+<<<<<<< HEAD
   @opts_schema NimbleOptions.new!(
                  num_clusters: [
                    required: true,
@@ -64,6 +65,60 @@ defmodule Scholar.Cluster.KMeans do
                    """
                  ]
                )
+=======
+  opts = [
+    num_clusters: [
+      required: true,
+      type: :pos_integer,
+      doc: "The number of clusters to form as well as the number of centroids to generate."
+    ],
+    max_iterations: [
+      type: :pos_integer,
+      default: 300,
+      doc: "Maximum number of iterations of the k-means algorithm for a single run."
+    ],
+    num_runs: [
+      type: :pos_integer,
+      default: 10,
+      doc: """
+      Number of time the k-means algorithm will be run with different centroid seeds.
+      The final results will be the best output of num_runs runs in terms of inertia.
+      """
+    ],
+    tol: [
+      type: {:custom, Scholar.Options, :positive_number, []},
+      default: 1.0e-4,
+      doc: """
+      Relative tolerance with regards to Frobenius norm of the difference in
+      the cluster centers of two consecutive iterations to declare convergence.
+      """
+    ],
+    weights: [
+      type: {:list, {:custom, Scholar.Options, :positive_number, []}},
+      doc: """
+      The weights for each observation in x. If equals to `nil`,
+      all observations are assigned equal weight.
+      """
+    ],
+    init: [
+      type: {:in, [:k_means_plus_plus, :random]},
+      default: :k_means_plus_plus,
+      doc: """
+      Method for centroid initialization, either of:
+
+      * `:k_means_plus_plus` - selects initial cluster centroids using sampling based
+        on an empirical probability distribution of the points’ contribution to
+        the overall inertia. This technique speeds up convergence, and is
+        theoretically proven to be O(log(k))-optimal.
+
+      * `:random` - choose `:num_clusters` observations (rows) at random from data for
+        the initial centroids.
+      """
+    ]
+  ]
+
+  @opts_schema NimbleOptions.new!(opts)
+>>>>>>> 9f42198b6cd851859a8e0853a0ab7267c4392e31
 
   @doc """
   Fits a K-Means model for sample inputs `x`.
@@ -85,11 +140,31 @@ defmodule Scholar.Cluster.KMeans do
     * `:labels` - Labels of each point.
   """
   deftransform train(x, opts \\ []) do
+<<<<<<< HEAD
     ntrain(x, NimbleOptions.validate!(opts, @opts_schema))
   end
 
   defnp ntrain(x, opts \\ []) do
     verify(x, opts)
+=======
+    if Nx.rank(x) != 2 do
+      raise ArgumentError,
+            "expected input tensor to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
+    end
+
+    {num_samples, _num_features} = Nx.shape(x)
+    opts = NimbleOptions.validate!(opts, @opts_schema)
+
+    unless opts[:num_clusters] <= num_samples do
+      raise ArgumentError,
+            "invalid value for :num_clusters option: expected positive integer between 1 and #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
+    end
+
+    ntrain(x, opts)
+  end
+
+  defnp ntrain(x, opts \\ []) do
+>>>>>>> 9f42198b6cd851859a8e0853a0ab7267c4392e31
     inf = Nx.Constants.infinity({:f, 32})
     {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
@@ -228,6 +303,7 @@ defmodule Scholar.Cluster.KMeans do
     final_centroids
   end
 
+<<<<<<< HEAD
   deftransformp verify(x, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
@@ -247,12 +323,17 @@ defmodule Scholar.Cluster.KMeans do
     end
   end
 
+=======
+>>>>>>> 9f42198b6cd851859a8e0853a0ab7267c4392e31
   @doc """
   Makes predictions with the given model on inputs `x`.
 
   It returns a tensor with clusters corresponding to the input.
   """
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9f42198b6cd851859a8e0853a0ab7267c4392e31
   defn predict(%__MODULE__{clusters: clusters} = _model, x) do
     assert_same_shape!(x[0], clusters[0])
     {num_clusters, _} = Nx.shape(clusters)
@@ -276,9 +357,12 @@ defmodule Scholar.Cluster.KMeans do
   end
 
   @doc """
-  For model and input `x` function calculate distances between each sample from `x` and centroids
+  Calculate distances between each sample from `x` and and the model centroids.
   """
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9f42198b6cd851859a8e0853a0ab7267c4392e31
   defn transform(%__MODULE__{clusters: clusters} = _model, x) do
     Nx.subtract(
       Nx.new_axis(x, 1),
@@ -303,7 +387,7 @@ defmodule Scholar.Cluster.KMeans do
       end
     else
       raise ArgumentError,
-            "expected :weights to be a list of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
+            "invalid value for :weights option: expected list of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
     end
   end
 
