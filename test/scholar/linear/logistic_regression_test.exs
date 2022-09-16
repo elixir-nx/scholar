@@ -42,9 +42,11 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       x = Nx.tensor([[1, 2], [3, 4]])
       y = Nx.tensor([1, 2])
 
-      assert_raise NimbleOptions.ValidationError, "invalid value for :num_classes option: expected positive integer, got: -3", fn ->
-        Scholar.Linear.LogisticRegression.train(x, y, num_classes: -3)
-      end
+      assert_raise NimbleOptions.ValidationError,
+                   "invalid value for :num_classes option: expected positive integer, got: -3",
+                   fn ->
+                     Scholar.Linear.LogisticRegression.train(x, y, num_classes: -3)
+                   end
 
       assert_raise NimbleOptions.ValidationError,
                    "invalid value for :num_classes option: expected positive integer, got: 2.0",
