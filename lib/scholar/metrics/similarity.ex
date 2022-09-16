@@ -80,7 +80,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.binary_jaccard(x, y)
       #Nx.Tensor<
         f32
-       0.8333333134651184
+        0.8333333134651184
       >
 
       iex> x = Nx.tensor([1, 1])
