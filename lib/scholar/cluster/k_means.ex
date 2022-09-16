@@ -8,19 +8,6 @@ defmodule Scholar.Cluster.KMeans do
   @derive {Nx.Container, containers: [:num_iterations, :clusters, :inertia, :labels]}
   defstruct [:num_iterations, :clusters, :inertia, :labels]
 
-  @initialization_schema NimbleOptions.new!(
-                           k_means_plus_plus: [
-                             doc:
-                               "selects initial cluster centroids using sampling based on an empirical probability distribution of the points’ contribution to the overall inertia. This technique speeds up convergence, and is theoretically proven to be O(log(k))-optimal.
-                             "
-                           ],
-                           random: [
-                             doc: """
-                             choose `:num_clusters` observations (rows) at random from data for the initial centroids.
-                             """
-                           ]
-                         )
-
   @opts_schema NimbleOptions.new!(
                  num_clusters: [
                    required: true,
@@ -42,7 +29,7 @@ defmodule Scholar.Cluster.KMeans do
                    """
                  ],
                  tol: [
-                   type: :float,
+                   type: {:custom, Scholar.Shared, :check_if_positive_float, [:tol]},
                    default: 1.0e-4,
                    doc: """
                    Relative tolerance with regards to Frobenius norm of the difference in
@@ -50,7 +37,13 @@ defmodule Scholar.Cluster.KMeans do
                    """
                  ],
                  weights: [
-                   type: {:list, {:or, [:float, :non_neg_integer]}},
+                   type:
+                     {:list,
+                      {:or,
+                       [
+                         {:custom, Scholar.Shared, :check_if_positive_float, [:weights]},
+                         :non_neg_integer
+                       ]}},
                    doc: """
                    The weights for each observation in x. If equals to `nil`,
                    all observations are assigned equal weight.
@@ -62,7 +55,11 @@ defmodule Scholar.Cluster.KMeans do
                    doc: """
                    Method for centroid initialization, either of:
 
-                   #{NimbleOptions.docs(@initialization_schema, nest_level: 1)}
+                   * `:k_means_plus_plus` - selects initial cluster centroids using sampling based
+                   on an empirical probability distribution of the points’ contribution to
+                   the overall inertia. This technique speeds up convergence, and is
+                   theoretically proven to be O(log(k))-optimal.
+                   * `:random` - choose `:num_clusters` observations (rows) at random from data for the initial centroids.
                    """
                  ]
                )
@@ -291,7 +288,7 @@ defmodule Scholar.Cluster.KMeans do
 
   deftransformp validate_weights(weights, num_samples, num_runs) do
     if is_nil(weights) or
-         (is_list(weights) and length(weights) == num_samples and Enum.all?(weights, &(&1 >= 0))) do
+         (is_list(weights) and length(weights) == num_samples) do
       case weights do
         nil ->
           Nx.broadcast(1.0, {num_runs, num_samples})
