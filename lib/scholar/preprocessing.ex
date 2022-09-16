@@ -5,6 +5,118 @@ defmodule Scholar.Preprocessing do
 
   import Nx.Defn
 
+  general_schema = [
+    axes: [
+      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      doc: """
+      Axes to calculate the distance over. By default the distance
+      is calculated between the whole tensors.
+      """
+    ]
+  ]
+
+  encode_schema = [
+    num_classes: [
+      required: true,
+      type: :pos_integer,
+      doc: """
+      Number of classes to be encoded.
+      """
+    ]
+  ]
+
+  min_max_schema = [
+    axes: [
+      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      doc: """
+      Axes to calculate the distance over. By default the distance
+      is calculated between the whole tensors.
+      """
+    ],
+    min: [
+      type: {:or, [:integer, :float]},
+      default: 0,
+      doc: """
+      The lower boundary of the desired range of transformed data.
+      """
+    ],
+    max: [
+      type: {:or, [:integer, :float]},
+      default: 1,
+      doc: """
+      The upper boundary of the desired range of transformed data.
+      """
+    ]
+  ]
+
+  normalize_schema = [
+    axes: [
+      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      doc: """
+      Axes to calculate the distance over. By default the distance
+      is calculated between the whole tensors.
+      """
+    ],
+    norm: [
+      type: {:in, [:euclidean, :chebyshev, :manhattan]},
+      default: :euclidean,
+      doc: """
+      The norm to use to normalize each non zero sample.
+      Possible options are `:euclidean`, `:manhattan`, and `:chebyshev`
+      """
+    ]
+  ]
+
+  binarize_schema = [
+    type: [
+      type:
+        {:in,
+         [
+           {:u, 8},
+           {:u, 16},
+           {:u, 32},
+           {:u, 64},
+           {:s, 8},
+           {:s, 16},
+           {:s, 32},
+           {:s, 64},
+           {:f, 16},
+           {:f, 32},
+           {:f, 64},
+           {:bf, 16},
+           :u8,
+           :u16,
+           :u32,
+           :u64,
+           :s8,
+           :s16,
+           :s32,
+           :s64,
+           :f16,
+           :f32,
+           :f64,
+           :bf16
+         ]},
+      default: {:f, 32},
+      doc: """
+      Type of the resultant tensor.
+      """
+    ],
+    threshold: [
+      type: {:or, [:integer, :float]},
+      default: 0,
+      doc: """
+      Feature values below or equal to this are replaced by 0, above it by 1.
+      """
+    ]
+  ]
+
+  @general_schema NimbleOptions.new!(general_schema)
+  @min_max_schema NimbleOptions.new!(min_max_schema)
+  @normalize_schema NimbleOptions.new!(normalize_schema)
+  @binarize_schema NimbleOptions.new!(binarize_schema)
+  @encode_schema NimbleOptions.new!(encode_schema)
+
   @doc """
   Standardizes the tensor by removing the mean and scaling to unit variance.
 
@@ -16,8 +128,7 @@ defmodule Scholar.Preprocessing do
 
   ## Options
 
-    * `:axes` - Axes to standarize a tensor over. By default the
-    whole tensor is standarized.
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -54,8 +165,11 @@ defmodule Scholar.Preprocessing do
         >
   """
   @spec standard_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
-  defn standard_scale(tensor, opts \\ []) do
-    opts = keyword!(opts, [:axes])
+  deftransform standard_scale(tensor, opts \\ []) do
+    nstandard_scale(tensor, NimbleOptions.validate!(opts, @general_schema))
+  end
+
+  defnp nstandard_scale(tensor, opts \\ []) do
     std = Nx.standard_deviation(tensor, axes: opts[:axes], keep_axes: true)
     mean_reduced = Nx.mean(tensor, axes: opts[:axes], keep_axes: true)
     mean_reduced = Nx.select(std == 0, 0.0, mean_reduced)
@@ -67,8 +181,7 @@ defmodule Scholar.Preprocessing do
 
   ## Options
 
-    * `:axes` - Axes to scale a tensor over. By default the
-    whole tensor is scaled.
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -97,8 +210,11 @@ defmodule Scholar.Preprocessing do
   """
 
   @spec max_abs_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
-  defn max_abs_scale(tensor, opts \\ []) do
-    opts = keyword!(opts, [:axes])
+  deftransform max_abs_scale(tensor, opts \\ []) do
+    nmax_abs_scale(tensor, NimbleOptions.validate!(opts, @general_schema))
+  end
+
+  defnp nmax_abs_scale(tensor, opts \\ []) do
     max_abs = Nx.abs(tensor) |> Nx.reduce_max(axes: opts[:axes], keep_axes: true)
     tensor / Nx.select(max_abs == 0, 1, max_abs)
   end
@@ -108,14 +224,7 @@ defmodule Scholar.Preprocessing do
 
   ## Options
 
-    * `:axes` - Axes to scale a tensor over. By default the
-    whole tensor is scaled.
-
-    * `:min` - The lower boundary of the desired range of transformed data.
-    Defaults to 0.
-
-    * `:max` - The upper boundary of the desired range of transformed data.
-    Defautls to 1.
+  #{NimbleOptions.docs(@min_max_schema)}
 
   ## Examples
 
@@ -155,9 +264,11 @@ defmodule Scholar.Preprocessing do
   """
 
   @spec min_max_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
-  defn min_max_scale(tensor, opts \\ []) do
-    opts = keyword!(opts, [:axes, min: 0, max: 1])
+  deftransform min_max_scale(tensor, opts \\ []) do
+    nmin_max_scale(tensor, NimbleOptions.validate!(opts, @min_max_schema))
+  end
 
+  defnp nmin_max_scale(tensor, opts \\ []) do
     if opts[:max] <= opts[:min] do
       raise ArgumentError,
             "expected :max to be greater than :min"
@@ -176,9 +287,7 @@ defmodule Scholar.Preprocessing do
 
   ## Options
 
-    * `:threshold` - Feature values below or equal to this are replaced by 0, above it by 1. Defaults to `0`.
-
-    * `:type` - Type of the resultant tensor. Defaults to `{:f, 32}`.
+  #{NimbleOptions.docs(@binarize_schema)}
 
   ## Examples
 
@@ -204,8 +313,11 @@ defmodule Scholar.Preprocessing do
   """
 
   @spec binarize(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
-  defn binarize(tensor, opts \\ []) do
-    opts = keyword!(opts, threshold: 0, type: {:f, 32})
+  deftransform binarize(tensor, opts \\ []) do
+    nbinarize(tensor, NimbleOptions.validate!(opts, @binarize_schema))
+  end
+
+  defnp nbinarize(tensor, opts \\ []) do
     (tensor > opts[:threshold]) |> Nx.as_type(opts[:type])
   end
 
@@ -214,7 +326,7 @@ defmodule Scholar.Preprocessing do
 
   ## Options
 
-    * `:num_classes` - Number of classes to be encoded. Required.
+  #{NimbleOptions.docs(@encode_schema)}
 
   ## Examples
 
@@ -226,9 +338,12 @@ defmodule Scholar.Preprocessing do
   """
 
   @spec ordinal_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
-  defn ordinal_encode(tensor, opts \\ []) do
+  deftransform ordinal_encode(tensor, opts \\ []) do
+    nordinal_encode(tensor, NimbleOptions.validate!(opts, @encode_schema))
+  end
+
+  defnp nordinal_encode(tensor, opts \\ []) do
     {num_samples} = Nx.shape(tensor)
-    opts = keyword!(opts, [:num_classes])
     sorted = Nx.sort(tensor)
     num_classes = opts[:num_classes]
 
@@ -261,7 +376,7 @@ defmodule Scholar.Preprocessing do
 
   ## Options
 
-    * `:num_classes` - Number of classes to be encoded. Required.
+  #{NimbleOptions.docs(@encode_schema)}
 
   ## Examples
 
@@ -281,7 +396,16 @@ defmodule Scholar.Preprocessing do
   """
 
   @spec one_hot_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
-  defn one_hot_encode(tensor, opts \\ []) do
+  deftransform one_hot_encode(tensor, opts \\ []) do
+    none_hot_encode(tensor, NimbleOptions.validate!(opts, @encode_schema))
+  end
+
+  defnp none_hot_encode(tensor, opts \\ []) do
+    {len} = Nx.shape(tensor)
+    if opts[:num_classes] > len do
+      raise ArgumentError,
+            "expected :num_classes to be at most as length of label vector"
+    end
     Nx.equal(Nx.new_axis(tensor, -1), Nx.iota({1, opts[:num_classes]}))
   end
 
@@ -293,12 +417,7 @@ defmodule Scholar.Preprocessing do
 
   ## Options
 
-    * `:axes` - Axes to normalize a tensor over. By default the
-    whole tensor is normalized.
-
-    * `:norm` - The norm to use to normalize each non zero sample.
-    Possible options are `:euclidean`, `:manhattan`, and `:chebyshev`
-    Defaults to `:euclidean`.
+  #{NimbleOptions.docs(@normalize_schema)}
 
   ## Examples
 
@@ -324,8 +443,11 @@ defmodule Scholar.Preprocessing do
   """
 
   @spec normalize(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
-  defn normalize(tensor, opts \\ []) do
-    opts = keyword!(opts, [:axes, norm: :euclidean])
+  deftransform normalize(tensor, opts \\ []) do
+    nnormalize(tensor, NimbleOptions.validate!(opts, @normalize_schema))
+  end
+
+  defnp nnormalize(tensor, opts \\ []) do
     zeros = Nx.broadcast(0.0, Nx.shape(tensor))
 
     norm =
