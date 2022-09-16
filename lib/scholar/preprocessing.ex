@@ -402,10 +402,12 @@ defmodule Scholar.Preprocessing do
 
   defnp none_hot_encode(tensor, opts \\ []) do
     {len} = Nx.shape(tensor)
+
     if opts[:num_classes] > len do
       raise ArgumentError,
             "expected :num_classes to be at most as length of label vector"
     end
+
     Nx.equal(Nx.new_axis(tensor, -1), Nx.iota({1, opts[:num_classes]}))
   end
 
