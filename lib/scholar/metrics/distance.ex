@@ -6,6 +6,33 @@ defmodule Scholar.Metrics.Distance do
   import Nx.Defn
   import Scholar.Shared
 
+  @general_schema NimbleOptions.new!(
+                    axes: [
+                      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+                      doc: """
+                      Axes to calculate the distance over. By default the distance
+                      is calculated between the whole tensors.
+                      """
+                    ]
+                  )
+
+  @minkowski_schema NimbleOptions.new!(
+                      axes: [
+                        type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+                        doc: """
+                        Axes to calculate the distance over. By default the distance
+                        is calculated between the whole tensors.
+                        """
+                      ],
+                      p: [
+                        type: {:custom, Scholar.Shared, :check_if_non_negative_float, [:p]},
+                        default: 2.0,
+                        doc: """
+                        A non-negative parameter of Minkowski distance.
+                        """
+                      ]
+                    )
+
   @doc """
   Standard euclidean distance.
 
@@ -15,8 +42,7 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to calculate the distance over. By default the distance
-    is calculated between the whole tensors.
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -50,10 +76,12 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   @spec euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
-  defn euclidean(x, y, opts \\ []) do
-    assert_same_shape!(x, y)
+  deftransform euclidean(x, y, opts \\ []) do
+    neuclidean(x, y, NimbleOptions.validate!(opts, @general_schema))
+  end
 
-    opts = keyword!(opts, [:axes])
+  defnp neuclidean(x, y, opts \\ []) do
+    assert_same_shape!(x, y)
 
     diff = x - y
 
@@ -71,8 +99,7 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to calculate the distance over. By default the distance
-    is calculated between the whole tensors.
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -106,10 +133,12 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   @spec squared_euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
-  defn squared_euclidean(x, y, opts \\ []) do
-    assert_same_shape!(x, y)
+  deftransform squared_euclidean(x, y, opts \\ []) do
+    nsquared_euclidean(x, y, NimbleOptions.validate!(opts, @general_schema))
+  end
 
-    opts = keyword!(opts, [:axes])
+  defnp nsquared_euclidean(x, y, opts \\ []) do
+    assert_same_shape!(x, y)
 
     diff = x - y
 
@@ -127,8 +156,7 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to calculate the distance over. By default the distance
-    is calculated between the whole tensors.
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -162,10 +190,12 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   @spec manhattan(Nx.t(), Nx.t(), keyword()) :: Nx.t()
-  defn manhattan(x, y, opts \\ []) do
-    assert_same_shape!(x, y)
+  deftransform manhattan(x, y, opts \\ []) do
+    nmanhattan(x, y, NimbleOptions.validate!(opts, @general_schema))
+  end
 
-    opts = keyword!(opts, [:axes])
+  defnp nmanhattan(x, y, opts \\ []) do
+    assert_same_shape!(x, y)
 
     (x - y)
     |> Nx.abs()
@@ -182,8 +212,7 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to calculate the distance over. By default the distance
-    is calculated between the whole tensors.
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -217,10 +246,12 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   @spec chebyshev(Nx.t(), Nx.t(), keyword()) :: Nx.t()
-  defn chebyshev(x, y, opts \\ []) do
-    assert_same_shape!(x, y)
+  deftransform chebyshev(x, y, opts \\ []) do
+    nchebyshev(x, y, NimbleOptions.validate!(opts, @general_schema))
+  end
 
-    opts = keyword!(opts, [:axes])
+  defnp nchebyshev(x, y, opts \\ []) do
+    assert_same_shape!(x, y)
 
     (x - y)
     |> Nx.abs()
@@ -237,10 +268,7 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-  * `:axes` - Axes to calculate the distance over. By default the distance
-    is calculated between the whole tensors.
-
-  * `:p` - A non-negative parameter of Minkowski distance. Defaults to `2`.
+  #{NimbleOptions.docs(@minkowski_schema)}
 
   ## Examples
 
@@ -274,22 +302,14 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   @spec minkowski(Nx.t(), Nx.t(), keyword()) :: Nx.t()
-  defn minkowski(x, y, opts \\ []) do
+  deftransform minkowski(x, y, opts \\ []) do
+    nminkowski(x, y, NimbleOptions.validate!(opts, @minkowski_schema))
+  end
+
+  defnp nminkowski(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
-    opts =
-      keyword!(
-        opts,
-        p: 2,
-        axes: nil
-      )
-
     p = opts[:p]
-
-    if p < 0 do
-      raise ArgumentError,
-            "expected the value of :p to be a non-negative number, got: #{inspect(p)}"
-    end
 
     cond do
       p == 0 ->
@@ -319,8 +339,7 @@ defmodule Scholar.Metrics.Distance do
 
   ## Options
 
-    * `:axes` - Axes to calculate the distance over. By default the distance
-      is calculated between the whole tensors.
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -346,7 +365,11 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   @spec cosine(Nx.t(), Nx.t(), keyword()) :: Nx.t()
-  defn cosine(x, y, opts \\ []) do
+  deftransform cosine(x, y, opts \\ []) do
+    ncosine(x, y, NimbleOptions.validate!(opts, @general_schema))
+  end
+
+  defnp ncosine(x, y, opts \\ []) do
     # Detect very small values that could lead to surprising
     # results and numerical stability issues. Every value smaller
     # than `cutoff` is considered small

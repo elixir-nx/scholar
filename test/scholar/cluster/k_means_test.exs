@@ -126,7 +126,7 @@ defmodule Scholar.Cluster.KMeansTest do
       x = Nx.tensor([[1, 2], [3, 4]])
 
       assert_raise NimbleOptions.ValidationError,
-                   "expected :tol to be positive number, got: -0.1",
+                   "expected :tol to be a positive number, got: -0.1",
                    fn ->
                      Scholar.Cluster.KMeans.train(x, num_clusters: 2, tol: -0.1)
                    end
@@ -156,7 +156,7 @@ defmodule Scholar.Cluster.KMeansTest do
                    list element at position 1 in :weights failed validation: expected \"list element\" to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
 
                      * expected \"list element\" to be a non negative integer, got: -2.0
-                     * expected :weights to be positive number, got: -2.0\
+                     * expected :weights to be a positive number, got: -2.0\
                    """,
                    fn ->
                      Scholar.Cluster.KMeans.train(x, num_clusters: 2, weights: [1, -2.0])

@@ -7,6 +7,29 @@ defmodule Scholar.Linear.LogisticRegression do
   @derive {Nx.Container, containers: [:coefficients, :bias], keep: [:mode]}
   defstruct [:coefficients, :bias, :mode]
 
+  @opts_schema NimbleOptions.new!(
+                 num_classes: [
+                   required: true,
+                   type: :pos_integer,
+                   doc: "number of classes contained in the input tensors."
+                 ],
+                 learning_rate: [
+                   type: {:custom, Scholar.Shared, :check_if_positive_float, [:learning_rate]},
+                   default: 0.01,
+                   doc: """
+                   learning rate used by gradient descent.
+                   """
+                 ],
+                 iterations: [
+                   type: :pos_integer,
+                   default: 1000,
+                   doc: """
+                   number of iterations of gradient descent performed inside logistic
+                   regression.
+                   """
+                 ]
+               )
+
   @doc """
   Fits a logistic regression model for sample inputs `x` and sample
   targets `y`.
@@ -16,17 +39,15 @@ defmodule Scholar.Linear.LogisticRegression do
 
   ## Options
 
-    * `:num_classes` - number of classes contained in the input tensors. Required
-
-    * `:learning_rate` - learning rate used by gradient descent. Defaults to `0.01`
-
-    * `:iterations` - number of iterations of gradient descent performed inside logistic
-      regression. Defaults to `1000`
+  #{NimbleOptions.docs(@opts_schema)}
 
   """
-  defn fit(x, y, opts \\ []) do
-    opts = keyword!(opts, [:num_classes, iterations: 1000, learning_rate: 0.01])
-    fit_verify(x, y, opts)
+  deftransform train(x, y, opts \\ []) do
+    ntrain(x, y, NimbleOptions.validate!(opts, @opts_schema))
+  end
+
+  defnp ntrain(x, y, opts \\ []) do
+    fit_verify(x, y)
 
     if opts[:num_classes] < 3 do
       fit_binary(x, y, opts)
@@ -37,16 +58,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
   # Function checks validity of the provided data
 
-  deftransformp fit_verify(x, y, opts) do
-    unless opts[:num_classes] do
-      raise ArgumentError, "missing option :num_classes"
-    end
-
-    unless is_integer(opts[:num_classes]) and opts[:num_classes] > 0 do
-      raise ArgumentError,
-            "expected :num_classes to be a positive integer, got: #{inspect(opts[:num_classes])}"
-    end
-
+  deftransformp fit_verify(x, y) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
@@ -55,16 +67,6 @@ defmodule Scholar.Linear.LogisticRegression do
     if Nx.rank(y) != 1 do
       raise ArgumentError,
             "expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
-    end
-
-    unless is_number(opts[:learning_rate]) and opts[:learning_rate] > 0 do
-      raise ArgumentError,
-            "expected :learning_rate to be a positive number, got: #{inspect(opts[:learning_rate])}"
-    end
-
-    unless is_integer(opts[:iterations]) and opts[:iterations] > 0 do
-      raise ArgumentError,
-            "expected :iterations to be a positive integer, got: #{inspect(opts[:iterations])}"
     end
   end
 
