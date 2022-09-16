@@ -25,7 +25,7 @@ defmodule Scholar.Metrics.Distance do
       """
     ],
     p: [
-      type: {:custom, Scholar.Shared, :check_if_non_negative_float, [:p]},
+      type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 2.0,
       doc: """
       A non-negative parameter of Minkowski distance.

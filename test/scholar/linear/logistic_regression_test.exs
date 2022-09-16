@@ -67,7 +67,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise NimbleOptions.ValidationError,
-                   "invalid value for :learning_rate option: expected :learning_rate to be a positive number, got: -0.001",
+                   "invalid value for :learning_rate option: expected positive number, got: -0.001",
                    fn ->
                      Scholar.Linear.LogisticRegression.train(x, y,
                        num_classes: 2,

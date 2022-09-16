@@ -14,7 +14,7 @@ defmodule Scholar.Linear.LogisticRegression do
       doc: "number of classes contained in the input tensors."
     ],
     learning_rate: [
-      type: {:custom, Scholar.Shared, :check_if_positive_float, [:learning_rate]},
+      type: {:custom, Scholar.Options, :positive_number, []},
       default: 0.01,
       doc: """
       learning rate used by gradient descent.

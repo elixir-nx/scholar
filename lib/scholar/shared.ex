@@ -31,20 +31,4 @@ defmodule Scholar.Shared do
             "expected tensor to have rank #{target_rank}, got tensor with rank #{rank}"
     end
   end
-
-  deftransform check_if_positive_float(num, param_name) do
-    if is_number(num) and num > 0 do
-      {:ok, num}
-    else
-      {:error, "expected :#{param_name} to be a positive number, got: #{inspect(num)}"}
-    end
-  end
-
-  deftransform check_if_non_negative_float(num, param_name) do
-    if is_number(num) and num >= 0 do
-      {:ok, num}
-    else
-      {:error, "expected :#{param_name} to be a non-negative number, got: #{inspect(num)}"}
-    end
-  end
 end
