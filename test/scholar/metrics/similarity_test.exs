@@ -66,4 +66,66 @@ defmodule Scholar.Metrics.SimilarityTest do
       end
     end
   end
+
+  describe "binary_jaccard/2" do
+    test "returns similarity according to sklearn jaccard_score function" do
+      x = Nx.tensor([1, 0, 0, 1, 1, 1])
+      y = Nx.tensor([0, 0, 1, 1, 1, 0])
+
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.4000000059604645)
+    end
+
+    test "returns 100% of similarity" do
+      x = Nx.tensor([1, 0, 1])
+      y = Nx.tensor([1, 0, 1])
+
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(1.0)
+    end
+
+    test "returns 0% of similarity" do
+      x = Nx.tensor([1, 1, 1])
+      y = Nx.tensor([0, 0, 0])
+
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.0)
+    end
+
+    test "returns 20% of similarity" do
+      x = Nx.tensor([1, 0, 1, 0, 1])
+      y = Nx.tensor([0, 1, 1, 1, 0])
+
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.20000000298023224)
+    end
+
+    test "returns similarity when tensors have a single element" do
+      x = Nx.tensor([1])
+      y = Nx.tensor([1])
+
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(1.0)
+    end
+
+    test "returns similarity when tensors have scalars" do
+      x = Nx.tensor(1)
+      y = Nx.tensor(0)
+
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.0)
+    end
+
+    test "returns similarity when tensor has multiple dimensions" do
+      x = Nx.tensor([[0, 1, 1], [1, 1, 1]])
+      y = Nx.tensor([[1, 1, 1], [1, 1, 1]])
+
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.8333333134651184)
+    end
+
+    test "raises exception when tensors have different shapes" do
+      x = Nx.tensor([1, 1, 0])
+      y = Nx.tensor([1, 0])
+
+      assert_raise ArgumentError,
+                   "expected tensor to have shape {3}, got tensor with shape {2}",
+                   fn ->
+                     Similarity.binary_jaccard(x, y)
+                   end
+    end
+  end
 end

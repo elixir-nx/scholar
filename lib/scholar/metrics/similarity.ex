@@ -53,6 +53,64 @@ defmodule Scholar.Metrics.Similarity do
     intersection_size / union_size
   end
 
+  @doc ~S"""
+  Calculates Jaccard similarity based on binary attributes.
+
+  $$
+  J = \frac{M_{11}}{M_{01} + M_{10} + M_{11}}
+  $$
+
+  $M_{11}$ is the total numbers of attributes, for which both X and Y have 1.\
+  $M_{10}$ is the total numbers of attributes, for which X has 1 and Y has 0.\
+  $M_{01}$ is the total numbers of attributes, for which X has 0 and Y has 1.\
+  $M_{00}$ is the total numbers of attributes, for which both X and Y have 0.
+
+  ## Examples
+
+      iex> x = Nx.tensor([1,0,0,1,1,1])
+      iex> y = Nx.tensor([0,0,1,1,1,0])
+      iex> Scholar.Metrics.Similarity.binary_jaccard(x, y)
+      #Nx.Tensor<
+        f32
+        0.4000000059604645
+      >
+
+      iex> x = Nx.tensor([[1,1,0,1], [1,1,0,1]])
+      iex> y = Nx.tensor([[1,1,0,1], [1,0,0,1]])
+      iex> Scholar.Metrics.Similarity.binary_jaccard(x, y)
+      #Nx.Tensor<
+        f32
+        0.8333333134651184
+      >
+
+      iex> x = Nx.tensor([1, 1])
+      iex> y = Nx.tensor([1, 0, 0])
+      iex> Scholar.Metrics.Similarity.binary_jaccard(x, y)
+      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
+  """
+  defn binary_jaccard(x, y) do
+    # We're requiring the same shape because usual use cases will have the same shape.
+    # The last axis could in theory be different on both sides.
+    assert_same_shape!(x, y)
+
+    m11 =
+      x
+      |> Nx.logical_and(y)
+      |> Nx.sum()
+
+    m10 =
+      x
+      |> Nx.greater(y)
+      |> Nx.sum()
+
+    m01 =
+      x
+      |> Nx.less(y)
+      |> Nx.sum()
+
+    m11 / (m11 + m10 + m01)
+  end
+
   defnp unique_size(%Nx.Tensor{shape: shape} = tensor) do
     case shape do
       {} ->
