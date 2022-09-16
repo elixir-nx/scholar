@@ -56,13 +56,9 @@ defmodule Scholar.Preprocessing do
   @spec standard_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
   defn standard_scale(tensor, opts \\ []) do
     opts = keyword!(opts, [:axes])
-    shape = Nx.shape(tensor)
-    shape_to_broadcast = unsqueezed_reduced_shape(shape, opts[:axes])
-    std = Nx.standard_deviation(tensor, axes: opts[:axes])
-    mean_reduced = Nx.mean(tensor, axes: opts[:axes])
+    std = Nx.standard_deviation(tensor, axes: opts[:axes], keep_axes: true)
+    mean_reduced = Nx.mean(tensor, axes: opts[:axes], keep_axes: true)
     mean_reduced = Nx.select(std == 0, 0.0, mean_reduced)
-    std = Nx.reshape(std, shape_to_broadcast)
-    mean_reduced = mean_reduced |> Nx.reshape(shape_to_broadcast)
     (tensor - mean_reduced) / Nx.select(std == 0, 1.0, std)
   end
 
@@ -103,10 +99,7 @@ defmodule Scholar.Preprocessing do
   @spec max_abs_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
   defn max_abs_scale(tensor, opts \\ []) do
     opts = keyword!(opts, [:axes])
-    shape = Nx.shape(tensor)
-    shape_to_broadcast = unsqueezed_reduced_shape(shape, opts[:axes])
-    max_abs = Nx.abs(tensor) |> Nx.reduce_max(axes: opts[:axes])
-    max_abs = Nx.reshape(max_abs, shape_to_broadcast)
+    max_abs = Nx.abs(tensor) |> Nx.reduce_max(axes: opts[:axes], keep_axes: true)
     tensor / Nx.select(max_abs == 0, 1, max_abs)
   end
 
@@ -176,13 +169,10 @@ defmodule Scholar.Preprocessing do
       raise ArgumentError,
             "expected :max to be greater than :min"
     else
-      shape = Nx.shape(tensor)
-      shape_to_broadcast = unsqueezed_reduced_shape(shape, opts[:axes])
-      reduced_max = Nx.reduce_max(tensor, axes: opts[:axes])
-      reduced_min = Nx.reduce_min(tensor, axes: opts[:axes])
+      reduced_max = Nx.reduce_max(tensor, axes: opts[:axes], keep_axes: true)
+      reduced_min = Nx.reduce_min(tensor, axes: opts[:axes], keep_axes: true)
       denominator = reduced_max - reduced_min
-      denominator = Nx.select(denominator == 0, 1, denominator) |> Nx.reshape(shape_to_broadcast)
-      reduced_min = Nx.reshape(reduced_min, shape_to_broadcast)
+      denominator = Nx.select(denominator == 0, 1, denominator)
       x_std = (tensor - reduced_min) / denominator
       x_std * (opts[:max] - opts[:min]) + opts[:min]
     end
