@@ -49,18 +49,6 @@ defmodule Scholar.Linear.LogisticRegression do
   end
 
   defnp ntrain(x, y, opts \\ []) do
-    fit_verify(x, y)
-
-    if opts[:num_classes] < 3 do
-      fit_binary(x, y, opts)
-    else
-      fit_multinomial(x, y, opts)
-    end
-  end
-
-  # Function checks validity of the provided data
-
-  deftransformp fit_verify(x, y) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
@@ -69,6 +57,12 @@ defmodule Scholar.Linear.LogisticRegression do
     if Nx.rank(y) != 1 do
       raise ArgumentError,
             "expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
+    end
+
+    if opts[:num_classes] < 3 do
+      fit_binary(x, y, opts)
+    else
+      fit_multinomial(x, y, opts)
     end
   end
 
