@@ -59,6 +59,7 @@ defmodule Scholar.Cluster.KMeans do
                    on an empirical probability distribution of the points’ contribution to
                    the overall inertia. This technique speeds up convergence, and is
                    theoretically proven to be O(log(k))-optimal.
+
                    * `:random` - choose `:num_clusters` observations (rows) at random from data for the initial centroids.
                    """
                  ]
@@ -67,7 +68,9 @@ defmodule Scholar.Cluster.KMeans do
   @doc """
   Fits a K-Means model for sample inputs `x`.
 
-  ## Options \n#{NimbleOptions.docs(@opts_schema)}
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
 
   ## Returns
 
