@@ -37,21 +37,20 @@ defmodule Scholar.Cluster.KMeans do
                    type: :pos_integer,
                    default: 10,
                    doc: """
-                    Number of time the k-means algorithm will be run with different centroid seeds.
-                     The final results will be the best output of num_runs runs in terms of inertia.
+                   Number of time the k-means algorithm will be run with different centroid seeds.
+                   The final results will be the best output of num_runs runs in terms of inertia.
                    """
                  ],
                  tol: [
                    type: :float,
                    default: 1.0e-4,
                    doc: """
-                    Relative tolerance with regards to Frobenius norm of the difference in
-                    the cluster centers of two consecutive iterations to declare convergence.
+                   Relative tolerance with regards to Frobenius norm of the difference in
+                   the cluster centers of two consecutive iterations to declare convergence.
                    """
                  ],
                  weights: [
-                   default: nil,
-                   type: {:or, [:atom, {:list, {:or, [:float, :non_neg_integer]}}]},
+                   type: {:list, {:or, [:float, :non_neg_integer]}},
                    doc: """
                    The weights for each observation in x. If equals to `nil`,
                    all observations are assigned equal weight.
