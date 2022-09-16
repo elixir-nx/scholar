@@ -60,10 +60,10 @@ defmodule Scholar.Metrics.Similarity do
   J = \frac{M_{11}}{M_{01} + M_{10} + M_{11}}
   $$
 
-  𝑀11 is the total numbers of attributes, for which both X and Y have 1
-  𝑀10 is the total numbers of attributes, for which X has 1 and Y has 0
-  𝑀01 is the total numbers of attributes, for which X has 0 and Y has 1
-  𝑀00 is the total numbers of attributes, for which both X and Y have 0
+  $M_{11}$ is the total numbers of attributes, for which both X and Y have 1.\
+  $M_{10}$ is the total numbers of attributes, for which X has 1 and Y has 0.\
+  $M_{01}$ is the total numbers of attributes, for which X has 0 and Y has 1.\
+  $M_{00}$ is the total numbers of attributes, for which both X and Y have 0.
 
   ## Examples
 
