@@ -60,7 +60,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       y = Nx.tensor([0, 1])
 
       assert_raise NimbleOptions.ValidationError,
-                   "required option :num_classes not found, received options: []",
+                   "required :num_classes option not found, received options: []",
                    fn -> Scholar.Linear.LogisticRegression.train(x, y) end
     end
 
