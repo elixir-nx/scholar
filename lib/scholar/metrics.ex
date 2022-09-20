@@ -14,6 +14,43 @@ defmodule Scholar.Metrics do
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
 
+  general_schema = [
+    num_classes: [
+      required: true,
+      type: :pos_integer,
+      doc: "Number of classes contained in the input tensors"
+    ]
+  ]
+
+  f1_score_schema = [
+    num_classes: [
+      required: true,
+      type: :pos_integer,
+      doc: "Number of classes contained in the input tensors"
+    ],
+    average: [
+      type: {:in, [:micro, :macro, nil, :weighted]},
+      default: nil,
+      doc: """
+      This determines the type of averaging performed on the data.
+
+      * `:macro`. Calculate metrics for each label, and find their unweighted mean.
+      This does not take label imbalance into account.
+
+      * `:weighted`. Calculate metrics for each label, and find their average weighted by
+      support (the number of true instances for each label).
+
+      * `:micro`. Calculate metrics globally by counting the total true positives,
+      false negatives and false positives.
+
+      * `nil`. The f1 scores for each class are returned.
+      """
+    ]
+  ]
+
+  @general_schema NimbleOptions.new!(general_schema)
+  @f1_score_schema NimbleOptions.new!(f1_score_schema)
+
   # Standard Metrics
 
   @doc ~S"""
@@ -70,7 +107,7 @@ defmodule Scholar.Metrics do
     safe_division(true_positives, true_positives + false_positives)
   end
 
-  @doc ~S"""
+  @doc """
   Computes the precision of the given predictions with respect to
   the given targets for multi-class classification problems.
 
@@ -79,7 +116,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-    * `:num_classes` - Number of classes contained in the input tensors
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -104,7 +141,7 @@ defmodule Scholar.Metrics do
     safe_division(true_positives, true_positives + false_positives)
   end
 
-  @doc ~S"""
+  @doc """
   Computes the recall of the given predictions with respect to
   the given targets for binary classification problems.
 
@@ -130,7 +167,7 @@ defmodule Scholar.Metrics do
     safe_division(true_positives, false_negatives + true_positives)
   end
 
-  @doc ~S"""
+  @doc """
   Computes the recall of the given predictions with respect to
   the given targets for multi-class classification problems.
 
@@ -139,7 +176,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-    * `:num_classes` - Number of classes contained in the input tensors
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -195,7 +232,7 @@ defmodule Scholar.Metrics do
     |> Nx.sum()
   end
 
-  @doc ~S"""
+  @doc """
   Computes the sensitivity of the given predictions with respect
   to the given targets for binary classification problems.
 
@@ -215,13 +252,13 @@ defmodule Scholar.Metrics do
     binary_recall(y_true, y_pred)
   end
 
-  @doc ~S"""
+  @doc """
   Computes the sensitivity of the given predictions with respect
   to the given targets for multi-class classification problems.
 
   ## Options
 
-    * `:num_classes` - Number of classes contained in the input tensors
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -242,7 +279,7 @@ defmodule Scholar.Metrics do
     recall(y_true, y_pred, opts)
   end
 
-  @doc ~S"""
+  @doc """
   Computes the specificity of the given predictions with respect
   to the given targets for binary classification problems.
 
@@ -268,7 +305,7 @@ defmodule Scholar.Metrics do
     safe_division(true_negatives, false_positives + true_negatives)
   end
 
-  @doc ~S"""
+  @doc """
   Computes the specificity of the given predictions with respect
   to the given targets for multi-class classification problems.
 
@@ -277,7 +314,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-    * `:num_classes` - Number of classes contained in the input tensors
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -304,13 +341,13 @@ defmodule Scholar.Metrics do
     safe_division(true_negative, false_positive + true_negative)
   end
 
-  @doc ~S"""
+  @doc """
   Calculates the confusion matrix given rank-1 tensors which represent
   the expected (`y_true`) and predicted (`y_pred`) classes.
 
   ## Options
 
-    * `:num_classes` - required. Number of classes contained in the input tensors
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -341,7 +378,7 @@ defmodule Scholar.Metrics do
     Nx.indexed_add(zeros, indices, updates)
   end
 
-  @doc ~S"""
+  @doc """
   Calculates F1 score given rank-1 tensors which represent
   the expected (`y_true`) and predicted (`y_pred`) classes.
 
@@ -350,15 +387,7 @@ defmodule Scholar.Metrics do
 
   ## Options
 
-    * `:num_classes` - required. Number of classes contained in the input tensors
-    * `:average` - optional. This determines the type of averaging performed on the data.
-      * `:macro`. Calculate metrics for each label, and find their unweighted mean.
-        This does not take label imbalance into account.
-      * `:weighted`. Calculate metrics for each label, and find their average weighted by
-        support (the number of true instances for each label).
-      * `:micro`. Calculate metrics globally by counting the total true positives,
-        false negatives and false positives.
-      * If not specified, then the f1 scores for each class are returned.
+  #{NimbleOptions.docs(@f1_score_schema)}
 
   ## Examples
 

@@ -5,6 +5,16 @@ defmodule Scholar.Metrics.Clustering do
 
   import Nx.Defn
 
+  opts = [
+    num_clusters: [
+      required: true,
+      type: :pos_integer,
+      doc: "Number of clusters in clustering."
+    ]
+  ]
+
+  @opts_schema NimbleOptions.new!(opts)
+
   @doc """
   Compute the Silhouette Coefficient for each sample.
 
@@ -17,7 +27,7 @@ defmodule Scholar.Metrics.Clustering do
 
   ## Options
 
-    * `:num_clusters` - Number of clusters in clustering. Required.
+  #{NimbleOptions.docs(@opts_schema)}
 
   ## Examples
 
@@ -37,8 +47,11 @@ defmodule Scholar.Metrics.Clustering do
         [0.0, -0.9782054424285889, 0.0, -0.18546819686889648, -0.5929657816886902]
       >
   """
+  deftransform silhouette_samples(x, labels, opts \\ []) do
+    nsilhouette_samples(x, labels, NimbleOptions.validate!(opts, @opts_schema))
+  end
 
-  defn silhouette_samples(x, labels, opts \\ []) do
+  defnp nsilhouette_samples(x, labels, opts \\ []) do
     verify_num_clusters(x, opts)
     {inner, alone?, outer} = inner_and_outer_dist(x, labels, opts)
     result = (outer - inner) / Nx.max(outer, inner)
@@ -50,7 +63,7 @@ defmodule Scholar.Metrics.Clustering do
 
   ## Options
 
-    * `:num_clusters` - Number of clusters in clustering. Required.
+  #{NimbleOptions.docs(@opts_schema)}
 
   ## Examples
 
@@ -70,7 +83,12 @@ defmodule Scholar.Metrics.Clustering do
         -0.35132789611816406
       >
   """
-  defn silhouette_score(x, labels, opts \\ []) do
+
+  deftransform silhouette_score(x, labels, opts \\ []) do
+    nsilhouette_score(x, labels, NimbleOptions.validate!(opts, @opts_schema))
+  end
+
+  defnp nsilhouette_score(x, labels, opts \\ []) do
     Nx.mean(silhouette_samples(x, labels, opts))
   end
 
@@ -114,13 +132,7 @@ defmodule Scholar.Metrics.Clustering do
   deftransformp verify_num_clusters(x, opts) do
     {num_samples, _} = Nx.shape(x)
 
-    unless opts[:num_clusters] do
-      raise ArgumentError,
-            "missing option :num_clusters"
-    end
-
-    unless is_integer(opts[:num_clusters]) and opts[:num_clusters] > 0 and
-             opts[:num_clusters] <= num_samples do
+    unless opts[:num_clusters] <= num_samples do
       raise ArgumentError,
             "expected :num_clusters to to be a positive integer in range 1 to #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
     end
