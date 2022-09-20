@@ -29,21 +29,21 @@ defmodule Scholar.Metrics do
       doc: "Number of classes contained in the input tensors"
     ],
     average: [
-      type: {:in, [:micro, :macro, nil, :weighted]},
-      default: nil,
+      type: {:in, [:micro, :macro, :weighted, :none]},
+      default: :none,
       doc: """
       This determines the type of averaging performed on the data.
 
-      * `:macro`. Calculate metrics for each label, and find their unweighted mean.
+      * `:macro` - Calculate metrics for each label, and find their unweighted mean.
       This does not take label imbalance into account.
 
-      * `:weighted`. Calculate metrics for each label, and find their average weighted by
+      * `:weighted` - Calculate metrics for each label, and find their average weighted by
       support (the number of true instances for each label).
 
-      * `:micro`. Calculate metrics globally by counting the total true positives,
+      * `:micro` - Calculate metrics globally by counting the total true positives,
       false negatives and false positives.
 
-      * `nil`. The f1 scores for each class are returned.
+      * `:none` - The f1 scores for each class are returned.
       """
     ]
   ]
@@ -393,7 +393,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
-      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: nil)
+      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
@@ -413,18 +413,19 @@ defmodule Scholar.Metrics do
         f32
         0.6000000238418579
       >
-      iex> Scholar.Metrics.f1_score(Nx.tensor([1,0,1,0]), Nx.tensor([0, 1, 0, 1]), num_classes: 2, average: nil)
+      iex> Scholar.Metrics.f1_score(Nx.tensor([1,0,1,0]), Nx.tensor([0, 1, 0, 1]), num_classes: 2, average: :none)
       #Nx.Tensor<
         f32[2]
         [0.0, 0.0]
       >
   """
-  defn f1_score(y_true, y_pred, opts \\ []) do
-    opts = keyword!(opts, [:num_classes, :average])
+  deftransform f1_score(y_true, y_pred, opts \\ []) do
+    f1_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @f1_score_schema))
+  end
 
+  defnp f1_score_n(y_true, y_pred, opts \\ []) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
-
     num_classes = check_num_classes(opts[:num_classes])
 
     case opts[:average] do
@@ -444,7 +445,7 @@ defmodule Scholar.Metrics do
         per_class_f1 = safe_division(2 * precision * recall, precision + recall)
 
         case opts[:average] do
-          nil ->
+          :none ->
             per_class_f1
 
           :macro ->

@@ -7,7 +7,7 @@ defmodule Scholar.Preprocessing do
 
   general_schema = [
     axes: [
-      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      type: {:custom, Scholar.Options, :axes, []},
       doc: """
       Axes to calculate the distance over. By default the distance
       is calculated between the whole tensors.
@@ -27,7 +27,7 @@ defmodule Scholar.Preprocessing do
 
   min_max_schema = [
     axes: [
-      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      type: {:custom, Scholar.Options, :axes, []},
       doc: """
       Axes to calculate the distance over. By default the distance
       is calculated between the whole tensors.
@@ -51,7 +51,7 @@ defmodule Scholar.Preprocessing do
 
   normalize_schema = [
     axes: [
-      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      type: {:custom, Scholar.Options, :axes, []},
       doc: """
       Axes to calculate the distance over. By default the distance
       is calculated between the whole tensors.
@@ -69,35 +69,8 @@ defmodule Scholar.Preprocessing do
 
   binarize_schema = [
     type: [
-      type:
-        {:in,
-         [
-           {:u, 8},
-           {:u, 16},
-           {:u, 32},
-           {:u, 64},
-           {:s, 8},
-           {:s, 16},
-           {:s, 32},
-           {:s, 64},
-           {:f, 16},
-           {:f, 32},
-           {:f, 64},
-           {:bf, 16},
-           :u8,
-           :u16,
-           :u32,
-           :u64,
-           :s8,
-           :s16,
-           :s32,
-           :s64,
-           :f16,
-           :f32,
-           :f64,
-           :bf16
-         ]},
-      default: {:f, 32},
+      type: {:custom, Scholar.Options, :type, []},
+      default: :f32,
       doc: """
       Type of the resultant tensor.
       """

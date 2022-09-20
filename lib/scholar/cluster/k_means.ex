@@ -94,10 +94,10 @@ defmodule Scholar.Cluster.KMeans do
             "invalid value for :num_clusters option: expected positive integer between 1 and #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
     end
 
-    ntrain(x, opts)
+    train_n(x, opts)
   end
 
-  defnp ntrain(x, opts \\ []) do
+  defnp train_n(x, opts \\ []) do
     inf = Nx.Constants.infinity({:f, 32})
     {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]

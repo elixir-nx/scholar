@@ -45,10 +45,10 @@ defmodule Scholar.Linear.LogisticRegression do
 
   """
   deftransform train(x, y, opts \\ []) do
-    ntrain(x, y, NimbleOptions.validate!(opts, @opts_schema))
+    train_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp ntrain(x, y, opts \\ []) do
+  defnp train_n(x, y, opts \\ []) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
