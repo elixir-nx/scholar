@@ -38,7 +38,7 @@ defmodule Scholar.Decomposition.PCA do
 
       $num\\_components = min(num\\_samples, num\\_features)$
 
-      If $0 < num\\_components < 1$, select the number of components such
+      If $0 < num\\_components <= 1$, select the number of components such
       that the amount of variance that needs to be explained is greater than the percentage specified by `:num_components`.
       """
     ]
