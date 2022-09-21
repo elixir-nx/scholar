@@ -281,7 +281,7 @@ defmodule Scholar.Metrics do
     sensitivity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defn sensitivity_n(y_true, y_pred, opts \\ []) do
+  defnp sensitivity_n(y_true, y_pred, opts \\ []) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -340,7 +340,7 @@ defmodule Scholar.Metrics do
     specificity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defn specificity_n(y_true, y_pred, opts \\ []) do
+  defnp specificity_n(y_true, y_pred, opts \\ []) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -380,7 +380,7 @@ defmodule Scholar.Metrics do
     confusion_matrix_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defn confusion_matrix_n(y_true, y_pred, opts \\ []) do
+  defnp confusion_matrix_n(y_true, y_pred, opts \\ []) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
