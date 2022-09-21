@@ -129,8 +129,11 @@ defmodule Scholar.Metrics do
       >
 
   """
-  defn precision(y_true, y_pred, opts \\ []) do
-    opts = keyword!(opts, [:num_classes])
+  deftransform precision(y_true, y_pred, opts \\ []) do
+    precision_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
+  end
+
+  defnp precision_n(y_true, y_pred, opts \\ []) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_true, y_pred)
 
@@ -189,8 +192,11 @@ defmodule Scholar.Metrics do
       >
 
   """
-  defn recall(y_true, y_pred, opts \\ []) do
-    opts = keyword!(opts, [:num_classes])
+  deftransform recall(y_true, y_pred, opts \\ []) do
+    recall_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
+  end
+
+  defnp recall_n(y_true, y_pred, opts \\ []) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -271,8 +277,11 @@ defmodule Scholar.Metrics do
       >
 
   """
-  defn sensitivity(y_true, y_pred, opts \\ []) do
-    opts = keyword!(opts, [:num_classes])
+  deftransform sensitivity(y_true, y_pred, opts \\ []) do
+    sensitivity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
+  end
+
+  defn sensitivity_n(y_true, y_pred, opts \\ []) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -327,8 +336,11 @@ defmodule Scholar.Metrics do
       >
 
   """
-  defn specificity(y_true, y_pred, opts \\ []) do
-    opts = keyword!(opts, [:num_classes])
+  deftransform specificity(y_true, y_pred, opts \\ []) do
+    specificity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
+  end
+
+  defn specificity_n(y_true, y_pred, opts \\ []) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -364,8 +376,11 @@ defmodule Scholar.Metrics do
       >
 
   """
-  defn confusion_matrix(y_true, y_pred, opts \\ []) do
-    opts = keyword!(opts, [:num_classes])
+  deftransform confusion_matrix(y_true, y_pred, opts \\ []) do
+    confusion_matrix_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
+  end
+
+  defn confusion_matrix_n(y_true, y_pred, opts \\ []) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 

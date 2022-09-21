@@ -31,4 +31,12 @@ defmodule Scholar.Shared do
             "expected tensor to have rank #{target_rank}, got tensor with rank #{rank}"
     end
   end
+
+  @doc """
+  Converts `tensor` to the floating type.
+  """
+  deftransform to_float(tensor) do
+    type = tensor |> Nx.type() |> Nx.Type.to_floating()
+    Nx.as_type(tensor, type)
+  end
 end
