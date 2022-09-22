@@ -78,7 +78,7 @@ defmodule Scholar.Decomposition.PCA do
 
   ## Returns
 
-    The function returns a struct with the following parameters:
+  The function returns a struct with the following parameters:
 
     * `:components` - Principal axes in feature space, representing the directions of maximum variance in the data.
       Equivalently, the right singular vectors of the centered input data, parallel to its eigenvectors.
