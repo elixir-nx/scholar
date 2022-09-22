@@ -5,13 +5,13 @@ defmodule Scholar.Covariance do
   import Nx.Defn
 
   opts = [
-    assume_centered: [
+    center: [
       type: :boolean,
-      default: false,
+      default: true,
       doc: """
-      If `true`, data will not be centered before computation.
+      If `true`, data will be centered before computation.
+      If `false`, data will not be centered before computation.
       Useful when working with data whose mean is almost, but not exactly zero.
-      If `false`, data will be centered before computation.
       """
     ],
     biased: [
@@ -34,13 +34,32 @@ defmodule Scholar.Covariance do
   #{NimbleOptions.docs(@opts_schema)}
 
   ## Example
-  iex> Scholar.Covariance.covariance_matrix(Nx.tensor([[3,6,5], [26,75,3], [23,4,1]]))
+  iex> Scholar.Covariance.covariance_matrix(Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]]))
   #Nx.Tensor<
     f32[3][3]
     [
       [104.22222137451172, 195.5555419921875, -13.333333015441895],
       [195.5555419921875, 1089.5555419921875, 1.3333333730697632],
       [-13.333333015441895, 1.3333333730697632, 2.6666667461395264]
+    ]
+  >
+
+  iex> Scholar.Covariance.covariance_matrix(Nx.tensor([[3, 6], [2, 3], [7, 9], [5, 3]]))
+  #Nx.Tensor<
+    f32[2][2]
+    [
+      [3.6875, 3.1875],
+      [3.1875, 6.1875]
+    ]
+  >
+
+  iex> Scholar.Covariance.covariance_matrix(Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]]), biased: false)
+  #Nx.Tensor<
+    f32[3][3]
+    [
+      [156.3333282470703, 293.33331298828125, -20.0],
+      [293.33331298828125, 1634.333251953125, 2.0],
+      [-20.0, 2.0, 4.0]
     ]
   >
 
@@ -55,7 +74,7 @@ defmodule Scholar.Covariance do
     end
 
     {num_samples, _num_features} = Nx.shape(x)
-    x = if opts[:assume_centered], do: x, else: x - Nx.mean(x, axes: [0])
+    x = if opts[:center], do: x - Nx.mean(x, axes: [0]), else: x
     matrix = Nx.dot(Nx.transpose(x), x)
 
     if opts[:biased] do
