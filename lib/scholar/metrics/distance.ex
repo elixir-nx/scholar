@@ -407,7 +407,7 @@ defmodule Scholar.Metrics.Distance do
     y_zero? = norm_y == 0.0
 
     both_zero? = x_zero? and y_zero?
-    one_zero? = x_zero? &&& y_zero?
+    one_zero? = Nx.logical_xor(x_zero?, y_zero?)
 
     res = (normalized_x * normalized_y) |> Nx.sum(axes: opts[:axes])
     res = Nx.select(one_zero?, 0.0, res)
