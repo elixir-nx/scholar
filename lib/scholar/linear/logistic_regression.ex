@@ -123,7 +123,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
     logit = 1 / (Nx.exp(-(Nx.dot(x, coeff) + bias)) + 1)
 
-    diff = (logit - y_t) |> Nx.reshape({m})
+    diff = Nx.reshape(logit - y_t, {m})
 
     coeff_diff = Nx.dot(x_t, diff) / m
 
