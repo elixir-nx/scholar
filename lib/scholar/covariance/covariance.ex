@@ -75,7 +75,7 @@ defmodule Scholar.Covariance do
 
     {num_samples, _num_features} = Nx.shape(x)
     x = if opts[:center], do: x - Nx.mean(x, axes: [0]), else: x
-    matrix = Nx.dot(Nx.transpose(x), x)
+    matrix = Nx.dot(x, [0], x, [0])
 
     if opts[:biased] do
       matrix / num_samples
