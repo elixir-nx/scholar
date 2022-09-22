@@ -113,11 +113,10 @@ defmodule Scholar.Metrics.Clustering do
     dist_in_cluster = Nx.dot(pairwise_dist, membership_mask)
     mean_dist_in_cluster = dist_in_cluster / cluster_size
 
-    alone? = Nx.equal(cluster_size, 1) |> Nx.squeeze() |> Nx.take(labels)
+    alone? = (cluster_size == 1) |> Nx.squeeze() |> Nx.take(labels)
 
     inner_dist =
-      dist_in_cluster
-      |> Nx.divide(Nx.max(cluster_size - 1, 1))
+      (dist_in_cluster / Nx.max(cluster_size - 1, 1))
       |> Nx.take_along_axis(Nx.reshape(labels, {num_samples, 1}), axis: 1)
       |> Nx.squeeze(axes: [1])
 

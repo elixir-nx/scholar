@@ -88,12 +88,6 @@ defmodule Scholar.Linear.LogisticRegression do
     %__MODULE__{coefficients: final_coeff, bias: final_bias, mode: :binary}
   end
 
-  # Function computes one-hot encoding
-
-  defnp one_hot_encoding(labels, num_classes) do
-    Nx.equal(Nx.new_axis(labels, -1), Nx.iota({1, num_classes}))
-  end
-
   # Multinomial logistic regression
 
   defnp fit_multinomial(x, y, opts) do
@@ -101,7 +95,7 @@ defmodule Scholar.Linear.LogisticRegression do
     iterations = opts[:iterations]
     learning_rate = opts[:learning_rate]
     num_classes = opts[:num_classes]
-    one_hot = one_hot_encoding(y, num_classes)
+    one_hot = Scholar.Preprocessing.one_hot_encode(y, num_classes: num_classes)
     x_t = Nx.transpose(x)
 
     {_, _, _, _, _, _, _, final_coeff} =
@@ -127,28 +121,13 @@ defmodule Scholar.Linear.LogisticRegression do
   defnp update_coefficients(x, x_t, y_t, {coeff, bias}, learning_rate) do
     {m, _n} = x.shape
 
-    logit =
-      x
-      |> Nx.dot(coeff)
-      |> Nx.add(bias)
-      |> Nx.multiply(-1)
-      |> Nx.exp()
-      |> Nx.add(1)
-      |> then(&(1 / &1))
+    logit = 1 / (Nx.exp(-(Nx.dot(x, coeff) + bias)) + 1)
 
-    diff =
-      (logit - y_t)
-      |> Nx.reshape({m})
+    diff = (logit - y_t) |> Nx.reshape({m})
 
-    coeff_diff =
-      x_t
-      |> Nx.dot(diff)
-      |> Nx.divide(m)
+    coeff_diff = Nx.dot(x_t, diff) / m
 
-    bias_diff =
-      diff
-      |> Nx.sum()
-      |> Nx.divide(m)
+    bias_diff = Nx.sum(diff) / m
 
     new_coeff = coeff - coeff_diff * learning_rate
     new_bias = bias - bias_diff * learning_rate
@@ -161,9 +140,7 @@ defmodule Scholar.Linear.LogisticRegression do
   defnp update_coefficients_multinomial(x, x_t, one_hot, coeff, learning_rate) do
     {m, _n} = x.shape
 
-    dot_prod =
-      x
-      |> Nx.dot(coeff)
+    dot_prod = Nx.dot(x, coeff)
 
     prob = softmax(dot_prod)
 
@@ -184,15 +161,7 @@ defmodule Scholar.Linear.LogisticRegression do
   end
 
   defnp predict_binary(%__MODULE__{coefficients: coeff, bias: bias}, x) do
-    logit =
-      coeff
-      |> Nx.dot(Nx.transpose(x))
-      |> Nx.add(bias)
-      |> Nx.multiply(-1)
-      |> Nx.exp()
-      |> Nx.add(1)
-      |> then(&(1 / &1))
-
+    logit = 1 / (Nx.exp(-(Nx.dot(coeff, Nx.transpose(x)) + bias)) + 1)
     logit > 0.5
   end
 
