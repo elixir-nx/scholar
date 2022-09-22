@@ -142,7 +142,10 @@ defmodule Scholar.Cluster.KMeans do
               Nx.reshape(broadcast_x, {num_runs, 1, num_samples, num_features}))
            |> Nx.sum(axes: [2])) / group_sizes
 
-        distance = Nx.sum((centroids - previous_iteration_centroids) ** 2, axes: [1, 2])
+        distance =
+          Scholar.Metrics.Distance.squared_euclidean(centroids, previous_iteration_centroids,
+            axes: [1, 2]
+          )
 
         {i + 1, tol, x, previous_iteration_centroids, distance, weights, broadcast_weights,
          broadcast_x, centroids, nearest_centroids}
@@ -267,13 +270,11 @@ defmodule Scholar.Cluster.KMeans do
   Calculate distances between each sample from `x` and and the model centroids.
   """
   defn transform(%__MODULE__{clusters: clusters} = _model, x) do
-    Nx.subtract(
+    Scholar.Metrics.Distance.euclidean(
       Nx.new_axis(x, 1),
-      Nx.new_axis(clusters, 0)
+      Nx.new_axis(clusters, 0),
+      axes: [-1]
     )
-    |> Nx.power(2)
-    |> Nx.sum(axes: [-1])
-    |> Nx.sqrt()
   end
 
   deftransformp validate_weights(weights, num_samples, num_runs) do

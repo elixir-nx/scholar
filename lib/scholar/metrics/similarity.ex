@@ -93,20 +93,9 @@ defmodule Scholar.Metrics.Similarity do
     # The last axis could in theory be different on both sides.
     assert_same_shape!(x, y)
 
-    m11 =
-      x
-      |> Nx.logical_and(y)
-      |> Nx.sum()
-
-    m10 =
-      x
-      |> Nx.greater(y)
-      |> Nx.sum()
-
-    m01 =
-      x
-      |> Nx.less(y)
-      |> Nx.sum()
+    m11 = Nx.sum(x and y)
+    m10 = Nx.sum(x > y)
+    m01 = Nx.sum(x < y)
 
     m11 / (m11 + m10 + m01)
   end
@@ -124,9 +113,7 @@ defmodule Scholar.Metrics.Similarity do
 
         different_from_successor? = sorted[0..-2//1] != sorted[1..-1//1]
 
-        different_from_successor?
-        |> Nx.sum()
-        |> Nx.add(1)
+        Nx.sum(different_from_successor?) + 1
     end
   end
 end

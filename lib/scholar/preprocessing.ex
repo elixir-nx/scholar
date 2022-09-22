@@ -323,7 +323,7 @@ defmodule Scholar.Preprocessing do
     # A mask with a single 1 in every group of equal values
     representative_mask =
       Nx.concatenate([
-        Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1]),
+        sorted[0..-2//1] != sorted[1..-1//1],
         Nx.tensor([1])
       ])
 
@@ -381,7 +381,7 @@ defmodule Scholar.Preprocessing do
             "expected :num_classes to be at most as length of label vector"
     end
 
-    Nx.equal(Nx.new_axis(tensor, -1), Nx.iota({1, opts[:num_classes]}))
+    Nx.new_axis(tensor, -1) == Nx.iota({1, opts[:num_classes]})
   end
 
   @doc """
