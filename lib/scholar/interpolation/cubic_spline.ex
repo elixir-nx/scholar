@@ -122,18 +122,26 @@ defmodule Scholar.Interpolation.CubicSpline do
   end
 
   defnp predict_n(%__MODULE__{x: x, coefficients: coefficients}, target_x, opts \\ []) do
-    if opts[:extrapolate] == false and (target_x < x[0] or target_x > x[-1]) do
-      Nx.tensor(:nan, type: :f64)
-    else
-      target_x = Nx.as_type(target_x, :f64)
-      idx = Nx.sum(x < target_x)
-      idx = Nx.min(idx, Nx.size(x) - 2)
+    nan_selector =
+      Nx.logical_and(opts[:extrapolate] == false, target_x < x[0] or target_x > x[-1])
 
-      c_poly = coefficients[[0..-1//1, idx]]
+    nan = Nx.tensor(:nan, type: :f64)
+    target_x = Nx.as_type(target_x, :f64)
 
-      x_poly = target_x - x[idx]
+    idx =
+      Nx.sum(x < Nx.new_axis(target_x, 1), axes: [1])
+      |> Nx.min(Nx.size(x) - 2)
 
-      Nx.dot(x_poly ** Nx.tensor([3.0, 2, 1, 0], type: :f64), c_poly)
-    end
+    c_poly = Nx.take_along_axis(coefficients, Nx.tile(idx, [4, 1]), axis: 1)
+
+    x_poly = target_x - Nx.take_along_axis(x, idx)
+
+    result =
+      x_poly
+      |> Nx.power(Nx.tensor([[3], [2], [1], [0]], type: :f64))
+      |> Nx.multiply(c_poly)
+      |> Nx.sum(axes: [0])
+
+    Nx.select(nan_selector, nan, result)
   end
 end
