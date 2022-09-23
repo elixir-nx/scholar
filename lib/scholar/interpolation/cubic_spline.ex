@@ -4,8 +4,8 @@ defmodule Scholar.Interpolation.CubicSpline do
   """
   import Nx.Defn
 
-  @derive {Nx.Container, containers: [:coefficients, :x, :y, :h]}
-  defstruct [:coefficients, :x, :y, :h]
+  @derive {Nx.Container, containers: [:coefficients, :x, :y, :dx]}
+  defstruct [:coefficients, :x, :y, :dx]
 
   opts = [
     extrapolate: [
@@ -31,68 +31,104 @@ defmodule Scholar.Interpolation.CubicSpline do
 
   defnp train_n(x, y) do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
+    # Reference implementation in Scipy
 
-    h_i = x[1..-1//1] - x[0..-2//1]
-    μ_i = h_i[0..-2//1] / (h_i[0..-2//1] + h_i[1..-1//1])
-    lambda_i = 1 - μ_i
+    # bc_type (boundary_condition_type) = 'not-a-knot'
+    # extrapolate = True
 
-    μ_i = Nx.pad(μ_i, 1, [{0, 1, 0}])
-    lambda_i = Nx.pad(lambda_i, 1, [{1, 0, 0}])
+    dx = x[1..-1//1] - x[0..-2//1]
+    n = Nx.size(x)
 
-    d_i = 6 * three_point_divided_difference(x, y)
+    slope = (y[1..-1//1] - y[0..-2//1]) / dx
 
-    a =
-      Nx.eye(Nx.size(d_i))
-      |> Nx.multiply(2)
-      |> Nx.put_diagonal(μ_i, offset: -1)
-      |> Nx.put_diagonal(lambda_i, offset: 1)
+    coefs =
+      if n == 3 do
+        a =
+          Nx.concatenate(
+            [
+              Nx.tensor([[1, 1, 0]]),
+              Nx.stack([dx[1], 2 * (dx[0] + dx[1]), dx[0]]) |> Nx.new_axis(0),
+              Nx.tensor([[0, 1, 1]])
+            ],
+            axis: 0
+          )
 
-    coefs = Nx.LinAlg.solve(a, d_i)
+        b = Nx.stack([2 * slope[0], 3 * (dx[0] * slope[1] + dx[1] * slope[0]), 2 * slope[1]])
 
-    zero = Nx.tensor([0])
-    coefs = Nx.concatenate([zero, coefs[1..-2//1], zero])
-    %__MODULE__{coefficients: coefs, x: x, y: y, h: h_i}
+        Nx.LinAlg.solve(a, b)
+      else
+        # n > 3 and bc = not_a_knot
+
+        d_0 = Nx.new_axis(x[2] - x[0], 0)
+        d_n = Nx.new_axis(x[-1] - x[-3], 0)
+
+        up_diag =
+          Nx.concatenate([
+            d_0,
+            dx[0..-2//1]
+          ])
+
+        low_diag =
+          Nx.concatenate([
+            dx[1..-1//1],
+            d_n
+          ])
+
+        main_diag =
+          Nx.concatenate([
+            Nx.new_axis(dx[1], 0),
+            2 * (dx[0..-2//1] + dx[1..-1//1]),
+            Nx.new_axis(dx[-2], 0)
+          ])
+
+        a =
+          Nx.broadcast(0, {n, n})
+          |> Nx.put_diagonal(up_diag, offset: 1)
+          |> Nx.put_diagonal(main_diag, offset: 0)
+          |> Nx.put_diagonal(low_diag, offset: -1)
+
+        bc_0 = ((dx[0] + 2 * d_0) * dx[1] * slope[0] + dx[0] ** 2 * slope[1]) / d_0
+
+        bc_n = (dx[-1] ** 2 * slope[-2] + (2 * d_n + dx[-1]) * dx[-2] * slope[-1]) / d_n
+
+        b =
+          Nx.concatenate([
+            Nx.new_axis(bc_0, 0),
+            3 * (dx[1..-1//1] * slope[0..-2//1] + dx[0..-2//1] * slope[1..-1//1]),
+            Nx.new_axis(bc_n, 0)
+          ])
+
+        Nx.LinAlg.solve(a, b)
+      end
+
+    %__MODULE__{coefficients: coefs, x: x, y: y, dx: dx}
   end
 
-  defnp three_point_divided_difference(x, y) do``
-    x_minus = x[0..-3//1]
-    x_i = x[1..-2//1]
-    x_plus = x[2..-1//1]
-
-    y_minus = y[0..-3//1]
-    y_i = y[1..-2//1]
-    y_plus = y[2..-1//1]
-
-    # divided diff f[x_minus, x_i, x_plus] = (f[x_i, x_plus] - f[x_minus, x_i]) / (x_plus - x_minus)
-    # divided diff f[a, b] := (f[b] - f[a] / (x_b - x_a)) = (y_b - y_a) / (x_b - x_a)
-    # f[x_i, x_plus] := (y_plus - y_i) / (x_plus - x_i)
-    # f[x_minus, x_i] := (y_i - y_minus) / (x_i - x_minus)
-
-    f_plus = (y_plus - y_i) / (x_plus - x_i)
-    f_minus = (y_i - y_minus) / (x_i - x_minus)
-
-    f = (f_plus - f_minus) / (x_plus - x_minus)
-
-    # Force the initial conditions f''(0) = f''(n) = 0
-    # zero = Nx.tensor([0])
-    Nx.concatenate([Nx.new_axis(f[0], 0), f, Nx.new_axis(f[-1], 0)])
-  end
-
-  defn predict(%__MODULE__{x: x, y: y, coefficients: coefficients, h: h}, target_x) do
-    i = Nx.sum(x < target_x)
-    i_prev = Nx.select(i > 1, i - 1, 0)
-    i = Nx.select(i > 1, i, 1)
+  defn predict(%__MODULE__{x: x, y: y, coefficients: coefficients, dx: dx}, target_x) do
+    # i = Nx.sum(x < target_x)
+    # i_prev = Nx.select(i > 0, i - 1, 0)
+    # i = Nx.select(i > 0, i, 0)
 
     # if i_prev < 0 == 1 do
     #   raise "negative index #{inspect(i)}"
     # end
 
-    m_prev = coefficients[i_prev]
-    m_i = coefficients[i]
+    # m_prev = coefficients[i_prev]
+    # m_i = coefficients[i]
 
-    c_i = m_prev * (x[i] - target_x) ** 3 / (6 * h[i])
-    c_i = c_i + m_i * (target_x - x[i_prev]) ** 3 / (6 * h[i])
-    c_i = c_i + (y[i_prev] - m_prev * h[i] ** 2 / 6) * (x[i] - target_x) / h[i]
-    c_i + (y[i] - m_i * h[i] ** 2 / 6) * (target_x - x[i_prev]) / h[i]
+    # c_i = m_prev * (x[i] - target_x) ** 3 / (6 * h[i])
+    # c_i = c_i + m_i * (target_x - x[i_prev]) ** 3 / (6 * h[i])
+    # c_i = c_i + (y[i_prev] - m_prev * h[i] ** 2 / 6) * (x[i] - target_x) / h[i]
+    # c_i + (y[i] - m_i * h[i] ** 2 / 6) * (target_x - x[i_prev]) / h[i]
+    slope = (y[1..-1//1] - y[0..-2//1]) / dx
+    t = (coefficients[0..-2//1] + coefficients[1..-1//1] - 2 * slope) / dx
+
+
+    c_3 = t / dx
+    c_2 = (slope - coefficients[0..-2//1]) / dx - t
+    c_1 = coefficients[0..-2//1]
+    c_0 = y[0..-2//1]
+
+    c_3[0] * target_x ** 3 + c_2[0] * target_x ** 2 + c_1[0] * target_x + c_0[0]
   end
 end
