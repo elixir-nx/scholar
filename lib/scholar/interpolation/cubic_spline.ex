@@ -4,8 +4,8 @@ defmodule Scholar.Interpolation.CubicSpline do
   """
   import Nx.Defn
 
-  @derive {Nx.Container, containers: [:coefficients, :x, :y, :dx]}
-  defstruct [:coefficients, :x, :y, :dx]
+  @derive {Nx.Container, containers: [:coefficients, :x]}
+  defstruct [:coefficients, :x]
 
   opts = [
     extrapolate: [
@@ -17,19 +17,11 @@ defmodule Scholar.Interpolation.CubicSpline do
   ]
 
   @opts_schema NimbleOptions.new!(opts)
+
   @doc """
   Fits a cubic spline interpolation of the given `(x, y)` points
-
-  ## Options
-
-  #{NimbleOptions.docs(@opts_schema)}
   """
-  deftransform train(x, y, _opts \\ []) do
-    train_n(x, y)
-    # train_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
-  end
-
-  defnp train_n(x, y) do
+  defn train(x, y) do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
     # Reference implementation in Scipy
 
@@ -111,18 +103,37 @@ defmodule Scholar.Interpolation.CubicSpline do
 
     c = Nx.stack([c_3, c_2, c_1, c_0], axis: 0)
 
-    %__MODULE__{coefficients: c, x: x, y: y, dx: dx}
+    %__MODULE__{coefficients: c, x: x}
   end
 
-  defn predict(%__MODULE__{x: x, coefficients: coefficients}, target_x) do
-    target_x = Nx.as_type(target_x, :f64)
-    idx = Nx.sum(x < target_x)
-    idx = Nx.min(idx, Nx.size(x) - 2)
+  @doc """
+  Returns the value fit by `train/2` corresponding to the `target_x` input
 
-    c_poly = coefficients[[0..-1//1, idx]]
+  ### Options
 
-    x_poly = target_x - x[idx]
+  #{NimbleOptions.docs(@opts_schema)}
+  """
+  deftransform predict(
+                 %__MODULE__{} = model,
+                 target_x,
+                 opts \\ []
+               ) do
+    predict_n(model, target_x, NimbleOptions.validate!(opts, @opts_schema))
+  end
 
-    Nx.dot(x_poly ** Nx.tensor([3.0, 2, 1, 0], type: :f64), c_poly)
+  defnp predict_n(%__MODULE__{x: x, coefficients: coefficients}, target_x, opts \\ []) do
+    if opts[:extrapolate] == false and (target_x < x[0] or target_x > x[-1]) do
+      Nx.tensor(:nan, type: :f64)
+    else
+      target_x = Nx.as_type(target_x, :f64)
+      idx = Nx.sum(x < target_x)
+      idx = Nx.min(idx, Nx.size(x) - 2)
+
+      c_poly = coefficients[[0..-1//1, idx]]
+
+      x_poly = target_x - x[idx]
+
+      Nx.dot(x_poly ** Nx.tensor([3.0, 2, 1, 0], type: :f64), c_poly)
+    end
   end
 end
