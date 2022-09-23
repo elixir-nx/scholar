@@ -115,9 +115,7 @@ defmodule Scholar.Interpolation.CubicSpline do
   end
 
   defn predict(%__MODULE__{x: x, coefficients: coefficients}, target_x) do
-    x = Nx.as_type(x, :f64)
     target_x = Nx.as_type(target_x, :f64)
-    coefficients = Nx.as_type(coefficients, :f64)
     idx = Nx.sum(x < target_x)
     idx = Nx.min(idx, Nx.size(x) - 2)
 
