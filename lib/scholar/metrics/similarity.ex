@@ -57,13 +57,13 @@ defmodule Scholar.Metrics.Similarity do
   Calculates Jaccard similarity based on binary attributes.
 
   $$
-  J = \frac{M_{11}}{M_{01} + M_{10} + M_{11}}
+  J = \frac{M\_{11}}{M\_{01} + M\_{10} + M\_{11}}
   $$
 
-  $M_{11}$ is the total numbers of attributes, for which both X and Y have 1.\
-  $M_{10}$ is the total numbers of attributes, for which X has 1 and Y has 0.\
-  $M_{01}$ is the total numbers of attributes, for which X has 0 and Y has 1.\
-  $M_{00}$ is the total numbers of attributes, for which both X and Y have 0.
+  $M\_{11}$ is the total numbers of attributes, for which both X and Y have 1.\
+  $M\_{10}$ is the total numbers of attributes, for which X has 1 and Y has 0.\
+  $M\_{01}$ is the total numbers of attributes, for which X has 0 and Y has 1.\
+  $M\_{00}$ is the total numbers of attributes, for which both X and Y have 0.
 
   ## Examples
 
