@@ -57,7 +57,7 @@ defmodule Scholar.Decomposition.PCATest do
   describe "errors" do
     test "input rank different than 2" do
       assert_raise ArgumentError,
-                   "expected x to have rank equal to: 2, got: 1",
+                   "expected input to have shape {n_samples, n_features}, got tensor with shape: {4}",
                    fn ->
                      Scholar.Decomposition.PCA.fit(Nx.tensor([1, 2, 3, 4]))
                    end

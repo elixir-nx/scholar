@@ -113,7 +113,8 @@ defmodule Scholar.Decomposition.PCA do
     opts = NimbleOptions.validate!(opts, @fit_opts_schema)
 
     if Nx.rank(x) != 2 do
-      raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
+      raise ArgumentError,
+            "expected input to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
     num_components =
@@ -146,6 +147,11 @@ defmodule Scholar.Decomposition.PCA do
 
     type = Nx.type(num_components)
     clipped = Nx.clip(num_components, 0, min(num_samples, num_features))
+
+    if Nx.rank(num_components) != 0 do
+      raise ArgumentError,
+            ":num_components must be a scalar tensor, got: #{inspect(num_components)}"
+    end
 
     num_components =
       cond do
