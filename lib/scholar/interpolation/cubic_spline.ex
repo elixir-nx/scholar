@@ -117,11 +117,7 @@ defmodule Scholar.Interpolation.CubicSpline do
 
   #{NimbleOptions.docs(@opts_schema)}
   """
-  deftransform predict(
-                 %__MODULE__{} = model,
-                 target_x,
-                 opts \\ []
-               ) do
+  deftransform predict(%__MODULE__{} = model, target_x, opts \\ []) do
     predict_n(model, target_x, NimbleOptions.validate!(opts, @opts_schema))
   end
 
