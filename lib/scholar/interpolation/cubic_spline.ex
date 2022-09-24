@@ -12,7 +12,7 @@ defmodule Scholar.Interpolation.CubicSpline do
       required: false,
       default: true,
       type: :boolean,
-      doc: "if false, out-of-bounds x values raise."
+      doc: "if false, out-of-bounds x return NaN."
     ]
   ]
 
