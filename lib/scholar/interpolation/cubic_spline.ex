@@ -101,7 +101,11 @@ defmodule Scholar.Interpolation.CubicSpline do
     c_1 = s[0..-2//1]
     c_0 = y[0..-2//1]
 
-    c = Nx.stack([c_3, c_2, c_1, c_0], axis: 0)
+    c =
+      Nx.concatenate(
+        [Nx.new_axis(c_3, 1), Nx.new_axis(c_2, 1), Nx.new_axis(c_1, 1), Nx.new_axis(c_0, 1)],
+        axis: 1
+      )
 
     %__MODULE__{coefficients: c, x: x}
   end
@@ -128,20 +132,37 @@ defmodule Scholar.Interpolation.CubicSpline do
     nan = Nx.tensor(:nan, type: :f64)
     target_x = Nx.as_type(target_x, :f64)
 
-    idx =
-      Nx.sum(x < Nx.new_axis(target_x, 1), axes: [1])
+    idx_selector = Nx.new_axis(target_x, 1) > Nx.new_axis(x, 0)
+
+    idx_poly =
+      idx_selector
+      |> Nx.argmax(axis: 1, tie_break: :high)
       |> Nx.min(Nx.size(x) - 2)
 
-    c_poly = Nx.take_along_axis(coefficients, Nx.tile(idx, [4, 1]), axis: 1)
+    # deal with the case where no valid index is found
+    # means that we're in the first interval
+    # _poly suffix because we're selecting a specific polynomial
+    # for each target_x value
+    idx_poly =
+      Nx.all(idx_selector == 0, axes: [1])
+      |> Nx.select(0, idx_poly)
 
-    x_poly = target_x - Nx.take_along_axis(x, idx)
+    coef_poly = Nx.take(coefficients, idx_poly)
+
+    # each polynomial is calculated as if the origin was moved to the
+    # x value that represents the start of the interval
+    x_poly = target_x - Nx.take(x, idx_poly)
 
     result =
       x_poly
-      |> Nx.power(Nx.tensor([[3], [2], [1], [0]], type: :f64))
-      |> Nx.multiply(c_poly)
-      |> Nx.sum(axes: [0])
+      |> Nx.new_axis(1)
+      |> Nx.power(Nx.tensor([3, 2, 1, 0]))
+      |> Nx.dot([1], [0], coef_poly, [1], [0])
 
-    Nx.select(nan_selector, nan, result)
+    if opts[:extrapolate] do
+      result
+    else
+      Nx.select(nan_selector, nan, result)
+    end
   end
 end
