@@ -63,30 +63,9 @@ defmodule Scholar.Decomposition.PCATest do
                    end
     end
 
-    test "fit test - :num_components bigger than min(num_samples, num_features)" do
-      assert_raise ArgumentError,
-                   "expected :num_components to be integer in range 1 to 2, got: 4",
-                   fn ->
-                     Scholar.Decomposition.PCA.fit(@x, num_components: 4)
-                   end
-    end
-
-    test "fit test - :num_components is float outside range (0,1)" do
-      assert_raise ArgumentError,
-                   "expected :num_components to be float in range 0 to 1, got: 1.5",
-                   fn ->
-                     Scholar.Decomposition.PCA.fit(@x, num_components: 1.5)
-                   end
-    end
-
     test "fit test - :num_components is atom" do
-      assert_raise NimbleOptions.ValidationError,
-                   """
-                   expected :num_components option to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
-
-                     * invalid value for :num_components option: expected one of [:none, :pos_integer], got: :two
-                     * invalid value for :num_components option: expected positive number, got: :two\
-                   """,
+      assert_raise ArgumentError,
+                   ":num_components must be :none, a number, or a tensor, got: :two",
                    fn ->
                      Scholar.Decomposition.PCA.fit(@x, num_components: :two)
                    end
