@@ -154,7 +154,7 @@ defmodule Scholar.Decomposition.PCA do
 
   ## Returns
 
-    The function returns a decomposed data.
+  The function returns a decomposed data.
   """
   deftransform transform(model, opts \\ []) do
     transform_n(model, NimbleOptions.validate!(opts, @transform_opts_schema))
