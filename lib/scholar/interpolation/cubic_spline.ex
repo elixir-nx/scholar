@@ -25,9 +25,6 @@ defmodule Scholar.Interpolation.CubicSpline do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
     # Reference implementation in Scipy
 
-    x = Nx.as_type(x, :f64)
-    y = Nx.as_type(y, :f64)
-
     dx = x[1..-1//1] - x[0..-2//1]
     n = Nx.size(x)
 
@@ -122,11 +119,16 @@ defmodule Scholar.Interpolation.CubicSpline do
   end
 
   defnp predict_n(%__MODULE__{x: x, coefficients: coefficients}, target_x, opts \\ []) do
+    target_x =
+      case Nx.shape(target_x) do
+        {} -> Nx.new_axis(target_x, 0)
+        _ -> target_x
+      end
+
     nan_selector =
       Nx.logical_and(opts[:extrapolate] == false, target_x < x[0] or target_x > x[-1])
 
-    nan = Nx.tensor(:nan, type: :f64)
-    target_x = Nx.as_type(target_x, :f64)
+    nan = Nx.tensor(:nan, type: Nx.Type.to_floating(Nx.type(target_x)))
 
     idx_selector = Nx.new_axis(target_x, 1) > Nx.new_axis(x, 0)
 
