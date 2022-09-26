@@ -30,19 +30,16 @@ defmodule Scholar.Decomposition.PCA do
 
   fit_opts_schema = [
     num_components: [
-      type: :any,
+      type:
+        {:or, [{:custom, Scholar.Options, :positive_number, []}, {:in, [:none, :pos_integer]}]},
       default: :none,
       doc: ~S"""
-      Number of components to keep.
+      Number of components to keep. if `:num_components` is not set all components are kept:
 
-      It may be a number or a tensor. When an integer number/tensor,
-      it is the exact number of components. When a float number/tensor,
-      it selects the number of components such that the amount of
-      variance that needs to be explained is greater than the percentage
-      specified by `:num_components`.
+      $num\\_components = min(num\\_samples, num\\_features)$
 
-      If none is given, it defaults `:none`, and it picks the minimum
-      between the number of samples and the number of features.
+      If $0 < num\\_components <= 1$, select the number of components such
+      that the amount of variance that needs to be explained is greater than the percentage specified by `:num_components`.
       """
     ]
   ]
@@ -110,66 +107,30 @@ defmodule Scholar.Decomposition.PCA do
     * `:decomposer` - Matrix used in actual decomposition. It is the unitary matrix from SVD factorization.
   """
   deftransform fit(x, opts \\ []) do
-    opts = NimbleOptions.validate!(opts, @fit_opts_schema)
-
-    if Nx.rank(x) != 2 do
-      raise ArgumentError,
-            "expected input to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
-    end
-
-    num_components =
-      case opts[:num_components] do
-        :none ->
-          {num_samples, num_features} = Nx.shape(x)
-          Kernel.min(num_features, num_samples)
-
-        %Nx.Tensor{} = num ->
-          num
-
-        num when is_number(num) ->
-          num
-
-        num ->
-          raise ArgumentError,
-                ":num_components must be :none, a number, or a tensor, got: #{inspect(num)}"
-      end
-
-    fit_n(x, num_components)
+    fit_n(x, NimbleOptions.validate!(opts, @fit_opts_schema))
   end
 
-  defnp fit_n(x, num_components) do
+  defnp fit_n(x, opts \\ []) do
+    if Nx.rank(x) != 2 do
+      raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
+    end
+
     {num_samples, num_features} = Nx.shape(x)
+    num_components = opts[:num_components]
+
     mean = Nx.mean(x, axes: [0])
     x = x - mean
     {decomposer, singular_values, components} = Nx.LinAlg.svd(x)
     explained_variance = singular_values * singular_values / (num_samples - 1)
     explained_variance_ratio = explained_variance / Nx.sum(explained_variance)
 
-    type = Nx.type(num_components)
-    clipped = Nx.clip(num_components, 0, min(num_samples, num_features))
-
-    if Nx.rank(num_components) != 0 do
-      raise ArgumentError,
-            ":num_components must be a scalar tensor, got: #{inspect(num_components)}"
-    end
-
     num_components =
-      cond do
-        Nx.Type.integer?(type) ->
-          clipped
-
-        Nx.Type.float?(type) ->
-          Nx.cumulative_sum(explained_variance)
-          |> then(&Nx.greater_equal(clipped, &1))
-          |> Nx.as_type({:s, 8})
-          |> Nx.argmax(tie_break: :low)
-          # add one to change an index into the number of clusters
-          |> Nx.add(1)
-
-        true ->
-          raise ArgumentError,
-                ":num_components must be an integer or float tensor, got: #{inspect(num_components)}"
-      end
+      calculate_num_components(
+        num_components,
+        num_features,
+        num_samples,
+        explained_variance
+      )
 
     %__MODULE__{
       components: components,
@@ -215,6 +176,41 @@ defmodule Scholar.Decomposition.PCA do
       decomposer[[0..-1//1, 0..(num_components - 1)]] * singular_values
     else
       decomposer[[0..-1//1, 0..(num_components - 1)]] * Nx.sqrt(num_samples - 1)
+    end
+  end
+
+  deftransformp calculate_num_components(
+                  num_components,
+                  num_features,
+                  num_samples,
+                  explained_variance
+                ) do
+    cond do
+      num_components == :none ->
+        Nx.min(num_features, num_samples)
+
+      num_components > 0 and num_components <= 1 ->
+        Nx.cumulative_sum(explained_variance)
+        |> then(&Nx.greater_equal(num_components, &1))
+        |> Nx.as_type({:s, 8})
+        |> Nx.argmax(tie_break: :low)
+        # add one to change an index into the number of clusters
+        |> Nx.add(1)
+
+      num_components > 0 and num_components <= min(num_features, num_samples) and
+          is_integer(num_components) ->
+        num_components
+
+      is_integer(num_components) ->
+        raise ArgumentError,
+              "expected :num_components to be integer in range 1 to #{inspect(min(num_samples, num_features))}, got: #{inspect(num_components)}"
+
+      is_float(num_components) ->
+        raise ArgumentError,
+              "expected :num_components to be float in range 0 to 1, got: #{inspect(num_components)}"
+
+      true ->
+        raise ArgumentError, "unexpected type of :num_components, got: #{inspect(num_components)}"
     end
   end
 end

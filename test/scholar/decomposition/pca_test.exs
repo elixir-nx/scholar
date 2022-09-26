@@ -57,15 +57,36 @@ defmodule Scholar.Decomposition.PCATest do
   describe "errors" do
     test "input rank different than 2" do
       assert_raise ArgumentError,
-                   "expected input to have shape {n_samples, n_features}, got tensor with shape: {4}",
+                   "expected x to have rank equal to: 2, got: 1",
                    fn ->
                      Scholar.Decomposition.PCA.fit(Nx.tensor([1, 2, 3, 4]))
                    end
     end
 
-    test "fit test - :num_components is atom" do
+    test "fit test - :num_components bigger than min(num_samples, num_features)" do
       assert_raise ArgumentError,
-                   ":num_components must be :none, a number, or a tensor, got: :two",
+                   "expected :num_components to be integer in range 1 to 2, got: 4",
+                   fn ->
+                     Scholar.Decomposition.PCA.fit(@x, num_components: 4)
+                   end
+    end
+
+    test "fit test - :num_components is float outside range (0,1)" do
+      assert_raise ArgumentError,
+                   "expected :num_components to be float in range 0 to 1, got: 1.5",
+                   fn ->
+                     Scholar.Decomposition.PCA.fit(@x, num_components: 1.5)
+                   end
+    end
+
+    test "fit test - :num_components is atom" do
+      assert_raise NimbleOptions.ValidationError,
+                   """
+                   expected :num_components option to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
+
+                     * invalid value for :num_components option: expected one of [:none, :pos_integer], got: :two
+                     * invalid value for :num_components option: expected positive number, got: :two\
+                   """,
                    fn ->
                      Scholar.Decomposition.PCA.fit(@x, num_components: :two)
                    end
