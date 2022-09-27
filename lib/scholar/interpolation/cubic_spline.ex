@@ -28,11 +28,10 @@ defmodule Scholar.Interpolation.CubicSpline do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
     # Reference implementation in Scipy
 
-    {n, dx} =
+    n =
       case Nx.shape(x) do
         {n} when n > 2 ->
-          dx = x[1..-1//1] - x[0..-2//1]
-          {n, dx}
+          n
 
         shape ->
           raise ArgumentError,
@@ -47,6 +46,8 @@ defmodule Scholar.Interpolation.CubicSpline do
         raise ArgumentError,
               "expected y to have shape #{inspect(x_shape)}, got: #{inspect(y_shape)}"
     end
+
+    dx = x[1..-1//1] - x[0..-2//1]
 
     sort_idx = Nx.argsort(x)
     x = Nx.take(x, sort_idx)
