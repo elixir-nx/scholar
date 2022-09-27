@@ -1,6 +1,6 @@
 defmodule Scholar.Interpolation.CubicSpline do
   @moduledoc """
-  Cubic spline interpolation
+  Cubic spline interpolation.
   """
   import Nx.Defn
 
