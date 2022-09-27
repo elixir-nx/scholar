@@ -49,8 +49,8 @@ defmodule Scholar.Interpolation.CubicSpline do
     end
 
     sort_idx = Nx.argsort(x)
-    x = Nx.take_along_axis(x, sort_idx)
-    y = Nx.take_along_axis(y, sort_idx)
+    x = Nx.take(x, sort_idx)
+    y = Nx.take(y, sort_idx)
 
     slope = (y[1..-1//1] - y[0..-2//1]) / dx
 
