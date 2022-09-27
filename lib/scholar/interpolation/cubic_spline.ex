@@ -20,27 +20,48 @@ defmodule Scholar.Interpolation.CubicSpline do
 
   @doc """
   Fits a cubic spline interpolation of the given `(x, y)` points
+
+  Inputs are expected to be rank-1 tensors with the same shape
+  and at least 3 entries.
   """
   defn train(x, y) do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
     # Reference implementation in Scipy
 
-    dx = x[1..-1//1] - x[0..-2//1]
-    n = Nx.size(x)
+    {n, dx} =
+      case Nx.shape(x) do
+        {n} when n > 2 ->
+          dx = x[1..-1//1] - x[0..-2//1]
+          {n, dx}
+
+        shape ->
+          raise ArgumentError,
+                "expected x to be a tensor with shape {n}, where n > 2, got: #{inspect(shape)}"
+      end
+
+    case {Nx.shape(y), Nx.shape(x)} do
+      {shape, shape} ->
+        :ok
+
+      {y_shape, x_shape} ->
+        raise ArgumentError,
+              "expected y to have shape #{inspect(x_shape)}, got: #{inspect(y_shape)}"
+    end
+
+    sort_idx = Nx.argsort(x)
+    x = Nx.take_along_axis(x, sort_idx)
+    y = Nx.take_along_axis(y, sort_idx)
 
     slope = (y[1..-1//1] - y[0..-2//1]) / dx
 
     s =
       if n == 3 do
         a =
-          Nx.concatenate(
-            [
-              Nx.tensor([[1, 1, 0]]),
-              Nx.stack([dx[1], 2 * (dx[0] + dx[1]), dx[0]]) |> Nx.new_axis(0),
-              Nx.tensor([[0, 1, 1]])
-            ],
-            axis: 0
-          )
+          Nx.stack([
+            Nx.tensor([1, 1, 0]),
+            Nx.stack([dx[1], 2 * (dx[0] + dx[1]), dx[0]]),
+            Nx.tensor([0, 1, 1])
+          ])
 
         b = Nx.stack([2 * slope[0], 3 * (dx[0] * slope[1] + dx[1] * slope[0]), 2 * slope[1]])
 
@@ -98,11 +119,7 @@ defmodule Scholar.Interpolation.CubicSpline do
     c_1 = s[0..-2//1]
     c_0 = y[0..-2//1]
 
-    c =
-      Nx.concatenate(
-        [Nx.new_axis(c_3, 1), Nx.new_axis(c_2, 1), Nx.new_axis(c_1, 1), Nx.new_axis(c_0, 1)],
-        axis: 1
-      )
+    c = Nx.stack([c_3, c_2, c_1, c_0], axis: 1)
 
     %__MODULE__{coefficients: c, x: x}
   end
@@ -119,16 +136,16 @@ defmodule Scholar.Interpolation.CubicSpline do
   end
 
   defnp predict_n(%__MODULE__{x: x, coefficients: coefficients}, target_x, opts \\ []) do
+    original_shape = Nx.shape(target_x)
+
     target_x =
-      case Nx.shape(target_x) do
-        {} -> Nx.new_axis(target_x, 0)
-        _ -> target_x
+      case target_x do
+        {} ->
+          Nx.new_axis(target_x, 0)
+
+        _ ->
+          Nx.flatten(target_x)
       end
-
-    nan_selector =
-      Nx.logical_and(opts[:extrapolate] == false, target_x < x[0] or target_x > x[-1])
-
-    nan = Nx.tensor(:nan, type: Nx.Type.to_floating(Nx.type(target_x)))
 
     idx_selector = Nx.new_axis(target_x, 1) > Nx.new_axis(x, 0)
 
@@ -157,10 +174,16 @@ defmodule Scholar.Interpolation.CubicSpline do
       |> Nx.power(Nx.tensor([3, 2, 1, 0]))
       |> Nx.dot([1], [0], coef_poly, [1], [0])
 
-    if opts[:extrapolate] do
-      result
-    else
-      Nx.select(nan_selector, nan, result)
-    end
+    result =
+      if opts[:extrapolate] do
+        result
+      else
+        nan_selector = target_x < x[0] or target_x > x[-1]
+
+        nan = Nx.tensor(:nan, type: Nx.Type.to_floating(Nx.type(target_x)))
+        Nx.select(nan_selector, nan, result)
+      end
+
+    Nx.reshape(result, original_shape)
   end
 end
