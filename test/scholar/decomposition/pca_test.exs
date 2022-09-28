@@ -9,14 +9,14 @@ defmodule Scholar.Decomposition.PCATest do
     assert model.explained_variance == Nx.tensor([7.9395432472229, 0.060456883162260056])
     assert model.explained_variance_ratio == Nx.tensor([0.9924429059028625, 0.007557110395282507])
     assert model.singular_values == Nx.tensor([6.30061232, 0.54980396])
-    assert model.num_components == Nx.tensor(2)
+    assert model.num_components == 2
     assert model.num_samples == Nx.tensor(6)
     assert model.num_features == Nx.tensor(2)
   end
 
   test "fit test - :num_components is integer" do
     model = Scholar.Decomposition.PCA.fit(@x, num_components: 1)
-    assert model.num_components == Nx.tensor(1)
+    assert model.num_components == 1
   end
 
   test "transform test - :whiten set to false" do
@@ -71,8 +71,8 @@ defmodule Scholar.Decomposition.PCATest do
                    """
                    expected :num_components option to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
 
-                     * invalid value for :num_components option: expected one of [:none, :pos_integer], got: :two
-                     * invalid value for :num_components option: expected positive number, got: :two\
+                     * invalid value for :num_components option: expected one of [:none], got: :two
+                     * invalid value for :num_components option: expected positive integer, got: :two\
                    """,
                    fn ->
                      Scholar.Decomposition.PCA.fit(@x, num_components: :two)

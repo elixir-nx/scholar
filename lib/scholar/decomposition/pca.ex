@@ -30,7 +30,7 @@ defmodule Scholar.Decomposition.PCA do
 
   fit_opts_schema = [
     num_components: [
-      type: {:in, [:none, :pos_integer]}
+      type: {:or, [:pos_integer, {:in, [:none]}]},
       default: :none,
       doc: ~S"""
       Number of components to keep. if `:num_components` is not set all components are kept:
@@ -108,7 +108,7 @@ defmodule Scholar.Decomposition.PCA do
     fit_n(x, NimbleOptions.validate!(opts, @fit_opts_schema))
   end
 
-  #TODO Add support for :num_components as a float when dynamic shapes will be implemented
+  # TODO Add support for :num_components as a float when dynamic shapes will be implemented
   defnp fit_n(x, opts \\ []) do
     if Nx.rank(x) != 2 do
       raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
@@ -127,8 +127,7 @@ defmodule Scholar.Decomposition.PCA do
       calculate_num_components(
         num_components,
         num_features,
-        num_samples,
-        explained_variance
+        num_samples
       )
 
     %__MODULE__{
@@ -180,20 +179,11 @@ defmodule Scholar.Decomposition.PCA do
   deftransformp calculate_num_components(
                   num_components,
                   num_features,
-                  num_samples,
-                  explained_variance
+                  num_samples
                 ) do
     cond do
       num_components == :none ->
-        Nx.min(num_features, num_samples)
-
-      num_components > 0 and num_components <= 1 ->
-        Nx.cumulative_sum(explained_variance)
-        |> then(&Nx.greater_equal(num_components, &1))
-        |> Nx.as_type({:s, 8})
-        |> Nx.argmax(tie_break: :low)
-        # add one to change an index into the number of clusters
-        |> Nx.add(1)
+        min(num_features, num_samples)
 
       num_components > 0 and num_components <= min(num_features, num_samples) and
           is_integer(num_components) ->
@@ -202,10 +192,6 @@ defmodule Scholar.Decomposition.PCA do
       is_integer(num_components) ->
         raise ArgumentError,
               "expected :num_components to be integer in range 1 to #{inspect(min(num_samples, num_features))}, got: #{inspect(num_components)}"
-
-      is_float(num_components) ->
-        raise ArgumentError,
-              "expected :num_components to be float in range 0 to 1, got: #{inspect(num_components)}"
 
       true ->
         raise ArgumentError, "unexpected type of :num_components, got: #{inspect(num_components)}"
