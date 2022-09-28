@@ -14,11 +14,6 @@ defmodule Scholar.Decomposition.PCATest do
     assert model.num_features == Nx.tensor(2)
   end
 
-  test "fit test - :num_components is float" do
-    model = Scholar.Decomposition.PCA.fit(@x, num_components: 0.8)
-    assert model.num_components == Nx.tensor(1)
-  end
-
   test "fit test - :num_components is integer" do
     model = Scholar.Decomposition.PCA.fit(@x, num_components: 1)
     assert model.num_components == Nx.tensor(1)
@@ -26,7 +21,7 @@ defmodule Scholar.Decomposition.PCATest do
 
   test "transform test - :whiten set to false" do
     model = Scholar.Decomposition.PCA.fit(@x)
-    num_components = model.num_components |> Nx.to_number()
+    num_components = model.num_components
 
     assert Scholar.Decomposition.PCA.transform(model, num_components: num_components) ==
              Nx.tensor([
@@ -41,7 +36,7 @@ defmodule Scholar.Decomposition.PCATest do
 
   test "transform test - :whiten set to true" do
     model = Scholar.Decomposition.PCA.fit(@x)
-    num_components = model.num_components |> Nx.to_number()
+    num_components = model.num_components
 
     assert Scholar.Decomposition.PCA.transform(model, num_components: num_components, whiten: true) ==
              Nx.tensor([
@@ -68,14 +63,6 @@ defmodule Scholar.Decomposition.PCATest do
                    "expected :num_components to be integer in range 1 to 2, got: 4",
                    fn ->
                      Scholar.Decomposition.PCA.fit(@x, num_components: 4)
-                   end
-    end
-
-    test "fit test - :num_components is float outside range (0,1)" do
-      assert_raise ArgumentError,
-                   "expected :num_components to be float in range 0 to 1, got: 1.5",
-                   fn ->
-                     Scholar.Decomposition.PCA.fit(@x, num_components: 1.5)
                    end
     end
 
@@ -106,7 +93,7 @@ defmodule Scholar.Decomposition.PCATest do
                    "invalid value for :whiten option: expected boolean, got: :yes",
                    fn ->
                      model = Scholar.Decomposition.PCA.fit(@x)
-                     num_components = model.num_components |> Nx.to_number()
+                     num_components = model.num_components
 
                      Scholar.Decomposition.PCA.transform(model,
                        num_components: num_components,

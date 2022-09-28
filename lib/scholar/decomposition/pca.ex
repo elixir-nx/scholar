@@ -30,8 +30,7 @@ defmodule Scholar.Decomposition.PCA do
 
   fit_opts_schema = [
     num_components: [
-      type:
-        {:or, [{:custom, Scholar.Options, :positive_number, []}, {:in, [:none, :pos_integer]}]},
+      type: {:in, [:none, :pos_integer]}
       default: :none,
       doc: ~S"""
       Number of components to keep. if `:num_components` is not set all components are kept:
@@ -96,9 +95,8 @@ defmodule Scholar.Decomposition.PCA do
 
     * `:mean` - Per-feature empirical mean, estimated from the training set.
 
-    * `:num_components` - The estimated number of components. When `:num_components` is set to a number between 0 and 1
-      this number is estimated from input data. Otherwise it equals the parameter `:num_components`, or the lesser
-      value of `:num_features` and `:num_samples` if `num_components` is `nil`.
+    * `:num_components` - It equals the parameter `:num_components`, or the lesser
+      value of `:num_features` and `:num_samples` if the parameter `:num_components` is `:none`.
 
     * `:num_features` - Number of features in the training data.
 
@@ -110,6 +108,7 @@ defmodule Scholar.Decomposition.PCA do
     fit_n(x, NimbleOptions.validate!(opts, @fit_opts_schema))
   end
 
+  #TODO Add support for :num_components as a float when dynamic shapes will be implemented
   defnp fit_n(x, opts \\ []) do
     if Nx.rank(x) != 2 do
       raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
@@ -168,7 +167,6 @@ defmodule Scholar.Decomposition.PCA do
           } = _model,
           opts \\ []
         ) do
-    opts = keyword!(opts, [:num_components, whiten: false])
     num_components = opts[:num_components]
     whiten? = opts[:whiten]
 
