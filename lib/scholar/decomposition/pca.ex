@@ -5,13 +5,13 @@ defmodule Scholar.Decomposition.PCA do
   import Nx.Defn
 
   @derive {Nx.Container,
+           keep: [:num_components],
            containers: [
              :components,
              :explained_variance,
              :explained_variance_ratio,
              :singular_values,
              :mean,
-             :num_components,
              :num_features,
              :num_samples,
              :decomposer
