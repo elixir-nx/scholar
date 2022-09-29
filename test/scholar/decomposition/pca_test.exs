@@ -2,7 +2,27 @@ defmodule Scholar.Decomposition.PCATest do
   use ExUnit.Case, async: true
 
   @x Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+  @x2 Nx.tensor([[1, 4], [54, 6], [26, 7]])
   @x3 Nx.tensor([[-1, -1, 3], [-2, -1, 2], [-3, -2, 1], [3, 1, 1], [21, 2, 1], [5, 3, 2]])
+
+  def assert_all_close(left, right, opts \\ []) do
+    atol = opts[:atol] || 1.0e-7
+    rtol = opts[:rtol] || 1.0e-7
+
+    equals =
+      left
+      |> Nx.all_close(right, atol: atol, rtol: rtol)
+      |> Nx.backend_transfer(Nx.BinaryBackend)
+
+    if equals != Nx.tensor(1, type: {:u, 8}, backend: Nx.BinaryBackend) do
+      flunk("""
+      expected
+      #{inspect(left)}
+      to be within tolerance of
+      #{inspect(right)}
+      """)
+    end
+  end
 
   test "fit test - all default options" do
     model = Scholar.Decomposition.PCA.fit(@x)
@@ -48,6 +68,17 @@ defmodule Scholar.Decomposition.PCATest do
              ])
   end
 
+  test "transform test - :whiten set to false and different data in fit and transform" do
+    model = Scholar.Decomposition.PCA.fit(@x, num_components: 2)
+
+    assert Scholar.Decomposition.PCA.transform(model, @x2) ==
+             Nx.tensor([
+               [-3.018146276473999, -2.8090553283691406],
+               [-48.54806137084961, 24.394376754760742],
+               [-25.615192413330078, 8.298306465148926]
+             ])
+  end
+
   test "transform test - :whiten set to true" do
     model = Scholar.Decomposition.PCA.fit(@x)
 
@@ -60,6 +91,35 @@ defmodule Scholar.Decomposition.PCATest do
                [-0.7885448336601257, 1.0221858024597168],
                [-1.2795112133026123, -0.17180685698986053]
              ])
+  end
+
+  test "fit_transform test - :whiten set to false" do
+    model = Scholar.Decomposition.PCA.fit(@x)
+
+    assert_all_close(
+      Scholar.Decomposition.PCA.transform(model, @x),
+      Scholar.Decomposition.PCA.fit_transform(@x)
+    )
+  end
+
+  test "fit_transform test - :whiten set to false and and num components different than min(num_samples, num_components)" do
+    model = Scholar.Decomposition.PCA.fit(@x3, num_components: 2)
+
+    assert_all_close(
+      Scholar.Decomposition.PCA.transform(model, @x3),
+      Scholar.Decomposition.PCA.fit_transform(@x3, num_components: 2),
+      atol: 1.0e-6,
+      rtol: 1.0e-6
+    )
+  end
+
+  test "fit_transform test - :whiten set to true" do
+    model = Scholar.Decomposition.PCA.fit(@x)
+
+    assert_all_close(
+      Scholar.Decomposition.PCA.transform(model, @x, whiten: true),
+      Scholar.Decomposition.PCA.fit_transform(@x, whiten: true)
+    )
   end
 
   describe "errors" do

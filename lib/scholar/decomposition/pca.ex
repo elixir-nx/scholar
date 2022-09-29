@@ -53,8 +53,11 @@ defmodule Scholar.Decomposition.PCA do
     ]
   ]
 
+  fit_transform_opts_schema = fit_opts_schema ++ transform_opts_schema
+
   @fit_opts_schema NimbleOptions.new!(fit_opts_schema)
   @transform_opts_schema NimbleOptions.new!(transform_opts_schema)
+  @fit_transform_opts_schema NimbleOptions.new!(fit_transform_opts_schema)
 
   @doc """
   Fits a PCA for sample inputs `x`.
@@ -107,16 +110,15 @@ defmodule Scholar.Decomposition.PCA do
     x = x - mean
     {decomposer, singular_values, components} = Nx.LinAlg.svd(x)
 
-    num_components =
+    {num_components, trim_dim} =
       calculate_num_components(
         num_components,
         num_features,
         num_samples
       )
 
-    trim_dim = min_shape(num_samples, num_features)
-
     {_, components} = flip_svd(decomposer[[0..-1//1, 0..(trim_dim - 1)]], components)
+    components = components[[0..(num_components - 1), 0..-1//1]]
 
     explained_variance = singular_values * singular_values / (num_samples - 1)
     explained_variance_ratio = explained_variance / Nx.sum(explained_variance)
@@ -152,8 +154,7 @@ defmodule Scholar.Decomposition.PCA do
           %__MODULE__{
             components: components,
             explained_variance: explained_variance,
-            mean: mean,
-            num_components: num_components
+            mean: mean
           } = _model,
           x,
           opts \\ []
@@ -164,14 +165,56 @@ defmodule Scholar.Decomposition.PCA do
 
     x_transformed = Nx.dot(x, [1], components, [1])
 
-    x_transformed =
-      if whiten? do
-        x_transformed / Nx.sqrt(explained_variance)
-      else
-        x_transformed
-      end
+    if whiten? do
+      x_transformed / Nx.sqrt(explained_variance)
+    else
+      x_transformed
+    end
+  end
 
-    x_transformed[[0..-1//1, 0..(num_components - 1)]]
+  @doc """
+  Fit the model with `x` and apply the dimensionality reduction on `x`.
+  This function is analogical to calling fit and then transform, but it is calculated
+  more efficiently.
+
+  ## Options
+
+  #{NimbleOptions.docs(@transform_opts_schema)}
+
+  ## Returns
+
+  The function returns a decomposed data.
+  """
+
+  deftransform fit_transform(x, opts \\ []) do
+    fit_transform_n(x, NimbleOptions.validate!(opts, @fit_transform_opts_schema))
+  end
+
+  defnp fit_transform_n(x, opts \\ []) do
+    if Nx.rank(x) != 2 do
+      raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
+    end
+
+    {num_samples, num_features} = Nx.shape(x)
+    num_components = opts[:num_components]
+    x = x - Nx.mean(x, axes: [0])
+    {decomposer, singular_values, components} = Nx.LinAlg.svd(x)
+
+    {num_components, trim_dim} =
+      calculate_num_components(
+        num_components,
+        num_features,
+        num_samples
+      )
+
+    {decomposer, _components} = flip_svd(decomposer[[0..-1//1, 0..(trim_dim - 1)]], components)
+    decomposer = decomposer[[0..-1//1, 0..(num_components - 1)]]
+
+    if opts[:whiten] do
+      decomposer * Nx.sqrt(num_samples - 1)
+    else
+      decomposer * singular_values[[0..(num_components - 1)]]
+    end
   end
 
   defnp flip_svd(u, v) do
@@ -188,13 +231,15 @@ defmodule Scholar.Decomposition.PCA do
                   num_features,
                   num_samples
                 ) do
+    default_num_components = min(num_features, num_samples)
+
     cond do
       num_components == nil ->
-        min(num_features, num_samples)
+        {default_num_components, default_num_components}
 
       num_components > 0 and num_components <= min(num_features, num_samples) and
           is_integer(num_components) ->
-        num_components
+        {num_components, default_num_components}
 
       is_integer(num_components) ->
         raise ArgumentError,
@@ -203,9 +248,5 @@ defmodule Scholar.Decomposition.PCA do
       true ->
         raise ArgumentError, "unexpected type of :num_components, got: #{inspect(num_components)}"
     end
-  end
-
-  deftransformp min_shape(x, y) do
-    min(x, y)
   end
 end
