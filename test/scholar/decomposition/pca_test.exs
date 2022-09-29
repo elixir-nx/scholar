@@ -2,6 +2,7 @@ defmodule Scholar.Decomposition.PCATest do
   use ExUnit.Case, async: true
 
   @x Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+  @x3 Nx.tensor([[-1, -1, 3], [-2, -1, 2], [-3, -2, 1], [3, 1, 1], [21, 2, 1], [5, 3, 2]])
 
   test "fit test - all default options" do
     model = Scholar.Decomposition.PCA.fit(@x)
@@ -21,31 +22,43 @@ defmodule Scholar.Decomposition.PCATest do
 
   test "transform test - :whiten set to false" do
     model = Scholar.Decomposition.PCA.fit(@x)
-    num_components = model.num_components
 
-    assert Scholar.Decomposition.PCA.transform(model, num_components: num_components) ==
+    assert Scholar.Decomposition.PCA.transform(model, @x) ==
              Nx.tensor([
-               [1.3834058046340942, 0.2935786843299866],
+               [1.3834056854248047, 0.2935786843299866],
                [2.221898078918457, -0.2513348460197449],
-               [3.605304002761841, 0.04224385693669319],
-               [-1.3834058046340942, -0.2935786843299866],
+               [3.6053037643432617, 0.0422438383102417],
+               [-1.3834056854248047, -0.2935786843299866],
                [-2.221898078918457, 0.2513348460197449],
-               [-3.605304002761841, -0.04224385693669319]
+               [-3.6053037643432617, -0.0422438383102417]
+             ])
+  end
+
+  test "transform test - :whiten set to false and and num components different than min(num_samples, num_components)" do
+    model = Scholar.Decomposition.PCA.fit(@x3, num_components: 2)
+
+    assert Scholar.Decomposition.PCA.transform(model, @x3) ==
+             Nx.tensor([
+               [-5.02537027, -0.41628357768058777],
+               [-5.977472305297852, -0.39489707350730896],
+               [-7.084321975708008, -1.3540430068969727],
+               [-0.6961240172386169, 0.6928002834320068],
+               [17.23049002, -1.010930061340332],
+               [1.5527995824813843, 2.48335338]
              ])
   end
 
   test "transform test - :whiten set to true" do
     model = Scholar.Decomposition.PCA.fit(@x)
-    num_components = model.num_components
 
-    assert Scholar.Decomposition.PCA.transform(model, num_components: num_components, whiten: true) ==
+    assert Scholar.Decomposition.PCA.transform(model, @x, whiten: true) ==
              Nx.tensor([
-               [0.49096646904945374, 1.1939927339553833],
+               [0.49096643924713135, 1.1939926147460938],
                [0.7885448336601257, -1.0221858024597168],
-               [1.2795113325119019, 0.1718069314956665],
-               [-0.49096646904945374, -1.1939927339553833],
+               [1.2795112133026123, 0.17180685698986053],
+               [-0.49096643924713135, -1.1939926147460938],
                [-0.7885448336601257, 1.0221858024597168],
-               [-1.2795113325119019, -0.1718069314956665]
+               [-1.2795112133026123, -0.17180685698986053]
              ])
   end
 
@@ -71,20 +84,11 @@ defmodule Scholar.Decomposition.PCATest do
                    """
                    expected :num_components option to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
 
-                     * invalid value for :num_components option: expected one of [:none], got: :two
+                     * invalid value for :num_components option: expected one of [nil], got: :two
                      * invalid value for :num_components option: expected positive integer, got: :two\
                    """,
                    fn ->
                      Scholar.Decomposition.PCA.fit(@x, num_components: :two)
-                   end
-    end
-
-    test "transform test - missing :num_components" do
-      assert_raise NimbleOptions.ValidationError,
-                   "required :num_components option not found, received options: []",
-                   fn ->
-                     model = Scholar.Decomposition.PCA.fit(@x)
-                     Scholar.Decomposition.PCA.transform(model)
                    end
     end
 
@@ -93,12 +97,8 @@ defmodule Scholar.Decomposition.PCATest do
                    "invalid value for :whiten option: expected boolean, got: :yes",
                    fn ->
                      model = Scholar.Decomposition.PCA.fit(@x)
-                     num_components = model.num_components
 
-                     Scholar.Decomposition.PCA.transform(model,
-                       num_components: num_components,
-                       whiten: :yes
-                     )
+                     Scholar.Decomposition.PCA.transform(model, @x, whiten: :yes)
                    end
     end
   end

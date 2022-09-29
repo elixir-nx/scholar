@@ -13,8 +13,7 @@ defmodule Scholar.Decomposition.PCA do
              :singular_values,
              :mean,
              :num_features,
-             :num_samples,
-             :decomposer
+             :num_samples
            ]}
   defstruct [
     :components,
@@ -24,33 +23,22 @@ defmodule Scholar.Decomposition.PCA do
     :mean,
     :num_components,
     :num_features,
-    :num_samples,
-    :decomposer
+    :num_samples
   ]
 
   fit_opts_schema = [
     num_components: [
-      type: {:or, [:pos_integer, {:in, [:none]}]},
-      default: :none,
+      type: {:or, [:pos_integer, {:in, [nil]}]},
+      default: nil,
       doc: ~S"""
       Number of components to keep. if `:num_components` is not set all components are kept:
 
       $num\\_components = min(num\\_samples, num\\_features)$
-
-      If $0 < num\\_components <= 1$, select the number of components such
-      that the amount of variance that needs to be explained is greater than the percentage specified by `:num_components`.
       """
     ]
   ]
 
   transform_opts_schema = [
-    num_components: [
-      required: true,
-      type: :pos_integer,
-      doc: """
-      Number of components to keep. It should equal to the value calculated in the `fit/2` method.
-      """
-    ],
     whiten: [
       type: :boolean,
       default: false,
@@ -96,13 +84,11 @@ defmodule Scholar.Decomposition.PCA do
     * `:mean` - Per-feature empirical mean, estimated from the training set.
 
     * `:num_components` - It equals the parameter `:num_components`, or the lesser
-      value of `:num_features` and `:num_samples` if the parameter `:num_components` is `:none`.
+      value of `:num_features` and `:num_samples` if the parameter `:num_components` is `nil`.
 
     * `:num_features` - Number of features in the training data.
 
     * `:num_samples` - Number of samples in the training data.
-
-    * `:decomposer` - Matrix used in actual decomposition. It is the unitary matrix from SVD factorization.
   """
   deftransform fit(x, opts \\ []) do
     fit_n(x, NimbleOptions.validate!(opts, @fit_opts_schema))
@@ -120,8 +106,6 @@ defmodule Scholar.Decomposition.PCA do
     mean = Nx.mean(x, axes: [0])
     x = x - mean
     {decomposer, singular_values, components} = Nx.LinAlg.svd(x)
-    explained_variance = singular_values * singular_values / (num_samples - 1)
-    explained_variance_ratio = explained_variance / Nx.sum(explained_variance)
 
     num_components =
       calculate_num_components(
@@ -129,6 +113,13 @@ defmodule Scholar.Decomposition.PCA do
         num_features,
         num_samples
       )
+
+    trim_dim = min_shape(num_samples, num_features)
+
+    {_, components} = flip_svd(decomposer[[0..-1//1, 0..(trim_dim - 1)]], components)
+
+    explained_variance = singular_values * singular_values / (num_samples - 1)
+    explained_variance_ratio = explained_variance / Nx.sum(explained_variance)
 
     %__MODULE__{
       components: components,
@@ -138,8 +129,7 @@ defmodule Scholar.Decomposition.PCA do
       mean: mean,
       num_components: num_components,
       num_features: num_features,
-      num_samples: num_samples,
-      decomposer: decomposer
+      num_samples: num_samples
     }
   end
 
@@ -154,26 +144,47 @@ defmodule Scholar.Decomposition.PCA do
 
   The function returns a decomposed data.
   """
-  deftransform transform(model, opts \\ []) do
-    transform_n(model, NimbleOptions.validate!(opts, @transform_opts_schema))
+  deftransform transform(model, x, opts \\ []) do
+    transform_n(model, x, NimbleOptions.validate!(opts, @transform_opts_schema))
   end
 
   defnp transform_n(
           %__MODULE__{
-            singular_values: singular_values,
-            num_samples: num_samples,
-            decomposer: decomposer
+            components: components,
+            explained_variance: explained_variance,
+            mean: mean,
+            num_components: num_components
           } = _model,
+          x,
           opts \\ []
         ) do
-    num_components = opts[:num_components]
     whiten? = opts[:whiten]
 
-    if not whiten? do
-      decomposer[[0..-1//1, 0..(num_components - 1)]] * singular_values
-    else
-      decomposer[[0..-1//1, 0..(num_components - 1)]] * Nx.sqrt(num_samples - 1)
-    end
+    x = x - mean
+
+    x_transformed =
+      Nx.dot(
+        x,
+        Nx.transpose(components)
+      )
+
+    x_transformed =
+      if not whiten? do
+        x_transformed
+      else
+        x_transformed / Nx.sqrt(explained_variance)
+      end
+
+    x_transformed[[0..-1//1, 0..(num_components - 1)]]
+  end
+
+  defnp flip_svd(u, v) do
+    # columns of u, rows of v
+    max_abs_cols_idx = u |> Nx.abs() |> Nx.argmax(axis: 0, keep_axis: true)
+    signs = u |> Nx.take_along_axis(max_abs_cols_idx, axis: 0) |> Nx.sign() |> Nx.squeeze()
+    u = u * signs
+    v = v * Nx.new_axis(signs, -1)
+    {u, v}
   end
 
   deftransformp calculate_num_components(
@@ -182,7 +193,7 @@ defmodule Scholar.Decomposition.PCA do
                   num_samples
                 ) do
     cond do
-      num_components == :none ->
+      num_components == nil ->
         min(num_features, num_samples)
 
       num_components > 0 and num_components <= min(num_features, num_samples) and
@@ -196,5 +207,9 @@ defmodule Scholar.Decomposition.PCA do
       true ->
         raise ArgumentError, "unexpected type of :num_components, got: #{inspect(num_components)}"
     end
+  end
+
+  deftransformp min_shape(x, y) do
+    min(x, y)
   end
 end
