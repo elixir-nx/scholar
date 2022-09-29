@@ -162,8 +162,7 @@ defmodule Scholar.Decomposition.PCA do
 
     x = x - mean
 
-    x_transformed =
-      Nx.dot(x, [1], components, [1])
+    x_transformed = Nx.dot(x, [1], components, [1])
 
     x_transformed =
       if whiten? do
