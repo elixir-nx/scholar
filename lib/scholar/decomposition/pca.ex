@@ -163,16 +163,13 @@ defmodule Scholar.Decomposition.PCA do
     x = x - mean
 
     x_transformed =
-      Nx.dot(
-        x,
-        Nx.transpose(components)
-      )
+      Nx.dot(x, [1], components, [1])
 
     x_transformed =
-      if not whiten? do
-        x_transformed
-      else
+      if whiten? do
         x_transformed / Nx.sqrt(explained_variance)
+      else
+        x_transformed
       end
 
     x_transformed[[0..-1//1, 0..(num_components - 1)]]
