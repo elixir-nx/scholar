@@ -31,7 +31,7 @@ defmodule Scholar.Decomposition.PCA do
       type: {:or, [:pos_integer, {:in, [nil]}]},
       default: nil,
       doc: ~S"""
-      Number of components to keep. if `:num_components` is not set all components are kept:
+      Number of components to keep. If `:num_components` is not set, all components are kept:
 
       $num\\_components = min(num\\_samples, num\\_features)$
       """
