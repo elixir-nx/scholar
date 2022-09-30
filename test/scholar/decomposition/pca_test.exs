@@ -30,6 +30,7 @@ defmodule Scholar.Decomposition.PCATest do
     assert model.explained_variance == Nx.tensor([7.9395432472229, 0.060456883162260056])
     assert model.explained_variance_ratio == Nx.tensor([0.9924429059028625, 0.007557110395282507])
     assert model.singular_values == Nx.tensor([6.30061232, 0.54980396])
+    assert model.mean == Nx.tensor([0.0, 0.0])
     assert model.num_components == 2
     assert model.num_samples == Nx.tensor(6)
     assert model.num_features == Nx.tensor(2)
@@ -56,6 +57,20 @@ defmodule Scholar.Decomposition.PCATest do
 
   test "transform test - :whiten set to false and and num components different than min(num_samples, num_components)" do
     model = Scholar.Decomposition.PCA.fit(@x3, num_components: 2)
+
+    assert model.components ==
+             Nx.tensor([
+               [0.98732591, 0.15474766, -0.03522361],
+               [-0.14912572, 0.98053261, 0.12773922085762024]
+             ])
+
+    assert model.explained_variance == Nx.tensor([82.19153594970703, 1.966333031654358])
+    assert model.explained_variance_ratio == Nx.tensor([0.97038421, 0.023215265944600105])
+    assert model.singular_values == Nx.tensor([20.272090911865234, 3.13554849])
+    assert model.mean == Nx.tensor([3.83333333, 0.33333333, 1.66666667])
+    assert model.num_components == 2
+    assert model.num_samples == Nx.tensor(6)
+    assert model.num_features == Nx.tensor(3)
 
     assert Scholar.Decomposition.PCA.transform(model, @x3) ==
              Nx.tensor([
