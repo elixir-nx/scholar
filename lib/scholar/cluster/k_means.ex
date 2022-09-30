@@ -80,7 +80,7 @@ defmodule Scholar.Cluster.KMeans do
 
     * `:labels` - Labels of each point.
   """
-  deftransform train(x, opts \\ []) do
+  deftransform fit(x, opts \\ []) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             "expected input tensor to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
@@ -94,10 +94,10 @@ defmodule Scholar.Cluster.KMeans do
             "invalid value for :num_clusters option: expected positive integer between 1 and #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
     end
 
-    train_n(x, opts)
+    fit_n(x, opts)
   end
 
-  defnp train_n(x, opts \\ []) do
+  defnp fit_n(x, opts \\ []) do
     inf = Nx.Constants.infinity({:f, 32})
     {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
