@@ -11,7 +11,7 @@ defmodule Scholar.Interpolation.CubicSplineTest do
       x = Nx.iota({5})
       y = Nx.tensor([1, 2, 3, -10, -1])
 
-      model = CubicSpline.train(x, y)
+      model = CubicSpline.fit(x, y)
 
       assert model.coefficients ==
                Nx.tensor([
@@ -26,23 +26,23 @@ defmodule Scholar.Interpolation.CubicSplineTest do
       assert_raise ArgumentError,
                    "expected x to be a tensor with shape {n}, where n > 2, got: {1, 1, 1}",
                    fn ->
-                     CubicSpline.train(Nx.iota({1, 1, 1}), Nx.iota({1, 1, 1}))
+                     CubicSpline.fit(Nx.iota({1, 1, 1}), Nx.iota({1, 1, 1}))
                    end
 
       assert_raise ArgumentError,
                    "expected x to be a tensor with shape {n}, where n > 2, got: {}",
                    fn ->
-                     CubicSpline.train(Nx.iota(1), Nx.iota(1))
+                     CubicSpline.fit(Nx.iota(1), Nx.iota(1))
                    end
 
       assert_raise ArgumentError,
                    "expected x to be a tensor with shape {n}, where n > 2, got: {2}",
                    fn ->
-                     CubicSpline.train(Nx.iota({2}), Nx.iota({2}))
+                     CubicSpline.fit(Nx.iota({2}), Nx.iota({2}))
                    end
 
       assert_raise ArgumentError, "expected y to have shape {4}, got: {3}", fn ->
-        CubicSpline.train(Nx.iota({4}), Nx.iota({3}))
+        CubicSpline.fit(Nx.iota({4}), Nx.iota({3}))
       end
     end
 
@@ -51,7 +51,7 @@ defmodule Scholar.Interpolation.CubicSplineTest do
       x = Nx.iota({5})
       y = Nx.tensor([1, 2, 3, -10, -1])
 
-      model = CubicSpline.train(x, y)
+      model = CubicSpline.fit(x, y)
 
       # ensure given values are predicted accurately
       # also ensures that the code works for scalar tensors
@@ -97,7 +97,7 @@ defmodule Scholar.Interpolation.CubicSplineTest do
     end
 
     test "predict/2 returns NaN if out-of-bounds and extrapolate: false" do
-      model = CubicSpline.train(Nx.tensor([0, 1, 2]), Nx.tensor([0, 1, 2]))
+      model = CubicSpline.fit(Nx.tensor([0, 1, 2]), Nx.tensor([0, 1, 2]))
 
       assert CubicSpline.predict(model, Nx.tensor([-1, 0, 1, 2, 3]), extrapolate: false) ==
                ~V[NaN 0 1 2 NaN]
@@ -107,7 +107,7 @@ defmodule Scholar.Interpolation.CubicSplineTest do
       # train a straight line
       x = y = Nx.iota({3})
 
-      model = CubicSpline.train(x, y)
+      model = CubicSpline.fit(x, y)
 
       # ensure the coefficients correspont to a straight line
       # we can see this because each line corresponds to

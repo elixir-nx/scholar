@@ -24,7 +24,7 @@ defmodule Scholar.Interpolation.CubicSpline do
   Inputs are expected to be rank-1 tensors with the same shape
   and at least 3 entries.
   """
-  defn train(x, y) do
+  defn fit(x, y) do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
     # Reference implementation in Scipy
 
