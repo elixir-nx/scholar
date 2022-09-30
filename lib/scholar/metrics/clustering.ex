@@ -48,10 +48,10 @@ defmodule Scholar.Metrics.Clustering do
       >
   """
   deftransform silhouette_samples(x, labels, opts \\ []) do
-    nsilhouette_samples(x, labels, NimbleOptions.validate!(opts, @opts_schema))
+    silhouette_samples_n(x, labels, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp nsilhouette_samples(x, labels, opts \\ []) do
+  defnp silhouette_samples_n(x, labels, opts \\ []) do
     verify_num_clusters(x, opts)
     {inner, alone?, outer} = inner_and_outer_dist(x, labels, opts)
     result = (outer - inner) / Nx.max(outer, inner)
@@ -85,10 +85,10 @@ defmodule Scholar.Metrics.Clustering do
   """
 
   deftransform silhouette_score(x, labels, opts \\ []) do
-    nsilhouette_score(x, labels, NimbleOptions.validate!(opts, @opts_schema))
+    silhouette_score_n(x, labels, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp nsilhouette_score(x, labels, opts \\ []) do
+  defnp silhouette_score_n(x, labels, opts \\ []) do
     Nx.mean(silhouette_samples(x, labels, opts))
   end
 

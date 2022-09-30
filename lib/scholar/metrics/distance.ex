@@ -8,7 +8,7 @@ defmodule Scholar.Metrics.Distance do
 
   general_schema = [
     axes: [
-      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      type: {:custom, Scholar.Options, :axes, []},
       doc: """
       Axes to calculate the distance over. By default the distance
       is calculated between the whole tensors.
@@ -18,7 +18,7 @@ defmodule Scholar.Metrics.Distance do
 
   minkowski_schema = [
     axes: [
-      type: {:or, [{:in, [nil]}, {:list, :non_neg_integer}]},
+      type: {:custom, Scholar.Options, :axes, []},
       doc: """
       Axes to calculate the distance over. By default the distance
       is calculated between the whole tensors.
@@ -80,10 +80,10 @@ defmodule Scholar.Metrics.Distance do
   """
   @spec euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform euclidean(x, y, opts \\ []) do
-    neuclidean(x, y, NimbleOptions.validate!(opts, @general_schema))
+    euclidean_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp neuclidean(x, y, opts \\ []) do
+  defnp euclidean_n(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
     diff = x - y
@@ -137,17 +137,17 @@ defmodule Scholar.Metrics.Distance do
   """
   @spec squared_euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform squared_euclidean(x, y, opts \\ []) do
-    nsquared_euclidean(x, y, NimbleOptions.validate!(opts, @general_schema))
+    squared_euclidean_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp nsquared_euclidean(x, y, opts \\ []) do
+  defnp squared_euclidean_n(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
     diff = x - y
 
     (diff * diff)
     |> Nx.sum(axes: opts[:axes])
-    |> as_float()
+    |> to_float()
   end
 
   @doc """
@@ -194,16 +194,16 @@ defmodule Scholar.Metrics.Distance do
   """
   @spec manhattan(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform manhattan(x, y, opts \\ []) do
-    nmanhattan(x, y, NimbleOptions.validate!(opts, @general_schema))
+    manhattan_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp nmanhattan(x, y, opts \\ []) do
+  defnp manhattan_n(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
     (x - y)
     |> Nx.abs()
     |> Nx.sum(axes: opts[:axes])
-    |> as_float()
+    |> to_float()
   end
 
   @doc """
@@ -250,16 +250,16 @@ defmodule Scholar.Metrics.Distance do
   """
   @spec chebyshev(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform chebyshev(x, y, opts \\ []) do
-    nchebyshev(x, y, NimbleOptions.validate!(opts, @general_schema))
+    chebyshev_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp nchebyshev(x, y, opts \\ []) do
+  defnp chebyshev_n(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
     (x - y)
     |> Nx.abs()
     |> Nx.reduce_max(axes: opts[:axes])
-    |> as_float()
+    |> to_float()
   end
 
   @doc """
@@ -306,10 +306,10 @@ defmodule Scholar.Metrics.Distance do
   """
   @spec minkowski(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform minkowski(x, y, opts \\ []) do
-    nminkowski(x, y, NimbleOptions.validate!(opts, @minkowski_schema))
+    minkowski_n(x, y, NimbleOptions.validate!(opts, @minkowski_schema))
   end
 
-  defnp nminkowski(x, y, opts \\ []) do
+  defnp minkowski_n(x, y, opts \\ []) do
     assert_same_shape!(x, y)
 
     p = opts[:p]
@@ -369,10 +369,10 @@ defmodule Scholar.Metrics.Distance do
   """
   @spec cosine(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform cosine(x, y, opts \\ []) do
-    ncosine(x, y, NimbleOptions.validate!(opts, @general_schema))
+    cosine_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp ncosine(x, y, opts \\ []) do
+  defnp cosine_n(x, y, opts \\ []) do
     # Detect very small values that could lead to surprising
     # results and numerical stability issues. Every value smaller
     # than `cutoff` is considered small
@@ -412,12 +412,5 @@ defmodule Scholar.Metrics.Distance do
     res = (normalized_x * normalized_y) |> Nx.sum(axes: opts[:axes])
     res = Nx.select(one_zero?, 0.0, res)
     1.0 - Nx.select(both_zero?, 1.0, res)
-  end
-
-  defnp as_float(x) do
-    transform(x, fn x ->
-      x_f = Nx.Type.to_floating(x.type)
-      Nx.as_type(x, x_f)
-    end)
   end
 end

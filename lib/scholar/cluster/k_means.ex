@@ -294,9 +294,4 @@ defmodule Scholar.Cluster.KMeans do
             "invalid value for :weights option: expected list of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
     end
   end
-
-  deftransformp to_float(tensor) do
-    type = tensor |> Nx.type() |> Nx.Type.to_floating()
-    Nx.as_type(tensor, type)
-  end
 end
