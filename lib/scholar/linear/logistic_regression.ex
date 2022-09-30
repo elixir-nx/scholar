@@ -152,7 +152,6 @@ defmodule Scholar.Linear.LogisticRegression do
   @doc """
   Makes predictions with the given model on inputs `x`.
   """
-
   defn predict(%__MODULE__{mode: mode} = model, x) do
     case mode do
       :binary -> predict_binary(model, x)
