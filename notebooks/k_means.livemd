@@ -147,7 +147,7 @@ clusterings = 1..11
 
 models =
   for num_clusters <- clusterings do
-    Scholar.Cluster.KMeans.train(x, num_clusters: num_clusters)
+    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters)
   end
 
 inertias = for model <- models, do: Nx.to_number(model.inertia)
@@ -257,7 +257,7 @@ Now we will try to use only ten colors to represent the same picture.
 
 ```elixir
 x = image |> StbImage.to_nx() |> Nx.reshape({:auto, 3})
-model = Scholar.Cluster.KMeans.train(x, num_clusters: 10, num_runs: 10, max_iterations: 200)
+model = Scholar.Cluster.KMeans.fit(x, num_clusters: 10, num_runs: 10, max_iterations: 200)
 
 repainted_x = Nx.take(model.clusters, model.labels)
 
@@ -281,7 +281,7 @@ clusterings = [5, 10, 15, 20, 40]
 
 models =
   for num_clusters <- clusterings do
-    Scholar.Cluster.KMeans.train(x, num_clusters: num_clusters)
+    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters)
   end
 ```
 
@@ -401,7 +401,7 @@ nums_clusters = 2..20
 
 models =
   for num_clusters <- 2..20 do
-    Scholar.Cluster.KMeans.train(images, num_clusters: num_clusters)
+    Scholar.Cluster.KMeans.fit(images, num_clusters: num_clusters)
   end
 ```
 
