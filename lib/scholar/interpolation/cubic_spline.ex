@@ -7,27 +7,34 @@ defmodule Scholar.Interpolation.CubicSpline do
   @derive {Nx.Container, containers: [:coefficients, :x]}
   defstruct [:coefficients, :x]
 
-  opts = [
-    extrapolate: [
+  fit_opts = [
+    boundary_condition: [
       required: false,
-      default: true,
-      type: :boolean,
-      doc: "if false, out-of-bounds x return NaN."
+      default: :not_a_knot,
+      type: :atom,
+      doc: "one of :not_a_knot or :natural"
     ]
   ]
 
-  @opts_schema NimbleOptions.new!(opts)
+  @fit_opts_schema NimbleOptions.new!(fit_opts)
 
   @doc """
   Fits a cubic spline interpolation of the given `(x, y)` points
 
   Inputs are expected to be rank-1 tensors with the same shape
   and at least 3 entries.
+
+  ### Options
+
+  #{NimbleOptions.docs(@fit_opts_schema)}
   """
-  defn fit(x, y, opts \\ []) do
+  deftransform fit(x, y, opts \\ []) do
+    fit_n(x, y, NimbleOptions.validate!(opts, @fit_opts_schema))
+  end
+
+  defnp fit_n(x, y, opts \\ []) do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
     # Reference implementation in Scipy
-    opts = keyword!(opts, boundary_condition: :not_a_knot)
 
     n =
       case Nx.shape(x) do
@@ -164,15 +171,26 @@ defmodule Scholar.Interpolation.CubicSpline do
     %__MODULE__{coefficients: c, x: x}
   end
 
+  predict_opts = [
+    extrapolate: [
+      required: false,
+      default: true,
+      type: :boolean,
+      doc: "if false, out-of-bounds x return NaN."
+    ]
+  ]
+
+  @predict_opts_schema NimbleOptions.new!(predict_opts)
+
   @doc """
   Returns the value fit by `train/2` corresponding to the `target_x` input
 
   ### Options
 
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@predict_opts_schema)}
   """
   deftransform predict(%__MODULE__{} = model, target_x, opts \\ []) do
-    predict_n(model, target_x, NimbleOptions.validate!(opts, @opts_schema))
+    predict_n(model, target_x, NimbleOptions.validate!(opts, @predict_opts_schema))
   end
 
   defnp predict_n(%__MODULE__{x: x, coefficients: coefficients}, target_x, opts \\ []) do
