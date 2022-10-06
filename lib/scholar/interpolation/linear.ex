@@ -1,6 +1,19 @@
 defmodule Scholar.Interpolation.Linear do
-  @moduledoc """
+  @moduledoc ~S"""
   Linear interpolation.
+
+  This kind of interpolation is calculated by fitting polynomials
+  of the first degree between each pair of given points.
+
+  This means that for points $(x_0, y_0), (x_1, y_1)$, the
+  predictive polynomial will be given by:
+  $$
+  \begin{cases}
+  y = ax + b \newline
+  a = \dfrac{y_1 - y_0}{x_1 - x_0} \newline
+  b = y_1 - ax_1 = y_0 - ax_0
+  \end{cases}
+  $$
   """
   import Nx.Defn
 
@@ -14,9 +27,6 @@ defmodule Scholar.Interpolation.Linear do
   and at least 2 entries.
   """
   defn fit(x, y) do
-    # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
-    # Reference implementation in Scipy
-
     case Nx.shape(x) do
       {n} when n > 1 ->
         :ok

@@ -1,6 +1,19 @@
 defmodule Scholar.Interpolation.CubicSpline do
   @moduledoc """
-  Cubic spline interpolation.
+  Cubic Spline interpolation.
+
+  This kind of interpolation is calculated by fitting a set of
+  continuous cubic polynomials of which the first and second
+  derivatives are also continuous.
+
+  The interpolated curve is smooth and avoids oscillations that
+  could appear if a single n-th degree polynomial were to be
+  fitted over all of the points.
+
+  Reference:
+
+    * [1] - [Cubic Spline Interpolation theory](https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation)
+    * [2] - [SciPy implementation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.CubicSpline.html)
   """
   import Nx.Defn
 
