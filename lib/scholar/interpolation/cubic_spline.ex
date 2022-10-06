@@ -24,9 +24,10 @@ defmodule Scholar.Interpolation.CubicSpline do
   Inputs are expected to be rank-1 tensors with the same shape
   and at least 3 entries.
   """
-  defn fit(x, y) do
+  defn fit(x, y, opts \\ []) do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
     # Reference implementation in Scipy
+    opts = keyword!(opts, boundary_condition: :not_a_knot)
 
     n =
       case Nx.shape(x) do
@@ -56,60 +57,98 @@ defmodule Scholar.Interpolation.CubicSpline do
     slope = (y[1..-1//1] - y[0..-2//1]) / dx
 
     s =
-      if n == 3 do
-        a =
-          Nx.stack([
-            Nx.tensor([1, 1, 0]),
-            Nx.stack([dx[1], 2 * (dx[0] + dx[1]), dx[0]]),
-            Nx.tensor([0, 1, 1])
-          ])
+      case {n, opts[:boundary_condition]} do
+        {3, :not_a_knot} ->
+          a =
+            Nx.stack([
+              Nx.tensor([1, 1, 0]),
+              Nx.stack([dx[1], 2 * (dx[0] + dx[1]), dx[0]]),
+              Nx.tensor([0, 1, 1])
+            ])
 
-        b = Nx.stack([2 * slope[0], 3 * (dx[0] * slope[1] + dx[1] * slope[0]), 2 * slope[1]])
+          b = Nx.stack([2 * slope[0], 3 * (dx[0] * slope[1] + dx[1] * slope[0]), 2 * slope[1]])
 
-        Nx.LinAlg.solve(a, b)
-      else
-        # n > 3 and bc = not_a_knot
+          Nx.LinAlg.solve(a, b)
 
-        d_0 = Nx.new_axis(x[2] - x[0], 0)
-        d_n = Nx.new_axis(x[-1] - x[-3], 0)
+        {_, :not_a_knot} ->
+          up_diag =
+            Nx.concatenate([
+              Nx.new_axis(x[2] - x[0], 0),
+              dx[0..-2//1]
+            ])
 
-        up_diag =
-          Nx.concatenate([
-            d_0,
-            dx[0..-2//1]
-          ])
+          low_diag =
+            Nx.concatenate([
+              dx[1..-1//1],
+              Nx.new_axis(x[-1] - x[-3], 0)
+            ])
 
-        low_diag =
-          Nx.concatenate([
-            dx[1..-1//1],
-            d_n
-          ])
+          main_diag =
+            Nx.concatenate([
+              Nx.new_axis(dx[1], 0),
+              2 * (dx[0..-2//1] + dx[1..-1//1]),
+              Nx.new_axis(dx[-2], 0)
+            ])
 
-        main_diag =
-          Nx.concatenate([
-            Nx.new_axis(dx[1], 0),
-            2 * (dx[0..-2//1] + dx[1..-1//1]),
-            Nx.new_axis(dx[-2], 0)
-          ])
+          a =
+            Nx.broadcast(0, {n, n})
+            |> Nx.put_diagonal(up_diag, offset: 1)
+            |> Nx.put_diagonal(main_diag, offset: 0)
+            |> Nx.put_diagonal(low_diag, offset: -1)
 
-        a =
-          Nx.broadcast(0, {n, n})
-          |> Nx.put_diagonal(up_diag, offset: 1)
-          |> Nx.put_diagonal(main_diag, offset: 0)
-          |> Nx.put_diagonal(low_diag, offset: -1)
+          d = x[2] - x[0]
+          b_0 = ((dx[0] + 2 * d) * dx[1] * slope[0] + dx[0] ** 2 * slope[1]) / d
 
-        bc_0 = ((dx[0] + 2 * d_0) * dx[1] * slope[0] + dx[0] ** 2 * slope[1]) / d_0
+          d = x[-1] - x[-3]
+          b_n = (dx[-1] ** 2 * slope[-2] + (2 * d + dx[-1]) * dx[-2] * slope[-1]) / d
 
-        bc_n = (dx[-1] ** 2 * slope[-2] + (2 * d_n + dx[-1]) * dx[-2] * slope[-1]) / d_n
+          b =
+            Nx.concatenate([
+              Nx.new_axis(b_0, 0),
+              3 * (dx[1..-1//1] * slope[0..-2//1] + dx[0..-2//1] * slope[1..-1//1]),
+              Nx.new_axis(b_n, 0)
+            ])
 
-        b =
-          Nx.concatenate([
-            Nx.new_axis(bc_0, 0),
-            3 * (dx[1..-1//1] * slope[0..-2//1] + dx[0..-2//1] * slope[1..-1//1]),
-            Nx.new_axis(bc_n, 0)
-          ])
+          Nx.LinAlg.solve(a, b)
 
-        Nx.LinAlg.solve(a, b)
+        _ ->
+          up_diag =
+            Nx.concatenate([
+              Nx.new_axis(dx[0], 0),
+              dx[0..-2//1]
+            ])
+
+          low_diag =
+            Nx.concatenate([
+              dx[1..-1//1],
+              Nx.new_axis(dx[-1], 0)
+            ])
+
+          main_diag =
+            Nx.concatenate([
+              Nx.new_axis(2 * dx[0], 0),
+              2 * (dx[0..-2//1] + dx[1..-1//1]),
+              Nx.new_axis(2 * dx[-1], 0)
+            ])
+
+          a =
+            Nx.broadcast(0, {n, n})
+            |> Nx.put_diagonal(up_diag, offset: 1)
+            |> Nx.put_diagonal(main_diag, offset: 0)
+            |> Nx.put_diagonal(low_diag, offset: -1)
+
+          b_0 = 3 * (y[1] - y[0])
+
+          b_n = 3 * (y[-1] - y[-2])
+
+          b =
+            Nx.concatenate([
+              Nx.new_axis(b_0, 0),
+              3 * (dx[1..-1//1] * slope[0..-2//1] + dx[0..-2//1] * slope[1..-1//1]),
+              Nx.new_axis(b_n, 0)
+            ])
+
+          Nx.LinAlg.solve(a, b)
       end
 
     slope = (y[1..-1//1] - y[0..-2//1]) / dx
