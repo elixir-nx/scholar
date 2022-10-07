@@ -6,7 +6,7 @@ defmodule Scholar.Interpolation.CubicSplineTest do
   alias Scholar.Interpolation.CubicSpline
 
   describe "cubic spline" do
-    test "train/2" do
+    test "fit/2" do
       # Reference values taken from Scipy
       x = Nx.iota({5})
       y = Nx.tensor([1, 2, 3, -10, -1])
