@@ -1,4 +1,5 @@
 defmodule Scholar.Interpolation.BezierSpline do
+  # https://www.particleincell.com/2012/bezier-splines/
   import Nx.Defn
 
   @derive {Nx.Container, containers: [:coefficients, :k]}
@@ -35,13 +36,7 @@ defmodule Scholar.Interpolation.BezierSpline do
         Nx.concatenate([k[0] + 2 * k[1], 8 * k[n - 1] + k[n]])
       )
 
-    #  P = [2 * (2 * points[i] + points[i + 1]) for i in range(n)]
-    # P[0] = points[0] + 2 * points[1]
-    # P[n - 1] = 8 * points[n - 1] + points[n]
-
-    p1 =
-      Nx.LinAlg.solve(print_value(a, label: "a"), print_value(b, label: "b"))
-      |> print_value(label: "p1")
+    p1 = Nx.LinAlg.solve(a, b)
 
     p2 =
       Nx.concatenate([
@@ -63,7 +58,7 @@ defmodule Scholar.Interpolation.BezierSpline do
     %__MODULE__{coefficients: coefficients, k: k}
   end
 
-  defn predict(%__MODULE__{coefficients: coefficients, k: k} = model, target_x) do
+  defn predict(%__MODULE__{coefficients: coefficients, k: k}, target_x) do
     input_shape = Nx.shape(target_x)
     x_poly = Nx.flatten(target_x)
 
@@ -93,18 +88,16 @@ defmodule Scholar.Interpolation.BezierSpline do
     x_curr = Nx.take(x, idx_poly)
     x_next = Nx.take(x, idx_poly + 1)
 
-    t = t_from_x(model, x_poly, x_curr, x_next, coef_poly)
-
-    # https://www.particleincell.com/2012/bezier-splines/
+    t = t_from_x(x_poly, x_curr, x_next, coef_poly)
 
     result = point_from_t(t, coef_poly)[[0..-1//1, 1]]
     Nx.reshape(result, input_shape)
   end
 
-  defnp t_from_x(model, x_poly, x_curr, x_next, coef_poly) do
+  defnp t_from_x(x_poly, x_curr, x_next, coef_poly) do
     t = (x_poly - x_curr) / (x_next - x_curr)
-    t_min = Nx.broadcast(0.0, t)
-    t_max = Nx.broadcast(1.0, t)
+    t_min = Nx.broadcast(Nx.tensor(0.0, type: Nx.type(t)), t)
+    t_max = Nx.broadcast(Nx.tensor(1.0, type: Nx.type(t)), t)
 
     eps = 1.0e-6
 
@@ -134,17 +127,6 @@ defmodule Scholar.Interpolation.BezierSpline do
         {update_mask, t_min, t_max, t, value, x_poly, eps, coef_poly, i + 1}
       end
 
-    # for (var i = 0; Math.abs(value - xVal) > epsilon && i < 8; i++) {
-    #   if (value < xVal) {
-    #     tMin = t;
-    #     t = (t + tMax) / 2;
-    #   } else {
-    #     tMax = t;
-    #     t = (t + tMin) / 2;
-    #   }
-    #   value = this.getPointX(t);
-    # }
-
     {_t_min, _t_max, t, _value, _x_poly, _coef_poly, _eps, _update_mask, _i} =
       while {t_min, t_max, t, value, x_poly, coef_poly, eps, update_mask = Nx.broadcast(1, t),
              i = 0},
@@ -167,41 +149,4 @@ defmodule Scholar.Interpolation.BezierSpline do
     t_poly = Nx.stack([(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3], axis: 1)
     Nx.dot(t_poly, [1], [0], coef_poly, [1], [0])
   end
-
-  # returns the t parameters and the corresponding coefficient index
-  defn as_poly_params(%__MODULE__{k: k}, target_x) do
-    input_shape = Nx.shape(target_x)
-    x_poly = Nx.flatten(target_x)
-
-    x = k[[0..-1//1, 0]]
-    idx_selector = Nx.new_axis(x_poly, 1) > Nx.new_axis(x, 0)
-
-    idx_poly =
-      idx_selector
-      |> Nx.argmax(axis: 1, tie_break: :high)
-      |> Nx.min(Nx.size(x) - 2)
-
-    # deal with the case where no valid index is found
-    # means that we're in the first interval
-    # _poly suffix because we're selecting a specific polynomial
-    # for each x_poly value
-    idx_poly =
-      Nx.all(idx_selector == 0, axes: [1])
-      |> Nx.select(0, idx_poly)
-
-    # for each polynomial, we need to transform x_poly into t
-    # through t := (x_poly - x_i) / (x_i+1 - x_i), so t is defined
-    # in the interval [0, 1], because each polynomial is defined in
-    # for the parameterized t in that domain
-
-    x_curr = Nx.take(x, idx_poly)
-    x_next = Nx.take(x, idx_poly + 1)
-    t = (x_poly - x_curr) / (x_next - x_curr)
-
-    # https://www.particleincell.com/2012/bezier-splines/
-    {Nx.stack([(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3], axis: 1)
-     |> Nx.reshape(to_out_shape(input_shape)), idx_poly}
-  end
-
-  deftransformp(to_out_shape(input_shape), do: Tuple.append(input_shape, 4))
 end
