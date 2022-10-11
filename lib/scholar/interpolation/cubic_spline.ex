@@ -6,7 +6,7 @@ defmodule Scholar.Interpolation.CubicSpline do
   continuous cubic polynomials of which the first and second
   derivatives are also continuous.
 
-  The interpolated curve is smooth and avoids oscillations that
+  The interpolated curve is smooth and mitigates oscillations that
   could appear if a single n-th degree polynomial were to be
   fitted over all of the points.
 
@@ -196,7 +196,7 @@ defmodule Scholar.Interpolation.CubicSpline do
   @predict_opts_schema NimbleOptions.new!(predict_opts)
 
   @doc """
-  Returns the value fit by `train/2` corresponding to the `target_x` input
+  Returns the value fit by `fit/2` corresponding to the `target_x` input
 
   ### Options
 

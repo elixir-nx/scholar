@@ -1,13 +1,56 @@
 defmodule Scholar.Interpolation.BezierSpline do
-  # https://www.particleincell.com/2012/bezier-splines/
+  @moduledoc """
+  Cubic Bezier Spline interpolation.
+
+  This kind of interpolation is calculated by fitting a set of
+  continuous cubic polynomials of which the first and second
+  derivatives are also continuous (which makes them curves of class C2).
+  In contrast to the `Scholar.Interpolation.CubicSpline` algorithm,
+  the Bezier curves aren't necessarily of class C2, but this interpolation
+  forces this so it yields a smooth function as the result.
+
+  The interpolated curve also has local control,
+  meaning that a point that would be problematic for other
+  interpolations, such as the `Scholar.Interpolation.CubicSpline`
+  or `Scholar.Interpolation.Linear` algorithms, will only affect
+  the segments right next to it, instead of affecting the curve as a whole.
+
+  Reference:
+
+    * [1] - [Bezier theory](https://en.wikipedia.org/wiki/B%C3%A9zier_curve)
+    * [2] - [Spline equation derivation](https://www.particleincell.com/2012/bezier-splines/)
+  """
   import Nx.Defn
 
   @derive {Nx.Container, containers: [:coefficients, :k]}
   defstruct [:coefficients, :k]
 
+  @doc """
+  Fits a cubic spline interpolation of the given `(x, y)` points
+
+  Inputs are expected to be rank-1 tensors with the same shape
+  and at least 3 entries.
+  """
   defn fit(x, y) do
-    {x_len} = Nx.shape(x)
-    n = x_len - 1
+    n =
+      case Nx.shape(x) do
+        {x_len} when x_len > 2 ->
+          x_len - 1
+
+        shape ->
+          raise ArgumentError,
+                "expected x to be a tensor with shape {n}, where n > 2, got: #{inspect(shape)}"
+      end
+
+    case {Nx.shape(y), Nx.shape(x)} do
+      {shape, shape} ->
+        :ok
+
+      {y_shape, x_shape} ->
+        raise ArgumentError,
+              "expected y to have shape #{inspect(x_shape)}, got: #{inspect(y_shape)}"
+    end
+
     d_low = Nx.concatenate([Nx.broadcast(1, {n - 2}), Nx.tensor([2])])
     d_main = Nx.concatenate([Nx.tensor([2]), Nx.broadcast(4, {n - 2}), Nx.tensor([7])])
     d_up = Nx.broadcast(1, {n - 1})
@@ -19,13 +62,6 @@ defmodule Scholar.Interpolation.BezierSpline do
       |> Nx.put_diagonal(d_up, offset: 1)
 
     k = Nx.stack([x, y], axis: 1)
-
-    # b =
-    #   Nx.concatenate([
-    #     Nx.new_axis(k[0] + 2 * k[1], 0),
-    #     2 * k[1..(n - 2)] + 4 * k[2..(n - 2)],
-    #     Nx.new_axis(8 * k[n - 1] + k[n], 0)
-    #   ])
 
     b = 2 * (2 * k[0..(n - 1)] + k[1..n])
 
@@ -58,7 +94,36 @@ defmodule Scholar.Interpolation.BezierSpline do
     %__MODULE__{coefficients: coefficients, k: k}
   end
 
-  defn predict(%__MODULE__{coefficients: coefficients, k: k}, target_x) do
+  predict_opts = [
+    max_iter: [
+      required: false,
+      default: 15,
+      type: :pos_integer,
+      doc:
+        "determines the maximum iterations for converging the t parameter for each spline polynomial"
+    ],
+    eps: [
+      required: false,
+      default: 1.0e-6,
+      type: :float,
+      doc:
+        "determines the tolerance to be used for converging the t parameter for each spline polynomial"
+    ]
+  ]
+
+  @predict_opts_schema NimbleOptions.new!(predict_opts)
+  @doc """
+  Returns the value fit by `fit/2` corresponding to the `target_x` input
+
+  ### Options
+
+  #{NimbleOptions.docs(@predict_opts_schema)}
+  """
+  deftransform predict(%__MODULE__{} = model, target_x, opts \\ []) do
+    predict_n(model, target_x, NimbleOptions.validate!(opts, @predict_opts_schema))
+  end
+
+  defnp predict_n(%__MODULE__{coefficients: coefficients, k: k}, target_x, opts \\ []) do
     input_shape = Nx.shape(target_x)
     x_poly = Nx.flatten(target_x)
 
@@ -80,35 +145,39 @@ defmodule Scholar.Interpolation.BezierSpline do
 
     coef_poly = Nx.take(coefficients, idx_poly)
 
-    # for each polynomial, we need to transform x_poly into t
-    # through t := (x_poly - x_i) / (x_i+1 - x_i), so t is defined
-    # in the interval [0, 1], because each polynomial is defined in
-    # for the parameterized t in that domain
-
     x_curr = Nx.take(x, idx_poly)
     x_next = Nx.take(x, idx_poly + 1)
 
-    t = t_from_x(x_poly, x_curr, x_next, coef_poly)
+    t = t_from_x(x_poly, x_curr, x_next, coef_poly, opts)
 
-    result = point_from_t(t, coef_poly)[[0..-1//1, 1]]
+    # polynomial_at_t returns pairs of [x, y] points.
+    # we slice to get only the y values
+    result = polynomial_at_t(t, coef_poly)[[0..-1//1, 1]]
     Nx.reshape(result, input_shape)
   end
 
-  defnp t_from_x(x_poly, x_curr, x_next, coef_poly) do
+  defnp t_from_x(x_poly, x_curr, x_next, coef_poly, opts \\ []) do
+    # for each polynomial, we need to transform x_poly into t
+    # the mapping from x to t isn't necessarily linear.
+    # so we first guess the initial t as the linear counterpart
+    # and then we perform some iterations of gradient descent
+    # followed by some iterations of binary search for the t
+    # entries that haven't converged yet.
     t = (x_poly - x_curr) / (x_next - x_curr)
     t_min = Nx.broadcast(Nx.tensor(0.0, type: Nx.type(t)), t)
     t_max = Nx.broadcast(Nx.tensor(1.0, type: Nx.type(t)), t)
 
-    eps = 1.0e-6
+    eps = opts[:eps]
+    max_iter = opts[:max_iter]
 
     {_upd_mask, t_min, t_max, t, value, _x_poly, _eps, _coef_poly, _i} =
       while {update_mask = Nx.broadcast(1, t), t_min, t_max, t, value = x_poly, x_poly, eps,
              coef_poly, i = 0},
-            i < 8 do
+            i < max_iter and Nx.any(update_mask) do
         # if update_mask[i] = 1, we update the entry, otherwise, we keep it
-        value = point_from_t(t, coef_poly)[[0..-1//1, 0]]
+        value = polynomial_at_t(t, coef_poly)[[0..-1//1, 0]]
 
-        derivative = (point_from_t(t + eps, coef_poly)[[0..-1//1, 0]] - value) / eps
+        derivative = (polynomial_at_t(t + eps, coef_poly)[[0..-1//1, 0]] - value) / eps
 
         convergence_selector = Nx.abs(value - x_poly) < eps or Nx.abs(derivative) < eps
 
@@ -130,12 +199,12 @@ defmodule Scholar.Interpolation.BezierSpline do
     {_t_min, _t_max, t, _value, _x_poly, _coef_poly, _eps, _update_mask, _i} =
       while {t_min, t_max, t, value, x_poly, coef_poly, eps, update_mask = Nx.broadcast(1, t),
              i = 0},
-            i < 8 do
+            i < max_iter and Nx.any(update_mask) do
         upd_selector = value < x_poly and update_mask
         t_min = Nx.select(upd_selector, t, t_min)
         t_max = Nx.select(upd_selector, t_max, t)
         t = Nx.select(upd_selector, (t + t_max) / 2, (t + t_min) / 2)
-        value = point_from_t(t, coef_poly)[[0..-1//1, 0]]
+        value = polynomial_at_t(t, coef_poly)[[0..-1//1, 0]]
 
         update_mask = Nx.select(Nx.abs(value - x_poly) > eps, update_mask, 0)
 
@@ -145,7 +214,8 @@ defmodule Scholar.Interpolation.BezierSpline do
     t
   end
 
-  defn point_from_t(t, coef_poly) do
+  defnp polynomial_at_t(t, coef_poly) do
+    # t is a {n}-shaped tensor (n can be 1, though)
     t_poly = Nx.stack([(1 - t) ** 3, 3 * (1 - t) ** 2 * t, 3 * (1 - t) * t ** 2, t ** 3], axis: 1)
     Nx.dot(t_poly, [1], [0], coef_poly, [1], [0])
   end
