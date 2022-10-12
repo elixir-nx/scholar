@@ -26,7 +26,7 @@ defmodule Scholar.Interpolation.BezierSpline do
   defstruct [:coefficients, :k]
 
   @doc """
-  Fits a cubic spline interpolation of the given `(x, y)` points
+  Fits a cubic Bezier spline interpolation of the given `(x, y)` points.
 
   Inputs are expected to be rank-1 tensors with the same shape
   and at least 3 entries.
