@@ -113,7 +113,7 @@ defmodule Scholar.Interpolation.BezierSpline do
 
   @predict_opts_schema NimbleOptions.new!(predict_opts)
   @doc """
-  Returns the value fit by `fit/2` corresponding to the `target_x` input
+  Returns the value fit by `fit/2` corresponding to the `target_x` input.
 
   ### Options
 
