@@ -1,0 +1,215 @@
+defmodule Scholar.Impute.SimpleImputer do
+  @moduledoc """
+  Univariate imputer for completing missing values with simple strategies.
+  """
+  import Nx.Defn
+
+  @derive {Nx.Container, keep: [:missing_values], containers: [:statistics]}
+  defstruct [:statistics, :missing_values]
+
+  opts_schema = [
+    missing_values: [
+      type: {:or, [:float, :integer, {:in, [:nan]}]},
+      default: :nan,
+      doc: ~S"""
+      The placeholder for the missing values. All occurrences of missing_values will be imputed.
+      """
+    ],
+    strategy: [
+      type: {:in, [:mean, :median, :mode, :constant]},
+      default: :mean,
+      doc: ~S"""
+      The imputation strategy.
+
+      * `:mean` - replace missing values using the mean along each column.
+
+      * `:median` - replace missing values using the median along each column.
+
+      * `:mode` - replace missing using the most frequent value along each column.
+        If there is more than one such value, only the smallest is returned.
+
+      * `:constant` - replace missing values with `:fill_value`.
+      """
+    ],
+    fill_value: [
+      type: {:or, [:float, :integer]},
+      default: 0.0,
+      doc: ~S"""
+      When strategy is set to `:constant`, `:fill_value` is used to replace all occurrences of missing_values.
+      """
+    ]
+  ]
+
+  @opts_schema NimbleOptions.new!(opts_schema)
+
+  @doc """
+  Univariate imputer for completing missing values with simple strategies.
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
+
+  ## Returns
+
+    The function returns a struct with the following parameters:
+
+    * `:missing_values` - the same value as in `:missing_values`
+
+    * `:statistics` - The imputation fill value for each feature. Computing statistics can result in `Nx.Constant.nan/1` values.
+  """
+  deftransform fit(x, opts \\ []) do
+    validated_opts = NimbleOptions.validate!(opts, @opts_schema)
+
+    input_rank = Nx.rank(x)
+
+    if input_rank != 2 do
+      raise ArgumentError, "Wrong input rank. Expected: 2, got: #{inspect(input_rank)}"
+    end
+
+    if validated_opts[:missing_values] != :nan and
+         Nx.any(Nx.is_nan(x)) == Nx.tensor(1, type: :u8) do
+      # IO.inspect("heheh")
+      raise ArgumentError,
+            ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array"
+    end
+
+    {type, _num_bits} = Nx.type(x)
+
+    x =
+      if validated_opts[:strategy] == :constant do
+        cond do
+          is_float(validated_opts[:fill_value]) and type in [:s, :u] ->
+            Nx.as_type(x, :f32)
+
+          is_integer(validated_opts[:fill_value]) and type in [:f, :bf] ->
+            {fill_value_type, _} = Nx.type(validated_opts[:fill_value])
+
+            raise ArgumentError,
+                  "Wrong type of `:fill_value` for the given data. Expected: :f or :bf, got: #{inspect(fill_value_type)}"
+
+          true ->
+            x
+        end
+      else
+        x
+      end
+
+    x_type = Nx.type(x)
+
+    x =
+      if validated_opts[:missing_values] != :nan,
+        do: Nx.select(Nx.equal(x, validated_opts[:missing_values]), Nx.Constants.nan(), x),
+        else: x
+
+    {_num_rows, num_cols} = Nx.shape(x)
+
+    statistics =
+      cond do
+        opts[:strategy] == :mean ->
+          mean_op(x)
+
+        opts[:strategy] == :median ->
+          median_op(x)
+
+        opts[:strategy] == :mode ->
+          mode_op(x, type: x_type)
+
+        true ->
+          Nx.broadcast(validated_opts[:fill_value], {num_cols})
+      end
+
+    missing_values = validated_opts[:missing_values]
+    %__MODULE__{statistics: statistics, missing_values: missing_values}
+  end
+
+  defnp mean_op(x) do
+    mask = not Nx.is_nan(x)
+    denominator = Nx.sum(mask, axes: [0])
+    temp = Nx.select(mask, x, 0)
+    nominator = Nx.sum(temp, axes: [0])
+
+    Nx.select(
+      denominator != 0,
+      nominator / denominator,
+      Nx.Constants.nan()
+    )
+  end
+
+  defnp median_op(x) do
+    {num_rows, num_cols} = Nx.shape(x)
+    x = Nx.sort(x, axis: 0)
+    tensor = Nx.iota(x, axis: 0) * num_rows
+    res = Nx.argsort(tensor, axis: 0)
+    x = Nx.take_along_axis(x, res, axis: 0)
+
+    indices = Nx.broadcast(num_rows - 1, {num_cols})
+    indices = indices - Nx.sum(Nx.is_nan(x), axes: [0])
+    half_indices = indices / 2
+    floor = Nx.as_type(Nx.floor(half_indices), :s64) |> Nx.new_axis(0)
+    ceil = Nx.as_type(Nx.ceil(half_indices), :s64) |> Nx.new_axis(0)
+    nums1 = Nx.take_along_axis(x, floor, axis: 0)
+    nums2 = Nx.take_along_axis(x, ceil, axis: 0)
+    ((nums1 + nums2) / 2) |> Nx.squeeze()
+  end
+
+  defnp mode_op(x, opts \\ []) do
+    type = opts[:type]
+
+    axis = 0
+
+    axis_length = Nx.axis_size(x, axis)
+    x = Nx.sort(x, axis: 0)
+    tensor = Nx.multiply(Nx.iota(x, axis: axis), axis_length)
+    res = Nx.argsort(tensor, axis: axis)
+    sorted = Nx.take_along_axis(x, res, axis: axis)
+
+    {num_rows, num_cols} = Nx.shape(tensor)
+
+    num_elements = Nx.size(tensor)
+
+    group_indices =
+      Nx.concatenate(
+        [
+          Nx.broadcast(0, {1, num_cols}),
+          Nx.not_equal(
+            Nx.slice_along_axis(sorted, 0, num_rows - 1, axis: axis),
+            Nx.slice_along_axis(sorted, 1, num_rows - 1, axis: axis)
+          )
+        ],
+        axis: axis
+      )
+      |> Nx.cumulative_sum(axis: axis)
+
+    counting_indices =
+      [
+        Nx.reshape(group_indices, {num_elements, 1}),
+        group_indices
+        |> Nx.iota(axis: 1)
+        |> Nx.reshape({num_elements, 1})
+      ]
+      |> Nx.concatenate(axis: 1)
+
+    largest_group_indices =
+      Nx.broadcast(0, sorted)
+      |> Nx.indexed_add(counting_indices, Nx.broadcast(1, {num_elements}))
+      |> Nx.argmax(axis: axis, keep_axis: true)
+
+    indices =
+      largest_group_indices
+      |> Nx.broadcast(Nx.shape(group_indices))
+      |> Nx.equal(group_indices)
+      |> Nx.argmax(axis: axis, keep_axis: true)
+
+    Nx.take_along_axis(sorted, indices, axis: axis) |> Nx.squeeze() |> Nx.as_type(type)
+  end
+
+  @doc """
+  Impute all missing values in `x` using fitted imputer.
+  """
+  deftransform transform(%__MODULE__{statistics: statistics, missing_values: missing_values}, x) do
+    {num_rows, num_cols} = Nx.shape(x)
+    impute_values = Nx.reshape(statistics, {1, num_cols}) |> Nx.broadcast({num_rows, num_cols})
+    mask = if missing_values == :nan, do: Nx.is_nan(x), else: Nx.equal(x, missing_values)
+    Nx.select(mask, impute_values, x)
+  end
+end
