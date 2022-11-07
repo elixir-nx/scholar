@@ -56,6 +56,34 @@ defmodule Scholar.Impute.SimpleImputer do
     * `:missing_values` - the same value as in `:missing_values`
 
     * `:statistics` - The imputation fill value for each feature. Computing statistics can result in `Nx.Constant.nan/1` values.
+
+  ## Examples
+
+    iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
+    iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :mean)
+    iex> Scholar.Impute.SimpleImputer.transform(imputer, x)
+    #Nx.Tensor<
+      f32[3][3]
+      [
+        [1.0, 2.0, 5.0],
+        [3.0, 7.0, 5.0],
+        [2.0, 4.0, 5.0]
+      ]
+    >
+
+    iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
+    iex> y = Nx.tensor([[7, :nan, 6], [6, 9, :nan], [8, :nan, 1]])
+    iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :median)
+    iex> Scholar.Impute.SimpleImputer.transform(imputer, y)
+    #Nx.Tensor<
+      f32[3][3]
+      [
+        [7.0, 4.0, 6.0],
+        [6.0, 9.0, 5.0],
+        [8.0, 4.0, 1.0]
+      ]
+    >
+
   """
   deftransform fit(x, opts \\ []) do
     validated_opts = NimbleOptions.validate!(opts, @opts_schema)
