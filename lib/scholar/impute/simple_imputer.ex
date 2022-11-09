@@ -161,19 +161,21 @@ defmodule Scholar.Impute.SimpleImputer do
   end
 
   defnp median_op(x) do
+    axis  = 0
+
     {num_rows, num_cols} = Nx.shape(x)
-    x = Nx.sort(x, axis: 0)
-    tensor = Nx.iota(x, axis: 0) * num_rows
-    res = Nx.argsort(tensor, axis: 0)
-    x = Nx.take_along_axis(x, res, axis: 0)
+    x = Nx.sort(x, axis: axis)
+    tensor = Nx.iota(x, axis: axis) + Nx.is_nan(x) * num_rows
+    res = Nx.argsort(tensor, axis: axis)
+    x = Nx.take_along_axis(x, res, axis: axis)
 
     indices = Nx.broadcast(num_rows - 1, {num_cols})
-    indices = indices - Nx.sum(Nx.is_nan(x), axes: [0])
+    indices = indices - Nx.sum(Nx.is_nan(x), axes: [axis])
     half_indices = indices / 2
     floor = Nx.as_type(Nx.floor(half_indices), :s64) |> Nx.new_axis(0)
     ceil = Nx.as_type(Nx.ceil(half_indices), :s64) |> Nx.new_axis(0)
-    nums1 = Nx.take_along_axis(x, floor, axis: 0)
-    nums2 = Nx.take_along_axis(x, ceil, axis: 0)
+    nums1 = Nx.take_along_axis(x, floor, axis: axis)
+    nums2 = Nx.take_along_axis(x, ceil, axis: axis)
     ((nums1 + nums2) / 2) |> Nx.squeeze()
   end
 
@@ -184,7 +186,7 @@ defmodule Scholar.Impute.SimpleImputer do
 
     axis_length = Nx.axis_size(x, axis)
     x = Nx.sort(x, axis: 0)
-    tensor = Nx.multiply(Nx.iota(x, axis: axis), axis_length)
+    tensor = Nx.iota(x, axis: axis) + Nx.is_nan(x) * axis_length
     res = Nx.argsort(tensor, axis: axis)
     sorted = Nx.take_along_axis(x, res, axis: axis)
 
