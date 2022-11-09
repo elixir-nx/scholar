@@ -157,7 +157,7 @@ defmodule Scholar.Impute.SimpleImputer do
 
     Nx.select(
       denominator != 0,
-      nominator / denominator,
+      numerator / denominator,
       Nx.Constants.nan()
     )
   end
