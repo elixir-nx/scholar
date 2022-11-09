@@ -97,7 +97,7 @@ defmodule Scholar.Impute.SimpleImputer do
     if validated_opts[:missing_values] != :nan and
          Nx.any(Nx.is_nan(x)) == Nx.tensor(1, type: :u8) do
       raise ArgumentError,
-            ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the tensor"
+            ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array"
     end
 
     {type, _num_bits} = Nx.type(x)
