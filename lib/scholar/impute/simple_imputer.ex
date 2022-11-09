@@ -104,22 +104,20 @@ defmodule Scholar.Impute.SimpleImputer do
     {type, _num_bits} = Nx.type(x)
 
     x =
-      if validated_opts[:strategy] == :constant do
-        cond do
-          is_float(validated_opts[:fill_value]) and type in [:s, :u] ->
-            Nx.as_type(x, :f32)
+      cond do
+        validated_opts[:strategy] == :constant and is_float(validated_opts[:fill_value]) and
+            type in [:s, :u] ->
+          Nx.as_type(x, :f32)
 
-          is_integer(validated_opts[:fill_value]) and type in [:f, :bf] ->
-            {fill_value_type, _} = Nx.type(validated_opts[:fill_value])
+        validated_opts[:strategy] == :constant and is_integer(validated_opts[:fill_value]) and
+            type in [:f, :bf] ->
+          {fill_value_type, _} = Nx.type(validated_opts[:fill_value])
 
-            raise ArgumentError,
-                  "Wrong type of `:fill_value` for the given data. Expected: :f or :bf, got: #{inspect(fill_value_type)}"
+          raise ArgumentError,
+                "Wrong type of `:fill_value` for the given data. Expected: :f or :bf, got: #{inspect(fill_value_type)}"
 
-          true ->
-            x
-        end
-      else
-        x
+        true ->
+          x
       end
 
     x_type = Nx.type(x)
