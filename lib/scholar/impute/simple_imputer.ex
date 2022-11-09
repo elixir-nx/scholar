@@ -59,30 +59,30 @@ defmodule Scholar.Impute.SimpleImputer do
 
   ## Examples
 
-    iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
-    iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :mean)
-    iex> Scholar.Impute.SimpleImputer.transform(imputer, x)
-    #Nx.Tensor<
-      f32[3][3]
-      [
-        [1.0, 2.0, 5.0],
-        [3.0, 7.0, 5.0],
-        [2.0, 4.0, 5.0]
-      ]
-    >
+      iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
+      iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :mean)
+      iex> Scholar.Impute.SimpleImputer.transform(imputer, x)
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [1.0, 2.0, 5.0],
+          [3.0, 7.0, 5.0],
+          [2.0, 4.0, 5.0]
+        ]
+      >
 
-    iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
-    iex> y = Nx.tensor([[7, :nan, 6], [6, 9, :nan], [8, :nan, 1]])
-    iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :median)
-    iex> Scholar.Impute.SimpleImputer.transform(imputer, y)
-    #Nx.Tensor<
-      f32[3][3]
-      [
-        [7.0, 4.0, 6.0],
-        [6.0, 9.0, 5.0],
-        [8.0, 4.0, 1.0]
-      ]
-    >
+      iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
+      iex> y = Nx.tensor([[7, :nan, 6], [6, 9, :nan], [8, :nan, 1]])
+      iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :median)
+      iex> Scholar.Impute.SimpleImputer.transform(imputer, y)
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [7.0, 4.0, 6.0],
+          [6.0, 9.0, 5.0],
+          [8.0, 4.0, 1.0]
+        ]
+      >
 
   """
   deftransform fit(x, opts \\ []) do
@@ -97,7 +97,7 @@ defmodule Scholar.Impute.SimpleImputer do
     if validated_opts[:missing_values] != :nan and
          Nx.any(Nx.is_nan(x)) == Nx.tensor(1, type: :u8) do
       raise ArgumentError,
-            ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array"
+            ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the tensor"
     end
 
     {type, _num_bits} = Nx.type(x)
@@ -153,7 +153,7 @@ defmodule Scholar.Impute.SimpleImputer do
     mask = not Nx.is_nan(x)
     denominator = Nx.sum(mask, axes: [0])
     temp = Nx.select(mask, x, 0)
-    nominator = Nx.sum(temp, axes: [0])
+    numerator = Nx.sum(temp, axes: [0])
 
     Nx.select(
       denominator != 0,
