@@ -161,7 +161,7 @@ defmodule Scholar.Impute.SimpleImputer do
   end
 
   defnp median_op(x) do
-    axis  = 0
+    axis = 0
 
     {num_rows, num_cols} = Nx.shape(x)
     x = Nx.sort(x, axis: axis)
