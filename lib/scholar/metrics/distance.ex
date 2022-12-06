@@ -78,7 +78,6 @@ defmodule Scholar.Metrics.Distance do
         [7.071067810058594, 1.4142135381698608, 4.123105525970459]
       >
   """
-  @spec euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform euclidean(x, y, opts \\ []) do
     euclidean_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
@@ -135,7 +134,6 @@ defmodule Scholar.Metrics.Distance do
         [50.0, 2.0, 17.0]
       >
   """
-  @spec squared_euclidean(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform squared_euclidean(x, y, opts \\ []) do
     squared_euclidean_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
@@ -192,7 +190,6 @@ defmodule Scholar.Metrics.Distance do
         [8.0, 2.0, 5.0]
       >
   """
-  @spec manhattan(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform manhattan(x, y, opts \\ []) do
     manhattan_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
@@ -248,7 +245,6 @@ defmodule Scholar.Metrics.Distance do
         [7.0, 1.0]
       >
   """
-  @spec chebyshev(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform chebyshev(x, y, opts \\ []) do
     chebyshev_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
@@ -304,7 +300,6 @@ defmodule Scholar.Metrics.Distance do
         [7.021548271179199, 1.3195079565048218, 4.049539089202881]
       >
   """
-  @spec minkowski(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform minkowski(x, y, opts \\ []) do
     minkowski_n(x, y, NimbleOptions.validate!(opts, @minkowski_schema))
   end
@@ -367,7 +362,6 @@ defmodule Scholar.Metrics.Distance do
         [0.1704850196838379, 1.0, 1.0]
       >
   """
-  @spec cosine(Nx.t(), Nx.t(), keyword()) :: Nx.t()
   deftransform cosine(x, y, opts \\ []) do
     cosine_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end

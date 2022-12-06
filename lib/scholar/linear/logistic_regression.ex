@@ -44,11 +44,11 @@ defmodule Scholar.Linear.LogisticRegression do
   #{NimbleOptions.docs(@opts_schema)}
 
   """
-  deftransform train(x, y, opts \\ []) do
-    train_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
+  deftransform fit(x, y, opts \\ []) do
+    fit_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp train_n(x, y, opts \\ []) do
+  defnp fit_n(x, y, opts \\ []) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
@@ -152,7 +152,6 @@ defmodule Scholar.Linear.LogisticRegression do
   @doc """
   Makes predictions with the given model on inputs `x`.
   """
-
   defn predict(%__MODULE__{mode: mode} = model, x) do
     case mode do
       :binary -> predict_binary(model, x)

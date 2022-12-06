@@ -1,30 +1,51 @@
 defmodule Scholar.Interpolation.CubicSpline do
   @moduledoc """
-  Cubic spline interpolation.
+  Cubic Spline interpolation.
+
+  This kind of interpolation is calculated by fitting a set of
+  continuous cubic polynomials of which the first and second
+  derivatives are also continuous.
+
+  The interpolated curve is smooth and mitigates oscillations that
+  could appear if a single n-th degree polynomial were to be
+  fitted over all of the points.
+
+  Reference:
+
+    * [1] - [Cubic Spline Interpolation theory](https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation)
+    * [2] - [SciPy implementation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.CubicSpline.html)
   """
   import Nx.Defn
 
   @derive {Nx.Container, containers: [:coefficients, :x]}
   defstruct [:coefficients, :x]
 
-  opts = [
-    extrapolate: [
+  fit_opts = [
+    boundary_condition: [
       required: false,
-      default: true,
-      type: :boolean,
-      doc: "if false, out-of-bounds x return NaN."
+      default: :not_a_knot,
+      type: :atom,
+      doc: "one of :not_a_knot or :natural"
     ]
   ]
 
-  @opts_schema NimbleOptions.new!(opts)
+  @fit_opts_schema NimbleOptions.new!(fit_opts)
 
   @doc """
   Fits a cubic spline interpolation of the given `(x, y)` points
 
   Inputs are expected to be rank-1 tensors with the same shape
   and at least 3 entries.
+
+  ### Options
+
+  #{NimbleOptions.docs(@fit_opts_schema)}
   """
-  defn train(x, y) do
+  deftransform fit(x, y, opts \\ []) do
+    fit_n(x, y, NimbleOptions.validate!(opts, @fit_opts_schema))
+  end
+
+  defnp fit_n(x, y, opts \\ []) do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
     # Reference implementation in Scipy
 
@@ -56,60 +77,98 @@ defmodule Scholar.Interpolation.CubicSpline do
     slope = (y[1..-1//1] - y[0..-2//1]) / dx
 
     s =
-      if n == 3 do
-        a =
-          Nx.stack([
-            Nx.tensor([1, 1, 0]),
-            Nx.stack([dx[1], 2 * (dx[0] + dx[1]), dx[0]]),
-            Nx.tensor([0, 1, 1])
-          ])
+      case {n, opts[:boundary_condition]} do
+        {3, :not_a_knot} ->
+          a =
+            Nx.stack([
+              Nx.tensor([1, 1, 0]),
+              Nx.stack([dx[1], 2 * (dx[0] + dx[1]), dx[0]]),
+              Nx.tensor([0, 1, 1])
+            ])
 
-        b = Nx.stack([2 * slope[0], 3 * (dx[0] * slope[1] + dx[1] * slope[0]), 2 * slope[1]])
+          b = Nx.stack([2 * slope[0], 3 * (dx[0] * slope[1] + dx[1] * slope[0]), 2 * slope[1]])
 
-        Nx.LinAlg.solve(a, b)
-      else
-        # n > 3 and bc = not_a_knot
+          Nx.LinAlg.solve(a, b)
 
-        d_0 = Nx.new_axis(x[2] - x[0], 0)
-        d_n = Nx.new_axis(x[-1] - x[-3], 0)
+        {_, :not_a_knot} ->
+          up_diag =
+            Nx.concatenate([
+              Nx.new_axis(x[2] - x[0], 0),
+              dx[0..-2//1]
+            ])
 
-        up_diag =
-          Nx.concatenate([
-            d_0,
-            dx[0..-2//1]
-          ])
+          low_diag =
+            Nx.concatenate([
+              dx[1..-1//1],
+              Nx.new_axis(x[-1] - x[-3], 0)
+            ])
 
-        low_diag =
-          Nx.concatenate([
-            dx[1..-1//1],
-            d_n
-          ])
+          main_diag =
+            Nx.concatenate([
+              Nx.new_axis(dx[1], 0),
+              2 * (dx[0..-2//1] + dx[1..-1//1]),
+              Nx.new_axis(dx[-2], 0)
+            ])
 
-        main_diag =
-          Nx.concatenate([
-            Nx.new_axis(dx[1], 0),
-            2 * (dx[0..-2//1] + dx[1..-1//1]),
-            Nx.new_axis(dx[-2], 0)
-          ])
+          a =
+            Nx.broadcast(0, {n, n})
+            |> Nx.put_diagonal(up_diag, offset: 1)
+            |> Nx.put_diagonal(main_diag, offset: 0)
+            |> Nx.put_diagonal(low_diag, offset: -1)
 
-        a =
-          Nx.broadcast(0, {n, n})
-          |> Nx.put_diagonal(up_diag, offset: 1)
-          |> Nx.put_diagonal(main_diag, offset: 0)
-          |> Nx.put_diagonal(low_diag, offset: -1)
+          d = x[2] - x[0]
+          b_0 = ((dx[0] + 2 * d) * dx[1] * slope[0] + dx[0] ** 2 * slope[1]) / d
 
-        bc_0 = ((dx[0] + 2 * d_0) * dx[1] * slope[0] + dx[0] ** 2 * slope[1]) / d_0
+          d = x[-1] - x[-3]
+          b_n = (dx[-1] ** 2 * slope[-2] + (2 * d + dx[-1]) * dx[-2] * slope[-1]) / d
 
-        bc_n = (dx[-1] ** 2 * slope[-2] + (2 * d_n + dx[-1]) * dx[-2] * slope[-1]) / d_n
+          b =
+            Nx.concatenate([
+              Nx.new_axis(b_0, 0),
+              3 * (dx[1..-1//1] * slope[0..-2//1] + dx[0..-2//1] * slope[1..-1//1]),
+              Nx.new_axis(b_n, 0)
+            ])
 
-        b =
-          Nx.concatenate([
-            Nx.new_axis(bc_0, 0),
-            3 * (dx[1..-1//1] * slope[0..-2//1] + dx[0..-2//1] * slope[1..-1//1]),
-            Nx.new_axis(bc_n, 0)
-          ])
+          Nx.LinAlg.solve(a, b)
 
-        Nx.LinAlg.solve(a, b)
+        _ ->
+          up_diag =
+            Nx.concatenate([
+              Nx.new_axis(dx[0], 0),
+              dx[0..-2//1]
+            ])
+
+          low_diag =
+            Nx.concatenate([
+              dx[1..-1//1],
+              Nx.new_axis(dx[-1], 0)
+            ])
+
+          main_diag =
+            Nx.concatenate([
+              Nx.new_axis(2 * dx[0], 0),
+              2 * (dx[0..-2//1] + dx[1..-1//1]),
+              Nx.new_axis(2 * dx[-1], 0)
+            ])
+
+          a =
+            Nx.broadcast(0, {n, n})
+            |> Nx.put_diagonal(up_diag, offset: 1)
+            |> Nx.put_diagonal(main_diag, offset: 0)
+            |> Nx.put_diagonal(low_diag, offset: -1)
+
+          b_0 = 3 * (y[1] - y[0])
+
+          b_n = 3 * (y[-1] - y[-2])
+
+          b =
+            Nx.concatenate([
+              Nx.new_axis(b_0, 0),
+              3 * (dx[1..-1//1] * slope[0..-2//1] + dx[0..-2//1] * slope[1..-1//1]),
+              Nx.new_axis(b_n, 0)
+            ])
+
+          Nx.LinAlg.solve(a, b)
       end
 
     slope = (y[1..-1//1] - y[0..-2//1]) / dx
@@ -125,15 +184,26 @@ defmodule Scholar.Interpolation.CubicSpline do
     %__MODULE__{coefficients: c, x: x}
   end
 
+  predict_opts = [
+    extrapolate: [
+      required: false,
+      default: true,
+      type: :boolean,
+      doc: "if false, out-of-bounds x return NaN."
+    ]
+  ]
+
+  @predict_opts_schema NimbleOptions.new!(predict_opts)
+
   @doc """
-  Returns the value fit by `train/2` corresponding to the `target_x` input
+  Returns the value fit by `fit/2` corresponding to the `target_x` input
 
   ### Options
 
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@predict_opts_schema)}
   """
   deftransform predict(%__MODULE__{} = model, target_x, opts \\ []) do
-    predict_n(model, target_x, NimbleOptions.validate!(opts, @opts_schema))
+    predict_n(model, target_x, NimbleOptions.validate!(opts, @predict_opts_schema))
   end
 
   defnp predict_n(%__MODULE__{x: x, coefficients: coefficients}, target_x, opts \\ []) do

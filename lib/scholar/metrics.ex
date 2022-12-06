@@ -71,7 +71,6 @@ defmodule Scholar.Metrics do
         f32
         0.6000000238418579
       >
-
   """
   defn accuracy(y_true, y_pred) do
     assert_rank!(y_true, 1)
@@ -95,7 +94,6 @@ defmodule Scholar.Metrics do
         f32
         0.6666666865348816
       >
-
   """
   defn binary_precision(y_true, y_pred) do
     assert_rank!(y_true, 1)
@@ -127,7 +125,6 @@ defmodule Scholar.Metrics do
         f32[3]
         [0.6666666865348816, 1.0, 0.25]
       >
-
   """
   deftransform precision(y_true, y_pred, opts \\ []) do
     precision_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
@@ -158,7 +155,6 @@ defmodule Scholar.Metrics do
         f32
         0.6666666865348816
       >
-
   """
   defn binary_recall(y_true, y_pred) do
     assert_rank!(y_true, 1)
@@ -190,7 +186,6 @@ defmodule Scholar.Metrics do
         f32[3]
         [0.6666666865348816, 0.5, 1.0]
       >
-
   """
   deftransform recall(y_true, y_pred, opts \\ []) do
     recall_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
@@ -249,7 +244,6 @@ defmodule Scholar.Metrics do
         f32
         0.6666666865348816
       >
-
   """
   defn binary_sensitivity(y_true, y_pred) do
     assert_rank!(y_true, 1)
@@ -275,7 +269,6 @@ defmodule Scholar.Metrics do
         f32[3]
         [0.6666666865348816, 0.5, 1.0]
       >
-
   """
   deftransform sensitivity(y_true, y_pred, opts \\ []) do
     sensitivity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
@@ -302,7 +295,6 @@ defmodule Scholar.Metrics do
         f32
         0.0
       >
-
   """
   defn binary_specificity(y_true, y_pred) do
     assert_rank!(y_true, 1)
@@ -334,7 +326,6 @@ defmodule Scholar.Metrics do
         f32[3]
         [0.8571428656578064, 1.0, 0.6666666865348816]
       >
-
   """
   deftransform specificity(y_true, y_pred, opts \\ []) do
     specificity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
@@ -374,7 +365,6 @@ defmodule Scholar.Metrics do
           [0, 0, 2]
         ]
       >
-
   """
   deftransform confusion_matrix(y_true, y_pred, opts \\ []) do
     confusion_matrix_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
