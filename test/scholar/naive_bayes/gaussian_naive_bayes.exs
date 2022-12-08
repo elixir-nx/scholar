@@ -1,13 +1,13 @@
-defmodule Scholar.NaiveBayes.GaussianBNTest do
+defmodule Scholar.NaiveBayes.GaussianTest do
   use ExUnit.Case
-  alias Scholar.NaiveBayes.GaussianNB
-  doctest GaussianNB
+  alias Scholar.NaiveBayes.Gaussian
+  doctest Gaussian
 
   test "fit test - all default options" do
     x = Nx.iota({5, 6})
     y = Nx.tensor([1, 2, 0, 3, 1])
 
-    model = Scholar.NaiveBayes.GaussianNB.fit(x, y, num_classes: 4)
+    model = Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 4)
 
     assert model.theta ==
              Nx.tensor([
@@ -34,7 +34,7 @@ defmodule Scholar.NaiveBayes.GaussianBNTest do
     x = Nx.iota({5, 6})
     y = Nx.tensor([1, 2, 0, 3, 1])
 
-    model = Scholar.NaiveBayes.GaussianNB.fit(x, y, num_classes: 4, var_smoothing: 1.0e-8)
+    model = Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 4, var_smoothing: 1.0e-8)
 
     assert model.theta ==
              Nx.tensor([
@@ -83,7 +83,7 @@ defmodule Scholar.NaiveBayes.GaussianBNTest do
     y = Nx.tensor([1, 2, 0, 3, 1])
 
     model =
-      Scholar.NaiveBayes.GaussianNB.fit(x, y, num_classes: 4, sample_weights: [1.5, 4, 2, 7, 4])
+      Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 4, sample_weights: [1.5, 4, 2, 7, 4])
 
     assert model.theta ==
              Nx.tensor([
@@ -152,8 +152,7 @@ defmodule Scholar.NaiveBayes.GaussianBNTest do
     x = Nx.iota({5, 6})
     y = Nx.tensor([1, 2, 0, 3, 1])
 
-    model =
-      Scholar.NaiveBayes.GaussianNB.fit(x, y, num_classes: 4, priors: [0.15, 0.25, 0.4, 0.2])
+    model = Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 4, priors: [0.15, 0.25, 0.4, 0.2])
 
     assert model.theta ==
              Nx.tensor([
@@ -204,7 +203,7 @@ defmodule Scholar.NaiveBayes.GaussianBNTest do
       assert_raise ArgumentError,
                    "Wrong input rank. Expected: 2 for x and 1 for y, got: 1 for x and 1 for y",
                    fn ->
-                     Scholar.NaiveBayes.GaussianNB.fit(
+                     Scholar.NaiveBayes.Gaussian.fit(
                        Nx.tensor([1, 2, 5, 8]),
                        Nx.tensor([1, 2, 3, 4]),
                        num_classes: 4
@@ -216,7 +215,7 @@ defmodule Scholar.NaiveBayes.GaussianBNTest do
       assert_raise ArgumentError,
                    "Wrong input shape. Expect x to have the same first dimension as y, got: 1 for x and 4 for y",
                    fn ->
-                     Scholar.NaiveBayes.GaussianNB.fit(
+                     Scholar.NaiveBayes.Gaussian.fit(
                        Nx.tensor([[1, 2, 5, 8]]),
                        Nx.tensor([1, 2, 3, 4]),
                        num_classes: 4
@@ -228,7 +227,7 @@ defmodule Scholar.NaiveBayes.GaussianBNTest do
       assert_raise ArgumentError,
                    "Number of priors must match number of classes. Number of priors: 3 does not match number of classes: 2",
                    fn ->
-                     Scholar.NaiveBayes.GaussianNB.fit(
+                     Scholar.NaiveBayes.Gaussian.fit(
                        Nx.tensor([[1, 2, 5, 8], [2, 5, 7, 3]]),
                        Nx.tensor([1, 0]),
                        num_classes: 2,
@@ -242,13 +241,13 @@ defmodule Scholar.NaiveBayes.GaussianBNTest do
                    "Wrong input shape. Expect x to have the same second dimension as the data for fitting process, got: 3 for x and 4 for training data",
                    fn ->
                      model =
-                       Scholar.NaiveBayes.GaussianNB.fit(
+                       Scholar.NaiveBayes.Gaussian.fit(
                          Nx.tensor([[1, 2, 5, 8], [1, 3, 5, 2]]),
                          Nx.tensor([0, 1]),
                          num_classes: 2
                        )
 
-                     Scholar.NaiveBayes.GaussianNB.predict(model, Nx.tensor([[1, 4, 2]]))
+                     Scholar.NaiveBayes.Gaussian.predict(model, Nx.tensor([[1, 4, 2]]))
                    end
     end
   end

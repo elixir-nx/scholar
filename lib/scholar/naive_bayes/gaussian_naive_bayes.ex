@@ -29,7 +29,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
       type: {:list, {:or, [:float, :integer]}},
       doc: ~S"""
       List of `n_samples` elements.
-      
+
       A list of 1.0 values is used if none is given.
       """
     ],
@@ -76,8 +76,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
-      iex> Scholar.NaiveBayes.GaussianNB.fit(x, y, num_classes: 3)
-      %Scholar.NaiveBayes.GaussianNB{
+      iex> Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 3)
+      %Scholar.NaiveBayes.Gaussian{
         theta: Nx.tensor(
           [
             [6.0, 7.0, 8.0],
@@ -100,8 +100,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
-      iex> Scholar.NaiveBayes.GaussianNB.fit(x, y, num_classes: 3, sample_weights: [1, 6, 2, 3])
-      %Scholar.NaiveBayes.GaussianNB{
+      iex> Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 3, sample_weights: [1, 6, 2, 3])
+      %Scholar.NaiveBayes.Gaussian{
         theta: Nx.tensor(
           [
             [6.0, 7.0, 8.0],
@@ -148,7 +148,33 @@ defmodule Scholar.NaiveBayes.Gaussian do
           priors_flag: if(opts[:priors] != nil, do: true, else: false)
         ]
 
-    fit_n(x, y, opts)
+    sample_weights =
+      case opts[:sample_weights_flag] do
+        false -> Nx.broadcast(1.0, {num_samples})
+        _ -> Nx.tensor(opts[:sample_weights])
+      end
+
+    priors = opts[:priors]
+
+    classes = Nx.iota({opts[:num_classes]})
+
+    class_priors =
+      case opts[:priors_flag] do
+        false ->
+          Nx.broadcast(0.0, Nx.shape(classes))
+
+        _ ->
+          priors = Nx.tensor(priors)
+
+          if Nx.size(priors) != Nx.size(classes) do
+            raise ArgumentError,
+                  "Number of priors must match number of classes. Number of priors: #{inspect(Nx.size(priors))} does not match number of classes: #{inspect(Nx.size(classes))}"
+          else
+            priors
+          end
+      end
+
+    fit_n(x, y, sample_weights, class_priors, classes, opts)
   end
 
   @doc """
@@ -158,8 +184,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
-      iex> model = Scholar.NaiveBayes.GaussianNB.fit(x, y, num_classes: 3)
-      iex> Scholar.NaiveBayes.GaussianNB.predict(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]))
+      iex> model = Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 3)
+      iex> Scholar.NaiveBayes.Gaussian.predict(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]))
       #Nx.Tensor<
         s64[2]
         [2, 2]
@@ -178,8 +204,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
-      iex> model = Scholar.NaiveBayes.GaussianNB.fit(x, y, num_classes: 3)
-      iex> Scholar.NaiveBayes.GaussianNB.predict_log_proba(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]))
+      iex> model = Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 3)
+      iex> Scholar.NaiveBayes.Gaussian.predict_log_probability(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]))
       #Nx.Tensor<
         f32[2][3]
         [
@@ -188,7 +214,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
         ]
       >
   """
-  defn predict_log_proba(%__MODULE__{} = model, x) do
+  defn predict_log_probability(%__MODULE__{} = model, x) do
     check_input(model, x)
     jll = joint_log_likelihood(model, x)
 
@@ -210,8 +236,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
-      iex> model = Scholar.NaiveBayes.GaussianNB.fit(x, y, num_classes: 3)
-      iex> Scholar.NaiveBayes.GaussianNB.predict_proba(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]))
+      iex> model = Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 3)
+      iex> Scholar.NaiveBayes.Gaussian.predict_probability(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]))
       #Nx.Tensor<
         f32[2][3]
         [
@@ -220,53 +246,23 @@ defmodule Scholar.NaiveBayes.Gaussian do
         ]
       >
   """
-  defn predict_proba(%__MODULE__{} = model, x) do
-    Nx.exp(predict_log_proba(model, x))
+  defn predict_probability(%__MODULE__{} = model, x) do
+    Nx.exp(predict_log_probability(model, x))
   end
 
-  defnp fit_n(x, y, opts \\ []) do
+  defnp fit_n(x, y, sample_weights, class_priors, classes, opts \\ []) do
     eps = opts[:var_smoothing] * Nx.reduce_max(Nx.variance(x, axes: [0]))
-    {n_samples, n_features} = Nx.shape(x)
-    number_of_classes = opts[:num_classes]
-    sample_weights_flag = opts[:sample_weights_flag]
-
-    sample_weights =
-      case sample_weights_flag do
-        false -> Nx.broadcast(1.0, {n_samples})
-        _ -> Nx.tensor(opts[:sample_weights])
-      end
-
-    priors = opts[:priors]
+    {_num_samples, num_features} = Nx.shape(x)
+    sample_weights_flag = Nx.tensor(opts[:sample_weights_flag])
     priors_flag = opts[:priors_flag]
-
-    classes = Nx.iota({number_of_classes})
-
     classes = Nx.sort(classes)
-    {n_classes} = Nx.shape(classes)
-
-    class_priors =
-      case priors_flag do
-        false ->
-          Nx.broadcast(0.0, Nx.shape(classes))
-
-        _ ->
-          priors = Nx.tensor(priors)
-
-          if Nx.size(priors) != Nx.size(classes) do
-            raise ArgumentError,
-                  "Number of priors must match number of classes. Number of priors: #{inspect(Nx.size(priors))} does not match number of classes: #{inspect(Nx.size(classes))}"
-          else
-            priors
-          end
-      end
-
-    sample_weights_flag = Nx.tensor(sample_weights_flag)
+    {num_classes} = Nx.shape(classes)
 
     {_, _, _, _, _, _, final_theta, final_var, final_class_count} =
       while {i = 0, x, y, sample_weights, classes, sample_weights_flag,
-             theta = Nx.broadcast(0.0, {n_classes, n_features}),
-             var = Nx.broadcast(0.0, {n_classes, n_features}),
-             class_count = Nx.broadcast(0.0, {n_classes})},
+             theta = Nx.broadcast(0.0, {num_classes, num_features}),
+             var = Nx.broadcast(0.0, {num_classes, num_features}),
+             class_count = Nx.broadcast(0.0, {num_classes})},
             i < Nx.size(classes) do
         y_i = classes[[i]]
         mask = y == y_i
@@ -301,8 +297,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
               ),
             else: {new_mu, new_var}
 
-        new_theta = Nx.put_slice(theta, [i, 0], Nx.broadcast(new_mu, {1, n_features}))
-        new_var = Nx.put_slice(var, [i, 0], Nx.broadcast(new_var, {1, n_features}))
+        new_theta = Nx.put_slice(theta, [i, 0], Nx.broadcast(new_mu, {1, num_features}))
+        new_var = Nx.put_slice(var, [i, 0], Nx.broadcast(new_var, {1, num_features}))
         class_count = Nx.indexed_add(class_count, Nx.reshape(i, {1, 1}), Nx.reshape(n_i, {1}))
 
         {i + 1, x, y, sample_weights, classes, sample_weights_flag, new_theta, new_var,
@@ -328,14 +324,14 @@ defmodule Scholar.NaiveBayes.Gaussian do
   end
 
   defnp update_mean_variance_init(mu, var, x, sample_weights, mask, sample_weights_flag) do
-    {n_samples, _n_features} = Nx.shape(x)
+    {num_samples, _num_features} = Nx.shape(x)
 
-    if n_samples == 0 do
+    if num_samples == 0 do
       {mu, var, 0}
     else
       case sample_weights_flag do
         false ->
-          new_n = n_samples
+          new_n = num_samples
           new_mu = mean_masked(x, mask)
           new_var = mean_masked((x - new_mu) ** 2, mask)
           {new_mu, new_var, new_n}
@@ -367,25 +363,25 @@ defmodule Scholar.NaiveBayes.Gaussian do
         ) do
     pi = 3.14159265359
     joint = Nx.log(class_priors)
-    {n_classes, n_features} = Nx.shape(theta)
+    {num_classes, num_features} = Nx.shape(theta)
     {samples_x, _features_x} = Nx.shape(x)
 
     n1 =
       (-0.5 * Nx.sum(Nx.log(2.0 * pi * var), axes: [1]))
       |> Nx.reshape({:auto, 1})
-      |> Nx.broadcast({n_classes, samples_x})
+      |> Nx.broadcast({num_classes, samples_x})
 
     x_broadcast =
-      Nx.reshape(x, {1, samples_x, n_features})
-      |> Nx.broadcast({n_classes, samples_x, n_features})
+      Nx.reshape(x, {1, samples_x, num_features})
+      |> Nx.broadcast({num_classes, samples_x, num_features})
 
     theta_broadcast =
-      Nx.reshape(theta, {n_classes, 1, n_features})
-      |> Nx.broadcast({n_classes, samples_x, n_features})
+      Nx.reshape(theta, {num_classes, 1, num_features})
+      |> Nx.broadcast({num_classes, samples_x, num_features})
 
     var_broadcast =
-      Nx.reshape(var, {n_classes, 1, n_features})
-      |> Nx.broadcast({n_classes, samples_x, n_features})
+      Nx.reshape(var, {num_classes, 1, num_features})
+      |> Nx.broadcast({num_classes, samples_x, num_features})
 
     n2 = -0.5 * Nx.sum((x_broadcast - theta_broadcast) ** 2 / var_broadcast, axes: [2])
 
