@@ -1,4 +1,4 @@
-defmodule Scholar.NaiveBayes.GaussianNB do
+defmodule Scholar.NaiveBayes.Gaussian do
   @moduledoc """
   Univariate imputer for completing missing values with simple strategies.
   """
@@ -28,8 +28,9 @@ defmodule Scholar.NaiveBayes.GaussianNB do
     sample_weights: [
       type: {:list, {:or, [:float, :integer]}},
       doc: ~S"""
-      Array-like of shape (n_samples,), if not provided
-      then set to ones of shape (n_samples,).
+      List of `n_samples` elements.
+      
+      A list of 1.0 values is used if none is given.
       """
     ],
     num_classes: [
