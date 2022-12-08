@@ -1,6 +1,6 @@
 defmodule Scholar.NaiveBayes.Gaussian do
   @moduledoc """
-  Univariate imputer for completing missing values with simple strategies.
+  Gaussian Naive Bayes.
   """
   import Nx.Defn
 
