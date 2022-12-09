@@ -130,7 +130,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
     if input_rank != 2 or targets_rank != 1 do
       raise ArgumentError,
-            "Wrong input rank. Expected: 2 for x and 1 for y, got: #{inspect(input_rank)} for x and #{inspect(targets_rank)} for y"
+            "wrong input rank. Expected x to be rank 2 and y to be rank 1, got: #{input_rank} for x and #{targets_rank} for y"
     end
 
     {num_samples, _} = Nx.shape(x)
@@ -138,15 +138,15 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
     if num_samples != num_targets do
       raise ArgumentError,
-            "Wrong input shape. Expect x to have the same first dimension as y, got: #{inspect(num_samples)} for x and #{inspect(num_targets)} for y"
+            "wrong input shape. Expected x to have the same first dimension as y, got: #{num_samples} for x and #{num_targets} for y"
     end
 
     opts =
-      opts ++
-        [
-          sample_weights_flag: if(opts[:sample_weights] != nil, do: true, else: false),
-          priors_flag: if(opts[:priors] != nil, do: true, else: false)
-        ]
+      [
+        sample_weights_flag: if(opts[:sample_weights] != nil, do: true, else: false),
+        priors_flag: if(opts[:priors] != nil, do: true, else: false)
+      ] ++
+        opts
 
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     sample_weights = Nx.tensor(sample_weights)
@@ -249,7 +249,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
         _ ->
           raise ArgumentError,
-                "Number of priors must match number of classes. Number of priors: #{inspect(Nx.size(class_priors))} does not match number of classes: #{inspect(Nx.size(classes))}"
+                "number of priors must match number of classes. Number of priors: #{Nx.size(class_priors)} does not match number of classes: #{Nx.size(classes)}"
       end
 
     sample_weights =
@@ -262,7 +262,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
         _ ->
           raise ArgumentError,
-                "Number of weights must match number of samples. Number of weights: #{inspect(Nx.size(sample_weights))} does not match number of samples: #{inspect(num_samples)}"
+                "number of weights must match number of samples. Number of weights: #{Nx.size(sample_weights)} does not match number of samples: #{num_samples}"
       end
 
     {_, _, _, _, _, _, final_theta, final_var, final_class_count} =
@@ -414,7 +414,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
     if num_features != x_num_features do
       raise ArgumentError,
-            "Wrong input shape. Expect x to have the same second dimension as the data for fitting process, got: #{inspect(x_num_features)} for x and #{inspect(num_features)} for training data"
+            "wrong input shape. Expected x to have the same second dimension as the data for fitting process, got: #{x_num_features} for x and #{num_features} for training data"
     end
   end
 end
