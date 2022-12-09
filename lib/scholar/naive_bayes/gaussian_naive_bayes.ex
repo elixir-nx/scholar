@@ -178,6 +178,28 @@ defmodule Scholar.NaiveBayes.Gaussian do
   end
 
   @doc """
+  Return joint log probability estimates for the test vector `x` using `model`.
+
+  ## Examples
+
+      iex> x = Nx.iota({4, 3})
+      iex> y = Nx.tensor([1, 2, 0, 2])
+      iex> model = Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 3)
+      iex> Scholar.NaiveBayes.Gaussian.predict_joint_log_probability(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]))
+      #Nx.Tensor<
+        f32[2][3]
+        [
+          [-1822222336.0, -1822222208.0, -9.023576736450195],
+          [-399999968.0, -5733332992.0, -7.245799541473389]
+        ]
+      >
+  """
+  defn predict_joint_log_probability(%__MODULE__{} = model, x) do
+    check_input(model, x)
+    joint_log_likelihood(model, x)
+  end
+
+  @doc """
   Return log-probability estimates for the test vector `x` using `model`.
 
   ## Examples
