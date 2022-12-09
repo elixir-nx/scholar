@@ -92,6 +92,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
         provided.
 
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> Scholar.NaiveBayes.Multinomial.fit(x, y, num_classes: 3)
@@ -173,7 +174,9 @@ defmodule Scholar.NaiveBayes.Multinomial do
 
   @doc """
   Perform classification on an array of test vectors `x` using `model`.
+
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> model = Scholar.NaiveBayes.Multinomial.fit(x, y, num_classes: 3)
@@ -191,7 +194,9 @@ defmodule Scholar.NaiveBayes.Multinomial do
 
   @doc """
   Return log-probability estimates for the test vector `x` using `model`.
+
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> model = Scholar.NaiveBayes.Multinomial.fit(x, y, num_classes: 3)
@@ -221,7 +226,9 @@ defmodule Scholar.NaiveBayes.Multinomial do
 
   @doc """
   Return probability estimates for the test vector `x` using `model`.
+
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> model = Scholar.NaiveBayes.Multinomial.fit(x, y, num_classes: 3)
@@ -369,7 +376,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
     case Nx.shape(alpha) do
       {} -> nil
       {^num_features} -> nil
-      _ -> raise ArgumentError, "When alpha is a list it should contain num_features values."
+      _ -> raise ArgumentError, "when alpha is a list it should contain num_features values"
     end
 
     if force_alpha, do: alpha, else: Nx.max(alpha, alpha_lower_bound)
