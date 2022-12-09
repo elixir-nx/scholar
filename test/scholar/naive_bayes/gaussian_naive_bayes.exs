@@ -236,6 +236,19 @@ defmodule Scholar.NaiveBayes.GaussianTest do
                    end
     end
 
+    test "wrong sample_weights size" do
+      assert_raise ArgumentError,
+                   "Number of weights must match number of samples. Number of weights: 3 does not match number of samples: 2",
+                   fn ->
+                     Scholar.NaiveBayes.Gaussian.fit(
+                       Nx.tensor([[1, 2, 5, 8], [2, 5, 7, 3]]),
+                       Nx.tensor([1, 0]),
+                       num_classes: 2,
+                       sample_weights: [0.4, 0.4, 0.2]
+                     )
+                   end
+    end
+
     test "wrong input shape in training process" do
       assert_raise ArgumentError,
                    "Wrong input shape. Expect x to have the same second dimension as the data for fitting process, got: 3 for x and 4 for training data",

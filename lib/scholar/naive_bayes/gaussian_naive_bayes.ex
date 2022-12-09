@@ -148,33 +148,13 @@ defmodule Scholar.NaiveBayes.Gaussian do
           priors_flag: if(opts[:priors] != nil, do: true, else: false)
         ]
 
-    sample_weights =
-      case opts[:sample_weights_flag] do
-        false -> Nx.broadcast(1.0, {num_samples})
-        _ -> Nx.tensor(opts[:sample_weights])
-      end
+    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
+    sample_weights = Nx.tensor(sample_weights)
 
-    priors = opts[:priors]
+    {priors, opts} = Keyword.pop(opts, :priors, 0.0)
+    class_priors = Nx.tensor(priors)
 
-    classes = Nx.iota({opts[:num_classes]})
-
-    class_priors =
-      case opts[:priors_flag] do
-        false ->
-          Nx.broadcast(0.0, Nx.shape(classes))
-
-        _ ->
-          priors = Nx.tensor(priors)
-
-          if Nx.size(priors) != Nx.size(classes) do
-            raise ArgumentError,
-                  "Number of priors must match number of classes. Number of priors: #{inspect(Nx.size(priors))} does not match number of classes: #{inspect(Nx.size(classes))}"
-          else
-            priors
-          end
-      end
-
-    fit_n(x, y, sample_weights, class_priors, classes, opts)
+    fit_n(x, y, sample_weights, class_priors, opts)
   end
 
   @doc """
@@ -250,13 +230,40 @@ defmodule Scholar.NaiveBayes.Gaussian do
     Nx.exp(predict_log_probability(model, x))
   end
 
-  defnp fit_n(x, y, sample_weights, class_priors, classes, opts \\ []) do
+  defnp fit_n(x, y, sample_weights, class_priors, opts \\ []) do
     eps = opts[:var_smoothing] * Nx.reduce_max(Nx.variance(x, axes: [0]))
-    {_num_samples, num_features} = Nx.shape(x)
-    sample_weights_flag = Nx.tensor(opts[:sample_weights_flag])
+    num_classes = opts[:num_classes]
     priors_flag = opts[:priors_flag]
-    classes = Nx.sort(classes)
-    {num_classes} = Nx.shape(classes)
+    sample_weights_flag = Nx.tensor(opts[:sample_weights_flag])
+    {num_samples, num_features} = Nx.shape(x)
+
+    classes = Nx.iota({num_classes}) |> Nx.sort()
+
+    class_priors =
+      case Nx.shape(class_priors) do
+        {} ->
+          Nx.broadcast(class_priors, {num_classes})
+
+        {^num_classes} ->
+          class_priors
+
+        _ ->
+          raise ArgumentError,
+                "Number of priors must match number of classes. Number of priors: #{inspect(Nx.size(class_priors))} does not match number of classes: #{inspect(Nx.size(classes))}"
+      end
+
+    sample_weights =
+      case Nx.shape(sample_weights) do
+        {} ->
+          Nx.broadcast(sample_weights, {num_samples})
+
+        {^num_samples} ->
+          sample_weights
+
+        _ ->
+          raise ArgumentError,
+                "Number of weights must match number of samples. Number of weights: #{inspect(Nx.size(sample_weights))} does not match number of samples: #{inspect(num_samples)}"
+      end
 
     {_, _, _, _, _, _, final_theta, final_var, final_class_count} =
       while {i = 0, x, y, sample_weights, classes, sample_weights_flag,
@@ -267,12 +274,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
         y_i = classes[[i]]
         mask = y == y_i
 
-        n_i =
-          if sample_weights_flag do
-            Nx.sum(mask * sample_weights)
-          else
-            Nx.sum(mask)
-          end
+        n_i = if sample_weights_flag, do: Nx.sum(mask * sample_weights), else: Nx.sum(mask)
 
         {new_mu, new_var, new_n} =
           update_mean_variance_init(
@@ -308,10 +310,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
     final_var = final_var + eps
 
     class_priors =
-      case priors_flag do
-        false -> final_class_count / Nx.sum(final_class_count)
-        _ -> class_priors
-      end
+      if priors_flag, do: class_priors, else: final_class_count / Nx.sum(final_class_count)
 
     %__MODULE__{
       theta: final_theta,
@@ -326,22 +325,21 @@ defmodule Scholar.NaiveBayes.Gaussian do
   defnp update_mean_variance_init(mu, var, x, sample_weights, mask, sample_weights_flag) do
     {num_samples, _num_features} = Nx.shape(x)
 
-    if num_samples == 0 do
-      {mu, var, 0}
-    else
-      case sample_weights_flag do
-        false ->
-          new_n = num_samples
-          new_mu = mean_masked(x, mask)
-          new_var = mean_masked((x - new_mu) ** 2, mask)
-          {new_mu, new_var, new_n}
+    cond do
+      num_samples == 0 ->
+        {mu, var, 0}
 
-        _ ->
-          new_n = Nx.sum(sample_weights * mask)
-          new_mu = mean_weighted_masked(x, mask, sample_weights)
-          new_var = mean_weighted_masked((x - new_mu) ** 2, mask, sample_weights)
-          {new_mu, new_var, new_n}
-      end
+      sample_weights_flag == false ->
+        new_n = num_samples
+        new_mu = mean_masked(x, mask)
+        new_var = mean_masked((x - new_mu) ** 2, mask)
+        {new_mu, new_var, new_n}
+
+      true ->
+        new_n = Nx.sum(sample_weights * mask)
+        new_mu = mean_weighted_masked(x, mask, sample_weights)
+        new_var = mean_weighted_masked((x - new_mu) ** 2, mask, sample_weights)
+        {new_mu, new_var, new_n}
     end
   end
 
