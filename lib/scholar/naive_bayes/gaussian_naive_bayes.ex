@@ -7,6 +7,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
   @derive {Nx.Container,
            containers: [:theta, :var, :class_count, :class_priors, :classes, :epsilon]}
   defstruct [:theta, :var, :class_count, :class_priors, :classes, :epsilon]
+  @pi :math.pi()
 
   opts_schema = [
     var_smoothing: [
@@ -143,8 +144,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
     opts =
       [
-        sample_weights_flag: if(opts[:sample_weights] != nil, do: true, else: false),
-        priors_flag: if(opts[:priors] != nil, do: true, else: false)
+        sample_weights_flag: opts[:sample_weights] != nil,
+        priors_flag: opts[:priors] != nil
       ] ++
         opts
 
@@ -225,7 +226,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
       |> Nx.exp()
       |> Nx.sum(axes: [1])
       |> Nx.log()
-      |> Nx.reshape({:auto, 1})
+      |> Nx.new_axis(1)
       |> Nx.broadcast(Nx.shape(jll))
 
     jll - log_proba_x
@@ -381,38 +382,37 @@ defmodule Scholar.NaiveBayes.Gaussian do
           %__MODULE__{class_priors: class_priors, var: var, theta: theta},
           x
         ) do
-    pi = 3.14159265359
     joint = Nx.log(class_priors)
     {num_classes, num_features} = Nx.shape(theta)
-    {samples_x, _features_x} = Nx.shape(x)
+    {samples_x, _} = Nx.shape(x)
 
     n1 =
-      (-0.5 * Nx.sum(Nx.log(2.0 * pi * var), axes: [1]))
-      |> Nx.reshape({:auto, 1})
+      (-0.5 * Nx.sum(Nx.log(2.0 * @pi * var), axes: [1]))
+      |> Nx.new_axis(1)
       |> Nx.broadcast({num_classes, samples_x})
 
     x_broadcast =
-      Nx.reshape(x, {1, samples_x, num_features})
+      Nx.new_axis(x, 0)
       |> Nx.broadcast({num_classes, samples_x, num_features})
 
     theta_broadcast =
-      Nx.reshape(theta, {num_classes, 1, num_features})
+      Nx.new_axis(theta, 1)
       |> Nx.broadcast({num_classes, samples_x, num_features})
 
     var_broadcast =
-      Nx.reshape(var, {num_classes, 1, num_features})
+      Nx.new_axis(var, 1)
       |> Nx.broadcast({num_classes, samples_x, num_features})
 
     n2 = -0.5 * Nx.sum((x_broadcast - theta_broadcast) ** 2 / var_broadcast, axes: [2])
 
-    (n1 + n2) |> Nx.transpose() |> Nx.add(joint)
+    Nx.transpose(n1 + n2) + joint
   end
 
   defnp mean_masked(t, mask) do
     {num_samples, num_features} = Nx.shape(t)
 
     broadcast_mask =
-      mask |> Nx.reshape({num_samples, 1}) |> Nx.broadcast({num_samples, num_features})
+      mask |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
 
     Nx.sum(t * broadcast_mask, axes: [0]) / Nx.sum(broadcast_mask, axes: [0])
   end
@@ -421,10 +421,10 @@ defmodule Scholar.NaiveBayes.Gaussian do
     {num_samples, num_features} = Nx.shape(t)
 
     broadcast_mask =
-      mask |> Nx.reshape({num_samples, 1}) |> Nx.broadcast({num_samples, num_features})
+      mask |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
 
     broadcast_weights =
-      weights |> Nx.reshape({num_samples, 1}) |> Nx.broadcast({num_samples, num_features})
+      weights |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
 
     Nx.sum(t * broadcast_mask * broadcast_weights, axes: [0]) /
       Nx.sum(broadcast_mask * broadcast_weights, axes: [0])
