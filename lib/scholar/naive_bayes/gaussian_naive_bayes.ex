@@ -411,8 +411,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
   defnp mean_masked(t, mask) do
     {num_samples, num_features} = Nx.shape(t)
 
-    broadcast_mask =
-      mask |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
+    broadcast_mask = mask |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
 
     Nx.sum(t * broadcast_mask, axes: [0]) / Nx.sum(broadcast_mask, axes: [0])
   end
@@ -420,11 +419,9 @@ defmodule Scholar.NaiveBayes.Gaussian do
   defnp mean_weighted_masked(t, mask, weights) do
     {num_samples, num_features} = Nx.shape(t)
 
-    broadcast_mask =
-      mask |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
+    broadcast_mask = mask |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
 
-    broadcast_weights =
-      weights |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
+    broadcast_weights = weights |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
 
     Nx.sum(t * broadcast_mask * broadcast_weights, axes: [0]) /
       Nx.sum(broadcast_mask * broadcast_weights, axes: [0])
