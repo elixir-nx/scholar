@@ -1,6 +1,17 @@
 defmodule Scholar.NaiveBayes.Gaussian do
-  @moduledoc """
+  @moduledoc ~S"""
   Gaussian Naive Bayes.
+
+  Gaussian implements the Gaussian Naive Bayes algorithm for classification.
+  The likelihood of the features is assumed to be Gaussian:
+  $$ P(x\_{i} | y) = \frac{1}{\sqrt{2\pi\sigma\_{y}^{2}}} \exp \left(-\frac{(x\_{i} - \mu\_{y})^2}{2\sigma\_{y}^{2}}\right) $$
+
+  The parameters $\sigma\_{y}$ and $\mu\_{y}$ are estimated using maximum likelihood.
+
+  For details on algorithm used to update feature means and variance online,
+  see Stanford CS tech report STAN-CS-79-773 by Chan, Golub, and LeVeque:
+
+    http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
   """
   import Nx.Defn
 
@@ -47,11 +58,6 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
   @doc """
   Gaussian Naive Bayes.
-
-  For details on algorithm used to update feature means and variance online,
-  see Stanford CS tech report STAN-CS-79-773 by Chan, Golub, and LeVeque:
-
-    http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
 
   ## Options
 
@@ -129,9 +135,14 @@ defmodule Scholar.NaiveBayes.Gaussian do
     input_rank = Nx.rank(x)
     targets_rank = Nx.rank(y)
 
-    if input_rank != 2 or targets_rank != 1 do
+    if input_rank != 2 do
       raise ArgumentError,
-            "wrong input rank. Expected x to be rank 2 and y to be rank 1, got: #{input_rank} for x and #{targets_rank} for y"
+            "wrong input rank. Expected x to be rank 2 got: #{input_rank}"
+    end
+
+    if targets_rank != 1 do
+      raise ArgumentError,
+            "wrong target rank. Expected target to be rank 1 got: #{targets_rank}"
     end
 
     {num_samples, _} = Nx.shape(x)
