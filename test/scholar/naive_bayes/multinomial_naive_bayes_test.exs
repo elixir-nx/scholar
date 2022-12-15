@@ -380,7 +380,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
     test "wrong alpha size" do
       assert_raise ArgumentError,
-                   "When alpha is a list it should contain num_features values.",
+                   "when alpha is a list it should contain num_features values",
                    fn ->
                      Scholar.NaiveBayes.Multinomial.fit(
                        Nx.tensor([[1, 2, 5, 8], [2, 5, 7, 3]]),
