@@ -65,7 +65,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
   ## Returns
 
-    The function returns a struct with the following parameters:
+  The function returns a struct with the following parameters:
 
     * `:theta` - mean of each feature per class.
 
