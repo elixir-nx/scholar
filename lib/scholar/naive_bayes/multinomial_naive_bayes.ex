@@ -27,8 +27,8 @@ defmodule Scholar.NaiveBayes.Multinomial do
       type: :boolean,
       default: true,
       doc: ~S"""
-      If False and alpha is less than 1e-10, it will set alpha to
-      1e-10. If True, alpha will remain unchanged. This may cause
+      If `false` and alpha is less than 1e-10, it will set alpha to
+      1e-10. If `true`, alpha will remain unchanged. This may cause
       numerical errors if alpha is too close to 0.
       """
     ],
@@ -37,7 +37,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
       default: true,
       doc: ~S"""
       Whether to learn class prior probabilities or not.
-      If false, a uniform prior will be used.
+      If `false`, a uniform prior will be used.
       """
     ],
     priors: [
@@ -75,7 +75,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
 
   ## Returns
 
-    The function returns a struct with the following parameters:
+  The function returns a struct with the following parameters:
 
     * `:feature_log_probability` - Empirical log probability of features
         given a class, ``P(x_i|y)``.
