@@ -252,7 +252,9 @@ defmodule Scholar.NaiveBayes.Multinomial do
 
   @doc """
   Return joint log probability estimates for the test vector `x` using `model`.
+
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> model = Scholar.NaiveBayes.Multinomial.fit(x, y, num_classes: 3)
