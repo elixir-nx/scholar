@@ -143,9 +143,14 @@ defmodule Scholar.NaiveBayes.Multinomial do
     input_rank = Nx.rank(x)
     targets_rank = Nx.rank(y)
 
-    if input_rank != 2 or targets_rank != 1 do
+    if input_rank != 2 do
       raise ArgumentError,
-            "wrong input rank. Expected x to be rank 2 and y to be rank 1, got: #{input_rank} for x and #{targets_rank} for y"
+            "wrong input rank. Expected x to be rank 2 got: #{input_rank}"
+    end
+
+    if targets_rank != 1 do
+      raise ArgumentError,
+            "wrong target rank. Expected target to be rank 1 got: #{targets_rank}"
     end
 
     {num_samples, _} = Nx.shape(x)
@@ -158,8 +163,8 @@ defmodule Scholar.NaiveBayes.Multinomial do
 
     opts =
       [
-        sample_weights_flag: if(opts[:sample_weights] != nil, do: true, else: false),
-        priors_flag: if(opts[:priors] != nil, do: true, else: false)
+        sample_weights_flag: opts[:sample_weights] != nil,
+        priors_flag: opts[:priors] != nil
       ] ++ opts
 
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
