@@ -201,11 +201,23 @@ defmodule Scholar.NaiveBayes.GaussianTest do
   describe "errors" do
     test "wrong input rank" do
       assert_raise ArgumentError,
-                   "wrong input rank. Expected x to be rank 2 and y to be rank 1, got: 1 for x and 1 for y",
+                   "wrong input rank. Expected x to be rank 2 got: 1",
                    fn ->
                      Scholar.NaiveBayes.Gaussian.fit(
                        Nx.tensor([1, 2, 5, 8]),
                        Nx.tensor([1, 2, 3, 4]),
+                       num_classes: 4
+                     )
+                   end
+    end
+
+    test "wrong target rank" do
+      assert_raise ArgumentError,
+                   "wrong target rank. Expected target to be rank 1 got: 2",
+                   fn ->
+                     Scholar.NaiveBayes.Gaussian.fit(
+                       Nx.tensor([[1, 2, 5, 8]]),
+                       Nx.tensor([[1, 2, 3, 4]]),
                        num_classes: 4
                      )
                    end
