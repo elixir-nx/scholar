@@ -141,27 +141,6 @@ defmodule Scholar.NaiveBayes.Multinomial do
   deftransform fit(x, y, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
-    input_rank = Nx.rank(x)
-    targets_rank = Nx.rank(y)
-
-    if input_rank != 2 do
-      raise ArgumentError,
-            "wrong input rank. Expected x to be rank 2 got: #{input_rank}"
-    end
-
-    if targets_rank != 1 do
-      raise ArgumentError,
-            "wrong target rank. Expected target to be rank 1 got: #{targets_rank}"
-    end
-
-    {num_samples, _} = Nx.shape(x)
-    {num_targets} = Nx.shape(y)
-
-    if num_samples != num_targets do
-      raise ArgumentError,
-            "wrong input shape. Expected x to have the same first dimension as y, got: #{num_samples} for x and #{num_targets} for y"
-    end
-
     opts =
       [
         sample_weights_flag: opts[:sample_weights] != nil,
@@ -273,6 +252,27 @@ defmodule Scholar.NaiveBayes.Multinomial do
   end
 
   defnp fit_n(x, y, sample_weights, class_priors, opts \\ []) do
+    input_rank = Nx.rank(x)
+    targets_rank = Nx.rank(y)
+
+    if input_rank != 2 do
+      raise ArgumentError,
+            "wrong input rank. Expected x to be rank 2 got: #{input_rank}"
+    end
+
+    if targets_rank != 1 do
+      raise ArgumentError,
+            "wrong target rank. Expected target to be rank 1 got: #{targets_rank}"
+    end
+
+    {num_samples, _} = Nx.shape(x)
+    {num_targets} = Nx.shape(y)
+
+    if num_samples != num_targets do
+      raise ArgumentError,
+            "wrong input shape. Expected x to have the same first dimension as y, got: #{num_samples} for x and #{num_targets} for y"
+    end
+
     num_classes = opts[:num_classes]
     {num_samples, num_features} = Nx.shape(x)
 
