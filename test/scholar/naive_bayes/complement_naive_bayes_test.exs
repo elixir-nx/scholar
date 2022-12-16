@@ -320,6 +320,69 @@ defmodule Scholar.NaiveBayes.ComplementTest do
     assert model.feature_all == Nx.tensor([270.0, 288.5, 307.0, 325.5, 344.0, 362.5])
   end
 
+  test "fit test - :norm set to true" do
+    x = Nx.iota({5, 6})
+    y = Nx.tensor([1, 2, 0, 3, 1])
+
+    model = Scholar.NaiveBayes.Complement.fit(x, y, num_classes: 4, norm: true)
+
+    assert model.feature_count ==
+             Nx.tensor([
+               [12.0, 13.0, 14.0, 15.0, 16.0, 17.0],
+               [24.0, 26.0, 28.0, 30.0, 32.0, 34.0],
+               [6.0, 7.0, 8.0, 9.0, 10.0, 11.0],
+               [18.0, 19.0, 20.0, 21.0, 22.0, 23.0]
+             ])
+
+    assert model.feature_log_probability ==
+             Nx.tensor([
+               [
+                 0.1832481473684311,
+                 0.17597636580467224,
+                 0.16923391819000244,
+                 0.16294896602630615,
+                 0.1570633351802826,
+                 0.15152929723262787
+               ],
+               [
+                 0.1831497997045517,
+                 0.17592497169971466,
+                 0.169222891330719,
+                 0.16297300159931183,
+                 0.15711811184883118,
+                 0.15161125361919403
+               ],
+               [
+                 0.18164047598838806,
+                 0.1751304417848587,
+                 0.16904762387275696,
+                 0.16333936154842377,
+                 0.15796221792697906,
+                 0.15287986397743225
+               ],
+               [
+                 0.185244619846344,
+                 0.17700961232185364,
+                 0.1694476306438446,
+                 0.1624569147825241,
+                 0.1559572070837021,
+                 0.14988401532173157
+               ]
+             ])
+
+    assert model.class_log_priors ==
+             Nx.tensor([
+               -1.6094379425048828,
+               -0.9162907600402832,
+               -1.6094379425048828,
+               -1.6094379425048828
+             ])
+
+    assert model.classes == Nx.tensor([0, 1, 2, 3])
+    assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
+    assert model.feature_all == Nx.tensor([60.0, 65.0, 70.0, 75.0, 80.0, 85.0])
+  end
+
   describe "errors" do
     test "wrong input rank" do
       assert_raise ArgumentError,
