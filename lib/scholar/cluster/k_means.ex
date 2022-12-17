@@ -119,8 +119,8 @@ defmodule Scholar.Cluster.KMeans do
     tol = (x |> Nx.variance(axes: [0]) |> Nx.mean()) * opts[:tol]
 
     {i, _, _, _, _, _, _, _, final_centroids, nearest_centroids} =
-      while {i = 0, tol, x, _previous_iteration_centroids = Nx.broadcast(inf, centroids), distance,
-             weights, broadcast_weights, broadcast_x, centroids,
+      while {i = 0, tol, x, _previous_iteration_centroids = Nx.broadcast(inf, centroids),
+             distance, weights, broadcast_weights, broadcast_x, centroids,
              _nearest_centroids = Nx.broadcast(-1, {num_runs, num_samples})},
             i < opts[:max_iterations] and
               Nx.all(distance > tol) do

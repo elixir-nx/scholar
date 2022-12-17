@@ -106,7 +106,11 @@ defmodule Scholar.Linear.LogisticRegression do
         {iter + 1, x, learning_rate, n, iterations, one_hot, x_t, coeff}
       end
 
-    %__MODULE__{coefficients: final_coeff, bias: Nx.tensor(0, type: Nx.type(x)), mode: :multinomial}
+    %__MODULE__{
+      coefficients: final_coeff,
+      bias: Nx.tensor(0, type: Nx.type(x)),
+      mode: :multinomial
+    }
   end
 
   # Normalized softmax
