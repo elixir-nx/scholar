@@ -3,7 +3,7 @@
 ```elixir
 Mix.install(
   [
-    {:scholar, path: "/home/mateusz/Dashbit/scholar"},
+    {:scholar, github: "elixir-nx/scholar"},
     {:exla, "~> 0.4.1"},
     {:explorer, "~> 0.4"},
     {:stb_image, "~> 0.6"},
