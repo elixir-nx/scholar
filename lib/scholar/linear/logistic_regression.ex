@@ -75,11 +75,11 @@ defmodule Scholar.Linear.LogisticRegression do
     y_t = Nx.transpose(y)
 
     {_m, n} = Nx.shape(x)
-    coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n})
+    coeff = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {n})
 
     {_, _, _, _, _, _, final_coeff, final_bias} =
       while {iter = 0, x, learning_rate, iterations, x_t, y_t, coeff,
-             bias = Nx.tensor(0, type: {:f, 32})},
+             bias = Nx.tensor(0, type: Nx.type(x))},
             Nx.less(iter, iterations) do
         {coeff, bias} = update_coefficients(x, x_t, y_t, {coeff, bias}, learning_rate)
         {iter + 1, x, learning_rate, iterations, x_t, y_t, coeff, bias}
@@ -100,13 +100,13 @@ defmodule Scholar.Linear.LogisticRegression do
 
     {_, _, _, _, _, _, _, final_coeff} =
       while {iter = 0, x, learning_rate, n, iterations, one_hot, x_t,
-             coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n, num_classes})},
+             coeff = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {n, num_classes})},
             iter < iterations do
         coeff = update_coefficients_multinomial(x, x_t, one_hot, coeff, learning_rate)
         {iter + 1, x, learning_rate, n, iterations, one_hot, x_t, coeff}
       end
 
-    %__MODULE__{coefficients: final_coeff, bias: Nx.tensor(0, type: {:f, 32}), mode: :multinomial}
+    %__MODULE__{coefficients: final_coeff, bias: Nx.tensor(0, type: Nx.type(x)), mode: :multinomial}
   end
 
   # Normalized softmax

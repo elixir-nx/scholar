@@ -3,19 +3,15 @@
 ```elixir
 Mix.install(
   [
-    {:scholar, github: "elixir-nx/scholar"},
-    {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
-    {:exla, github: "elixir-nx/nx", sparse: "exla"},
-    {:explorer, "~> 0.2.0"},
-    {:stb_image, "~> 0.5.2"},
+    {:scholar, path: "/home/mateusz/Dashbit/scholar"},
+    {:exla, "~> 0.4.1"},
+    {:explorer, "~> 0.4"},
+    {:stb_image, "~> 0.6"},
     {:scidata, "~> 0.1.9"},
-    {:jason, "~> 1.2"},
-    {:req, "~> 0.3.0"},
-    {:kino, github: "livebook-dev/kino", override: true},
+    {:req, "~> 0.3.3"},
+    {:kino, "~> 0.8.0"},
     {:vega_lite, "~> 0.1.6"},
-    {:kino_vega_lite, "~> 0.1.3"},
-    # TODO remove following after new release of finch
-    {:nimble_options, "~> 0.5.0", override: true}
+    {:kino_vega_lite, "~> 0.1.7"}
   ],
   config: [
     nx: [default_defn_options: [compiler: EXLA]]
@@ -29,6 +25,7 @@ The main purpose of this livebook is to introduce the KMeans clustering algorith
 
 ```elixir
 alias VegaLite, as: Vl
+require Explorer.DataFrame
 ```
 
 <!-- livebook:{"branch_parent_index":0} -->
@@ -67,7 +64,7 @@ y = Iris.Data.df_to_label_vector(df, "species")
 
 x =
   df
-  |> Explorer.DataFrame.select(["species"], :drop)
+  |> Explorer.DataFrame.discard(["species"])
   |> Iris.Data.df_to_matrix()
 ```
 
@@ -82,14 +79,14 @@ There is an important part of Data Science workflow is called **Exploratory Data
 iWe start our EDA by finding the mean values of each feature by species.
 
 ```elixir
-grouped_data = Explorer.DataFrame.group_by(df, ["species"])
+grouped_data = Explorer.DataFrame.group_by(df, "species")
 
 grouped_data
 |> Explorer.DataFrame.summarise(
-  petal_length: [:mean],
-  petal_width: [:mean],
-  sepal_width: [:mean],
-  sepal_length: [:mean]
+  petal_length: mean(petal_length),
+  petal_width: mean(petal_width),
+  sepal_width: mean(sepal_width),
+  sepal_length: mean(sepal_length)
 )
 ```
 

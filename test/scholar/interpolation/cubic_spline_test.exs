@@ -48,7 +48,7 @@ defmodule Scholar.Interpolation.CubicSplineTest do
       assert_raise ArgumentError,
                    "expected x to be a tensor with shape {n}, where n > 2, got: {}",
                    fn ->
-                     CubicSpline.fit(Nx.iota(1), Nx.iota(1))
+                     CubicSpline.fit(Nx.iota({}), Nx.iota({}))
                    end
 
       assert_raise ArgumentError,
@@ -185,7 +185,7 @@ defmodule Scholar.Interpolation.CubicSplineTest do
                  [0.0, 0.0, 1.0, 1.0]
                ])
 
-      for shape <- [1, {2}, {3, 4}, {5, 6, 7}] do
+      for shape <- [{}, {2}, {3, 4}, {5, 6, 7}] do
         target_x = Nx.iota(shape, type: :f32)
         # a straight line will output the input
         assert CubicSpline.predict(model, target_x) == target_x

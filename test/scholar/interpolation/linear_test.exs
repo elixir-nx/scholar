@@ -28,7 +28,7 @@ defmodule Scholar.Interpolation.LinearTest do
       assert_raise ArgumentError,
                    "expected x to be a tensor with shape {n}, where n > 1, got: {}",
                    fn ->
-                     Linear.fit(Nx.iota(1), Nx.iota(1))
+                     Linear.fit(Nx.iota({}), Nx.iota({}))
                    end
 
       assert_raise ArgumentError,

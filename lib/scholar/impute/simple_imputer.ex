@@ -165,7 +165,7 @@ defmodule Scholar.Impute.SimpleImputer do
 
     {num_rows, num_cols} = Nx.shape(x)
     x = Nx.sort(x, axis: axis)
-    tensor = Nx.iota(x, axis: axis) + Nx.is_nan(x) * num_rows
+    tensor = Nx.iota(Nx.shape(x), axis: axis) + Nx.is_nan(x) * num_rows
     res = Nx.argsort(tensor, axis: axis)
     x = Nx.take_along_axis(x, res, axis: axis)
 
@@ -186,7 +186,7 @@ defmodule Scholar.Impute.SimpleImputer do
 
     axis_length = Nx.axis_size(x, axis)
     x = Nx.sort(x, axis: 0)
-    tensor = Nx.iota(x, axis: axis) + Nx.is_nan(x) * axis_length
+    tensor = Nx.iota(Nx.shape(x), axis: axis) + Nx.is_nan(x) * axis_length
     res = Nx.argsort(tensor, axis: axis)
     sorted = Nx.take_along_axis(x, res, axis: axis)
 
@@ -210,7 +210,7 @@ defmodule Scholar.Impute.SimpleImputer do
     counting_indices =
       [
         Nx.reshape(group_indices, {num_elements, 1}),
-        group_indices
+        Nx.shape(group_indices)
         |> Nx.iota(axis: 1)
         |> Nx.reshape({num_elements, 1})
       ]

@@ -45,7 +45,7 @@ defmodule Scholar.Interpolation.BezierSplineTest do
       assert_raise ArgumentError,
                    "expected x to be a tensor with shape {n}, where n > 2, got: {}",
                    fn ->
-                     BezierSpline.fit(Nx.iota(1), Nx.iota(1))
+                     BezierSpline.fit(Nx.iota({}), Nx.iota({}))
                    end
 
       assert_raise ArgumentError,
