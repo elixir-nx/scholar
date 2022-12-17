@@ -171,7 +171,7 @@ defmodule Scholar.Interpolation.BezierSpline do
     max_iter = opts[:max_iter]
 
     {_upd_mask, t_min, t_max, t, value, _x_poly, _eps, _coef_poly, _i} =
-      while {update_mask = Nx.broadcast(1, t), t_min, t_max, t, value = x_poly, x_poly, eps,
+      while {update_mask = Nx.broadcast(1, t), t_min, t_max, t, _value = x_poly, x_poly, eps,
              coef_poly, i = 0},
             i < max_iter and Nx.any(update_mask) do
         # if update_mask[i] = 1, we update the entry, otherwise, we keep it

@@ -30,7 +30,7 @@ end
 # Pima Indians Diabetes Data
 data = Explorer.DataFrame.from_csv!("test/data/pima.csv", header: false)
 
-x = Explorer.DataFrame.select(data, [-1], :drop)
+x = Explorer.DataFrame.discard(data, [-1])
 y = Explorer.DataFrame.select(data, [-1])
 
 x_train = Explorer.DataFrame.slice(x, 0, 500)
@@ -47,7 +47,7 @@ df = Explorer.Datasets.iris()
 train_ids = for n <- 0..149, rem(n, 5) != 0, do: n
 test_ids = for n <- 0..149, rem(n, 5) == 0, do: n
 
-x = Explorer.DataFrame.select(df, ["species"], :drop)
+x = Explorer.DataFrame.discard(df, ["species"])
 y = Explorer.DataFrame.select(df, ["species"]) |> Explorer.DataFrame.dummies(["species"])
 
 x_train = Explorer.DataFrame.slice(x, train_ids)
