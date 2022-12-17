@@ -146,8 +146,8 @@ defmodule Scholar.Cluster.KMeans do
             axes: [1, 2]
           )
 
-        {i + 1, tol, x, distance, weights, broadcast_weights,
-         broadcast_x, centroids, nearest_centroids}
+        {i + 1, tol, x, distance, weights, broadcast_weights, broadcast_x, centroids,
+         nearest_centroids}
       end
 
     {_inertia_for_centroids, min_inertia} =
