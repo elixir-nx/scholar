@@ -78,7 +78,7 @@ defmodule Scholar.Linear.LinearRegression do
   end
 
   # Implements ordinary least-squares by estimating the
-  # solution A to the equation A.X = b.
+  # solution A to the equation A.X = y.
   defnp lstsq(x, y) do
     {m, n} = Nx.shape(x)
     rcond = @eps * Nx.max(m, n)
@@ -95,12 +95,11 @@ defmodule Scholar.Linear.LinearRegression do
     u = u[[0..-1//1, 0..(min - 1)]]
     mask = s > rcond * Nx.reduce_max(s)
     safe_s = Nx.select(mask, s, 1)
-    print_value(safe_s)
 
     s_inv = Nx.new_axis(Nx.select(mask, 1 / safe_s, 0), -1)
 
-    utb = Nx.dot(Nx.transpose(u), y)
-    coeffs = Nx.dot(Nx.transpose(vt), s_inv * utb)
+    utb = Nx.dot(Nx.LinAlg.adjoint(u), y)
+    coeffs = Nx.dot(Nx.LinAlg.adjoint(vt), s_inv * utb)
     if y_rank == 1, do: Nx.flatten(coeffs), else: coeffs
   end
 
@@ -110,14 +109,14 @@ defmodule Scholar.Linear.LinearRegression do
         do: Nx.weighted_mean(x, sample_weights, axis: 0),
         else: Nx.mean(x, axes: [0])
 
-    x = Nx.subtract(x, x_offset)
+    x = x - x_offset
 
     y_offset =
       if opts[:sample_weights_flag],
         do: Nx.weighted_mean(y, sample_weights, axis: 0),
         else: Nx.mean(y, axes: [0])
 
-    y = Nx.subtract(y, y_offset)
+    y = y - y_offset
     {x, y}
   end
 end
