@@ -30,12 +30,17 @@ defmodule Scholar.Metrics.ClusteringTest do
 
   @y_one Nx.tensor([2, 2, 2, 2, 0, 2, 1, 3, 2, 2, 2, 2, 2, 1, 4, 0, 1, 2, 1, 2])
 
+  @true_val Nx.tensor(1, type: {:u, 8})
+
   test "silhouette_score test" do
-    assert Clustering.silhouette_score(@x, @y, num_clusters: 3) == Nx.tensor(-0.17424359382143964)
+    expected = Nx.tensor(-0.17424359382143964)
+
+    assert Nx.all_close(Clustering.silhouette_score(@x, @y, num_clusters: 3), expected) ==
+             @true_val
   end
 
   test "silhouette_samples test" do
-    res =
+    expected =
       Nx.tensor([
         -0.2700417935848236,
         0.014513458125293255,
@@ -59,16 +64,19 @@ defmodule Scholar.Metrics.ClusteringTest do
         -0.5314690470695496
       ])
 
-    assert Clustering.silhouette_samples(@x, @y, num_clusters: 3) == res
+    assert Nx.all_close(Clustering.silhouette_samples(@x, @y, num_clusters: 3), expected) ==
+             @true_val
   end
 
   test "silhouette_score test with one-element clusters" do
-    assert Clustering.silhouette_score(@x, @y_one, num_clusters: 5) ==
-             Nx.tensor(-0.298110549250206)
+    expected = Nx.tensor(-0.298110549250206)
+
+    assert Nx.all_close(Clustering.silhouette_score(@x, @y_one, num_clusters: 5), expected) ==
+             @true_val
   end
 
   test "silhouette_samples test with one-element clusters" do
-    res =
+    expected =
       Nx.tensor([
         -0.4016384184360504,
         -0.05811696499586105,
@@ -92,6 +100,7 @@ defmodule Scholar.Metrics.ClusteringTest do
         -0.5314690470695496
       ])
 
-    assert Clustering.silhouette_samples(@x, @y_one, num_clusters: 5) == res
+    assert Nx.all_close(Clustering.silhouette_samples(@x, @y_one, num_clusters: 5), expected) ==
+             @true_val
   end
 end

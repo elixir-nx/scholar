@@ -4,25 +4,7 @@ defmodule Scholar.Decomposition.PCATest do
   @x Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
   @x2 Nx.tensor([[1, 4], [54, 6], [26, 7]])
   @x3 Nx.tensor([[-1, -1, 3], [-2, -1, 2], [-3, -2, 1], [3, 1, 1], [21, 2, 1], [5, 3, 2]])
-
-  def assert_all_close(left, right, opts \\ []) do
-    atol = opts[:atol] || 1.0e-7
-    rtol = opts[:rtol] || 1.0e-7
-
-    equals =
-      left
-      |> Nx.all_close(right, atol: atol, rtol: rtol)
-      |> Nx.backend_transfer(Nx.BinaryBackend)
-
-    if equals != Nx.tensor(1, type: {:u, 8}, backend: Nx.BinaryBackend) do
-      flunk("""
-      expected
-      #{inspect(left)}
-      to be within tolerance of
-      #{inspect(right)}
-      """)
-    end
-  end
+  @true_val Nx.tensor(1, type: {:u, 8})
 
   test "fit test - all default options" do
     model = Scholar.Decomposition.PCA.fit(@x)
@@ -111,30 +93,30 @@ defmodule Scholar.Decomposition.PCATest do
   test "fit_transform test - :whiten set to false" do
     model = Scholar.Decomposition.PCA.fit(@x)
 
-    assert_all_close(
+    assert Nx.all_close(
       Scholar.Decomposition.PCA.transform(model, @x),
       Scholar.Decomposition.PCA.fit_transform(@x)
-    )
+    ) == @true_val
   end
 
   test "fit_transform test - :whiten set to false and and num components different than min(num_samples, num_components)" do
     model = Scholar.Decomposition.PCA.fit(@x3, num_components: 2)
 
-    assert_all_close(
+    assert Nx.all_close(
       Scholar.Decomposition.PCA.transform(model, @x3),
       Scholar.Decomposition.PCA.fit_transform(@x3, num_components: 2),
       atol: 1.0e-6,
       rtol: 1.0e-6
-    )
+    ) == @true_val
   end
 
   test "fit_transform test - :whiten set to true" do
     model = Scholar.Decomposition.PCA.fit(@x)
 
-    assert_all_close(
+    assert Nx.all_close(
       Scholar.Decomposition.PCA.transform(model, @x, whiten: true),
       Scholar.Decomposition.PCA.fit_transform(@x, whiten: true)
-    )
+    ) == @true_val
   end
 
   describe "errors" do

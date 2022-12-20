@@ -4,6 +4,8 @@ defmodule Scholar.PreprocessingTest do
   alias Scholar.Preprocessing
   doctest Preprocessing
 
+  @true_val Nx.tensor(1, type: {:u, 8})
+
   describe "standard_scaler/1" do
     test "applies standard scaling to data" do
       data = Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]])
@@ -15,13 +17,13 @@ defmodule Scholar.PreprocessingTest do
           [-0.4170288145542145, 0.5212860703468323, -1.3553436994552612]
         ])
 
-      assert expected == Preprocessing.standard_scale(data)
+      assert Nx.all_close(Preprocessing.standard_scale(data), expected) == @true_val
     end
 
     test "leaves data as it is when variance is zero" do
       data = 42.0
       expected = Nx.tensor(data)
-      assert expected == Preprocessing.standard_scale(data)
+      assert Preprocessing.standard_scale(data) == expected
     end
   end
 end
