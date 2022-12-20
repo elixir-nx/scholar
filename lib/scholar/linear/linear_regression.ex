@@ -72,7 +72,7 @@ defmodule Scholar.Linear.LinearRegression do
       end
 
     scale = Nx.sqrt(sample_weights)
-    scale = Nx.broadcast(0.0, {n, n}) |> Nx.put_diagonal(scale)
+    scale = Nx.make_diagonal(scale)
 
     {Nx.dot(scale, x), Nx.dot(scale, y)}
   end
