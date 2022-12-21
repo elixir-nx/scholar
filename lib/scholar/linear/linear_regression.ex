@@ -16,10 +16,10 @@ defmodule Scholar.Linear.LinearRegression do
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
-  Fits a linear regression model for sample inputs `x` and
-  sample targets `y`.
+  Fits a linear regression model for sample inputs `a` and
+  sample targets `b`.
   """
-  deftransform fit(x, y, opts \\ []) do
+  deftransform fit(a, b, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     opts =
@@ -31,20 +31,20 @@ defmodule Scholar.Linear.LinearRegression do
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     sample_weights = Nx.tensor(sample_weights)
 
-    fit_n(x, y, sample_weights, opts)
+    fit_n(a, b, sample_weights, opts)
   end
 
-  defnp fit_n(x, y, sample_weights, opts \\ []) do
-    {x, y} = preprocess_data(x, y, sample_weights, opts)
+  defnp fit_n(a, b, sample_weights, opts \\ []) do
+    {a, b} = preprocess_data(a, b, sample_weights, opts)
 
-    {x, y} =
+    {a, b} =
       if opts[:sample_weights_flag] do
-        rescale(x, y, sample_weights)
+        rescale(a, b, sample_weights)
       else
-        {x, y}
+        {a, b}
       end
 
-    coeff = lstsq(x, y)
+    coeff = lstsq(a, b)
     %__MODULE__{coefficients: Nx.transpose(coeff)}
   end
 
@@ -76,13 +76,10 @@ defmodule Scholar.Linear.LinearRegression do
   end
 
   # Implements ordinary least-squares by estimating the
-  # solution A to the equation A.X = y.
-  defnp lstsq(x, y) do
-    y_rank = Nx.rank(y)
-    y = if Nx.rank(y) == 1, do: Nx.new_axis(y, -1), else: y
-    pinv = Nx.LinAlg.pinv(x)
-    coeff = Nx.dot(pinv, y)
-    if y_rank == 1, do: Nx.flatten(coeff), else: coeff
+  # solution A to the equation A.X = b.
+  defnp lstsq(a, b) do
+    pinv = Nx.LinAlg.pinv(a)
+    Nx.dot(pinv, b)
   end
 
   defnp preprocess_data(x, y, sample_weights, opts \\ []) do
