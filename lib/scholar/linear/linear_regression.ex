@@ -13,8 +13,6 @@ defmodule Scholar.Linear.LinearRegression do
     ]
   ]
 
-  @eps 1.1920929e-07
-
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
@@ -80,27 +78,11 @@ defmodule Scholar.Linear.LinearRegression do
   # Implements ordinary least-squares by estimating the
   # solution A to the equation A.X = y.
   defnp lstsq(x, y) do
-    {m, n} = Nx.shape(x)
-    rcond = @eps * Nx.max(m, n)
-
-    {u, s, vt} = Nx.LinAlg.svd(x)
-
     y_rank = Nx.rank(y)
     y = if Nx.rank(y) == 1, do: Nx.new_axis(y, -1), else: y
-
-    {u_rows, _u_cols} = Nx.shape(u)
-    {vt_rows, _vt_cols} = Nx.shape(vt)
-    min = Kernel.min(u_rows, vt_rows)
-    vt = vt[[0..(min - 1), 0..-1//1]]
-    u = u[[0..-1//1, 0..(min - 1)]]
-    mask = s > rcond * Nx.reduce_max(s)
-    safe_s = Nx.select(mask, s, 1)
-
-    s_inv = Nx.new_axis(Nx.select(mask, 1 / safe_s, 0), -1)
-
-    utb = Nx.dot(Nx.LinAlg.adjoint(u), y)
-    coeffs = Nx.dot(Nx.LinAlg.adjoint(vt), s_inv * utb)
-    if y_rank == 1, do: Nx.flatten(coeffs), else: coeffs
+    pinv = Nx.LinAlg.pinv(x)
+    coeff = Nx.dot(pinv, y)
+    if y_rank == 1, do: Nx.flatten(coeff), else: coeff
   end
 
   defnp preprocess_data(x, y, sample_weights, opts \\ []) do
