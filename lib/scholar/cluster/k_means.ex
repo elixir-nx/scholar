@@ -80,7 +80,7 @@ defmodule Scholar.Cluster.KMeans do
 
     * `:labels` - Labels of each point.
   """
-  deftransform train(x, opts \\ []) do
+  deftransform fit(x, opts \\ []) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             "expected input tensor to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
@@ -94,11 +94,10 @@ defmodule Scholar.Cluster.KMeans do
             "invalid value for :num_clusters option: expected positive integer between 1 and #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
     end
 
-    train_n(x, opts)
+    fit_n(x, opts)
   end
 
-  defnp train_n(x, opts \\ []) do
-    inf = Nx.Constants.infinity({:f, 32})
+  defnp fit_n(x, opts \\ []) do
     {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
     num_runs = opts[:num_runs]
@@ -115,13 +114,13 @@ defmodule Scholar.Cluster.KMeans do
       |> Nx.broadcast({num_runs, num_samples, num_features})
 
     centroids = initialize_centroids(x, opts)
+    inf = Nx.Constants.infinity(Nx.type(centroids))
     distance = Nx.broadcast(inf, {num_runs})
     tol = (x |> Nx.variance(axes: [0]) |> Nx.mean()) * opts[:tol]
 
-    {i, _, _, _, _, _, _, _, final_centroids, nearest_centroids} =
-      while {i = 0, tol, x, previous_iteration_centroids = Nx.broadcast(inf, centroids), distance,
-             weights, broadcast_weights, broadcast_x, centroids,
-             nearest_centroids = Nx.broadcast(-1, {num_runs, num_samples})},
+    {i, _, _, _, _, _, _, final_centroids, nearest_centroids} =
+      while {i = 0, tol, x, distance, weights, broadcast_weights, broadcast_x, centroids,
+             _nearest_centroids = Nx.broadcast(-1, {num_runs, num_samples})},
             i < opts[:max_iterations] and
               Nx.all(distance > tol) do
         previous_iteration_centroids = centroids
@@ -147,8 +146,8 @@ defmodule Scholar.Cluster.KMeans do
             axes: [1, 2]
           )
 
-        {i + 1, tol, x, previous_iteration_centroids, distance, weights, broadcast_weights,
-         broadcast_x, centroids, nearest_centroids}
+        {i + 1, tol, x, distance, weights, broadcast_weights, broadcast_x, centroids,
+         nearest_centroids}
       end
 
     {_inertia_for_centroids, min_inertia} =

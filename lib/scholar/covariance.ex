@@ -62,7 +62,6 @@ defmodule Scholar.Covariance do
       [-20.0, 2.0, 4.0]
     ]
   >
-
   """
   deftransform covariance_matrix(x, opts \\ []) do
     covariance_matrix_n(x, NimbleOptions.validate!(opts, @opts_schema))

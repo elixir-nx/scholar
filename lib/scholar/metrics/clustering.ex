@@ -83,7 +83,6 @@ defmodule Scholar.Metrics.Clustering do
         -0.35132789611816406
       >
   """
-
   deftransform silhouette_score(x, labels, opts \\ []) do
     silhouette_score_n(x, labels, NimbleOptions.validate!(opts, @opts_schema))
   end

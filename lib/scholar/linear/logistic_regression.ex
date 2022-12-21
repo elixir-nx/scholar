@@ -44,11 +44,11 @@ defmodule Scholar.Linear.LogisticRegression do
   #{NimbleOptions.docs(@opts_schema)}
 
   """
-  deftransform train(x, y, opts \\ []) do
-    train_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
+  deftransform fit(x, y, opts \\ []) do
+    fit_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp train_n(x, y, opts \\ []) do
+  defnp fit_n(x, y, opts \\ []) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
@@ -75,11 +75,11 @@ defmodule Scholar.Linear.LogisticRegression do
     y_t = Nx.transpose(y)
 
     {_m, n} = Nx.shape(x)
-    coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n})
+    coeff = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {n})
 
     {_, _, _, _, _, _, final_coeff, final_bias} =
       while {iter = 0, x, learning_rate, iterations, x_t, y_t, coeff,
-             bias = Nx.tensor(0, type: {:f, 32})},
+             bias = Nx.tensor(0, type: Nx.type(x))},
             Nx.less(iter, iterations) do
         {coeff, bias} = update_coefficients(x, x_t, y_t, {coeff, bias}, learning_rate)
         {iter + 1, x, learning_rate, iterations, x_t, y_t, coeff, bias}
@@ -100,13 +100,17 @@ defmodule Scholar.Linear.LogisticRegression do
 
     {_, _, _, _, _, _, _, final_coeff} =
       while {iter = 0, x, learning_rate, n, iterations, one_hot, x_t,
-             coeff = Nx.broadcast(Nx.tensor(0, type: {:f, 32}), {n, num_classes})},
+             coeff = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {n, num_classes})},
             iter < iterations do
         coeff = update_coefficients_multinomial(x, x_t, one_hot, coeff, learning_rate)
         {iter + 1, x, learning_rate, n, iterations, one_hot, x_t, coeff}
       end
 
-    %__MODULE__{coefficients: final_coeff, bias: Nx.tensor(0, type: {:f, 32}), mode: :multinomial}
+    %__MODULE__{
+      coefficients: final_coeff,
+      bias: Nx.tensor(0, type: Nx.type(x)),
+      mode: :multinomial
+    }
   end
 
   # Normalized softmax
@@ -152,7 +156,6 @@ defmodule Scholar.Linear.LogisticRegression do
   @doc """
   Makes predictions with the given model on inputs `x`.
   """
-
   defn predict(%__MODULE__{mode: mode} = model, x) do
     case mode do
       :binary -> predict_binary(model, x)

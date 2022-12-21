@@ -137,7 +137,6 @@ defmodule Scholar.Preprocessing do
           42.0
         >
   """
-  @spec standard_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
   deftransform standard_scale(tensor, opts \\ []) do
     standard_scale_n(tensor, NimbleOptions.validate!(opts, @general_schema))
   end
@@ -181,8 +180,6 @@ defmodule Scholar.Preprocessing do
           1.0
         >
   """
-
-  @spec max_abs_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
   deftransform max_abs_scale(tensor, opts \\ []) do
     max_abs_scale_n(tensor, NimbleOptions.validate!(opts, @general_schema))
   end
@@ -235,8 +232,6 @@ defmodule Scholar.Preprocessing do
           0.0
         >
   """
-
-  @spec min_max_scale(tensor :: Nx.Tensor.t(), opts :: keyword()) :: Nx.Tensor.t()
   deftransform min_max_scale(tensor, opts \\ []) do
     min_max_scale_n(tensor, NimbleOptions.validate!(opts, @min_max_schema))
   end
@@ -284,8 +279,6 @@ defmodule Scholar.Preprocessing do
         ]
       >
   """
-
-  @spec binarize(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
   deftransform binarize(tensor, opts \\ []) do
     binarize_n(tensor, NimbleOptions.validate!(opts, @binarize_schema))
   end
@@ -309,8 +302,6 @@ defmodule Scholar.Preprocessing do
         [1, 0, 2, 3, 0, 2, 0]
       >
   """
-
-  @spec ordinal_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
   deftransform ordinal_encode(tensor, opts \\ []) do
     ordinal_encode_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
   end
@@ -367,8 +358,6 @@ defmodule Scholar.Preprocessing do
         ]
       >
   """
-
-  @spec one_hot_encode(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
   deftransform one_hot_encode(tensor, opts \\ []) do
     one_hot_encode_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
   end
@@ -416,8 +405,6 @@ defmodule Scholar.Preprocessing do
         ]
       >
   """
-
-  @spec normalize(tensor :: Nx.Tensor.t(), opts :: Keyword.t()) :: Nx.Tensor.t()
   deftransform normalize(tensor, opts \\ []) do
     normalize_n(tensor, NimbleOptions.validate!(opts, @normalize_schema))
   end
