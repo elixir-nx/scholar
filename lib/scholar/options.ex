@@ -11,6 +11,15 @@ defmodule Scholar.Options do
     end
   end
 
+  def weights(weights) do
+    # weights are further validated by Nx, including against the tensor.
+    if weights == nil or is_list(weights) do
+      {:ok, weights}
+    else
+      {:error, "expected :weights to be a list positive integers as axis"}
+    end
+  end
+
   def type(type) do
     {:ok, Nx.Type.normalize!(type)}
   end

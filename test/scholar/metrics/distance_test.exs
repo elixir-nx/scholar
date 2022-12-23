@@ -52,4 +52,11 @@ defmodule Scholar.Metrics.DistanceTest do
   test "cosine matches scipy" do
     assert Distance.cosine(@x, @y) == Nx.tensor(0.7650632810164779)
   end
+
+  test "hamming matches scipy" do
+    assert Distance.hamming(Nx.tensor([1, 0, 0]),Nx.tensor([0, 1, 0])) == Nx.tensor(0.6666666865348816)
+    assert Distance.hamming(Nx.tensor([1, 0, 0]),Nx.tensor([1, 1, 0])) == Nx.tensor(0.3333333432674408)
+    assert Distance.hamming(Nx.tensor([1, 0, 0]), Nx.tensor([2, 0, 0])) == Nx.tensor(0.3333333432674408)
+    assert Distance.hamming(Nx.tensor([1, 0, 0]), Nx.tensor([3, 0, 0])) == Nx.tensor(0.3333333432674408)
+  end
 end
