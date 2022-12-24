@@ -481,6 +481,6 @@ defmodule Scholar.Metrics.Distance do
 
   defnp hamming_weighted(x, y, opts \\ []) do
     assert_same_shape!(x, y)
-    (x != y) |> Nx.weighted_mean(Nx.tensor(opts[:weights]), axis: opts[:axis])
+    (x != y) |> Nx.weighted_mean(opts[:weights], axis: opts[:axis])
   end
 end

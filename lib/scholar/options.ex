@@ -12,11 +12,15 @@ defmodule Scholar.Options do
   end
 
   def weights(weights) do
+    import Nx, only: [is_tensor: 1, tensor: 1]
     # weights are further validated by Nx, including against the tensor.
-    if weights == nil or is_list(weights) do
-      {:ok, weights}
-    else
-      {:error, "expected :weights to be a list positive integers as axis"}
+    cond do
+      weights == nil or is_tensor(weights) ->
+        {:ok, weights}
+      is_list(weights) ->
+        {:ok, tensor(weights)}
+      true ->
+        {:error, "expected :weights to be a list or a tensor"}
     end
   end
 
