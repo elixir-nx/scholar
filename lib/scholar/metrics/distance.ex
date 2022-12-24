@@ -430,7 +430,7 @@ defmodule Scholar.Metrics.Distance do
   @doc """
   Hamming distance.
 
-  N_unequal(x, y) / N_tot
+  $hamming(x ,y) = \frac{\#\{x_{i, j...} \neq y_{i, j, ...}\}}{\#x_{i, j, ...}}$, where $i, j, ...$ are the aggregation axes
 
   ## Options
 
