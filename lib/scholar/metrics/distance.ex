@@ -445,6 +445,7 @@ defmodule Scholar.Metrics.Distance do
         f32
         0.6666666865348816
       >
+
       iex> Scholar.Metrics.Distance.hamming(x, y, weights: [1,0.5,0.5])
       #Nx.Tensor<
         f32
