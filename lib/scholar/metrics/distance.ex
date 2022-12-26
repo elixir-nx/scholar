@@ -448,13 +448,15 @@ defmodule Scholar.Metrics.Distance do
         [0.6666666865348816, 1.0, 1.0]
       >
   """
-  deftransform hamming(x, y), do: hamming_unweighted(x, y)
+  deftransform(hamming(x, y), do: hamming_unweighted(x, y))
+
   deftransform hamming(x, y, opts) when is_list(opts) do
     NimbleOptions.validate!(opts, @general_schema)
     hamming_unweighted(x, y, opts)
   end
 
-  deftransform hamming(x, y, w), do: hamming_weighted(x, y, w)
+  deftransform(hamming(x, y, w), do: hamming_weighted(x, y, w))
+
   deftransform hamming(x, y, w, opts) when is_list(opts) do
     NimbleOptions.validate!(opts, @general_schema)
     hamming_weighted(x, y, w, opts)
