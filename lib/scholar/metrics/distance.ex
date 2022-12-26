@@ -33,27 +33,8 @@ defmodule Scholar.Metrics.Distance do
     ]
   ]
 
-  hamming_schema = [
-    axis: [
-      type: :non_neg_integer,
-      default: 0,
-      doc: """
-      Represents axis over which to compute the Hamming Distance.
-      """
-    ],
-    weights: [
-      type: {:custom, Scholar.Options, :weights, []},
-      default: nil,
-      doc: """
-      The weights for each value in `x` and `y`. Default is nil,
-      which gives each value a weight of 1.0
-      """
-    ]
-  ]
-
   @general_schema NimbleOptions.new!(general_schema)
   @minkowski_schema NimbleOptions.new!(minkowski_schema)
-  @hamming_schema NimbleOptions.new!(hamming_schema)
 
   @doc """
   Standard euclidean distance.
@@ -430,11 +411,13 @@ defmodule Scholar.Metrics.Distance do
   @doc """
   Hamming distance.
 
-  $hamming(x ,y) = \frac{\#\{x_{i, j...} \neq y_{i, j, ...}\}}{\#x_{i, j, ...}}$, where $i, j, ...$ are the aggregation axes
+  $$
+  hamming(x ,y) = \frac{\#\{x_{i, j...} \neq y_{i, j, ...}\}}{\#x_{i, j, ...}}$, where $i, j, ...$ are the aggregation axes
+  $$
 
   ## Options
 
-  #{NimbleOptions.docs(@hamming_schema)}
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -445,8 +428,8 @@ defmodule Scholar.Metrics.Distance do
         f32
         0.6666666865348816
       >
-
-      iex> Scholar.Metrics.Distance.hamming(x, y, weights: [1,0.5,0.5])
+      iex> weights = Nx.tensor([1,0.5,0.5])
+      iex> Scholar.Metrics.Distance.hamming(x, y, weights)
       #Nx.Tensor<
         f32
         0.75
@@ -459,29 +442,31 @@ defmodule Scholar.Metrics.Distance do
 
       iex> x = Nx.tensor([[1, 2, 3], [0, 0, 0], [5, 2, 4]])
       iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
-      iex> Scholar.Metrics.Distance.hamming(x, y, axis: 1)
+      iex> Scholar.Metrics.Distance.hamming(x, y, axes: [1])
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 1.0, 1.0]
       >
   """
-  deftransform hamming(x, y, opts \\ []) do
-    options = NimbleOptions.validate!(opts, @hamming_schema)
+  deftransform hamming(x, y), do: hamming_unweighted(x, y)
+  deftransform hamming(x, y, opts) when is_list(opts) do
+    NimbleOptions.validate!(opts, @general_schema)
+    hamming_unweighted(x, y, opts)
+  end
 
-    if nil == options[:weights] do
-      hamming_unweighted(x, y, options)
-    else
-      hamming_weighted(x, y, options)
-    end
+  deftransform hamming(x, y, w), do: hamming_weighted(x, y, w)
+  deftransform hamming(x, y, w, opts) when is_list(opts) do
+    NimbleOptions.validate!(opts, @general_schema)
+    hamming_weighted(x, y, w, opts)
   end
 
   defnp hamming_unweighted(x, y, opts \\ []) do
     assert_same_shape!(x, y)
-    (x != y) |> Nx.mean(axes: [opts[:axis]])
+    (x != y) |> Nx.mean(axes: opts[:axes])
   end
 
-  defnp hamming_weighted(x, y, opts \\ []) do
+  defnp hamming_weighted(x, y, w, opts \\ []) do
     assert_same_shape!(x, y)
-    (x != y) |> Nx.weighted_mean(opts[:weights], axis: opts[:axis])
+    (x != y) |> Nx.weighted_mean(w, axes: opts[:axes])
   end
 end
