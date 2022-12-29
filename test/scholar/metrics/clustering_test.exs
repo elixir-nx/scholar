@@ -1,5 +1,6 @@
 defmodule Scholar.Metrics.ClusteringTest do
   use ExUnit.Case
+  import ScholarCase
   alias Scholar.Metrics.Clustering
   doctest Clustering
 
@@ -30,13 +31,10 @@ defmodule Scholar.Metrics.ClusteringTest do
 
   @y_one Nx.tensor([2, 2, 2, 2, 0, 2, 1, 3, 2, 2, 2, 2, 2, 1, 4, 0, 1, 2, 1, 2])
 
-  @true_val Nx.tensor(1, type: {:u, 8})
-
   test "silhouette_score test" do
     expected = Nx.tensor(-0.17424359382143964)
 
-    assert Nx.all_close(Clustering.silhouette_score(@x, @y, num_clusters: 3), expected) ==
-             @true_val
+    assert_all_close(Clustering.silhouette_score(@x, @y, num_clusters: 3), expected)
   end
 
   test "silhouette_samples test" do
@@ -64,15 +62,13 @@ defmodule Scholar.Metrics.ClusteringTest do
         -0.5314690470695496
       ])
 
-    assert Nx.all_close(Clustering.silhouette_samples(@x, @y, num_clusters: 3), expected) ==
-             @true_val
+    assert_all_close(Clustering.silhouette_samples(@x, @y, num_clusters: 3), expected)
   end
 
   test "silhouette_score test with one-element clusters" do
     expected = Nx.tensor(-0.298110549250206)
 
-    assert Nx.all_close(Clustering.silhouette_score(@x, @y_one, num_clusters: 5), expected) ==
-             @true_val
+    assert_all_close(Clustering.silhouette_score(@x, @y_one, num_clusters: 5), expected)
   end
 
   test "silhouette_samples test with one-element clusters" do
@@ -100,7 +96,6 @@ defmodule Scholar.Metrics.ClusteringTest do
         -0.5314690470695496
       ])
 
-    assert Nx.all_close(Clustering.silhouette_samples(@x, @y_one, num_clusters: 5), expected) ==
-             @true_val
+    assert_all_close(Clustering.silhouette_samples(@x, @y_one, num_clusters: 5), expected)
   end
 end

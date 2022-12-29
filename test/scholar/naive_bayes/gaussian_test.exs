@@ -1,9 +1,8 @@
 defmodule Scholar.NaiveBayes.GaussianTest do
   use ExUnit.Case
+  import ScholarCase
   alias Scholar.NaiveBayes.Gaussian
   doctest Gaussian
-
-  @true_val Nx.tensor(1, type: {:u, 8})
 
   test "fit test - all default options" do
     x = Nx.iota({5, 6})
@@ -27,7 +26,7 @@ defmodule Scholar.NaiveBayes.GaussianTest do
         [7.20e-08, 7.20e-08, 7.20e-08, 7.20e-08, 7.20e-08, 7.20e-08]
       ])
 
-    assert Nx.all_close(model.var, expected_var) == @true_val
+    assert_all_close(model.var, expected_var)
 
     assert model.class_priors == Nx.tensor([0.2, 0.4, 0.2, 0.2])
     assert model.classes == Nx.tensor([0, 1, 2, 3])
@@ -77,7 +76,7 @@ defmodule Scholar.NaiveBayes.GaussianTest do
         ]
       ])
 
-    assert Nx.all_close(model.var, expected_var) == @true_val
+    assert_all_close(model.var, expected_var)
 
     assert model.class_priors == Nx.tensor([0.2, 0.4, 0.2, 0.2])
     assert model.classes == Nx.tensor([0, 1, 2, 3])
@@ -106,7 +105,7 @@ defmodule Scholar.NaiveBayes.GaussianTest do
         [18.0, 19.0, 20.0, 21.0, 22.0, 23.0]
       ])
 
-    assert Nx.all_close(model.theta, expected_theta) == @true_val
+    assert_all_close(model.theta, expected_theta)
 
     expected_var =
       Nx.tensor([
@@ -144,7 +143,7 @@ defmodule Scholar.NaiveBayes.GaussianTest do
         ]
       ])
 
-    assert Nx.all_close(model.var, expected_var) == @true_val
+    assert_all_close(model.var, expected_var)
 
     expected_class_priors =
       Nx.tensor([
@@ -154,7 +153,7 @@ defmodule Scholar.NaiveBayes.GaussianTest do
         0.37837839126586914
       ])
 
-    assert Nx.all_close(model.class_priors, expected_class_priors) == @true_val
+    assert_all_close(model.class_priors, expected_class_priors)
 
     assert model.classes == Nx.tensor([0, 1, 2, 3])
     assert model.class_count == Nx.tensor([2.0, 5.5, 4.0, 7.0])
@@ -204,7 +203,7 @@ defmodule Scholar.NaiveBayes.GaussianTest do
         ]
       ])
 
-    assert Nx.all_close(model.var, expected_var) == @true_val
+    assert_all_close(model.var, expected_var)
 
     assert model.class_priors == Nx.tensor(priors)
 

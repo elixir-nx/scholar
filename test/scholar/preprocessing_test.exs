@@ -1,10 +1,8 @@
 defmodule Scholar.PreprocessingTest do
   use ExUnit.Case, async: true
-
+  import ScholarCase
   alias Scholar.Preprocessing
   doctest Preprocessing
-
-  @true_val Nx.tensor(1, type: {:u, 8})
 
   describe "standard_scaler/1" do
     test "applies standard scaling to data" do
@@ -17,7 +15,7 @@ defmodule Scholar.PreprocessingTest do
           [-0.4170288145542145, 0.5212860703468323, -1.3553436994552612]
         ])
 
-      assert Nx.all_close(Preprocessing.standard_scale(data), expected) == @true_val
+      assert_all_close(Preprocessing.standard_scale(data), expected)
     end
 
     test "leaves data as it is when variance is zero" do

@@ -1,9 +1,8 @@
 defmodule Scholar.NaiveBayes.MultinomialTest do
   use ExUnit.Case
+  import ScholarCase
   alias Scholar.NaiveBayes.Multinomial
   doctest Multinomial
-
-  @true_val Nx.tensor(1, type: {:u, 8})
 
   test "fit test - all default options" do
     x = Nx.iota({5, 6})
@@ -55,8 +54,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         ]
       ])
 
-    assert Nx.all_close(model.feature_log_probability, expected_feature_log_probability) ==
-             @true_val
+    assert_all_close(model.feature_log_probability, expected_feature_log_probability)
 
     expected_class_log_priors =
       Nx.tensor([
@@ -66,7 +64,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         -1.6094379425048828
       ])
 
-    assert Nx.all_close(model.class_log_priors, expected_class_log_priors) == @true_val
+    assert_all_close(model.class_log_priors, expected_class_log_priors)
 
     assert model.classes == Nx.tensor([0, 1, 2, 3])
     assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
@@ -122,8 +120,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         ]
       ])
 
-    assert Nx.all_close(model.feature_log_probability, expected_feature_log_probability) ==
-             @true_val
+    assert_all_close(model.feature_log_probability, expected_feature_log_probability)
 
     expected_class_log_priors =
       Nx.tensor([
@@ -133,7 +130,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         -1.6094379425048828
       ])
 
-    assert Nx.all_close(model.class_log_priors, expected_class_log_priors) == @true_val
+    assert_all_close(model.class_log_priors, expected_class_log_priors)
 
     assert model.classes == Nx.tensor([0, 1, 2, 3])
     assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
@@ -189,8 +186,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         ]
       ])
 
-    assert Nx.all_close(model.feature_log_probability, expected_feature_log_probability) ==
-             @true_val
+    assert_all_close(model.feature_log_probability, expected_feature_log_probability)
 
     expected_class_log_priors =
       Nx.tensor([
@@ -200,7 +196,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         -1.3862943649291992
       ])
 
-    assert Nx.all_close(model.class_log_priors, expected_class_log_priors) == @true_val
+    assert_all_close(model.class_log_priors, expected_class_log_priors)
 
     assert model.classes == Nx.tensor([0, 1, 2, 3])
     assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
@@ -257,8 +253,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         ]
       ])
 
-    assert Nx.all_close(model.feature_log_probability, expected_feature_log_probability) ==
-             @true_val
+    assert_all_close(model.feature_log_probability, expected_feature_log_probability)
 
     expected_class_log_priors =
       Nx.tensor([
@@ -268,7 +263,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         -1.6094379425048828
       ])
 
-    assert Nx.all_close(model.class_log_priors, expected_class_log_priors) == @true_val
+    assert_all_close(model.class_log_priors, expected_class_log_priors)
 
     assert model.classes == Nx.tensor([0, 1, 2, 3])
     assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
@@ -325,8 +320,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         ]
       ])
 
-    assert Nx.all_close(model.feature_log_probability, expected_feature_log_probability) ==
-             @true_val
+    assert_all_close(model.feature_log_probability, expected_feature_log_probability)
 
     expected_class_log_priors =
       Nx.tensor([
@@ -336,7 +330,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
         -0.9718605279922485
       ])
 
-    assert Nx.all_close(model.class_log_priors, expected_class_log_priors) == @true_val
+    assert_all_close(model.class_log_priors, expected_class_log_priors)
 
     assert model.classes == Nx.tensor([0, 1, 2, 3])
     assert model.class_count == Nx.tensor([2.0, 5.5, 4.0, 7.0])
