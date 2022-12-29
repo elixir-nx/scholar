@@ -1,9 +1,9 @@
-defmodule ScholarTest do
+defmodule ScholarCase do
   use ExUnit.CaseTemplate
 
   def assert_all_close(left, right, opts \\ []) do
-    atol = opts[:atol] || 1.0e-7
-    rtol = opts[:rtol] || 1.0e-7
+    atol = opts[:atol] || 1.0e-4
+    rtol = opts[:rtol] || 1.0e-4
 
     equals =
       left
