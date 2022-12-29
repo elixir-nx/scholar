@@ -72,11 +72,11 @@ x =
 
 <!-- livebook:{"break_markdown":true} -->
 
-There is an important part of Data Science workflow is called **Exploratory Data Analysis**. EDA helps us understand the data in a better way and suggests some efficient strategies to solve problems. There is no one specific course of action which defines good EDA. It should contain tabular summaries and plots showing relations between features.
+An important part of Data Science workflow is so-called **Exploratory Data Analysis**. EDA helps us understand the data in a better way and suggests some efficient strategies to solve problems. There is no one specific course of action which defines good EDA. It should contain tabular summaries and plots showing relations between features.
 
 <!-- livebook:{"break_markdown":true} -->
 
-iWe start our EDA by finding the mean values of each feature by species.
+We start our EDA by finding the mean values of each feature by species.
 
 ```elixir
 grouped_data = Explorer.DataFrame.group_by(df, "species")
@@ -137,7 +137,7 @@ Vl.new(
 )
 ```
 
-Now we have a better understanding of the data. Iris species have different petal widths and petal lengths. Iris *Setosa* has the smallest petal, *Versicolor* is medium size and *Virginica* has the biggest petal. We can make sure even further that our analysis is correct and plot the so-called **Elbow plot**. The Elbow plot is a plot which presents Inertia vs the number of clusters. If there is a characteristic elbow on, then we have a strong suggestion about the right number of clusters. Let's train KMeans models for a different number of clusters from range 1 to 11.
+Now we have a better understanding of the data. Iris species have different petal widths and petal lengths. Iris *Setosa* has the smallest petal, *Versicolor* is medium size, and *Virginica* has the largest petal. We can ascertain that our analysis is correct and plot the so-called **Elbow plot**. The Elbow plot is a plot which presents Inertia vs the number of clusters. If there is a characteristic elbow, then we have a strong suggestion that the number of clusters is correct. Let's train KMeans models for a different number of clusters from range 1 to 11.
 
 ```elixir
 clusterings = 1..11
@@ -192,7 +192,7 @@ best_model = Iris.Clusters.sort_clusters(best_model)
 accuracy = Scholar.Metrics.accuracy(best_model.labels, y)
 ```
 
-Accuracy is nearly 90%, that's pretty decent! Let's look at our results plotted on one of the previous plots.
+Accuracy is nearly 90% - that's pretty decent! Let's look at our results plotted on one of the previous plots.
 
 ```elixir
 coords = [
@@ -271,7 +271,7 @@ end
 repainted_x = tensor_to_image.(repainted_x)
 ```
 
-Look that even though we use only ten colors, we can say without any doubt that this is the same image. Let's experiment more deeply. Now we will try 5, 10, 15, 20 and 40 colors and then compare the processed images with the original one.
+Look that even with only five colors can recognize the Golden Gate Bridge in the image. On the other hand, with only 40 colors we keep almost all details except the sky and water surface. Sky and water do not map well because there is a small gradient in changing colors. Pixel clustering is a great way to compress images drastically with small integration in their appearance.
 
 ```elixir
 clusterings = [5, 10, 15, 20, 40]
@@ -310,7 +310,7 @@ Look that even with only five colors can recognize the Golden Gate Bridge in the
 
 ## Clustering images from Fashion-MNIST
 
-The last example is the clustering problem on the Fashion-MNIST Dataset. The dataset consists of 60000 images 28 by 28 pixels. They present ten different parts of clothing. Let's dive into this clustering problem.
+The last example is the clustering problem on the Fashion-MNIST Dataset. The dataset consists of 60000 images 28 by 28 pixels of ten different parts of clothing. Let's dive into this clustering problem.
 
 <!-- livebook:{"break_markdown":true} -->
 
@@ -423,7 +423,7 @@ Vl.new(width: 600, height: 300, title: "Elbow Plot")
 )
 ```
 
-Look that this time there is no elbow on a plot. We need to use a different method to predict the number of classes. Now we will use *Silhouette Score*. It is a metric that indicates the quality of clustering. The higher score the better clustering. However, we should be aware that Silhouette Score is just a heuristic and not always works.
+Look that this time there is no elbow on a plot. We need to use a different method to predict the number of classes. Now we will use *Silhouette Score*. It is a metric that indicates the quality of clustering. The higher score we achieve, the better clustering we get. However, we should be aware that Silhouette Score is just a heuristic and not always works.
 
 ```elixir
 silhouette_scores =
@@ -513,4 +513,4 @@ end
 |> Kino.Layout.grid(columns: 3)
 ```
 
-One of the images has a vertical line (something like trousers) while another is almost all white (similar to a jumper) and the last one has lots of dark color. This time Silhouette Score turns out to be not the best indicator. To get better clustering, try to rerun the code with a higher number of clusters.
+One of the images has a vertical line (something like trousers), the next image is almost all white (similar to a jumper), and the last one is mostly black. This time Silhouette Score turns out to be not the best indicator. To get better clustering, try to rerun the code with a higher number of clusters.
