@@ -45,7 +45,7 @@ defmodule Scholar.Linear.LinearRegression do
       end
 
     coeff = lstsq(a, b)
-    %__MODULE__{coefficients: Nx.transpose(coeff)}
+    %__MODULE__{coefficients: coeff}
   end
 
   @doc """
@@ -58,27 +58,22 @@ defmodule Scholar.Linear.LinearRegression do
   # Implements sample weighting by rescaling inputs and
   # targets by sqrt(sample_weight).
   defnp rescale(x, y, sample_weights) do
-    n = Nx.axis_size(x, 0)
+    case Nx.shape(sample_weights) do
+      {} = scalar ->
+        scalar = Nx.sqrt(scalar)
+        {scalar * x, scalar * y}
 
-    sample_weights =
-      case Nx.shape(sample_weights) do
-        {} ->
-          Nx.broadcast(sample_weights, {n})
-
-        _ ->
-          sample_weights
-      end
-
-    scale = Nx.sqrt(sample_weights) |> Nx.make_diagonal()
-
-    {Nx.dot(scale, x), Nx.dot(scale, y)}
+      _ ->
+        scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
+        {Nx.dot(scale, x), Nx.dot(scale, y)}
+    end
   end
 
   # Implements ordinary least-squares by estimating the
   # solution A to the equation A.X = b.
   defnp lstsq(a, b) do
     pinv = Nx.LinAlg.pinv(a)
-    Nx.dot(pinv, b)
+    Nx.dot(b, [0], pinv, [1])
   end
 
   defnp preprocess_data(x, y, sample_weights, opts \\ []) do
