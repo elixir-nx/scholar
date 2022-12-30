@@ -69,8 +69,7 @@ defmodule Scholar.Linear.LinearRegression do
           sample_weights
       end
 
-    scale = Nx.sqrt(sample_weights)
-    scale = Nx.make_diagonal(scale)
+    scale = Nx.sqrt(sample_weights) |> Nx.make_diagonal()
 
     {Nx.dot(scale, x), Nx.dot(scale, y)}
   end
@@ -83,19 +82,13 @@ defmodule Scholar.Linear.LinearRegression do
   end
 
   defnp preprocess_data(x, y, sample_weights, opts \\ []) do
-    x_offset =
+    {x_offset, y_offset} =
       if opts[:sample_weights_flag],
-        do: Nx.weighted_mean(x, sample_weights, axes: [0]),
-        else: Nx.mean(x, axes: [0])
+        do:
+          {Nx.weighted_mean(x, sample_weights, axes: [0]),
+           Nx.weighted_mean(y, sample_weights, axes: [0])},
+        else: {Nx.mean(x, axes: [0]), Nx.mean(y, axes: [0])}
 
-    x = x - x_offset
-
-    y_offset =
-      if opts[:sample_weights_flag],
-        do: Nx.weighted_mean(y, sample_weights, axes: [0]),
-        else: Nx.mean(y, axes: [0])
-
-    y = y - y_offset
-    {x, y}
+    {x - x_offset, y - y_offset}
   end
 end
