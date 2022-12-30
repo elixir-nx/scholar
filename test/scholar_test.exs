@@ -1,2 +1,0 @@
-defmodule ScholarTest do
-end

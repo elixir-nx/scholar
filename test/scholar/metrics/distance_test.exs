@@ -1,5 +1,5 @@
 defmodule Scholar.Metrics.DistanceTest do
-  use ExUnit.Case
+  use Scholar.Case
   alias Scholar.Metrics.Distance
   doctest Distance
 
@@ -30,26 +30,26 @@ defmodule Scholar.Metrics.DistanceTest do
      ])
 
   test "euclidean matches scipy" do
-    assert Distance.euclidean(@x, @y) == Nx.tensor(3.388213202573845)
+    assert_all_close(Distance.euclidean(@x, @y), Nx.tensor(3.388213202573845))
   end
 
   test "squared euclidean matches scipy" do
-    assert Distance.squared_euclidean(@x, @y) == Nx.tensor(11.479988706095714)
+    assert_all_close(Distance.squared_euclidean(@x, @y), Nx.tensor(11.479988706095714))
   end
 
   test "manhattan matches scipy" do
-    assert Distance.manhattan(@x, @y) == Nx.tensor(8.694822449237108)
+    assert_all_close(Distance.manhattan(@x, @y), Nx.tensor(8.694822449237108))
   end
 
   test "chebyshev matches scipy" do
-    assert Distance.chebyshev(@x, @y) == Nx.tensor(2.043651282787323)
+    assert_all_close(Distance.chebyshev(@x, @y), Nx.tensor(2.043651282787323))
   end
 
   test "minkowski matches scipy" do
-    assert Distance.minkowski(@x, @y) == Nx.tensor(3.388213202573845)
+    assert_all_close(Distance.minkowski(@x, @y), Nx.tensor(3.388213202573845))
   end
 
   test "cosine matches scipy" do
-    assert Distance.cosine(@x, @y) == Nx.tensor(0.7650632810164779)
+    assert_all_close(Distance.cosine(@x, @y), Nx.tensor(0.7650632810164779))
   end
 end

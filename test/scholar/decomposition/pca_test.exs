@@ -1,28 +1,9 @@
 defmodule Scholar.Decomposition.PCATest do
-  use ExUnit.Case, async: true
+  use Scholar.Case, async: true
 
   @x Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
   @x2 Nx.tensor([[1, 4], [54, 6], [26, 7]])
   @x3 Nx.tensor([[-1, -1, 3], [-2, -1, 2], [-3, -2, 1], [3, 1, 1], [21, 2, 1], [5, 3, 2]])
-
-  def assert_all_close(left, right, opts \\ []) do
-    atol = opts[:atol] || 1.0e-7
-    rtol = opts[:rtol] || 1.0e-7
-
-    equals =
-      left
-      |> Nx.all_close(right, atol: atol, rtol: rtol)
-      |> Nx.backend_transfer(Nx.BinaryBackend)
-
-    if equals != Nx.tensor(1, type: {:u, 8}, backend: Nx.BinaryBackend) do
-      flunk("""
-      expected
-      #{inspect(left)}
-      to be within tolerance of
-      #{inspect(right)}
-      """)
-    end
-  end
 
   test "fit test - all default options" do
     model = Scholar.Decomposition.PCA.fit(@x)
