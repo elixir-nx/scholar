@@ -1,5 +1,5 @@
 defmodule Scholar.Linear.LinearRegressionTest do
-  use ExUnit.Case, async: true
+  use Scholar.Case, async: true
 
   describe "fit" do
     test "matches sklearn for shapes {1, 1}, {1, 1} and type {:f, 32}" do
@@ -7,7 +7,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       b = Nx.tensor([[0.8904717564582825]])
       expected = Nx.tensor([[0.0]])
       model = Scholar.Linear.LinearRegression.fit(a, b)
-      assert Nx.all_close(expected, model.coefficients) == Nx.tensor(1, type: {:u, 8})
+      assert_all_close(expected, model.coefficients)
     end
 
     test "matches sklearn for shapes {4, 6}, {4} and type {:f, 32}" do
@@ -63,8 +63,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       %Scholar.Linear.LinearRegression{coefficients: actual} =
         Scholar.Linear.LinearRegression.fit(a, b)
 
-      assert Nx.all_close(expected, actual, rtol: 1.0e-2, atol: 1.0e-2) ==
-               Nx.tensor(1, type: {:u, 8})
+      assert_all_close(expected, actual, rtol: 1.0e-2, atol: 1.0e-2)
     end
 
     test "matches sklearn for shapes {6, 6}, {6, 1} and type {:f, 64}" do
@@ -145,8 +144,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       %Scholar.Linear.LinearRegression{coefficients: actual} =
         Scholar.Linear.LinearRegression.fit(a, b)
 
-      assert Nx.all_close(expected, actual, rtol: 1.0e-2, atol: 1.0e-2) ==
-               Nx.tensor(1, type: {:u, 8})
+      assert_all_close(expected, actual, rtol: 1.0e-2, atol: 1.0e-2)
     end
 
     test "matches sklearn for shapes {8, 6}, {8, 4} and type {:f, 32}" do
@@ -269,8 +267,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       %Scholar.Linear.LinearRegression{coefficients: actual} =
         Scholar.Linear.LinearRegression.fit(a, b)
 
-      assert Nx.all_close(expected, actual, rtol: 1.0e-1, atol: 1.0e-2) ==
-               Nx.tensor(1, type: {:u, 8})
+      assert_all_close(expected, actual, rtol: 1.0e-1, atol: 1.0e-2)
     end
 
     test "matches sklearn for shapes {1, 1}, {1, 1} and type {:f, 32} and sample_weights" do
@@ -282,7 +279,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       %Scholar.Linear.LinearRegression{coefficients: actual} =
         Scholar.Linear.LinearRegression.fit(a, b, sample_weights: sample_weights)
 
-      assert Nx.all_close(expected, actual) == Nx.tensor(1, type: {:u, 8})
+      assert_all_close(expected, actual)
     end
 
     test "matches sklearn for shapes {4, 6}, {4} and type {:f, 32} and sample_weight" do
@@ -343,8 +340,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       %Scholar.Linear.LinearRegression{coefficients: actual} =
         Scholar.Linear.LinearRegression.fit(a, b, sample_weights: sample_weights)
 
-      assert Nx.all_close(expected, actual, rtol: 1.0e-1, atol: 1.0e-2) ==
-               Nx.tensor(1, type: {:u, 8})
+      assert_all_close(expected, actual, rtol: 1.0e-1, atol: 1.0e-2)
     end
 
     test "matches sklearn for shapes {6, 6}, {6, 1} and type {:f, 64} and sample_weight" do
@@ -425,8 +421,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       %Scholar.Linear.LinearRegression{coefficients: actual} =
         Scholar.Linear.LinearRegression.fit(a, b, sample_weights: sample_weights)
 
-      assert Nx.all_close(expected, actual, rtol: 1.0e-2, atol: 1.0e-2) ==
-               Nx.tensor(1, type: {:u, 8})
+      assert_all_close(expected, actual, rtol: 1.0e-2, atol: 1.0e-2)
     end
 
     test "matches sklearn for shapes {8, 6}, {8, 4} and type {:f, 32} and sample_weight" do
@@ -560,8 +555,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       %Scholar.Linear.LinearRegression{coefficients: actual} =
         Scholar.Linear.LinearRegression.fit(a, b, sample_weights: sample_weights)
 
-      assert Nx.all_close(expected, actual, rtol: 1.0e-1, atol: 1.0e-1) ==
-               Nx.tensor(1, type: {:u, 8})
+      assert_all_close(expected, actual, rtol: 1.0e-1, atol: 1.0e-1)
     end
   end
 end
