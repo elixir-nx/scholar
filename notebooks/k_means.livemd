@@ -271,7 +271,7 @@ end
 repainted_x = tensor_to_image.(repainted_x)
 ```
 
-Look that even with only five colors can recognize the Golden Gate Bridge in the image. On the other hand, with only 40 colors we keep almost all details except the sky and water surface. Sky and water do not map well because there is a small gradient in changing colors. Pixel clustering is a great way to compress images drastically with small integration in their appearance.
+Look that even though we use only ten colors, we can say without any doubt that this is the same image. Let's experiment more deeply. Now we will try 5, 10, 15, 20 and 40 colors and then compare the processed images with the original one.
 
 ```elixir
 clusterings = [5, 10, 15, 20, 40]
@@ -304,7 +304,7 @@ image_box =
 Kino.Layout.grid(image_boxes ++ [image_box], columns: 2)
 ```
 
-Look that even with only five colors can recognize the Golden Gate Bridge in the image. On the other hand with only 40 colors we keep almost all details except the sky and water surface. The reason why these two spaces do not map well is that there is a small gradient in changing colors. Pixel clustering is a great way to compress images drastically with small integration in them.
+Look that even with only five colors can recognize the Golden Gate Bridge in the image. On the other hand, with only 40 colors we keep almost all details except the sky and water surface. Sky and water do not map well because there is a small gradient in changing colors. Pixel clustering is a great way to compress images drastically with small integration in their appearance.
 
 <!-- livebook:{"branch_parent_index":0} -->
 
