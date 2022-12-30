@@ -1,6 +1,5 @@
 defmodule Scholar.NaiveBayes.ComplementTest do
-  use ExUnit.Case
-  import ScholarCase
+  use Scholar.Case
   alias Scholar.NaiveBayes.Complement
   doctest Complement
 

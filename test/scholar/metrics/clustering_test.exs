@@ -1,6 +1,5 @@
 defmodule Scholar.Metrics.ClusteringTest do
-  use ExUnit.Case
-  import ScholarCase
+  use Scholar.Case
   alias Scholar.Metrics.Clustering
   doctest Clustering
 

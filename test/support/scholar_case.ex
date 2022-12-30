@@ -1,5 +1,11 @@
-defmodule ScholarCase do
+defmodule Scholar.Case do
   use ExUnit.CaseTemplate
+
+  using do
+    quote do
+      import Scholar.Case
+    end
+  end
 
   def assert_all_close(left, right, opts \\ []) do
     atol = opts[:atol] || 1.0e-4

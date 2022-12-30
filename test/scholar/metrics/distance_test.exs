@@ -1,6 +1,5 @@
 defmodule Scholar.Metrics.DistanceTest do
-  use ExUnit.Case
-  import ScholarCase
+  use Scholar.Case
   alias Scholar.Metrics.Distance
   doctest Distance
 

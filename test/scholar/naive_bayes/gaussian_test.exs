@@ -1,6 +1,5 @@
 defmodule Scholar.NaiveBayes.GaussianTest do
-  use ExUnit.Case
-  import ScholarCase
+  use Scholar.Case
   alias Scholar.NaiveBayes.Gaussian
   doctest Gaussian
 

@@ -1,6 +1,5 @@
 defmodule Scholar.Decomposition.PCATest do
-  use ExUnit.Case, async: true
-  import ScholarCase
+  use Scholar.Case, async: true
 
   @x Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
   @x2 Nx.tensor([[1, 4], [54, 6], [26, 7]])

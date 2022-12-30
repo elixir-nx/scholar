@@ -1,6 +1,5 @@
 defmodule Scholar.PreprocessingTest do
-  use ExUnit.Case, async: true
-  import ScholarCase
+  use Scholar.Case, async: true
   alias Scholar.Preprocessing
   doctest Preprocessing
 

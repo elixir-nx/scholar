@@ -1,6 +1,5 @@
 defmodule Scholar.Interpolation.BezierSplineTest do
-  use ExUnit.Case, async: true
-  import ScholarCase
+  use Scholar.Case, async: true
   alias Scholar.Interpolation.BezierSpline
 
   describe "bezier spline" do

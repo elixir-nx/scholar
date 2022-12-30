@@ -1,6 +1,5 @@
 defmodule Scholar.NaiveBayes.MultinomialTest do
-  use ExUnit.Case
-  import ScholarCase
+  use Scholar.Case
   alias Scholar.NaiveBayes.Multinomial
   doctest Multinomial
 

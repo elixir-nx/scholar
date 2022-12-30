@@ -1,6 +1,5 @@
 defmodule Scholar.Interpolation.CubicSplineTest do
-  use ExUnit.Case, async: true
-  import ScholarCase
+  use Scholar.Case, async: true
   import Nx, only: :sigils
 
   alias Scholar.Interpolation.CubicSpline
