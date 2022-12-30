@@ -8,7 +8,7 @@ defmodule Scholar.Metrics.SimilarityTest do
       x = Nx.tensor([1, 2, 3, 5, 0])
       y = Nx.tensor([1, 30, 4, 8, 9])
 
-      assert Similarity.jaccard(x, y) == Nx.tensor(0.1111111119389534)
+      assert Similarity.jaccard(x, y) == Nx.tensor(1 / 9)
     end
 
     test "returns 100% of similarity" do
@@ -72,7 +72,7 @@ defmodule Scholar.Metrics.SimilarityTest do
       x = Nx.tensor([1, 0, 0, 1, 1, 1])
       y = Nx.tensor([0, 0, 1, 1, 1, 0])
 
-      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.4000000059604645)
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.4)
     end
 
     test "returns 100% of similarity" do
@@ -93,7 +93,7 @@ defmodule Scholar.Metrics.SimilarityTest do
       x = Nx.tensor([1, 0, 1, 0, 1])
       y = Nx.tensor([0, 1, 1, 1, 0])
 
-      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.20000000298023224)
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.2)
     end
 
     test "returns similarity when tensors have a single element" do
@@ -114,7 +114,7 @@ defmodule Scholar.Metrics.SimilarityTest do
       x = Nx.tensor([[0, 1, 1], [1, 1, 1]])
       y = Nx.tensor([[1, 1, 1], [1, 1, 1]])
 
-      assert Similarity.binary_jaccard(x, y) == Nx.tensor(0.8333333134651184)
+      assert Similarity.binary_jaccard(x, y) == Nx.tensor(5 / 6)
     end
 
     test "raises exception when tensors have different shapes" do
