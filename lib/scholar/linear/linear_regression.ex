@@ -11,7 +11,7 @@ defmodule Scholar.Linear.LinearRegression do
     sample_weights: [
       type: {:list, {:custom, Scholar.Options, :positive_number, []}},
       doc: """
-      The weights for each observation in x. If not provided,
+      The weights for each observation. If not provided,
       all observations are assigned equal weight.
       """
     ],
@@ -19,8 +19,10 @@ defmodule Scholar.Linear.LinearRegression do
       type: :boolean,
       default: true,
       doc: """
-      If set to `true`, interception will be fitted. Otherwise,
-      interception is set to 0.0.
+      If set to `true`, a model will fit the intercept. Otherwise,
+      the intercept is set to 0.0. The intercept is an independent term
+      in a linear model. Specifically, it is the expected mean value
+      of targets for a zero-vector on input.
       """
     ]
   ]
