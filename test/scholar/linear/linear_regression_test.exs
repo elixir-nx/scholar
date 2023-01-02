@@ -538,7 +538,6 @@ defmodule Scholar.Linear.LinearRegressionTest do
         0.531108558177948
       ]
 
-<<<<<<< HEAD
       expected_coeff =
         Nx.tensor([
           [1.26270717, -0.6669458, 0.46800176, -0.11085355, 0.75226201, -0.27554435],
