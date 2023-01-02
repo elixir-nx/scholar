@@ -4,12 +4,26 @@ defmodule Scholar.Linear.LinearRegression do
   """
   import Nx.Defn
 
-  @derive {Nx.Container, containers: [:coefficients]}
-  defstruct [:coefficients]
+  @derive {Nx.Container, containers: [:coefficients, :intercept]}
+  defstruct [:coefficients, :intercept]
 
   opts = [
     sample_weights: [
-      type: {:list, {:custom, Scholar.Options, :positive_number, []}}
+      type: {:list, {:custom, Scholar.Options, :positive_number, []}},
+      doc: """
+      The weights for each observation. If not provided,
+      all observations are assigned equal weight.
+      """
+    ],
+    fit_intercept?: [
+      type: :boolean,
+      default: true,
+      doc: """
+      If set to `true`, a model will fit the intercept. Otherwise,
+      the intercept is set to 0.0. The intercept is an independent term
+      in a linear model. Specifically, it is the expected mean value
+      of targets for a zero-vector on input.
+      """
     ]
   ]
 
@@ -35,7 +49,17 @@ defmodule Scholar.Linear.LinearRegression do
   end
 
   defnp fit_n(a, b, sample_weights, opts \\ []) do
-    {a, b} = preprocess_data(a, b, sample_weights, opts)
+    {a_offset, b_offset} =
+      if opts[:fit_intercept?] do
+        preprocess_data(a, b, sample_weights, opts)
+      else
+        {_, a_shape} = Nx.shape(a)
+        b_reshaped = if Nx.rank(b) > 1, do: b, else: Nx.reshape(b, {:auto, 1})
+        {_, b_shape} = Nx.shape(b_reshaped)
+        {Nx.broadcast(0.0, {a_shape}), Nx.broadcast(0.0, {b_shape})}
+      end
+
+    {a, b} = {a - a_offset, b - b_offset}
 
     {a, b} =
       if opts[:sample_weights_flag] do
@@ -44,15 +68,15 @@ defmodule Scholar.Linear.LinearRegression do
         {a, b}
       end
 
-    coeff = lstsq(a, b)
-    %__MODULE__{coefficients: coeff}
+    {coeff, intercept} = lstsq(a, b, a_offset, b_offset, opts[:fit_intercept?])
+    %__MODULE__{coefficients: coeff, intercept: intercept}
   end
 
   @doc """
   Makes predictions with the given model on inputs `x`.
   """
-  defn predict(%__MODULE__{coefficients: coeff}, x) do
-    Nx.dot(x, coeff)
+  defn predict(%__MODULE__{coefficients: coeff, intercept: intercept}, x) do
+    Nx.dot(x, coeff) + intercept
   end
 
   # Implements sample weighting by rescaling inputs and
@@ -71,19 +95,26 @@ defmodule Scholar.Linear.LinearRegression do
 
   # Implements ordinary least-squares by estimating the
   # solution A to the equation A.X = b.
-  defnp lstsq(a, b) do
+  defnp lstsq(a, b, a_offset, b_offset, fit_intercept?) do
     pinv = Nx.LinAlg.pinv(a)
-    Nx.dot(b, [0], pinv, [1])
+    coeff = Nx.dot(b, [0], pinv, [1])
+    intercept = set_intercept(coeff, a_offset, b_offset, fit_intercept?)
+    {coeff, intercept}
+  end
+
+  defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
+    if fit_intercept? do
+      y_offset - Nx.dot(coeff, x_offset)
+    else
+      0.0
+    end
   end
 
   defnp preprocess_data(x, y, sample_weights, opts \\ []) do
-    {x_offset, y_offset} =
-      if opts[:sample_weights_flag],
-        do:
-          {Nx.weighted_mean(x, sample_weights, axes: [0]),
-           Nx.weighted_mean(y, sample_weights, axes: [0])},
-        else: {Nx.mean(x, axes: [0]), Nx.mean(y, axes: [0])}
-
-    {x - x_offset, y - y_offset}
+    if opts[:sample_weights_flag],
+      do:
+        {Nx.weighted_mean(x, sample_weights, axes: [0]),
+         Nx.weighted_mean(y, sample_weights, axes: [0])},
+      else: {Nx.mean(x, axes: [0]), Nx.mean(y, axes: [0])}
   end
 end
