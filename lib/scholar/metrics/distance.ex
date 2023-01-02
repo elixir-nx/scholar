@@ -407,4 +407,68 @@ defmodule Scholar.Metrics.Distance do
     res = Nx.select(one_zero?, 0.0, res)
     1.0 - Nx.select(both_zero?, 1.0, res)
   end
+
+  @doc """
+  Hamming distance.
+
+  $$
+  hamming(x ,y) = \frac{\#\{x_{i, j...} \neq y_{i, j, ...}\}}{\#x_{i, j, ...}}$, where $i, j, ...$ are the aggregation axes
+  $$
+
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
+
+  ## Examples
+
+      iex> x = Nx.tensor([1, 0, 0])
+      iex> y = Nx.tensor([0, 1, 0])
+      iex> Scholar.Metrics.Distance.hamming(x, y)
+      #Nx.Tensor<
+        f32
+        0.6666666865348816
+      >
+      iex> weights = Nx.tensor([1, 0.5, 0.5])
+      iex> Scholar.Metrics.Distance.hamming(x, y, weights)
+      #Nx.Tensor<
+        f32
+        0.75
+      >
+
+      iex> x = Nx.tensor([1, 2])
+      iex> y = Nx.tensor([1, 2, 3])
+      iex> Scholar.Metrics.Distance.hamming(x, y)
+      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
+
+      iex> x = Nx.tensor([[1, 2, 3], [0, 0, 0], [5, 2, 4]])
+      iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
+      iex> Scholar.Metrics.Distance.hamming(x, y, axes: [1])
+      #Nx.Tensor<
+        f32[3]
+        [0.6666666865348816, 1.0, 1.0]
+      >
+  """
+  deftransform hamming(x, y, opts \\ [])
+
+  deftransform hamming(x, y, opts) when is_list(opts) do
+    NimbleOptions.validate!(opts, @general_schema)
+    hamming_unweighted(x, y, opts)
+  end
+
+  deftransform hamming(x, y, w), do: hamming_weighted(x, y, w, [])
+
+  deftransform hamming(x, y, w, opts) when is_list(opts) do
+    NimbleOptions.validate!(opts, @general_schema)
+    hamming_weighted(x, y, w, opts)
+  end
+
+  defnp hamming_unweighted(x, y, opts) do
+    assert_same_shape!(x, y)
+    Nx.mean(x != y, axes: opts[:axes])
+  end
+
+  defnp hamming_weighted(x, y, w, opts) do
+    assert_same_shape!(x, y)
+    Nx.weighted_mean(x != y, w, axes: opts[:axes])
+  end
 end
