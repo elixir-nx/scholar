@@ -65,7 +65,6 @@ defmodule Scholar.Metrics.Similarity do
   * $M_{11}$ is the total number of attributes, for which both $X$ and $Y$ have 1.
   * $M_{10}$ is the total number of attributes, for which $X$ has 1 and $Y$ has 0.
   * $M_{01}$ is the total number of attributes, for which $X$ has 0 and $Y$ has 1.
-  * $M_{00}$ is the total number of attributes, for which both $X$ and $Y$ have 0.
 
   ## Examples
 
