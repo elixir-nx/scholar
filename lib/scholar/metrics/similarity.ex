@@ -1,6 +1,6 @@
 defmodule Scholar.Metrics.Similarity do
   @moduledoc """
-  Similarity metrics between 1-D tensors.
+  Similarity metrics between multi-dimensional tensors.
   """
 
   import Nx.Defn
@@ -57,13 +57,15 @@ defmodule Scholar.Metrics.Similarity do
   Calculates Jaccard similarity based on binary attributes.
 
   $$
-  J = \frac{M\_{11}}{M\_{01} + M\_{10} + M\_{11}}
+  J(X, Y) = \frac{M\_{11}}{M\_{01} + M\_{10} + M\_{11}}
   $$
 
-  $M\_{11}$ is the total numbers of attributes, for which both X and Y have 1.\
-  $M\_{10}$ is the total numbers of attributes, for which X has 1 and Y has 0.\
-  $M\_{01}$ is the total numbers of attributes, for which X has 0 and Y has 1.\
-  $M\_{00}$ is the total numbers of attributes, for which both X and Y have 0.
+  Where:
+
+  * $M\_{11}$ is the total number of attributes, for which both $X$ and $Y$ have 1.
+  * $M\_{10}$ is the total number of attributes, for which $X$ has 1 and $Y$ has 0.
+  * $M\_{01}$ is the total number of attributes, for which $X$ has 0 and $Y$ has 1.
+  * $M\_{00}$ is the total number of attributes, for which both $X$ and $Y$ have 0.
 
   ## Examples
 

@@ -29,7 +29,47 @@ defmodule Scholar.Interpolation.BezierSpline do
   Fits a cubic Bezier spline interpolation of the given `(x, y)` points.
 
   Inputs are expected to be rank-1 tensors with the same shape
-  and at least 3 entries.
+  and at least 4 entries.
+
+  ## Examples
+
+      iex> x = Nx.iota({4})
+      iex> y = Nx.tensor([2.0, 0.0, 1.0, 0.5])
+      iex> Scholar.Interpolation.BezierSpline.fit(x, y)
+      %Scholar.Interpolation.BezierSpline{
+        coefficients: #Nx.Tensor<
+          f32[3][4][2]
+          [
+            [
+              [0.0, 2.0],
+              [0.3333335816860199, 1.033333420753479],
+              [0.6666669845581055, 0.06666680425405502],
+              [1.0, 0.0]
+            ],
+            [
+              [1.0, 0.0],
+              [1.3333330154418945, -0.06666680425405502],
+              [1.6666665077209473, 0.7666666507720947],
+              [2.0, 1.0]
+            ],
+            [
+              [2.0, 1.0],
+              [2.3333334922790527, 1.2333333492279053],
+              [2.6666667461395264, 0.8666666746139526],
+              [3.0, 0.5]
+            ]
+          ]
+        >,
+        k: #Nx.Tensor<
+          f32[4][2]
+          [
+            [0.0, 2.0],
+            [1.0, 0.0],
+            [2.0, 1.0],
+            [3.0, 0.5]
+          ]
+        >
+      }
   """
   defn fit(x, y) do
     n =
@@ -118,6 +158,17 @@ defmodule Scholar.Interpolation.BezierSpline do
   ### Options
 
   #{NimbleOptions.docs(@predict_opts_schema)}
+
+  ## Examples
+
+      iex> x = Nx.iota({4})
+      iex> y = Nx.tensor([2.0, 0.0, 1.0, 0.5])
+      iex> model = Scholar.Interpolation.BezierSpline.fit(x, y)
+      iex> Scholar.Interpolation.BezierSpline.predict(model, Nx.tensor([3.0, 4.0, 2.0, 7.0]))
+      #Nx.Tensor<
+        f32[4]
+        [0.5000335574150085, -4.2724612285383046e-5, 0.9999786615371704, 34.5]
+      >
   """
   deftransform predict(%__MODULE__{} = model, target_x, opts \\ []) do
     predict_n(model, target_x, NimbleOptions.validate!(opts, @predict_opts_schema))

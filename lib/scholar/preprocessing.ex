@@ -93,12 +93,16 @@ defmodule Scholar.Preprocessing do
   @doc """
   Standardizes the tensor by removing the mean and scaling to unit variance.
 
-  Formula: `z = (x - u) / s`
+  #{~S'''
+  Formula for input tensor $x$:
+  $$
+  z = \frac{x - \mu}{\sigma}
+  $$
 
-  Where `u` is the mean of the samples, and `s` is the standard deviation.
+  Where $\mu$ is the mean of the samples, and $\sigma$ is the standard deviation.
   Standardization can be helpful in cases where the data follows a Gaussian distribution
   (or Normal distribution) without outliers.
-
+  '''}
   ## Options
 
   #{NimbleOptions.docs(@general_schema)}
@@ -288,7 +292,7 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  Encodes a tensor's values into integers from range 0 to `:num_classes - 1`.
+  Encodes a tensor's values into integers from range 0 to `:num_classes` - 1.
 
   ## Options
 

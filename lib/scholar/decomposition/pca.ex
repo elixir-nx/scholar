@@ -1,6 +1,14 @@
 defmodule Scholar.Decomposition.PCA do
   @moduledoc """
-  PCA decomposition algorithm.
+  Principal component analysis (PCA).
+
+  The main concept of PCA is to find axes which explain the most variance
+  of data set [1]. Then the sample data is decompose using linear combination of
+  vectors that lie on mentioned axes.
+
+  Reference:
+
+  * [1] - [Principal component analysis](https://en.wikipedia.org/wiki/Principal_component_analysis)
   """
   import Nx.Defn
 
@@ -31,9 +39,8 @@ defmodule Scholar.Decomposition.PCA do
       type: {:or, [:pos_integer, {:in, [nil]}]},
       default: nil,
       doc: ~S"""
-      Number of components to keep. If `:num_components` is not set, all components are kept:
-
-      $num\\_components = min(num\\_samples, num\\_features)$
+      Number of components to keep. If `:num_components` is not set, all components are kept
+      which is the minimum value from number of features and number of samples.
       """
     ]
   ]
@@ -92,6 +99,44 @@ defmodule Scholar.Decomposition.PCA do
     * `:num_features` - Number of features in the training data.
 
     * `:num_samples` - Number of samples in the training data.
+
+  ## Examples
+      iex> x = Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+      iex> Scholar.Decomposition.PCA.fit(x)
+      %Scholar.Decomposition.PCA{
+        components: #Nx.Tensor<
+          f32[2][2]
+          [
+            [-0.8387274146080017, -0.544551432132721],
+            [0.544551432132721, -0.8387274146080017]
+          ]
+        >,
+        explained_variance: #Nx.Tensor<
+          f32[2]
+          [7.939539909362793, 0.060457102954387665]
+        >,
+        explained_variance_ratio: #Nx.Tensor<
+          f32[2]
+          [0.9924428462982178, 0.007557140663266182]
+        >,
+        singular_values: #Nx.Tensor<
+          f32[2]
+          [6.3006110191345215, 0.5498049855232239]
+        >,
+        mean: #Nx.Tensor<
+          f32[2]
+          [0.0, 0.0]
+        >,
+        num_components: 2,
+        num_features: #Nx.Tensor<
+          s64
+          2
+        >,
+        num_samples: #Nx.Tensor<
+          s64
+          6
+        >
+      }
   """
   deftransform fit(x, opts \\ []) do
     fit_n(x, NimbleOptions.validate!(opts, @fit_opts_schema))
@@ -146,7 +191,23 @@ defmodule Scholar.Decomposition.PCA do
 
   ## Returns
 
-  The function returns a decomposed data.
+  The function returns a tensor with decomposed data.
+
+  ## Examples
+      iex> x = Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+      iex> model = Scholar.Decomposition.PCA.fit(x)
+      iex> Scholar.Decomposition.PCA.transform(model, x)
+      #Nx.Tensor<
+        f32[6][2]
+        [
+          [1.3832788467407227, 0.29417598247528076],
+          [2.222006320953369, -0.2503754496574402],
+          [3.605285167694092, 0.043800532817840576],
+          [-1.3832788467407227, -0.29417598247528076],
+          [-2.222006320953369, 0.2503754496574402],
+          [-3.605285167694092, -0.043800532817840576]
+        ]
+      >
   """
   deftransform transform(model, x, opts \\ []) do
     transform_n(model, x, NimbleOptions.validate!(opts, @transform_opts_schema))
@@ -176,8 +237,9 @@ defmodule Scholar.Decomposition.PCA do
 
   @doc """
   Fit the model with `x` and apply the dimensionality reduction on `x`.
-  This function is analogical to calling fit and then transform, but it is calculated
-  more efficiently.
+
+  This function is analogical to calling `fit/2` and then
+  `transform/3`, but it is calculated more efficiently.
 
   ## Options
 
@@ -185,7 +247,23 @@ defmodule Scholar.Decomposition.PCA do
 
   ## Returns
 
-  The function returns a decomposed data.
+  The function returns a tensor with decomposed data.
+
+  ## Examples
+
+      iex> x = Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+      iex> Scholar.Decomposition.PCA.fit_transform(x)
+      #Nx.Tensor<
+        f32[6][2]
+        [
+          [1.3819527626037598, 0.29363134503364563],
+          [2.2231407165527344, -0.25125157833099365],
+          [3.605093240737915, 0.04237978905439377],
+          [-1.3819527626037598, -0.29363134503364563],
+          [-2.2231407165527344, 0.25125157833099365],
+          [-3.605093240737915, -0.04237978905439377]
+        ]
+      >
   """
 
   deftransform fit_transform(x, opts \\ []) do

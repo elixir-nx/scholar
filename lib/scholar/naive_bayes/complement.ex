@@ -1,9 +1,13 @@
 defmodule Scholar.NaiveBayes.Complement do
   @moduledoc """
-  The Complement Naive Bayes classifier described in Rennie et al. (2003).
+  The Complement Naive Bayes classifier described in Rennie et al. (2003) [1].
 
   The Complement Naive Bayes classifier was designed to correct the assumption of Multinomial Naive Bayes that each class has roughly the
   same representation. It is particularly suited for imbalanced data sets.
+
+  Reference:
+
+  * [1] - [Paper about Complement Naive Bayes Algorithm](https://www.aaai.org/Papers/ICML/2003/ICML03-081.pdf?ref=https://githubhelp.com)
   """
   import Nx.Defn
 
@@ -399,14 +403,14 @@ defmodule Scholar.NaiveBayes.Complement do
     }
   end
 
-  defn joint_log_likelihood(
-         %__MODULE__{
-           feature_log_probability: feature_log_probability,
-           class_log_priors: class_log_priors,
-           classes: classes
-         },
-         x
-       ) do
+  defnp joint_log_likelihood(
+          %__MODULE__{
+            feature_log_probability: feature_log_probability,
+            class_log_priors: class_log_priors,
+            classes: classes
+          },
+          x
+        ) do
     jll = Nx.dot(x, [1], feature_log_probability, [1])
 
     if Nx.size(classes) == 1 do

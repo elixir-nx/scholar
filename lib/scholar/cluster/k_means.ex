@@ -1,6 +1,20 @@
 defmodule Scholar.Cluster.KMeans do
   @moduledoc """
-  K-Means algorithm.
+  K-Means Algorithm
+
+  K-Means is simple clustering method that works iteratively [1]. In the first iteration,
+  centroids are chosen randomly from input data. It turned out that some initialization
+  are especially effective. In 2007 David Arthur and Sergei Vassilvitskii proposed initialization
+  called k-means++ which speed up conergence of algorithm drastically [2]. After initialization, from each centroid
+  find points that are the clostest to that centroid. Then, for each centroid replace it with the
+  center of mass of associated points. These two steps mentioned above are repeated until the solution
+  converge. Since some initializations are unfortunate and converge to sub-optimal results
+  we need repeat the whole procedure a few times and take the best result.
+
+  Reference:
+
+  * [1] - [K-Means Algorithm](https://cs.nyu.edu/~roweis/csc2515-2006/readings/lloyd57.pdf)
+  * [2] - [K-Means++ Initialization](http://ilpubs.stanford.edu:8090/778/1/2006-13.pdf)
   """
   import Nx.Defn
   import Scholar.Shared
@@ -49,7 +63,7 @@ defmodule Scholar.Cluster.KMeans do
       Method for centroid initialization, either of:
 
       * `:k_means_plus_plus` - selects initial cluster centroids using sampling based
-        on an empirical probability distribution of the points’ contribution to
+        on an empirical probability distribution of the points' contribution to
         the overall inertia. This technique speeds up convergence, and is
         theoretically proven to be O(log(k))-optimal.
 
@@ -79,6 +93,33 @@ defmodule Scholar.Cluster.KMeans do
     * `:inertia` - Sum of squared distances of samples to their closest cluster center.
 
     * `:labels` - Labels of each point.
+
+  ## Examples
+
+      iex>  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
+      ...>    num_clusters: 2
+      ...>  )
+      %Scholar.Cluster.KMeans{
+        num_iterations: #Nx.Tensor<
+          s64
+          2
+        >,
+        clusters: #Nx.Tensor<
+          f32[2][2]
+          [
+            [1.0, 2.5],
+            [2.0, 4.5]
+          ]
+        >,
+        inertia: #Nx.Tensor<
+          f32
+          1.0
+        >,
+        labels: #Nx.Tensor<
+          s64[4]
+          [0, 1, 0, 1]
+        >
+      }
   """
   deftransform fit(x, opts \\ []) do
     if Nx.rank(x) != 2 do
@@ -239,9 +280,23 @@ defmodule Scholar.Cluster.KMeans do
   end
 
   @doc """
-  Makes predictions with the given model on inputs `x`.
+  Makes predictions with the given `model` on inputs `x`.
 
-  It returns a tensor with clusters corresponding to the input.
+  ## Returns
+
+    It returns a tensor with clusters corresponding to the input.
+
+  ## Examples
+
+      iex> model =
+      ...>  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
+      ...>    num_clusters: 2
+      ...>  )
+      iex> Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      #Nx.Tensor<
+        s64[2]
+        [1, 0]
+      >
   """
   defn predict(%__MODULE__{clusters: clusters} = _model, x) do
     assert_same_shape!(x[0], clusters[0])
@@ -266,12 +321,33 @@ defmodule Scholar.Cluster.KMeans do
   end
 
   @doc """
-  Calculate distances between each sample from `x` and and the model centroids.
+  Calculates distances between each sample from `x` and the calculated centroids.
+
+  ## Returns
+
+    It returns a tensor with corresponding distances.
+
+  ## Examples
+
+      iex> model =
+      ...>  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
+      ...>    num_clusters: 2
+      ...>  )
+      iex> Scholar.Cluster.KMeans.transform(model, Nx.tensor([[1.0, 2.5]]))
+      #Nx.Tensor<
+        f32[1][2]
+        [
+          [2.2360680103302, 0.0]
+        ]
+      >
   """
   defn transform(%__MODULE__{clusters: clusters} = _model, x) do
+    {num_clusters, num_features} = Nx.shape(clusters)
+    {num_samples, _} = Nx.shape(x)
+
     Scholar.Metrics.Distance.euclidean(
-      Nx.new_axis(x, 1),
-      Nx.new_axis(clusters, 0),
+      Nx.new_axis(x, 1) |> Nx.broadcast({num_samples, num_clusters, num_features}),
+      Nx.new_axis(clusters, 0) |> Nx.broadcast({num_samples, num_clusters, num_features}),
       axes: [-1]
     )
   end

@@ -1,6 +1,6 @@
 defmodule Scholar.Metrics.Distance do
   @moduledoc """
-  Distance metrics between 1-D tensors.
+  Distance metrics between multi-dimensional tensors.
   """
 
   import Nx.Defn
@@ -37,7 +37,7 @@ defmodule Scholar.Metrics.Distance do
   @minkowski_schema NimbleOptions.new!(minkowski_schema)
 
   @doc """
-  Standard euclidean distance.
+  Standard euclidean distance ($L_{2}$ distance).
 
   $$
   D(x, y) = \\sqrt{\\sum_i (x_i - y_i)^2}
@@ -149,7 +149,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   @doc """
-  Manhattan, taxicab, or l1 distance.
+  Manhattan, Taxicab, or $L_{1}$ distance.
 
   $$
   D(x, y) = \\sum_i |x_i - y_i|
@@ -204,7 +204,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   @doc """
-  Chebyshev or l-infinity distance.
+  Chebyshev or $L_{\\infty}$ distance.
 
   $$
   D(x, y) = \\max_i |x_i - y_i|
@@ -332,7 +332,7 @@ defmodule Scholar.Metrics.Distance do
   Cosine distance.
 
   $$
-  1 - \\frac{u \\cdot v}{\\|u\\|_2 \\|v\\|_2}
+  D(u, v) = 1 - \\frac{u \\cdot v}{\\|u\\|_2 \\|v\\|_2}
   $$
 
   ## Options
@@ -411,9 +411,12 @@ defmodule Scholar.Metrics.Distance do
   @doc """
   Hamming distance.
 
+  #{~S'''
   $$
-  hamming(x ,y) = \frac{\#\{x_{i, j...} \neq y_{i, j, ...}\}}{\#x_{i, j, ...}}$, where $i, j, ...$ are the aggregation axes
+  hamming(x, y) = \frac{\left \lvert x\_{i, j, ...} \neq y\_{i, j, ...}\right \rvert}{\left \lvert x\_{i, j, ...}\right \rvert}
   $$
+  where $i, j, ...$ are the aggregation axes
+  '''}
 
   ## Options
 
@@ -427,12 +430,6 @@ defmodule Scholar.Metrics.Distance do
       #Nx.Tensor<
         f32
         0.6666666865348816
-      >
-      iex> weights = Nx.tensor([1, 0.5, 0.5])
-      iex> Scholar.Metrics.Distance.hamming(x, y, weights)
-      #Nx.Tensor<
-        f32
-        0.75
       >
 
       iex> x = Nx.tensor([1, 2])
@@ -457,6 +454,24 @@ defmodule Scholar.Metrics.Distance do
 
   deftransform hamming(x, y, w), do: hamming_weighted(x, y, w, [])
 
+  @doc """
+  Hamming distance in weighted version.
+
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
+
+  ## Examples
+
+      iex> x = Nx.tensor([1, 0, 0])
+      iex> y = Nx.tensor([0, 1, 0])
+      iex> weights = Nx.tensor([1, 0.5, 0.5])
+      iex> Scholar.Metrics.Distance.hamming(x, y, weights)
+      #Nx.Tensor<
+        f32
+        0.75
+      >
+  """
   deftransform hamming(x, y, w, opts) when is_list(opts) do
     NimbleOptions.validate!(opts, @general_schema)
     hamming_weighted(x, y, w, opts)

@@ -40,6 +40,25 @@ defmodule Scholar.Interpolation.CubicSpline do
   ### Options
 
   #{NimbleOptions.docs(@fit_opts_schema)}
+
+  ## Examples
+
+      iex> x = Nx.iota({3})
+      iex> y = Nx.tensor([2.0, 0.0, 1.0])
+      iex> Scholar.Interpolation.CubicSpline.fit(x, y)
+      %Scholar.Interpolation.CubicSpline{
+        coefficients: #Nx.Tensor<
+          f32[2][4]
+          [
+            [0.0, 1.500000238418579, -3.500000238418579, 2.0],
+            [0.0, 1.5, -0.4999999403953552, 0.0]
+          ]
+        >,
+        x: #Nx.Tensor<
+          s64[3]
+          [0, 1, 2]
+        >
+      }
   """
   deftransform fit(x, y, opts \\ []) do
     fit_n(x, y, NimbleOptions.validate!(opts, @fit_opts_schema))
@@ -201,6 +220,20 @@ defmodule Scholar.Interpolation.CubicSpline do
   ### Options
 
   #{NimbleOptions.docs(@predict_opts_schema)}
+
+  ## Examples
+
+      iex> x = Nx.iota({3})
+      iex> y = Nx.tensor([2.0, 0.0, 1.0])
+      iex> model = Scholar.Interpolation.CubicSpline.fit(x, y)
+      iex> Scholar.Interpolation.CubicSpline.predict(model, Nx.tensor([[1.0, 4.0], [3.0, 7.0]]))
+      #Nx.Tensor<
+        f32[2][2]
+        [
+          [0.0, 12.0],
+          [5.0, 51.0]
+        ]
+      >
   """
   deftransform predict(%__MODULE__{} = model, target_x, opts \\ []) do
     predict_n(model, target_x, NimbleOptions.validate!(opts, @predict_opts_schema))

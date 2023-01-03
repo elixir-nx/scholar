@@ -43,6 +43,34 @@ defmodule Scholar.Linear.LogisticRegression do
 
   #{NimbleOptions.docs(@opts_schema)}
 
+  ## Returns
+
+    The function returns a struct with the following parameters:
+
+    * `:coefficients` - Coefficient of the features in the decision function.
+
+    * `:bias` - Bias added to the decision function.
+
+    * `:mode` - Indicates whether the problem is binary classification (`:num_classes` set to 2)
+      or multinomial (`:num_classes` is bigger than 2). For binary classification set to `:binary`, otherwise
+      set to `:multinomial`.
+
+  ## Examples
+
+      iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
+      iex> y = Nx.tensor([4.0, 3.0, -1.0])
+      iex> Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
+      %Scholar.Linear.LogisticRegression{
+        coefficients: #Nx.Tensor<
+          f32[2]
+          [7.674156665802002, -5.888940811157227]
+        >,
+        bias: #Nx.Tensor<
+          f32
+          11.289297103881836
+        >,
+        mode: :binary
+      }
   """
   deftransform fit(x, y, opts \\ []) do
     fit_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
@@ -155,6 +183,17 @@ defmodule Scholar.Linear.LogisticRegression do
 
   @doc """
   Makes predictions with the given model on inputs `x`.
+
+  ## Examples
+
+      iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
+      iex> y = Nx.tensor([4.0, 3.0, -1.0])
+      iex> model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
+      iex> Scholar.Linear.LogisticRegression.predict(model, Nx.tensor([-3.0, 5.0]))
+      #Nx.Tensor<
+        u8
+        0
+      >
   """
   defn predict(%__MODULE__{mode: mode} = model, x) do
     case mode do
