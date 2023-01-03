@@ -30,19 +30,19 @@ defmodule Scholar.Covariance do
   Computes covariance matrix for sample inputs `x`.
 
   #{~S'''
-  The value on the position $(i, j)$ in matrix is caluculated using formula:
+  The value on the position $Cov_{ij}$ in the $Cov$ matrix is calculated using the formula:
   $$ Cov(X\_{i}, X\_{j}) = \frac{\sum\_{k}\left(x\_{k} - \bar{x}\right)\left(y\_{k} - \bar{y}\right)}{N - 1} $$
   Where:
 
-    * $X\_{i}$ is a $i$th row of input
+    * $X_i$ is a $i$th row of input
 
-    * $x\_{k}$ is a $k$th value of $X_{i}$
+    * $x_k$ is a $k$th value of $X_i$
 
-    * $y\_{k}$ is a $k$th value of $X_{j}$
+    * $y_k$ is a $k$th value of $X_j$
 
-    * $\bar{x}$ is the mean of $X\_{i}$
+    * $\bar{x}$ is the mean of $X_i$
 
-    * $\bar{y}$ is the mean of $X\_{j}$
+    * $\bar{y}$ is the mean of $X_j$
 
     * $N$ is the number of samples
 

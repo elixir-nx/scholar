@@ -1,14 +1,14 @@
 defmodule Scholar.Decomposition.PCA do
   @moduledoc """
-  Principal component analysis (PCA).
+  Principal Component Analysis (PCA).
 
-  The main concept of PCA is to find axes which explain the most variance
-  of data set [1]. Then the sample data is decompose using linear combination of
-  vectors that lie on mentioned axes.
+  The main concept of PCA is to find components (i.e. columns of a matrix) which explain the most variance
+  of data set [1]. The sample data is decomposed using linear combination of
+  vectors that lie on the directions of those components.
 
   Reference:
 
-  * [1] - [Principal component analysis](https://en.wikipedia.org/wiki/Principal_component_analysis)
+  * [1] - [Principal Component Analysis](https://en.wikipedia.org/wiki/Principal_component_analysis)
   """
   import Nx.Defn
 
@@ -238,7 +238,7 @@ defmodule Scholar.Decomposition.PCA do
   @doc """
   Fit the model with `x` and apply the dimensionality reduction on `x`.
 
-  This function is analogical to calling `fit/2` and then
+  This function is analogous to calling `fit/2` and then
   `transform/3`, but it is calculated more efficiently.
 
   ## Options
