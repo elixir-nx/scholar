@@ -71,10 +71,11 @@ defmodule Scholar.Cluster.KMeans do
         the initial centroids.
       """
     ],
-    random_seed: [
+    seed: [
       type: :integer,
       doc: """
       Determines random number generation for centroid initialization.
+      If the seed is not provided, it is set to `System.system_time().
       """
     ]
   ]
@@ -141,10 +142,16 @@ defmodule Scholar.Cluster.KMeans do
             "invalid value for :num_clusters option: expected positive integer between 1 and #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
     end
 
-    fit_n(x, opts)
+    seed =
+      case opts[:seed] do
+        nil -> System.system_time()
+        _ -> opts[:seed]
+      end
+
+    fit_n(x, seed, opts)
   end
 
-  defnp fit_n(x, opts \\ []) do
+  defnp fit_n(x, seed, opts \\ []) do
     {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
     num_runs = opts[:num_runs]
@@ -160,7 +167,7 @@ defmodule Scholar.Cluster.KMeans do
       x
       |> Nx.broadcast({num_runs, num_samples, num_features})
 
-    centroids = initialize_centroids(x, opts)
+    centroids = initialize_centroids(x, seed, opts)
     inf = Nx.Constants.infinity(Nx.type(centroids))
     distance = Nx.broadcast(inf, {num_runs})
     tol = (x |> Nx.variance(axes: [0]) |> Nx.mean()) * opts[:tol]
@@ -211,7 +218,7 @@ defmodule Scholar.Cluster.KMeans do
     }
   end
 
-  defnp initialize_centroids(x, opts) do
+  defnp initialize_centroids(x, seed, opts) do
     num_clusters = opts[:num_clusters]
     {num_samples, _num_features} = Nx.shape(x)
     x = to_float(x)
@@ -225,7 +232,7 @@ defmodule Scholar.Cluster.KMeans do
         |> then(&Nx.take(x, &1))
 
       :k_means_plus_plus ->
-        k_means_plus_plus(x, num_clusters, num_runs, opts)
+        k_means_plus_plus(x, num_clusters, num_runs, seed)
     end
   end
 
@@ -262,20 +269,12 @@ defmodule Scholar.Cluster.KMeans do
     {Nx.take(x, idx), new_key}
   end
 
-  deftransformp check_seed(seed) do
-    case seed do
-      nil -> :erlang.system_time()
-      _ -> seed
-    end
-  end
-
-  defnp k_means_plus_plus(x, num_clusters, num_runs, opts) do
+  defnp k_means_plus_plus(x, num_clusters, num_runs, seed) do
     inf = Nx.Constants.infinity()
     {num_samples, num_features} = Nx.shape(x)
     centroids = Nx.broadcast(inf, {num_runs, num_clusters, num_features})
     inertia = Nx.broadcast(0.0, {num_runs, num_samples})
 
-    seed = check_seed(opts[:random_seed])
     key = Nx.Random.key(seed)
 
     {first_centroid_idx, new_key} = Nx.Random.randint(key, 0, num_samples - 1, shape: {num_runs})

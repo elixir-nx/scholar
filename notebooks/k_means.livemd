@@ -26,7 +26,7 @@ The main purpose of this livebook is to introduce the KMeans clustering algorith
 ```elixir
 alias VegaLite, as: Vl
 require Explorer.DataFrame
-random_seed = 42
+seed = 42
 ```
 
 <!-- livebook:{"branch_parent_index":0} -->
@@ -145,7 +145,7 @@ clusterings = 1..11
 
 models =
   for num_clusters <- clusterings do
-    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters, random_seed: random_seed)
+    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters, seed: seed)
   end
 
 inertias = for model <- models, do: Nx.to_number(model.inertia)
@@ -261,7 +261,7 @@ model =
     num_clusters: 10,
     num_runs: 10,
     max_iterations: 200,
-    random_seed: random_seed
+    seed: seed
   )
 
 repainted_x = Nx.take(model.clusters, model.labels)
@@ -286,7 +286,7 @@ clusterings = [5, 10, 15, 20, 40]
 
 models =
   for num_clusters <- clusterings do
-    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters, random_seed: random_seed)
+    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters, seed: seed)
   end
 ```
 
@@ -406,7 +406,7 @@ nums_clusters = 2..20
 
 models =
   for num_clusters <- 2..20 do
-    Scholar.Cluster.KMeans.fit(images, num_clusters: num_clusters, random_seed: random_seed)
+    Scholar.Cluster.KMeans.fit(images, num_clusters: num_clusters, seed: seed)
   end
 ```
 

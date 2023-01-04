@@ -1,14 +1,14 @@
 defmodule Scholar.Cluster.KMeansTest do
   use ExUnit.Case, async: true
 
-  @random_seed 42
+  @seed 42
 
   describe "fit, predict, and transform" do
     test "fit and predict without weights" do
       model =
         Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
           num_clusters: 2,
-          random_seed: @random_seed
+          seed: @seed
         )
 
       assert model.clusters == Nx.tensor([[1.0, 2.5], [2.0, 4.5]])
@@ -24,7 +24,7 @@ defmodule Scholar.Cluster.KMeansTest do
       model =
         Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
           num_clusters: 2,
-          random_seed: @random_seed,
+          seed: @seed,
           weights: [1, 2, 3, 4]
         )
 
