@@ -49,7 +49,7 @@ defmodule Scholar.Impute.SimpleImputer do
 
   #{NimbleOptions.docs(@opts_schema)}
 
-  ## Returns
+  ## Return Values
 
     The function returns a struct with the following parameters:
 
@@ -218,7 +218,7 @@ defmodule Scholar.Impute.SimpleImputer do
   @doc """
   Impute all missing values in `x` using fitted imputer.
 
-  ## Returns
+  ## Return Values
 
   The function returns input tensor with NaN replaced with values saved in fitted imputer.
 

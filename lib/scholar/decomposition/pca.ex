@@ -73,7 +73,7 @@ defmodule Scholar.Decomposition.PCA do
 
   #{NimbleOptions.docs(@fit_opts_schema)}
 
-  ## Returns
+  ## Return Values
 
   The function returns a struct with the following parameters:
 
@@ -189,7 +189,7 @@ defmodule Scholar.Decomposition.PCA do
 
   #{NimbleOptions.docs(@transform_opts_schema)}
 
-  ## Returns
+  ## Return Values
 
   The function returns a tensor with decomposed data.
 
@@ -245,7 +245,7 @@ defmodule Scholar.Decomposition.PCA do
 
   #{NimbleOptions.docs(@transform_opts_schema)}
 
-  ## Returns
+  ## Return Values
 
   The function returns a tensor with decomposed data.
 

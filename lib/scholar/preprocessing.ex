@@ -109,37 +109,37 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-        iex> Scholar.Preprocessing.standard_scale(Nx.tensor([1,2,3]))
-        #Nx.Tensor<
-          f32[3]
-          [-1.2247447967529297, 0.0, 1.2247447967529297]
-        >
+      iex> Scholar.Preprocessing.standard_scale(Nx.tensor([1,2,3]))
+      #Nx.Tensor<
+        f32[3]
+        [-1.2247447967529297, 0.0, 1.2247447967529297]
+      >
 
-        iex> Scholar.Preprocessing.standard_scale(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]))
-        #Nx.Tensor<
-          f32[3][3]
-          [
-            [0.5212860703468323, -1.3553436994552612, 1.4596009254455566],
-            [1.4596009254455566, -0.4170288145542145, -0.4170288145542145],
-            [-0.4170288145542145, 0.5212860703468323, -1.3553436994552612]
-          ]
-        >
+      iex> Scholar.Preprocessing.standard_scale(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]))
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [0.5212860703468323, -1.3553436994552612, 1.4596009254455566],
+          [1.4596009254455566, -0.4170288145542145, -0.4170288145542145],
+          [-0.4170288145542145, 0.5212860703468323, -1.3553436994552612]
+        ]
+      >
 
-        iex> Scholar.Preprocessing.standard_scale(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]), axes: [1])
-        #Nx.Tensor<
-          f32[3][3]
-          [
-            [0.26726120710372925, -1.3363062143325806, 1.069044828414917],
-            [1.4142135381698608, -0.7071068286895752, -0.7071068286895752],
-            [0.0, 1.2247447967529297, -1.2247447967529297]
-          ]
-        >
+      iex> Scholar.Preprocessing.standard_scale(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]), axes: [1])
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [0.26726120710372925, -1.3363062143325806, 1.069044828414917],
+          [1.4142135381698608, -0.7071068286895752, -0.7071068286895752],
+          [0.0, 1.2247447967529297, -1.2247447967529297]
+        ]
+      >
 
-        iex> Scholar.Preprocessing.standard_scale(42)
-        #Nx.Tensor<
-          f32
-          42.0
-        >
+      iex> Scholar.Preprocessing.standard_scale(42)
+      #Nx.Tensor<
+        f32
+        42.0
+      >
   """
   deftransform standard_scale(tensor, opts \\ []) do
     standard_scale_n(tensor, NimbleOptions.validate!(opts, @general_schema))
@@ -161,28 +161,28 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-        iex> Scholar.Preprocessing.max_abs_scale(Nx.tensor([1, 2, 3]))
-        #Nx.Tensor<
-          f32[3]
-          [0.3333333432674408, 0.6666666865348816, 1.0]
-        >
+      iex> Scholar.Preprocessing.max_abs_scale(Nx.tensor([1, 2, 3]))
+      #Nx.Tensor<
+        f32[3]
+        [0.3333333432674408, 0.6666666865348816, 1.0]
+      >
 
-        iex> Scholar.Preprocessing.max_abs_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0])
-        #Nx.Tensor<
-          f32[4][3]
-          [
-            [0.3333333432674408, -0.3333333432674408, 1.0],
-            [1.0, 0.0, 0.0],
-            [0.0, 0.3333333432674408, -0.5],
-            [0.6666666865348816, 1.0, 0.5]
-          ]
-        >
+      iex> Scholar.Preprocessing.max_abs_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0])
+      #Nx.Tensor<
+        f32[4][3]
+        [
+          [0.3333333432674408, -0.3333333432674408, 1.0],
+          [1.0, 0.0, 0.0],
+          [0.0, 0.3333333432674408, -0.5],
+          [0.6666666865348816, 1.0, 0.5]
+        ]
+      >
 
-        iex> Scholar.Preprocessing.max_abs_scale(42)
-        #Nx.Tensor<
-          f32
-          1.0
-        >
+      iex> Scholar.Preprocessing.max_abs_scale(42)
+      #Nx.Tensor<
+        f32
+        1.0
+      >
   """
   deftransform max_abs_scale(tensor, opts \\ []) do
     max_abs_scale_n(tensor, NimbleOptions.validate!(opts, @general_schema))
@@ -202,39 +202,39 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-        iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([1, 2, 3]))
-        #Nx.Tensor<
-          f32[3]
-          [0.0, 0.5, 1.0]
-        >
+      iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([1, 2, 3]))
+      #Nx.Tensor<
+        f32[3]
+        [0.0, 0.5, 1.0]
+      >
 
-        iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0])
-        #Nx.Tensor<
-          f32[4][3]
-          [
-            [0.3333333432674408, 0.0, 1.0],
-            [1.0, 0.25, 0.3333333432674408],
-            [0.0, 0.5, 0.0],
-            [0.6666666865348816, 1.0, 0.6666666865348816]
-          ]
-        >
+      iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0])
+      #Nx.Tensor<
+        f32[4][3]
+        [
+          [0.3333333432674408, 0.0, 1.0],
+          [1.0, 0.25, 0.3333333432674408],
+          [0.0, 0.5, 0.0],
+          [0.6666666865348816, 1.0, 0.6666666865348816]
+        ]
+      >
 
-        iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0], min: 1, max: 3)
-        #Nx.Tensor<
-          f32[4][3]
-          [
-            [1.6666667461395264, 1.0, 3.0],
-            [3.0, 1.5, 1.6666667461395264],
-            [1.0, 2.0, 1.0],
-            [2.3333334922790527, 3.0, 2.3333334922790527]
-          ]
-        >
+      iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0], min: 1, max: 3)
+      #Nx.Tensor<
+        f32[4][3]
+        [
+          [1.6666667461395264, 1.0, 3.0],
+          [3.0, 1.5, 1.6666667461395264],
+          [1.0, 2.0, 1.0],
+          [2.3333334922790527, 3.0, 2.3333334922790527]
+        ]
+      >
 
-        iex> Scholar.Preprocessing.min_max_scale(42)
-        #Nx.Tensor<
-          f32
-          0.0
-        >
+      iex> Scholar.Preprocessing.min_max_scale(42)
+      #Nx.Tensor<
+        f32
+        0.0
+      >
   """
   deftransform min_max_scale(tensor, opts \\ []) do
     min_max_scale_n(tensor, NimbleOptions.validate!(opts, @min_max_schema))

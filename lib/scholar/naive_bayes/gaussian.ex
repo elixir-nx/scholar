@@ -62,7 +62,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
   #{NimbleOptions.docs(@opts_schema)}
 
-  ## Returns
+  ## Return Values
 
   The function returns a struct with the following parameters:
 

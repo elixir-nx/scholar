@@ -82,7 +82,7 @@ defmodule Scholar.Cluster.KMeans do
 
   #{NimbleOptions.docs(@opts_schema)}
 
-  ## Returns
+  ## Return Values
 
     The function returns a struct with the following parameters:
 
@@ -282,7 +282,7 @@ defmodule Scholar.Cluster.KMeans do
   @doc """
   Makes predictions with the given `model` on inputs `x`.
 
-  ## Returns
+  ## Return Values
 
     It returns a tensor with clusters corresponding to the input.
 
@@ -323,7 +323,7 @@ defmodule Scholar.Cluster.KMeans do
   @doc """
   Calculates distances between each sample from `x` and the calculated centroids.
 
-  ## Returns
+  ## Return Values
 
     It returns a tensor with corresponding distances.
 
