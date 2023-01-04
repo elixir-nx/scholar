@@ -70,6 +70,12 @@ defmodule Scholar.Cluster.KMeans do
       * `:random` - choose `:num_clusters` observations (rows) at random from data for
         the initial centroids.
       """
+    ],
+    random_seed: [
+      type: :integer,
+      doc: """
+      Determines random number generation for centroid initialization.
+      """
     ]
   ]
 
@@ -219,7 +225,7 @@ defmodule Scholar.Cluster.KMeans do
         |> then(&Nx.take(x, &1))
 
       :k_means_plus_plus ->
-        k_means_plus_plus(x, num_clusters, num_runs)
+        k_means_plus_plus(x, num_clusters, num_runs, opts)
     end
   end
 
@@ -243,8 +249,8 @@ defmodule Scholar.Cluster.KMeans do
     {inertia_for_centroids, Nx.reduce_min(inertia_for_centroids, axes: [1])}
   end
 
-  defnp find_new_centroid(weights, x, num_runs) do
-    rand = Nx.random_uniform({num_runs}, 0.0, 1.0, type: {:f, 32})
+  defnp find_new_centroid(weights, x, num_runs, random_key) do
+    {rand, new_key} = Nx.Random.uniform(random_key, shape: {num_runs}, type: :f32)
     val = (rand * Nx.sum(weights, axes: [1])) |> Nx.new_axis(-1)
     cumulative_weights = Nx.cumulative_sum(weights, axis: 1)
 
@@ -253,27 +259,37 @@ defmodule Scholar.Cluster.KMeans do
       |> Nx.as_type({:s, 8})
       |> Nx.argmax(tie_break: :low, axis: 1)
 
-    Nx.take(x, idx)
+    {Nx.take(x, idx), new_key}
   end
 
-  defnp k_means_plus_plus(x, num_clusters, num_runs) do
+  deftransformp check_seed(seed) do
+    case seed do
+      nil -> :erlang.system_time()
+      _ -> seed
+    end
+  end
+
+  defnp k_means_plus_plus(x, num_clusters, num_runs, opts) do
     inf = Nx.Constants.infinity()
     {num_samples, num_features} = Nx.shape(x)
     centroids = Nx.broadcast(inf, {num_runs, num_clusters, num_features})
     inertia = Nx.broadcast(0.0, {num_runs, num_samples})
 
-    first_centroid_idx = Nx.random_uniform({num_runs}, 0, num_samples - 1)
+    seed = check_seed(opts[:random_seed])
+    key = Nx.Random.key(seed)
+
+    {first_centroid_idx, new_key} = Nx.Random.randint(key, 0, num_samples - 1, shape: {num_runs})
     first_centroid = Nx.take(x, first_centroid_idx)
     centroids = Nx.put_slice(centroids, [0, 0, 0], Nx.new_axis(first_centroid, 1))
 
-    {_, _, _, final_centroids} =
-      while {idx = 1, x, inertia, centroids}, idx < num_clusters do
+    {_, _, _, _, final_centroids} =
+      while {idx = 1, x, inertia, random_key = new_key, centroids}, idx < num_clusters do
         {_inertia_for_centroids, min_inertia} =
           calculate_inertia(x, centroids, num_clusters, num_runs)
 
-        new_centroid = find_new_centroid(min_inertia, x, num_runs)
+        {new_centroid, new_key} = find_new_centroid(min_inertia, x, num_runs, random_key)
         centroids = Nx.put_slice(centroids, [0, idx, 0], Nx.new_axis(new_centroid, 1))
-        {idx + 1, x, inertia, centroids}
+        {idx + 1, x, inertia, new_key, centroids}
       end
 
     final_centroids
