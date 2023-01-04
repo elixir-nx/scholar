@@ -33,9 +33,9 @@ defmodule Scholar.Covariance do
 
   #{~S'''
   $$ Cov(X\_{i}, X\_{j}) = \frac{\sum\_{k}\left(x\_{k} -
-  \bar{x}\right)\left(y\_{k} - \bar{y}\right)}{N - 1} $$
+  \bar{x}\right)\left(y\_{k} - \bar{y}\right)}{N - 1}
+  $$
   Where:
-
     * $X_i$ is a $i$th row of input
 
     * $x_k$ is a $k$th value of $X_i$
@@ -47,6 +47,7 @@ defmodule Scholar.Covariance do
     * $\bar{y}$ is the mean of $X_j$
 
     * $N$ is the number of samples
+
   This is a non-biased version of covariance.
   The biased version has $N$ in denominator instead of $N - 1$.
   '''}
