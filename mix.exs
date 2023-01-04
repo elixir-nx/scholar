@@ -33,6 +33,33 @@ defmodule Scholar.MixProject do
 
   defp docs do
     [
+      main: "Scholar",
+      source_url: "https://github.com/elixir-nx/scholar",
+      logo: "images/scholar_simplified.png",
+      extras: ["notebooks/k_means.livemd"],
+      groups_for_modules: [
+        Models: [
+          Scholar.Cluster.KMeans,
+          Scholar.Decomposition.PCA,
+          Scholar.Interpolation.BezierSpline,
+          Scholar.Interpolation.CubicSpline,
+          Scholar.Interpolation.Linear,
+          Scholar.Linear.LinearRegression,
+          Scholar.Linear.LogisticRegression,
+          Scholar.NaiveBayes.Complement,
+          Scholar.NaiveBayes.Gaussian,
+          Scholar.NaiveBayes.Multinomial
+        ],
+        Utilities: [
+          Scholar.Covariance,
+          Scholar.Impute.SimpleImputer,
+          Scholar.Metrics,
+          Scholar.Metrics.Clustering,
+          Scholar.Metrics.Distance,
+          Scholar.Metrics.Similarity,
+          Scholar.Preprocessing
+        ]
+      ],
       before_closing_body_tag: &before_closing_body_tag/1
     ]
   end

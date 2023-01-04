@@ -20,7 +20,7 @@ defmodule Scholar.Linear.LinearRegression do
       default: true,
       doc: """
       If set to `true`, a model will fit the intercept. Otherwise,
-      the intercept is set to 0.0. The intercept is an independent term
+      the intercept is set to `0.0`. The intercept is an independent term
       in a linear model. Specifically, it is the expected mean value
       of targets for a zero-vector on input.
       """
@@ -32,6 +32,34 @@ defmodule Scholar.Linear.LinearRegression do
   @doc """
   Fits a linear regression model for sample inputs `a` and
   sample targets `b`.
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
+
+  ## Return Values
+
+    The function returns a struct with the following parameters:
+
+    * `:coefficients` - Estimated coefficients for the linear regression problem.
+
+    * `:intercept` - Independent term in the linear model.
+
+  ## Examples
+
+      iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
+      iex> y = Nx.tensor([4.0, 3.0, -1.0])
+      iex> Scholar.Linear.LinearRegression.fit(x, y)
+      %Scholar.Linear.LinearRegression{
+        coefficients: #Nx.Tensor<
+          f32[2]
+          [-0.4972473084926605, -0.70103919506073]
+        >,
+        intercept: #Nx.Tensor<
+          f32
+          5.896470069885254
+        >
+      }
   """
   deftransform fit(a, b, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -73,9 +101,20 @@ defmodule Scholar.Linear.LinearRegression do
   end
 
   @doc """
-  Makes predictions with the given model on inputs `x`.
+  Makes predictions with the given `model` on input `x`.
+
+  ## Examples
+
+      iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
+      iex> y = Nx.tensor([4.0, 3.0, -1.0])
+      iex> model = Scholar.Linear.LinearRegression.fit(x, y)
+      iex> Scholar.Linear.LinearRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
+      #Nx.Tensor<
+        f32[1]
+        [4.200936317443848]
+      >
   """
-  defn predict(%__MODULE__{coefficients: coeff, intercept: intercept}, x) do
+  defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
     Nx.dot(x, coeff) + intercept
   end
 

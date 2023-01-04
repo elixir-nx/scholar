@@ -35,7 +35,7 @@ defmodule Scholar.Impute.SimpleImputer do
       type: {:or, [:float, :integer]},
       default: 0.0,
       doc: ~S"""
-      When strategy is set to `:constant`, `:fill_value` is used to replace all occurrences of missing_values.
+      When strategy is set to `:constant`, `:fill_value` is used to replace all occurrences of `:missing_values`.
       """
     ]
   ]
@@ -49,41 +49,26 @@ defmodule Scholar.Impute.SimpleImputer do
 
   #{NimbleOptions.docs(@opts_schema)}
 
-  ## Returns
+  ## Return Values
 
     The function returns a struct with the following parameters:
 
     * `:missing_values` - the same value as in `:missing_values`
 
-    * `:statistics` - The imputation fill value for each feature. Computing statistics can result in `Nx.Constant.nan/1` values.
+    * `:statistics` - The imputation fill value for each feature. Computing statistics can result in
+    [`Nx.Constant.nan/0`](https://hexdocs.pm/nx/Nx.Constants.html#nan/0) values.
 
   ## Examples
 
       iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
-      iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :mean)
-      iex> Scholar.Impute.SimpleImputer.transform(imputer, x)
-      #Nx.Tensor<
-        f32[3][3]
-        [
-          [1.0, 2.0, 5.0],
-          [3.0, 7.0, 5.0],
-          [2.0, 4.0, 5.0]
-        ]
-      >
-
-      iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
-      iex> y = Nx.tensor([[7, :nan, 6], [6, 9, :nan], [8, :nan, 1]])
-      iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :median)
-      iex> Scholar.Impute.SimpleImputer.transform(imputer, y)
-      #Nx.Tensor<
-        f32[3][3]
-        [
-          [7.0, 4.0, 6.0],
-          [6.0, 9.0, 5.0],
-          [8.0, 4.0, 1.0]
-        ]
-      >
-
+      iex> Scholar.Impute.SimpleImputer.fit(x, strategy: :mean)
+      %Scholar.Impute.SimpleImputer{
+        statistics: #Nx.Tensor<
+          f32[3]
+          [2.0, 4.333333492279053, 5.0]
+        >,
+        missing_values: :nan
+      }
   """
   deftransform fit(x, opts \\ []) do
     validated_opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -232,10 +217,41 @@ defmodule Scholar.Impute.SimpleImputer do
 
   @doc """
   Impute all missing values in `x` using fitted imputer.
+
+  ## Return Values
+
+  The function returns input tensor with NaN replaced with values saved in fitted imputer.
+
+  ## Examples
+
+      iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
+      iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :mean)
+      iex> Scholar.Impute.SimpleImputer.transform(imputer, x)
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [1.0, 2.0, 5.0],
+          [3.0, 7.0, 5.0],
+          [2.0, 4.0, 5.0]
+        ]
+      >
+
+      iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
+      iex> y = Nx.tensor([[7, :nan, 6], [6, 9, :nan], [8, :nan, 1]])
+      iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :median)
+      iex> Scholar.Impute.SimpleImputer.transform(imputer, y)
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [7.0, 4.0, 6.0],
+          [6.0, 9.0, 5.0],
+          [8.0, 4.0, 1.0]
+        ]
+      >
   """
   deftransform transform(%__MODULE__{statistics: statistics, missing_values: missing_values}, x) do
     {num_rows, num_cols} = Nx.shape(x)
-    impute_values = Nx.reshape(statistics, {1, num_cols}) |> Nx.broadcast({num_rows, num_cols})
+    impute_values = Nx.new_axis(statistics, 0) |> Nx.broadcast({num_rows, num_cols})
     mask = if missing_values == :nan, do: Nx.is_nan(x), else: Nx.equal(x, missing_values)
     Nx.select(mask, impute_values, x)
   end

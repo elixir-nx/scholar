@@ -25,6 +25,25 @@ defmodule Scholar.Interpolation.Linear do
 
   Inputs are expected to be rank-1 tensors with the same shape
   and at least 2 entries.
+
+  ## Examples
+
+      iex> x = Nx.iota({3})
+      iex> y = Nx.tensor([2.0, 0.0, 1.0])
+      iex> Scholar.Interpolation.Linear.fit(x, y)
+      %Scholar.Interpolation.Linear{
+        coefficients: #Nx.Tensor<
+          f32[2][2]
+          [
+            [-2.0, 2.0],
+            [1.0, -1.0]
+          ]
+        >,
+        x: #Nx.Tensor<
+          s64[2]
+          [0, 1]
+        >
+      }
   """
   defn fit(x, y) do
     case Nx.shape(x) do
@@ -65,8 +84,22 @@ defmodule Scholar.Interpolation.Linear do
 
   @doc """
   Returns the value fit by `train/2` corresponding to the `target_x` input.
+
+  ## Examples
+
+      iex> x = Nx.iota({3})
+      iex> y = Nx.tensor([2.0, 0.0, 1.0])
+      iex> model = Scholar.Interpolation.Linear.fit(x, y)
+      iex> Scholar.Interpolation.Linear.predict(model, Nx.tensor([[1.0, 4.0], [3.0, 7.0]]))
+      #Nx.Tensor<
+        f32[2][2]
+        [
+          [0.0, 3.0],
+          [2.0, 6.0]
+        ]
+      >
   """
-  defn predict(%__MODULE__{x: x, coefficients: coefficients}, target_x) do
+  defn predict(%__MODULE__{x: x, coefficients: coefficients} = _model, target_x) do
     original_shape = Nx.shape(target_x)
 
     target_x = Nx.flatten(target_x)

@@ -73,7 +73,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
 
   #{NimbleOptions.docs(@opts_schema)}
 
-  ## Returns
+  ## Return Values
 
   The function returns a struct with the following parameters:
 
@@ -367,13 +367,13 @@ defmodule Scholar.NaiveBayes.Multinomial do
     }
   end
 
-  defn joint_log_likelihood(
-         %__MODULE__{
-           feature_log_probability: feature_log_probability,
-           class_log_priors: class_log_priors
-         },
-         x
-       ) do
+  defnp joint_log_likelihood(
+          %__MODULE__{
+            feature_log_probability: feature_log_probability,
+            class_log_priors: class_log_priors
+          },
+          x
+        ) do
     Nx.dot(x, [1], feature_log_probability, [1]) + class_log_priors
   end
 

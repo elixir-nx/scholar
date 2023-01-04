@@ -2,16 +2,15 @@ defmodule Scholar.NaiveBayes.Gaussian do
   @moduledoc ~S"""
   Gaussian Naive Bayes.
 
-  Gaussian implements the Gaussian Naive Bayes algorithm for classification.
+  Module implements the Gaussian Naive Bayes algorithm for classification [1].
   The likelihood of the features is assumed to be Gaussian:
   $$ P(x\_{i} | y) = \frac{1}{\sqrt{2\pi\sigma\_{y}^{2}}} \exp \left(-\frac{(x\_{i} - \mu\_{y})^2}{2\sigma\_{y}^{2}}\right) $$
 
   The parameters $\sigma\_{y}$ and $\mu\_{y}$ are estimated using maximum likelihood.
 
-  For details on algorithm used to update feature means and variance online,
-  see Stanford CS tech report STAN-CS-79-773 by Chan, Golub, and LeVeque:
+  Reference:
 
-    http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf
+  * [1] - [Detailed explanation of algorithm used to update feature means and variance online by Chan, Golub, and LaVeque](http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf)
   """
   import Nx.Defn
 
@@ -63,7 +62,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
   #{NimbleOptions.docs(@opts_schema)}
 
-  ## Returns
+  ## Return Values
 
   The function returns a struct with the following parameters:
 
