@@ -29,9 +29,11 @@ defmodule Scholar.Covariance do
   @doc """
   Computes covariance matrix for sample inputs `x`.
 
-  #{~S'''
   The value on the position $Cov_{ij}$ in the $Cov$ matrix is calculated using the formula:
-  $$ Cov(X\_{i}, X\_{j}) = \frac{\sum\_{k}\left(x\_{k} - \bar{x}\right)\left(y\_{k} - \bar{y}\right)}{N - 1} $$
+
+  #{~S'''
+  $$ Cov(X\_{i}, X\_{j}) = \frac{\sum\_{k}\left(x\_{k} -
+  \bar{x}\right)\left(y\_{k} - \bar{y}\right)}{N - 1} $$
   Where:
 
     * $X_i$ is a $i$th row of input
@@ -46,7 +48,8 @@ defmodule Scholar.Covariance do
 
     * $N$ is the number of samples
 
-  This is a non-biased version of covariance. The biased version has $N$ in denominator instead of $N - 1$.
+  This is a non-biased version of covariance.
+  The biased version has $N$ in denominator instead of $N - 1$.
   '''}
   ## Options
 

@@ -100,9 +100,10 @@ defmodule Scholar.Preprocessing do
   $$
 
   Where $\mu$ is the mean of the samples, and $\sigma$ is the standard deviation.
-  Standardization can be helpful in cases where the data follows a Gaussian distribution
-  (or Normal distribution) without outliers.
+  Standardization can be helpful in cases where the data follows
+  a Gaussian distribution (or Normal distribution) without outliers.
   '''}
+
   ## Options
 
   #{NimbleOptions.docs(@general_schema)}
