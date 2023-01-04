@@ -75,7 +75,7 @@ defmodule Scholar.Cluster.KMeans do
       type: :integer,
       doc: """
       Determines random number generation for centroid initialization.
-      If the seed is not provided, it is set to `System.system_time().
+      If the seed is not provided, it is set to `System.system_time()`.
       """
     ]
   ]
@@ -142,11 +142,7 @@ defmodule Scholar.Cluster.KMeans do
             "invalid value for :num_clusters option: expected positive integer between 1 and #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
     end
 
-    seed =
-      case opts[:seed] do
-        nil -> System.system_time()
-        _ -> opts[:seed]
-      end
+    seed = Keyword.get_lazy(opts, :seed, &System.system_time/0)
 
     fit_n(x, seed, opts)
   end
