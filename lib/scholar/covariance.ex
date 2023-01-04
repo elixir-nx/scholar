@@ -51,6 +51,7 @@ defmodule Scholar.Covariance do
   This is a non-biased version of covariance.
   The biased version has $N$ in denominator instead of $N - 1$.
   '''}
+
   ## Options
 
   #{NimbleOptions.docs(@opts_schema)}

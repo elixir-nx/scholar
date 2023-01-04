@@ -98,7 +98,6 @@ defmodule Scholar.Preprocessing do
   $$
   z = \frac{x - \mu}{\sigma}
   $$
-
   Where $\mu$ is the mean of the samples, and $\sigma$ is the standard deviation.
   Standardization can be helpful in cases where the data follows
   a Gaussian distribution (or Normal distribution) without outliers.
