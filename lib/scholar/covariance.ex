@@ -47,7 +47,6 @@ defmodule Scholar.Covariance do
     * $\bar{y}$ is the mean of $X_j$
 
     * $N$ is the number of samples
-
   This is a non-biased version of covariance.
   The biased version has $N$ in denominator instead of $N - 1$.
   '''}
