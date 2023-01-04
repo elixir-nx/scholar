@@ -35,6 +35,7 @@ defmodule Scholar.MixProject do
     [
       main: "Scholar",
       source_url: "https://github.com/elixir-nx/scholar",
+      logo: "scholar.png",
       extras: ["notebooks/k_means.livemd"],
       groups_for_modules: [
         Models: [

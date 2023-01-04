@@ -1,4 +1,4 @@
-# K-means tutorial
+# K-means Tutorial
 
 ```elixir
 Mix.install(
