@@ -1,28 +1,16 @@
 defmodule Scholar.Cluster.KMeansTest do
   use ExUnit.Case, async: true
 
-  import Nx.Defn
-
-  # Reorders clusters according to the first coordinate
-  defnp sort_clusters(model) do
-    order = Nx.argsort(model.clusters[[0..-1//1, 0]])
-    labels_maping = Nx.argsort(order)
-
-    %{
-      model
-      | labels: Nx.take(labels_maping, model.labels),
-        clusters: Nx.take(model.clusters, order)
-    }
-  end
+  @seed 42
 
   describe "fit, predict, and transform" do
     test "fit and predict without weights" do
       model =
         Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
-          num_clusters: 2
+          num_clusters: 2,
+          seed: @seed
         )
 
-      model = sort_clusters(model)
       assert model.clusters == Nx.tensor([[1.0, 2.5], [2.0, 4.5]])
       assert model.inertia == Nx.tensor(1.0, type: {:f, 32})
       assert model.labels == Nx.tensor([0, 1, 0, 1])
@@ -36,10 +24,9 @@ defmodule Scholar.Cluster.KMeansTest do
       model =
         Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
           num_clusters: 2,
+          seed: @seed,
           weights: [1, 2, 3, 4]
         )
-
-      model = sort_clusters(model)
 
       assert model.clusters == Nx.tensor([[1.0, 2.75], [2.0, 4.75]])
       assert model.inertia == Nx.tensor(1.5, type: {:f, 32})
