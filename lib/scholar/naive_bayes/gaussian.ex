@@ -133,18 +133,18 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
     opts =
       [
-        sample_weights_flag: opts[:sample_weights] != nil,
         priors_flag: opts[:priors] != nil
       ] ++
         opts
 
+    sample_weights_flag = Nx.tensor(opts[:sample_weights] != nil)
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     sample_weights = Nx.tensor(sample_weights)
 
     {priors, opts} = Keyword.pop(opts, :priors, 0.0)
     class_priors = Nx.tensor(priors)
 
-    fit_n(x, y, sample_weights, class_priors, opts)
+    fit_n(x, y, sample_weights, class_priors, sample_weights_flag, opts)
   end
 
   @doc """
@@ -242,7 +242,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
     Nx.exp(predict_log_probability(model, x))
   end
 
-  defnp fit_n(x, y, sample_weights, class_priors, opts) do
+  defnp fit_n(x, y, sample_weights, class_priors, sample_weights_flag, opts) do
     input_rank = Nx.rank(x)
     targets_rank = Nx.rank(y)
 
@@ -267,7 +267,6 @@ defmodule Scholar.NaiveBayes.Gaussian do
     eps = opts[:var_smoothing] * Nx.reduce_max(Nx.variance(x, axes: [0]))
     num_classes = opts[:num_classes]
     priors_flag = opts[:priors_flag]
-    sample_weights_flag = Nx.tensor(opts[:sample_weights_flag])
     {num_samples, num_features} = Nx.shape(x)
 
     classes = Nx.iota({num_classes}) |> Nx.sort()
