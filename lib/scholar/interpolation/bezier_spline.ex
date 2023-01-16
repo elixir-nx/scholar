@@ -106,7 +106,7 @@ defmodule Scholar.Interpolation.BezierSpline do
     b = 2 * (2 * k[0..(n - 1)] + k[1..n])
 
     b_comp = Nx.tensor([[0, 0], [0, 1], [0, 0], [0, 1]])
-    b_comp = Nx.indexed_put(b_comp, Nx.tensor([[2, 0], [3, 0]]), Nx.broadcast(n-1, {2}))
+    b_comp = Nx.indexed_put(b_comp, Nx.tensor([[2, 0], [3, 0]]), Nx.broadcast(n - 1, {2}))
 
     b =
       Nx.indexed_put(
