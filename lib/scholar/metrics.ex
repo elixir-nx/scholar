@@ -469,7 +469,7 @@ defmodule Scholar.Metrics do
   Calculates the mean absolute error of predictions
   with respect to targets.
 
-  $$l_i = \sum_i |\hat{y_i} - y_i|$$
+  $$MAE = \frac{\sum_{i=1}^{n} |\hat{y_i} - y_i|}{n}$$
 
   ## Examples
 
@@ -487,6 +487,27 @@ defmodule Scholar.Metrics do
     (y_true - y_pred)
     |> Nx.abs()
     |> Nx.mean()
+  end
+
+  @doc ~S"""
+  Calculates the mean square error of predictions
+  with respect to targets.
+
+  $$MSE = \frac{\sum_{i=1}^{n} (\hat{y_i} - y_i)^2}{n}$$
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([[0.0, 2.0], [0.5, 0.0]], type: {:f, 32})
+      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]], type: {:f, 32})
+      iex> Scholar.Metrics.mean_square_error(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.5625
+      >
+  """
+  defn mean_square_error(y_true, y_pred) do
+    diff = y_true - y_pred
+    (diff * diff) |> Nx.mean()
   end
 
   deftransformp check_num_classes(num_classes) do
