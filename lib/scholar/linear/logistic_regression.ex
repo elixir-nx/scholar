@@ -76,7 +76,7 @@ defmodule Scholar.Linear.LogisticRegression do
     fit_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp fit_n(x, y, opts \\ []) do
+  defnp fit_n(x, y, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
@@ -96,7 +96,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
   # Binary logistic regression
 
-  defnp fit_binary(x, y, opts \\ []) do
+  defnp fit_binary(x, y, opts) do
     iterations = opts[:iterations]
     learning_rate = opts[:learning_rate]
     x_t = Nx.transpose(x)

@@ -152,8 +152,10 @@ defmodule Scholar.NaiveBayes.Multinomial do
 
     {priors, opts} = Keyword.pop(opts, :priors, 0.0)
     class_priors = Nx.tensor(priors)
+    {alpha, opts} = Keyword.pop!(opts, :alpha)
+    alpha = Nx.tensor(alpha)
 
-    fit_n(x, y, sample_weights, class_priors, opts)
+    fit_n(x, y, sample_weights, class_priors, alpha, opts)
   end
 
   @doc """
@@ -251,7 +253,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
     joint_log_likelihood(model, x)
   end
 
-  defnp fit_n(x, y, sample_weights, class_priors, opts \\ []) do
+  defnp fit_n(x, y, sample_weights, class_priors, alpha, opts) do
     input_rank = Nx.rank(x)
     targets_rank = Nx.rank(y)
 
@@ -333,7 +335,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
     feature_count = Nx.broadcast(0.0, {n_classes, num_features})
     feature_count = feature_count + Nx.dot(Nx.transpose(classes), x)
     class_count = class_count + Nx.sum(classes, axes: [0])
-    alpha = check_alpha(Nx.tensor(opts[:alpha]), opts[:force_alpha], num_features)
+    alpha = check_alpha(alpha, opts[:force_alpha], num_features)
     smoothed_feature_count = feature_count + alpha
     smoothed_cumulative_count = Nx.sum(smoothed_feature_count, axes: [1])
 

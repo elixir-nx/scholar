@@ -130,7 +130,7 @@ defmodule Scholar.Metrics do
     precision_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp precision_n(y_true, y_pred, opts \\ []) do
+  defnp precision_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_true, y_pred)
 
@@ -191,7 +191,7 @@ defmodule Scholar.Metrics do
     recall_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp recall_n(y_true, y_pred, opts \\ []) do
+  defnp recall_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -274,7 +274,7 @@ defmodule Scholar.Metrics do
     sensitivity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp sensitivity_n(y_true, y_pred, opts \\ []) do
+  defnp sensitivity_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -331,7 +331,7 @@ defmodule Scholar.Metrics do
     specificity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp specificity_n(y_true, y_pred, opts \\ []) do
+  defnp specificity_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -370,7 +370,7 @@ defmodule Scholar.Metrics do
     confusion_matrix_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp confusion_matrix_n(y_true, y_pred, opts \\ []) do
+  defnp confusion_matrix_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -428,7 +428,7 @@ defmodule Scholar.Metrics do
     f1_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @f1_score_schema))
   end
 
-  defnp f1_score_n(y_true, y_pred, opts \\ []) do
+  defnp f1_score_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
     num_classes = check_num_classes(opts[:num_classes])
@@ -469,7 +469,7 @@ defmodule Scholar.Metrics do
   Calculates the mean absolute error of predictions
   with respect to targets.
 
-  $$l_i = \sum_i |\hat{y_i} - y_i|$$
+  $$MAE = \frac{\sum_{i=1}^{n} |\hat{y_i} - y_i|}{n}$$
 
   ## Examples
 
@@ -487,6 +487,27 @@ defmodule Scholar.Metrics do
     (y_true - y_pred)
     |> Nx.abs()
     |> Nx.mean()
+  end
+
+  @doc ~S"""
+  Calculates the mean square error of predictions
+  with respect to targets.
+
+  $$MSE = \frac{\sum_{i=1}^{n} (\hat{y_i} - y_i)^2}{n}$$
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([[0.0, 2.0], [0.5, 0.0]], type: {:f, 32})
+      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]], type: {:f, 32})
+      iex> Scholar.Metrics.mean_square_error(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.5625
+      >
+  """
+  defn mean_square_error(y_true, y_pred) do
+    diff = y_true - y_pred
+    (diff * diff) |> Nx.mean()
   end
 
   deftransformp check_num_classes(num_classes) do

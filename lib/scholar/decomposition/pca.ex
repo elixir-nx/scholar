@@ -143,7 +143,7 @@ defmodule Scholar.Decomposition.PCA do
   end
 
   # TODO Add support for :num_components as a float when dynamic shapes will be implemented
-  defnp fit_n(x, opts \\ []) do
+  defnp fit_n(x, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
     end
@@ -220,7 +220,7 @@ defmodule Scholar.Decomposition.PCA do
             mean: mean
           } = _model,
           x,
-          opts \\ []
+          opts
         ) do
     whiten? = opts[:whiten]
 
@@ -270,7 +270,7 @@ defmodule Scholar.Decomposition.PCA do
     fit_transform_n(x, NimbleOptions.validate!(opts, @fit_transform_opts_schema))
   end
 
-  defnp fit_transform_n(x, opts \\ []) do
+  defnp fit_transform_n(x, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
     end

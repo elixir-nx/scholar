@@ -82,7 +82,7 @@ defmodule Scholar.Metrics.Distance do
     euclidean_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp euclidean_n(x, y, opts \\ []) do
+  defnp euclidean_n(x, y, opts) do
     assert_same_shape!(x, y)
 
     diff = x - y
@@ -138,7 +138,7 @@ defmodule Scholar.Metrics.Distance do
     squared_euclidean_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp squared_euclidean_n(x, y, opts \\ []) do
+  defnp squared_euclidean_n(x, y, opts) do
     assert_same_shape!(x, y)
 
     diff = x - y
@@ -194,7 +194,7 @@ defmodule Scholar.Metrics.Distance do
     manhattan_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp manhattan_n(x, y, opts \\ []) do
+  defnp manhattan_n(x, y, opts) do
     assert_same_shape!(x, y)
 
     (x - y)
@@ -249,7 +249,7 @@ defmodule Scholar.Metrics.Distance do
     chebyshev_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp chebyshev_n(x, y, opts \\ []) do
+  defnp chebyshev_n(x, y, opts) do
     assert_same_shape!(x, y)
 
     (x - y)
@@ -304,7 +304,7 @@ defmodule Scholar.Metrics.Distance do
     minkowski_n(x, y, NimbleOptions.validate!(opts, @minkowski_schema))
   end
 
-  defnp minkowski_n(x, y, opts \\ []) do
+  defnp minkowski_n(x, y, opts) do
     assert_same_shape!(x, y)
 
     p = opts[:p]
@@ -366,7 +366,7 @@ defmodule Scholar.Metrics.Distance do
     cosine_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp cosine_n(x, y, opts \\ []) do
+  defnp cosine_n(x, y, opts) do
     # Detect very small values that could lead to surprising
     # results and numerical stability issues. Every value smaller
     # than `cutoff` is considered small
