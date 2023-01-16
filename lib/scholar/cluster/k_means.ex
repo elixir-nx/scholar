@@ -147,7 +147,7 @@ defmodule Scholar.Cluster.KMeans do
     fit_n(x, seed, opts)
   end
 
-  defnp fit_n(x, seed, opts \\ []) do
+  defnp fit_n(x, seed, opts) do
     {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
     num_runs = opts[:num_runs]

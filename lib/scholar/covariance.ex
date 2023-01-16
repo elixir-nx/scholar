@@ -37,17 +37,17 @@ defmodule Scholar.Covariance do
   $$
   Where:
     * $X_i$ is a $i$th row of input
-  
+
     * $x_k$ is a $k$th value of $X_i$
-  
+
     * $y_k$ is a $k$th value of $X_j$
-  
+
     * $\bar{x}$ is the mean of $X_i$
-  
+
     * $\bar{y}$ is the mean of $X_j$
-  
+
     * $N$ is the number of samples
-  
+
   This is a non-biased version of covariance.
   The biased version has $N$ in denominator instead of $N - 1$.
   '''}
@@ -93,7 +93,7 @@ defmodule Scholar.Covariance do
     covariance_matrix_n(x, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp covariance_matrix_n(x, opts \\ []) do
+  defnp covariance_matrix_n(x, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError, "expected data to have rank equal 2, got: #{inspect(Nx.rank(x))}"
     end
@@ -117,7 +117,7 @@ defmodule Scholar.Covariance do
   $$ Corr(X\_i, X\_j) = \frac{Cov(X\_i, X\_j)}{\sqrt{Cov(X\_i, X\_i)Cov(X\_j, X\_j)}} $$
   Where:
     * $X_i$ is a $i$th row of input
-  
+
     * $Cov(X\_i, X\_j)$ is covariance between features $X_i$ and $X_j$
   '''}
 

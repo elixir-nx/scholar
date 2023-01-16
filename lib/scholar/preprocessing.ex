@@ -145,7 +145,7 @@ defmodule Scholar.Preprocessing do
     standard_scale_n(tensor, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp standard_scale_n(tensor, opts \\ []) do
+  defnp standard_scale_n(tensor, opts) do
     std = Nx.standard_deviation(tensor, axes: opts[:axes], keep_axes: true)
     mean_reduced = Nx.mean(tensor, axes: opts[:axes], keep_axes: true)
     mean_reduced = Nx.select(std == 0, 0.0, mean_reduced)
@@ -188,7 +188,7 @@ defmodule Scholar.Preprocessing do
     max_abs_scale_n(tensor, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp max_abs_scale_n(tensor, opts \\ []) do
+  defnp max_abs_scale_n(tensor, opts) do
     max_abs = Nx.abs(tensor) |> Nx.reduce_max(axes: opts[:axes], keep_axes: true)
     tensor / Nx.select(max_abs == 0, 1, max_abs)
   end
@@ -240,7 +240,7 @@ defmodule Scholar.Preprocessing do
     min_max_scale_n(tensor, NimbleOptions.validate!(opts, @min_max_schema))
   end
 
-  defnp min_max_scale_n(tensor, opts \\ []) do
+  defnp min_max_scale_n(tensor, opts) do
     if opts[:max] <= opts[:min] do
       raise ArgumentError,
             "expected :max to be greater than :min"
@@ -287,7 +287,7 @@ defmodule Scholar.Preprocessing do
     binarize_n(tensor, NimbleOptions.validate!(opts, @binarize_schema))
   end
 
-  defnp binarize_n(tensor, opts \\ []) do
+  defnp binarize_n(tensor, opts) do
     (tensor > opts[:threshold]) |> Nx.as_type(opts[:type])
   end
 
@@ -310,7 +310,7 @@ defmodule Scholar.Preprocessing do
     ordinal_encode_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
   end
 
-  defnp ordinal_encode_n(tensor, opts \\ []) do
+  defnp ordinal_encode_n(tensor, opts) do
     {num_samples} = Nx.shape(tensor)
     sorted = Nx.sort(tensor)
     num_classes = opts[:num_classes]
@@ -366,7 +366,7 @@ defmodule Scholar.Preprocessing do
     one_hot_encode_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
   end
 
-  defnp one_hot_encode_n(tensor, opts \\ []) do
+  defnp one_hot_encode_n(tensor, opts) do
     {len} = Nx.shape(tensor)
 
     if opts[:num_classes] > len do
@@ -413,7 +413,7 @@ defmodule Scholar.Preprocessing do
     normalize_n(tensor, NimbleOptions.validate!(opts, @normalize_schema))
   end
 
-  defnp normalize_n(tensor, opts \\ []) do
+  defnp normalize_n(tensor, opts) do
     zeros = Nx.broadcast(0.0, Nx.shape(tensor))
 
     norm =
