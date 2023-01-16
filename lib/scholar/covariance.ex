@@ -32,22 +32,22 @@ defmodule Scholar.Covariance do
   The value on the position $Cov_{ij}$ in the $Cov$ matrix is calculated using the formula:
 
   #{~S'''
-  $$ Cov(X\_{i}, X\_{j}) = \frac{\sum\_{k}\left(x\_{k} -
-  \bar{x}\right)\left(y\_{k} - \bar{y}\right)}{N - 1}
+  $$ Cov(X\_i, X\_j) = \frac{\sum\_{k}\left(x\_k -
+  \bar{x}\right)\left(y\_k - \bar{y}\right)}{N - 1}
   $$
   Where:
     * $X_i$ is a $i$th row of input
-  
+
     * $x_k$ is a $k$th value of $X_i$
-  
+
     * $y_k$ is a $k$th value of $X_j$
-  
+
     * $\bar{x}$ is the mean of $X_i$
-  
+
     * $\bar{y}$ is the mean of $X_j$
-  
+
     * $N$ is the number of samples
-  
+
   This is a non-biased version of covariance.
   The biased version has $N$ in denominator instead of $N - 1$.
   '''}
@@ -107,5 +107,71 @@ defmodule Scholar.Covariance do
     else
       matrix / (num_samples - 1)
     end
+  end
+
+  @doc """
+  Computes covariance matrix for sample inputs `x`.
+
+  The value on the position $Corr_{ij}$ in the $Corr$ matrix is calculated using the formula:
+  #{~S'''
+  $$ Corr(X\_i, X\_j) = \frac{Cov(X\_i, X\_j)}{\sqrt{Cov(X\_i, X\_i)Cov(X\_j, X\_j)}} $$
+  Where:
+    * $X_i$ is a $i$th row of input
+
+    * $Cov(X\_i, X\_j)$ is covariance between features $X_i$ and $X_j$
+  '''}
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
+
+  ## Example
+
+      iex> Scholar.Covariance.correlation_matrix(Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]]))
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [1.0, 0.580316960811615, -0.7997867465019226],
+          [0.580316960811615, 1.0, 0.024736011400818825],
+          [-0.7997867465019226, 0.024736011400818825, 1.0]
+        ]
+      >
+
+      iex> Scholar.Covariance.correlation_matrix(Nx.tensor([[3, 6], [2, 3], [7, 9], [5, 3]]))
+      #Nx.Tensor<
+        f32[2][2]
+        [
+          [1.0, 0.6673083305358887],
+          [0.6673083305358887, 1.0]
+        ]
+      >
+
+      iex> Scholar.Covariance.correlation_matrix(Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]]),
+      ...>   biased: false
+      ...> )
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [1.0, 0.5803170204162598, -0.7997867465019226],
+          [0.5803170204162598, 1.0, 0.024736013263463974],
+          [-0.7997867465019226, 0.024736013263463974, 1.0]
+        ]
+      >
+  """
+
+  deftransform correlation_matrix(x, opts \\ []) do
+    correlation_matrix_n(x, NimbleOptions.validate!(opts, @opts_schema))
+  end
+
+  defnp correlation_matrix_n(x, opts \\ []) do
+    variances =
+      if opts[:biased] do
+        Nx.variance(x, axes: [0])
+      else
+        Nx.variance(x, axes: [0], ddof: 1)
+      end
+
+    Scholar.Covariance.covariance_matrix(x, opts) /
+      Nx.sqrt(Nx.new_axis(variances, 1) * Nx.new_axis(variances, 0))
   end
 end
