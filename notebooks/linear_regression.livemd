@@ -76,7 +76,7 @@ For a regression task, we will use the `Scholar.Linear.LinearRegression` module.
 model = Scholar.Linear.LinearRegression.fit(x, y)
 ```
 
-As we can see, the coefficient is almost 3.0, and the intercept is nearly 4.0. Those are decent estimations. They are not exactly equal to 3.0 and 4.0 because we introduce noise to our samples.
+As we can see, the coefficient is almost 3.0, and the intercept is nearly 4.0. Those are decent estimations. They are not exactly equal to 3.0 and 4.0 because we introduced noise to our sample generation.
 
 Now, let's plot the result of linear regression.
 
@@ -175,7 +175,7 @@ Vl.new(
 
 As we expected, the red dot lies on the regression line.
 
-This implementation of linear regression is based on the so-called *Least Squares* method. In practice, the function computes $X^+y$ where $X^+$ is a pseudo-inverse matrix (more precisely, Moore-Penrose matrix). You can calculate the results using `Nx.LinAlg.pinv/2`.
+This implementation of linear regression is based on the so-called *Least Squares* method. In practice, the function computes $X^+y$ where $X^+$ is the Moore-Penrose pseudo-inverse matrix, calculated using `Nx.LinAlg.pinv/2`.
 
 ```elixir
 x_b = Nx.concatenate([Nx.broadcast(1.0, {size, 1}), x], axis: 1)
@@ -241,7 +241,7 @@ Vl.new(
 )
 ```
 
-From histograms, we can spot that *median_income* and *median_house_values* have a similar distribution. Both of them are heavy-tailed with high skewness. We might speculate that those two features are strictly correlated. We will check that later on.
+From the histograms, we can spot that *median_income* and *median_house_values* have a similar distribution. Both of them are heavy-tailed with high skewness. We might speculate that those two features are strictly correlated. We will check that later on.
 
 Now, let's plot the distribution of houses on a scatter plot.
 
@@ -363,7 +363,7 @@ Vl.new(
 ])
 ```
 
-From This plot, we can read that prices are substantially dependent on **geolocalization** and **population**. For geolocalization, we see, those areas closer to the ocean are more expensive. But it's not a strict rule since houses on the northern bay of California are much more affordable than in in-land Mid California. For the population, there are two dense areas with expensive housing: Los Angeles Bay (In South California) and San Francisco Bay (in Mid Califonia). They are metropolises with a lot of different tech companies, and business and cultural institutions, so, logically, housing in those places will be expensive.
+From this plot, we can read that prices are substantially dependent on **geolocalization** and **population**. For geolocalization, we see that those areas closer to the ocean are more expensive. But it's not a strict rule since houses on the northern bay of California are much more affordable than in-land Mid California. For the population, there are two dense areas with expensive housing: Los Angeles Bay (In South California) and San Francisco Bay (in Mid California). They are metropoles with a lot of different tech companies, and business and cultural institutions, so, logically, housing in those places will be expensive.
 
 <ins>
 <i>
@@ -373,7 +373,7 @@ Hint:
 
 <br />
 
-You can try to add another feature by computing clustering on this data set. It might be a sum or power mean of distances to the clusters. We may predict that centroids will be located in San Francisco Bay and Los Angeles Bay. You can also pass population as weights to k-means.
+You can try to add another feature by computing clustering on this data set. It might be a sum or power mean of distances to the clusters. We may predict that centroids will be located in San Francisco Bay and Los Angeles Bay. You can also pass population as weights to K-means.
 
 <!-- livebook:{"break_markdown":true} -->
 
@@ -394,7 +394,7 @@ df =
   )
 ```
 
-In the next step, we will find the correlation matrix. But to do this, we need to cast our data frame to Nx tensor and split data into train and test sets.
+In the next step, we will find the correlation matrix. But to do this, we need to cast our data frame to an Nx tensor and split data into train and test sets.
 
 ```elixir
 # Module to convert Explorer data frames into tensors.
@@ -475,7 +475,7 @@ x_nan_count = Nx.sum(Nx.is_nan(x))
 {x_nan_count, y_nan_count}
 ```
 
-Ups, we have some. Fortunately, for y, we don't have any NaNs. If we dig a little bit more, it turns out that NaNs are in <pre> bedrooms_per_rooms (1st row) </pre>  <pre> total_bedrooms (10th row) </pre>
+Oops, we have some! Fortunately, for y we don't have any NaNs. If we dig a little bit more, it turns out that NaNs are in <pre> bedrooms_per_rooms (1st row) </pre>  <pre> total_bedrooms (10th row) </pre>
 
 ```elixir
 {bedrooms_per_rooms_idx, total_bedrooms_idx} = {0, 9}
@@ -484,7 +484,7 @@ total_bedrooms_nan_count = Nx.sum(Nx.is_nan(x[[0..-1//1, total_bedrooms_idx]]))
 Nx.equal(x_nan_count, Nx.add(bedrooms_per_rooms_nan_count, total_bedrooms_nan_count))
 ```
 
-For these two, we use `Scholar.Impute.SimpleImputer` with startegy set to median of values. Function `fit` learn the median of features and `transform` for trained model replace all NaNs with a given startegy. It is important that we perform imputation after splitting data because otherwise we will have a leakage of information from test data.
+For these two, we use `Scholar.Impute.SimpleImputer` with strategy set to median of values. The `fit` function learns the median of features and `transform` with the trained model replaces all NaNs with a given strategy. It is important that we perform imputation after splitting data because otherwise we will have a leakage of information from test data.
 
 ```elixir
 x_train =
@@ -524,7 +524,7 @@ correlation =
   |> Correlation.correlation_matrix_n(biased: true)
 ```
 
-Maybe visual representation would be nicer. 😅
+Maybe a visual representation would be nicer. 😅
 
 ```elixir
 {corr_size, _} = Nx.shape(correlation)
