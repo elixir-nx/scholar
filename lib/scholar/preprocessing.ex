@@ -84,33 +84,11 @@ defmodule Scholar.Preprocessing do
     ]
   ]
 
-  polynomial_transform_schema = [
-    degree: [
-      type: :pos_integer,
-      default: 2,
-      doc: """
-      The degree of the feature matrix to return. Must be a >1 integer. 1
-      returns the input matrix.
-      """
-    ],
-    fit_intercept?: [
-      type: :boolean,
-      default: true,
-      doc: """
-      If set to `true`, a model will fit the intercept. Otherwise,
-      the intercept is set to `0.0`. The intercept is an independent term
-      in a linear model. Specifically, it is the expected mean value
-      of targets for a zero-vector on input.
-      """
-    ]
-  ]
-
   @general_schema NimbleOptions.new!(general_schema)
   @min_max_schema NimbleOptions.new!(min_max_schema)
   @normalize_schema NimbleOptions.new!(normalize_schema)
   @binarize_schema NimbleOptions.new!(binarize_schema)
   @encode_schema NimbleOptions.new!(encode_schema)
-  @opts_schema NimbleOptions.new!(polynomial_transform_schema)
 
   @doc """
   Standardizes the tensor by removing the mean and scaling to unit variance.
@@ -466,130 +444,5 @@ defmodule Scholar.Preprocessing do
     else
       Tuple.duplicate(1, length(Tuple.to_list(shape)))
     end
-  end
-
-  @doc """
-    Computes the feature matrix for polynomial regression.
-
-    ## Examples
-      iex> x = Nx.tensor([[2]])
-      iex> Preprocessing.polynomial_transform(x, degree: 0)
-      ** (NimbleOptions.ValidationError) invalid value for :degree option: expected positive integer, got: 0
-
-      iex> x = Nx.tensor([[2]])
-      iex> Preprocessing.polynomial_transform(x, degree: 5, fit_intercept?: false)
-      #Nx.Tensor<
-        s64[1][5]
-        [
-          [2, 4, 8, 16, 32]
-        ]
-      >
-
-      iex> x = Nx.tensor([[2, 3], [1, 3]])
-      iex> Preprocessing.polynomial_transform(x, degree: 1, fit_intercept?: false)
-      #Nx.Tensor<
-        s64[2][2]
-        [
-          [2, 3],
-          [1, 3]
-        ]
-      >
-
-      iex> x = Nx.tensor([[2, 3]])
-      iex> Preprocessing.polynomial_transform(x)
-      #Nx.Tensor<
-        s64[1][6]
-        [
-          [1, 2, 3, 4, 6, 9]
-        ]
-      >
-
-      iex> x = Nx.tensor([[2, 3, 5], [0, 1, 2]])
-      iex> Preprocessing.polynomial_transform(x, fit_intercept?: false)
-      #Nx.Tensor<
-        s64[2][9]
-        [
-          [2, 3, 5, 4, 6, 10, 9, 15, 25],
-          [0, 1, 2, 0, 0, 0, 1, 2, 4]
-        ]
-      >
-
-      iex> x = Nx.tensor([[2, 3, 5], [0, 1, 2]])
-      iex> Preprocessing.polynomial_transform(x, degree: 3)
-      #Nx.Tensor<
-        s64[2][20]
-        [
-          [1, 2, 3, 5, 4, 6, 10, 9, 15, 25, 8, 12, 20, 18, 30, 50, 27, 45, 75, 125],
-          [1, 0, 1, 2, 0, 0, 0, 1, 2, 4, 0, 0, 0, 0, 0, 0, 1, 2, 4, 8]
-        ]
-      >
-
-      iex> x = Nx.tensor([[2, 3, 5, 7]])
-      iex> Preprocessing.polynomial_transform(x, degree: 3, fit_intercept?: false)
-      #Nx.Tensor<
-        s64[1][34]
-        [
-          [2, 3, 5, 7, 4, 6, 10, 14, 9, 15, 21, 25, 35, 49, 8, 12, 20, 28, 18, 30, 42, 50, 70, 98, 27, 45, 63, 75, 105, 147, 125, 175, 245, 343]
-        ]
-      >
-
-      iex> x = Nx.tensor([[2, 3]])
-      iex> Preprocessing.polynomial_transform(x, degree: 6, fit_intercept?: false)
-      #Nx.Tensor<
-        s64[1][27]
-        [
-          [2, 3, 4, 6, 9, 8, 12, 18, 27, 16, 24, 36, 54, 81, 32, 48, 72, 108, 162, 243, 64, 96, 144, 216, 324, 486, 729]
-        ]
-      >
-  """
-  deftransform polynomial_transform(x, opts \\ []) do
-    opts = NimbleOptions.validate!(opts, @opts_schema)
-    {n_samples, n_features} = Nx.shape(x)
-
-    x_split = Enum.map(0..(n_features - 1), &Nx.reshape(x[[.., &1]], {n_samples, :auto}))
-
-    polynomial_features =
-      if opts[:degree] != 1 do
-        2..opts[:degree]
-        |> Enum.reduce([x_split], fn _, prev_degree -> compute_degree(x, prev_degree) end)
-        |> List.flatten()
-        |> Nx.concatenate(axis: 1)
-      else
-        x
-      end
-
-    if opts[:fit_intercept?], do: add_intercept(polynomial_features), else: polynomial_features
-  end
-
-  defp compute_degree(x, previous_degree) do
-    {_n_samples, n_features} = Nx.shape(x)
-
-    res =
-      0..(n_features - 1)
-      |> Enum.map(fn nf ->
-        previous_joined =
-          previous_degree
-          |> List.last()
-          |> Enum.slice(nf..-1)
-          |> Nx.concatenate(axis: 1)
-
-        compute_column(x, previous_joined, nf)
-      end)
-
-    [previous_degree, res]
-  end
-
-  defnp compute_column(x, previous, n) do
-    {n_samples, _n_features} = Nx.shape(x)
-
-    Nx.reshape(x[[0..-1//1, n]], {n_samples, :auto})
-    |> Nx.multiply(previous)
-  end
-
-  defp add_intercept(x) do
-    {n_samples, _n_features} = Nx.shape(x)
-
-    [Nx.broadcast(1, {n_samples, 1}) | [x]]
-    |> Nx.concatenate(axis: 1)
   end
 end
