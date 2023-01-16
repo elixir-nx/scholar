@@ -4,10 +4,9 @@
 Mix.install(
   [
     {:scholar, github: "elixir-nx/scholar"},
-    {:explorer, github: "elixir-nx/explorer"},
-    {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
-    {:exla, github: "elixir-nx/nx", sparse: "exla", override: true},
-    {:rustler, ">= 0.0.0", optional: true},
+    {:explorer, "~> 0.5.0"},
+    {:nx, "~> 0.4.2"},
+    {:exla, "~> 0.4.2"},
     {:req, "~> 0.3.3"},
     {:vega_lite, "~> 0.1.6"},
     {:kino_vega_lite, "~> 0.1.7"},
@@ -43,10 +42,9 @@ Firstly, we generate the data which simulates the function $f(x) = 3x + 4$ with 
 ```elixir
 key = Nx.Random.key(42)
 size = 100
-{uniform_x, new_key} = Nx.Random.uniform(key, shape: {size, 1}, type: :f32)
-{uniform_y, _} = Nx.Random.uniform(new_key, shape: {size, 1}, type: :f32)
-x = 2 * uniform_x
-y = 3 * x + 4 + (uniform_y - Nx.mean(uniform_y))
+{x, new_key} = Nx.Random.uniform(key, 0, 2shape: {size, 1}, type: :f32)
+{noise, _} = Nx.Random.uniform(new_key, -0.5, 0.5, shape: {size, 1}, type: :f32)
+y = 3 * x + 4 + noise
 ```
 
 Now let's plot the generated points.
