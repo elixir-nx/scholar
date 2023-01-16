@@ -3,13 +3,15 @@
 ```elixir
 Mix.install(
   [
-    {:scholar, path: "/home/mateusz/Dashbit/scholar"},
-    {:explorer, "~> 0.5.0"},
+    {:scholar, github: "elixir-nx/scholar"},
+    {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
+    {:explorer, "~> 0.5.0", override: true},
     {:exla, "~> 0.4.2"},
     {:req, "~> 0.3.3"},
     {:vega_lite, "~> 0.1.6"},
     {:kino_vega_lite, "~> 0.1.7"},
-    {:kino, "~> 0.8.0"}
+    {:kino, "~> 0.8.0"},
+    {:elixir_math, "~> 0.1.2"}
   ],
   config: [
     nx: [default_defn_options: [compiler: EXLA]]
@@ -56,8 +58,8 @@ Vl.new(
     text: "Scatterplot of Generated Data",
     offset: 20
   ],
-  width: 500,
-  height: 500
+  width: 630,
+  height: 630
 )
 |> Vl.data_from_values(df)
 |> Vl.mark(:circle)
@@ -99,8 +101,8 @@ Vl.new(
     text: "Scatterplot of Generated Data",
     offset: 20
   ],
-  width: 500,
-  height: 500
+  width: 630,
+  height: 630
 )
 |> Vl.layers([
   Vl.new()
@@ -146,8 +148,8 @@ Vl.new(
     text: "Scatterplot of Generated Data",
     offset: 20
   ],
-  width: 500,
-  height: 500
+  width: 630,
+  height: 630
 )
 |> Vl.layers([
   Vl.new()
@@ -189,16 +191,16 @@ We are ready to dive into a more complex example!
 
 In this section we will play with [California Housing Data Set](https://www.kaggle.com/datasets/camnugent/california-housing-prices). The data pertains to the houses found in a given California district and some summary stats about them based on the 1990 census data. Be warned the data aren't cleaned, so there are some preprocessing steps required! The columns are as follows (their names are pretty self explanatory):
 
-* <pre>longitude</pre>
-* <pre>latitude</pre>
-* <pre>housing_median_age</pre>
-* <pre>total_rooms</pre>
-* <pre>total_bedrooms</pre>
-* <pre>population</pre>
-* <pre>households</pre>
-* <pre>median_income</pre>
-* <pre>median_house_value</pre>
-* <pre>ocean_proximity</pre>
+* `longitude`
+* `latitude`
+* `housing_median_age`
+* `total_rooms`
+* `total_bedrooms`
+* `population`
+* `households`
+* `median_income`
+* `median_house_value`
+* `ocean_proximity`
 
 The main task of this section is to predict the median_house_income. However, before we use our linear regression for prediction, we need to learn more about the data.
 
@@ -241,6 +243,8 @@ Vl.new(
 ```
 
 From histograms, we can spot that *median_income* and *median_house_values* have a similar distribution. Both of them are heavy-tailed with high skewness. We might speculate that those two features are strictly correlated. We will check that later on.
+
+<!-- livebook:{"break_markdown":true} -->
 
 Now, let's plot the distribution of houses on a scatter plot.
 
@@ -378,9 +382,9 @@ You can try to add another feature by computing clustering on this data set. It 
 
 Before we convert our data to tensor, we will add three more columns which might be informative:
 
-* <pre>rooms_per_family</pre>
-* <pre>bedrooms_per_rooms</pre>
-* <pre>population_per_family</pre>
+* `rooms_per_family`
+* `bedrooms_per_rooms`
+* `population_per_family`
 
 The names of columns are self-describing. Now, add them to our data frame.
 
@@ -449,14 +453,14 @@ y =
 
 x =
   df
-  |> Explorer.DataFrame.discard(["median_house_value"])
+  |> Explorer.DataFrame.discard("median_house_value")
   |> ToTensor.df_to_matrix()
   |> Nx.take(permutation_indices)
 
 {x, y}
 ```
 
-Since we don't have a stratified spilt of data implemented (to learn more see [Stratified Sampling](https://en.wikipedia.org/wiki/Stratified_sampling)), we shuffle data set and take advantage of [Law of large numbers](https://en.wikipedia.org/wiki/Law_of_large_numbers). Now, we will split the data into training and test sets.
+Since we don't have a stratified split of data implemented (to learn more see [Stratified Sampling](https://en.wikipedia.org/wiki/Stratified_sampling)), we shuffle data set and take advantage of [Law of large numbers](https://en.wikipedia.org/wiki/Law_of_large_numbers). It says that the average of the results obtained from a large number of trials should be close to the expected value and tends to become closer to the expected value as more trials are performed. As we take a lot of samples from shuffled data it implies that the sampled data sets will be stratified. Now, we will split the data into training and test sets.
 
 ```elixir
 train_ratio = 0.8
@@ -500,27 +504,9 @@ x_test =
 Eventually, we can compute the correlation matrix. We will use `Scholar.Covariance` to calculate the correlation matrix.
 
 ```elixir
-defmodule Correlation do
-  import Nx.Defn
-
-  defn correlation_matrix_n(x, opts \\ []) do
-    variances =
-      if opts[:biased] do
-        Nx.variance(x, axes: [0])
-      else
-        Nx.variance(x, axes: [0], ddof: 1)
-      end
-
-    Scholar.Covariance.covariance_matrix(x, opts) /
-      Nx.sqrt(Nx.new_axis(variances, 1) * Nx.new_axis(variances, 0))
-  end
-end
-```
-
-```elixir
 correlation =
   Nx.concatenate([x_train, Nx.new_axis(y_train, 1)], axis: 1)
-  |> Correlation.correlation_matrix_n(biased: true)
+  |> Scholar.Covariance.correlation_matrix(biased: true)
 ```
 
 Maybe visual representation would be nicer. 😅
@@ -581,19 +567,8 @@ model = Scholar.Linear.LinearRegression.fit(x_train, y_train)
 Now we can predict the values for the test set and measure the error of our prediction. We will calculate root mean square error (RMSE) and mean absolute error (MAE).
 
 ```elixir
-defmodule RMSE do
-  import Nx.Defn
-
-  defn root_mean_square_error(y_true, y_pred) do
-    diff = y_true - y_pred
-    (diff * diff) |> Nx.mean() |> Nx.sqrt()
-  end
-end
-```
-
-```elixir
 predictions = Scholar.Linear.LinearRegression.predict(model, x_test)
-rmse = RMSE.root_mean_square_error(y_test, predictions)
+rmse = Scholar.Metrics.mean_square_error(y_test, predictions) |> Nx.sqrt()
 mae = Scholar.Metrics.mean_absolute_error(y_test, predictions)
 {rmse, mae}
 ```
