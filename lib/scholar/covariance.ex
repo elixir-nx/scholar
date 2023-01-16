@@ -117,7 +117,7 @@ defmodule Scholar.Covariance do
   $$ Corr(X\_i, X\_j) = \frac{Cov(X\_i, X\_j)}{\sqrt{Cov(X\_i, X\_i)Cov(X\_j, X\_j)}} $$
   Where:
     * $X_i$ is a $i$th row of input
-  
+
     * $Cov(X\_i, X\_j)$ is covariance between features $X_i$ and $X_j$
   '''}
 
