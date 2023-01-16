@@ -163,7 +163,7 @@ defmodule Scholar.Covariance do
     correlation_matrix_n(x, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp correlation_matrix_n(x, opts \\ []) do
+  defnp correlation_matrix_n(x, opts) do
     variances =
       if opts[:biased] do
         Nx.variance(x, axes: [0])
