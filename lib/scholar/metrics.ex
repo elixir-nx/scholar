@@ -130,7 +130,7 @@ defmodule Scholar.Metrics do
     precision_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp precision_n(y_true, y_pred, opts \\ []) do
+  defnp precision_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_true, y_pred)
 
@@ -191,7 +191,7 @@ defmodule Scholar.Metrics do
     recall_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp recall_n(y_true, y_pred, opts \\ []) do
+  defnp recall_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -274,7 +274,7 @@ defmodule Scholar.Metrics do
     sensitivity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp sensitivity_n(y_true, y_pred, opts \\ []) do
+  defnp sensitivity_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -331,7 +331,7 @@ defmodule Scholar.Metrics do
     specificity_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp specificity_n(y_true, y_pred, opts \\ []) do
+  defnp specificity_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -370,7 +370,7 @@ defmodule Scholar.Metrics do
     confusion_matrix_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
-  defnp confusion_matrix_n(y_true, y_pred, opts \\ []) do
+  defnp confusion_matrix_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
 
@@ -428,7 +428,7 @@ defmodule Scholar.Metrics do
     f1_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @f1_score_schema))
   end
 
-  defnp f1_score_n(y_true, y_pred, opts \\ []) do
+  defnp f1_score_n(y_true, y_pred, opts) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_pred, y_true)
     num_classes = check_num_classes(opts[:num_classes])

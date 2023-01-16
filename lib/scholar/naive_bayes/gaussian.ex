@@ -242,7 +242,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
     Nx.exp(predict_log_probability(model, x))
   end
 
-  defnp fit_n(x, y, sample_weights, class_priors, opts \\ []) do
+  defnp fit_n(x, y, sample_weights, class_priors, opts) do
     input_rank = Nx.rank(x)
     targets_rank = Nx.rank(y)
 

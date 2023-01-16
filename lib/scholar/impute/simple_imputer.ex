@@ -164,7 +164,7 @@ defmodule Scholar.Impute.SimpleImputer do
     ((nums1 + nums2) / 2) |> Nx.squeeze()
   end
 
-  defnp mode_op(x, opts \\ []) do
+  defnp mode_op(x, opts) do
     type = opts[:type]
 
     axis = 0

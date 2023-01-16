@@ -64,7 +64,7 @@ defmodule Scholar.Interpolation.CubicSpline do
     fit_n(x, y, NimbleOptions.validate!(opts, @fit_opts_schema))
   end
 
-  defnp fit_n(x, y, opts \\ []) do
+  defnp fit_n(x, y, opts) do
     # https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation
     # Reference implementation in Scipy
 
@@ -239,7 +239,7 @@ defmodule Scholar.Interpolation.CubicSpline do
     predict_n(model, target_x, NimbleOptions.validate!(opts, @predict_opts_schema))
   end
 
-  defnp predict_n(%__MODULE__{x: x, coefficients: coefficients}, target_x, opts \\ []) do
+  defnp predict_n(%__MODULE__{x: x, coefficients: coefficients}, target_x, opts) do
     original_shape = Nx.shape(target_x)
 
     target_x =
