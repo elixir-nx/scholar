@@ -39,7 +39,7 @@ Firstly, we generate the data which simulates the function $f(x) = 3x + 4$ with 
 defmodule LinearData do
   import Nx.Defn
 
-  defn data() do
+  defn data do
     key = Nx.Random.key(42)
     size = 100
     {x, new_key} = Nx.Random.uniform(key, 0, 2, shape: {size, 1}, type: :f32)
