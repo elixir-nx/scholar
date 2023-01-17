@@ -34,8 +34,8 @@ defmodule Scholar.Options do
   end
 
   def weights(weights) do
-    if (Nx.is_tensor(weights) and Nx.to_number(Nx.rank(weights)) == 1) or
-         (is_list(weights) and List.flatten(weights) == weights) do
+    if (Nx.is_tensor(weights) and Nx.rank(weights) == 1) or
+         (is_list(weights) and Enum.all?(weights, &is_number/1)) do
       {:ok, weights}
     else
       {:error, "expected weights to be a flat tensor or a flat list, got: #{inspect(weights)}"}
