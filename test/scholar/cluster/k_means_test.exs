@@ -20,7 +20,7 @@ defmodule Scholar.Cluster.KMeansTest do
       assert predictions == Nx.tensor([1, 0])
     end
 
-    test "fit and predict with weights as list" do
+    test "fit and predict with weights as a list" do
       model =
         Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
           num_clusters: 2,
@@ -37,7 +37,7 @@ defmodule Scholar.Cluster.KMeansTest do
       assert predictions == Nx.tensor([1, 0])
     end
 
-    test "fit and predict with weights as tensor" do
+    test "fit and predict with weights as a tensor" do
       model =
         Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
           num_clusters: 2,

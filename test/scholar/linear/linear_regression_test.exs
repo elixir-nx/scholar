@@ -628,7 +628,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_intercept, actual_intercept)
     end
 
-    test "test fit when fit_intercept set to false - weights as tensor" do
+    test "test fit when fit_intercept set to false - weights as a tensor" do
       a =
         Nx.tensor([
           [
