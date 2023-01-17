@@ -51,7 +51,7 @@ defmodule Scholar.Cluster.KMeans do
       """
     ],
     weights: [
-      type: {:custom, Scholar.Options, :positive_weights, []},
+      type: {:custom, Scholar.Options, :weights, []},
       doc: """
       The weights for each observation in x. If equals to `nil`,
       all observations are assigned equal weight.
@@ -145,18 +145,19 @@ defmodule Scholar.Cluster.KMeans do
 
     seed = Keyword.get_lazy(opts, :seed, &System.system_time/0)
     {weights, opts} = Keyword.pop(opts, :weights, nil)
-    weights = validate_weights(weights, num_samples, opts[:num_runs])
+    weights = validate_weights(weights, num_samples)
 
     fit_n(x, weights, seed, opts)
   end
 
   defnp fit_n(%Nx.Tensor{shape: {num_samples, num_features}} = x, weights, seed, opts) do
-    # {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
     num_runs = opts[:num_runs]
 
     broadcast_weights =
       weights
+      |> Nx.as_type(:f32)
+      |> Nx.broadcast({num_runs, num_samples})
       |> Nx.reshape({num_runs, 1, num_samples})
       |> Nx.broadcast({num_runs, num_clusters, num_samples})
 
@@ -364,21 +365,20 @@ defmodule Scholar.Cluster.KMeans do
     )
   end
 
-  deftransformp validate_weights(weights, num_samples, num_runs) do
-    if is_nil(weights) or (is_list(weights) and length(weights) == num_samples) or
-         (Nx.is_tensor(weights) and Nx.shape(weights) == {num_samples}) do
-      case weights do
-        nil ->
-          Nx.broadcast(1.0, {num_runs, num_samples})
+  deftransformp validate_weights(weights, num_samples) do
+    cond do
+      is_nil(weights) ->
+        1.0
 
-        _ ->
-          weights
-          |> Nx.tensor(type: {:f, 32})
-          |> Nx.broadcast({num_runs, num_samples})
-      end
-    else
-      raise ArgumentError,
-            "invalid value for :weights option: expected list or tensor of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
+      Nx.is_tensor(weights) and Nx.shape(weights) == {num_samples} ->
+        weights
+
+      is_list(weights) and length(weights) == num_samples ->
+        Nx.tensor(weights, type: :f32)
+
+      true ->
+        raise ArgumentError,
+              "invalid value for :weights option: expected list or tensor of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
     end
   end
 end

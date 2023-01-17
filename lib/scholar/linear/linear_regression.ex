@@ -9,7 +9,7 @@ defmodule Scholar.Linear.LinearRegression do
 
   opts = [
     sample_weights: [
-      type: {:custom, Scholar.Options, :positive_weights, []},
+      type: {:custom, Scholar.Options, :weights, []},
       doc: """
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
