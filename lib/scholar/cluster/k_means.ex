@@ -151,7 +151,6 @@ defmodule Scholar.Cluster.KMeans do
   end
 
   defnp fit_n(%Nx.Tensor{shape: {num_samples, num_features}} = x, weights, seed, opts) do
-    # {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
     num_runs = opts[:num_runs]
 

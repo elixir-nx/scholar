@@ -34,7 +34,7 @@ defmodule Scholar.Options do
   end
 
   def weights(weights) do
-    if (Nx.is_tensor(weights) and Nx.to_number(Nx.rank(weights)) == 1) or
+    if (Nx.is_tensor(weights) and Nx.rank(weights) == 1) or
          (is_list(weights) and Enum.all?(weights, &is_number/1)) do
       {:ok, weights}
     else
