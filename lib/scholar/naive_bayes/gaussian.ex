@@ -29,7 +29,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
       """
     ],
     priors: [
-      type: {:list, {:custom, Scholar.Options, :positive_number, []}},
+      type: {:custom, Scholar.Options, :non_negative_weights, []},
       doc: ~S"""
       Prior probabilities of the classes. If specified, the priors are not
       adjusted according to the data. We assume that priors are correct and
@@ -37,7 +37,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
       """
     ],
     sample_weights: [
-      type: {:list, {:or, [:float, :integer]}},
+      type: {:custom, Scholar.Options, :positive_weights, []},
       doc: ~S"""
       List of `n_samples` elements.
 

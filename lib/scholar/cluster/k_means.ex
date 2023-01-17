@@ -18,6 +18,7 @@ defmodule Scholar.Cluster.KMeans do
   """
   import Nx.Defn
   import Scholar.Shared
+  require Nx
 
   @derive {Nx.Container, containers: [:num_iterations, :clusters, :inertia, :labels]}
   defstruct [:num_iterations, :clusters, :inertia, :labels]
@@ -50,7 +51,7 @@ defmodule Scholar.Cluster.KMeans do
       """
     ],
     weights: [
-      type: {:list, {:custom, Scholar.Options, :positive_number, []}},
+      type: {:custom, Scholar.Options, :positive_weights, []},
       doc: """
       The weights for each observation in x. If equals to `nil`,
       all observations are assigned equal weight.
@@ -143,16 +144,16 @@ defmodule Scholar.Cluster.KMeans do
     end
 
     seed = Keyword.get_lazy(opts, :seed, &System.system_time/0)
+    {weights, opts} = Keyword.pop(opts, :weights, nil)
+    weights = validate_weights(weights, num_samples, opts[:num_runs])
 
-    fit_n(x, seed, opts)
+    fit_n(x, weights, seed, opts)
   end
 
-  defnp fit_n(x, seed, opts) do
-    {num_samples, num_features} = Nx.shape(x)
+  defnp fit_n(%Nx.Tensor{shape: {num_samples, num_features}} = x, weights, seed, opts) do
+    # {num_samples, num_features} = Nx.shape(x)
     num_clusters = opts[:num_clusters]
     num_runs = opts[:num_runs]
-
-    weights = validate_weights(opts[:weights], num_samples, num_runs)
 
     broadcast_weights =
       weights
@@ -364,8 +365,8 @@ defmodule Scholar.Cluster.KMeans do
   end
 
   deftransformp validate_weights(weights, num_samples, num_runs) do
-    if is_nil(weights) or
-         (is_list(weights) and length(weights) == num_samples) do
+    if is_nil(weights) or (is_list(weights) and length(weights) == num_samples) or
+         (Nx.is_tensor(weights) and Nx.shape(weights) == {num_samples}) do
       case weights do
         nil ->
           Nx.broadcast(1.0, {num_runs, num_samples})
@@ -377,7 +378,7 @@ defmodule Scholar.Cluster.KMeans do
       end
     else
       raise ArgumentError,
-            "invalid value for :weights option: expected list of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
+            "invalid value for :weights option: expected list or tensor of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
     end
   end
 end

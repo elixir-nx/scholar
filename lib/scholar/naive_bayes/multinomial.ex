@@ -41,7 +41,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
       """
     ],
     priors: [
-      type: {:list, :float},
+      type: {:custom, Scholar.Options, :non_negative_weights, []},
       doc: ~S"""
       Prior probabilities of the classes. If specified, the priors are not
       adjusted according to the data.
@@ -55,7 +55,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
       """
     ],
     sample_weights: [
-      type: {:list, {:or, [:float, :integer]}},
+      type: {:custom, Scholar.Options, :positive_weights, []},
       doc: ~S"""
       List of `n_samples` elements.
       A list of 1.0 values is used if none is given.

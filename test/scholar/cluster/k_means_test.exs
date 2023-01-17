@@ -20,12 +20,29 @@ defmodule Scholar.Cluster.KMeansTest do
       assert predictions == Nx.tensor([1, 0])
     end
 
-    test "fit and predict with weights" do
+    test "fit and predict with weights as list" do
       model =
         Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
           num_clusters: 2,
           seed: @seed,
           weights: [1, 2, 3, 4]
+        )
+
+      assert model.clusters == Nx.tensor([[1.0, 2.75], [2.0, 4.75]])
+      assert model.inertia == Nx.tensor(1.5, type: {:f, 32})
+      assert model.labels == Nx.tensor([0, 1, 0, 1])
+      assert model.num_iterations == Nx.tensor(2)
+
+      predictions = Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      assert predictions == Nx.tensor([1, 0])
+    end
+
+    test "fit and predict with weights as tensor" do
+      model =
+        Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
+          num_clusters: 2,
+          seed: 42,
+          weights: Nx.tensor([1, 2, 3, 4], type: {:f, 32})
         )
 
       assert model.clusters == Nx.tensor([[1.0, 2.75], [2.0, 4.75]])
@@ -145,19 +162,19 @@ defmodule Scholar.Cluster.KMeansTest do
       x = Nx.tensor([[1, 2], [3, 4]])
 
       assert_raise ArgumentError,
-                   "invalid value for :weights option: expected list of positive numbers of size 2, got: [1, 2, 3]",
+                   "invalid value for :weights option: expected list or tensor of positive numbers of size 2, got: [1, 2, 3]",
                    fn ->
                      Scholar.Cluster.KMeans.fit(x, num_clusters: 2, weights: [1, 2, 3])
                    end
 
       assert_raise NimbleOptions.ValidationError,
-                   "invalid list in :weights option: invalid value for list element at position 1: expected positive number, got: -2.0",
+                   "invalid value for :weights option: expected weights to be a tensor or a list of positive numbers, got: [1, -2.0]",
                    fn ->
                      Scholar.Cluster.KMeans.fit(x, num_clusters: 2, weights: [1, -2.0])
                    end
 
       assert_raise NimbleOptions.ValidationError,
-                   "invalid value for :weights option: expected list, got: {1, 2}",
+                   "invalid value for :weights option: expected weights to be a tensor or a list of positive numbers, got: {1, 2}",
                    fn ->
                      Scholar.Cluster.KMeans.fit(x, num_clusters: 2, weights: {1, 2})
                    end
