@@ -2,6 +2,8 @@ defmodule Scholar.Options do
   # Useful NimbleOptions validations.
   @moduledoc false
 
+  require Nx
+
   def axes(axes) do
     # Axes are further validated by Nx, including against the tensor.
     if axes == nil or is_list(axes) do
@@ -28,6 +30,15 @@ defmodule Scholar.Options do
       {:ok, num}
     else
       {:error, "expected a non-negative number, got: #{inspect(num)}"}
+    end
+  end
+
+  def weights(weights) do
+    if (Nx.is_tensor(weights) and Nx.rank(weights) == 1) or
+         (is_list(weights) and Enum.all?(weights, &is_number/1)) do
+      {:ok, weights}
+    else
+      {:error, "expected weights to be a flat tensor or a flat list, got: #{inspect(weights)}"}
     end
   end
 end

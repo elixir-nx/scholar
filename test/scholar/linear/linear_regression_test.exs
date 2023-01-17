@@ -627,6 +627,74 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-2, atol: 1.0e-2)
       assert_all_close(expected_intercept, actual_intercept)
     end
+
+    test "test fit when fit_intercept set to false - weights as a tensor" do
+      a =
+        Nx.tensor([
+          [
+            0.7731901407241821,
+            0.5813425779342651,
+            0.8365984559059143,
+            0.2182593196630478,
+            0.06448899209499359,
+            0.9420031905174255
+          ],
+          [
+            0.6547101736068726,
+            0.05023770406842232,
+            0.657528281211853,
+            0.24924135208129883,
+            0.8238568902015686,
+            0.11182288080453873
+          ],
+          [
+            0.7693489193916321,
+            0.6696648001670837,
+            0.6877049803733826,
+            0.08740159869194031,
+            0.6053816676139832,
+            0.5419610142707825
+          ],
+          [
+            0.03419172018766403,
+            0.8298202753067017,
+            0.6097439527511597,
+            0.0184243805706501,
+            0.5578944087028503,
+            0.9986271858215332
+          ]
+        ])
+
+      b =
+        Nx.tensor([
+          0.38682249188423157,
+          0.8040792346000671,
+          0.8069542646408081,
+          0.3620224595069885
+        ])
+
+      sample_weights =
+        Nx.tensor([
+          0.8669093251228333,
+          0.10421276837587357,
+          0.996828556060791,
+          0.29747673869132996
+        ])
+
+      expected_coeff =
+        Nx.tensor([0.465558, 0.26869825, 0.10571962, -0.07031003, 0.56091221, -0.25331104])
+
+      expected_intercept = Nx.tensor(0.0)
+
+      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        Scholar.Linear.LinearRegression.fit(a, b,
+          sample_weights: sample_weights,
+          fit_intercept?: false
+        )
+
+      assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-2, atol: 1.0e-2)
+      assert_all_close(expected_intercept, actual_intercept)
+    end
   end
 
   describe "predict" do
