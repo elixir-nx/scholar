@@ -579,4 +579,4 @@ Ok, but is it a good or poor estimation? Huh, check the mean value of the target
 Nx.mean(y)
 ```
 
-For such a simple model as linear regression, it seems to be a pretty good result. But there is space to improve this result. You can, for example, add some additional features like the logarithm of the population. In the future, you will be able to try more complicated models, such as random forests.
+For such a simple model as linear regression, it seems to be a pretty good result. But there is space to improve this result. You can, for example, add some additional features to the data set. In the future, you will be able to try more complicated models, such as random forests.
