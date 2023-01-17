@@ -31,22 +31,29 @@ require Explorer.DataFrame
 
 ## Linear Regression on Synthetic Data
 
-
 Before we dive into real-life use cases of linear regression, we start with a simpler one. We will generate data with a linear pattern and then use `Scholar.Linear.LinearRegression` to compute regression.
 
 Firstly, we generate the data which simulates the function $f(x) = 3x + 4$ with added uniform, zero-mean noise. `Nx.Random.uniform` creates a tensor with a given shape and type.
 
 ```elixir
-key = Nx.Random.key(42)
-size = 100
-{x, new_key} = Nx.Random.uniform(key, 0, 2, shape: {size, 1}, type: :f32)
-{noise, _} = Nx.Random.uniform(new_key, -0.5, 0.5, shape: {size, 1}, type: :f32)
-y = 3 * x + 4 + noise
+defmodule LinearData do
+  import Nx.Defn
+
+  defn data() do
+    key = Nx.Random.key(42)
+    size = 100
+    {x, new_key} = Nx.Random.uniform(key, 0, 2, shape: {size, 1}, type: :f32)
+    {noise, _} = Nx.Random.uniform(new_key, -0.5, 0.5, shape: {size, 1}, type: :f32)
+    y = 3 * x + 4 + noise
+    {x, y}
+  end
+end
 ```
 
 Now let's plot the generated points.
 
 ```elixir
+{x, y} = LinearData.data()
 df = Explorer.DataFrame.new(x: Nx.to_flat_list(x), y: Nx.to_flat_list(y))
 
 Vl.new(
