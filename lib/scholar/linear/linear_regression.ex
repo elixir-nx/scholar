@@ -103,6 +103,11 @@ defmodule Scholar.Linear.LinearRegression do
   @doc """
   Makes predictions with the given `model` on input `x`.
 
+  If the input is scalar or 1D tensor it is assumed that
+  it represents one sample with `n` features (columns).
+
+  Predictions have always the same size of the first axis as input data.
+
   ## Examples
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
@@ -115,7 +120,19 @@ defmodule Scholar.Linear.LinearRegression do
       >
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
-    Nx.dot(x, coeff) + intercept
+    {x, shape} =
+      case Nx.shape(x) do
+        {} ->
+          {Nx.reshape(x, {1, 1}), {}}
+
+        {_} ->
+          {Nx.reshape(x, {1, :auto}), {1}}
+
+        {num_samples, _} ->
+          {x, {num_samples}}
+      end
+
+    (Nx.dot(x, coeff) + intercept) |> Nx.reshape(shape)
   end
 
   # Implements sample weighting by rescaling inputs and

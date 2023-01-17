@@ -759,5 +759,107 @@ defmodule Scholar.Linear.LinearRegressionTest do
       actual_prediction = Scholar.Linear.LinearRegression.predict(model, prediction_input)
       assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-3, atol: 1.0e-3)
     end
+
+    test "predict when :fit_intercept? set to false and 1d input" do
+      a =
+        Nx.tensor([
+          [
+            0.7731901407241821,
+            0.5813425779342651,
+            0.8365984559059143,
+            0.2182593196630478,
+            0.06448899209499359,
+            0.9420031905174255
+          ],
+          [
+            0.6547101736068726,
+            0.05023770406842232,
+            0.657528281211853,
+            0.24924135208129883,
+            0.8238568902015686,
+            0.11182288080453873
+          ],
+          [
+            0.7693489193916321,
+            0.6696648001670837,
+            0.6877049803733826,
+            0.08740159869194031,
+            0.6053816676139832,
+            0.5419610142707825
+          ],
+          [
+            0.03419172018766403,
+            0.8298202753067017,
+            0.6097439527511597,
+            0.0184243805706501,
+            0.5578944087028503,
+            0.9986271858215332
+          ]
+        ])
+
+      b =
+        Nx.tensor([
+          0.38682249188423157,
+          0.8040792346000671,
+          0.8069542646408081,
+          0.3620224595069885
+        ])
+
+      sample_weights = [
+        0.8669093251228333,
+        0.10421276837587357,
+        0.996828556060791,
+        0.29747673869132996
+      ]
+
+      prediction_input = Nx.tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+      expected_prediction = Nx.tensor([2.32356805])
+
+      model =
+        Scholar.Linear.LinearRegression.fit(a, b,
+          sample_weights: sample_weights,
+          fit_intercept?: false
+        )
+
+      actual_prediction = Scholar.Linear.LinearRegression.predict(model, prediction_input)
+      assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-3, atol: 1.0e-3)
+    end
+
+    test "predict when :fit_intercept? set to false and scalar input" do
+      a =
+        Nx.tensor([
+          [0.7731901407241821],
+          [0.6547101736068726],
+          [0.7693489193916321],
+          [0.03419172018766403]
+        ])
+
+      b =
+        Nx.tensor([
+          [1.0],
+          [2.0],
+          [3.0],
+          [4.0]
+        ])
+
+      sample_weights = [
+        0.8669093251228333,
+        0.10421276837587357,
+        0.996828556060791,
+        0.29747673869132996
+      ]
+
+      prediction_input = Nx.tensor(3.0)
+      expected_prediction = Nx.tensor(8.38652476)
+
+      model =
+        Scholar.Linear.LinearRegression.fit(a, b,
+          sample_weights: sample_weights,
+          fit_intercept?: false
+        )
+
+      actual_prediction = Scholar.Linear.LinearRegression.predict(model, prediction_input)
+      assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-1, atol: 1.0e-2)
+    end
   end
 end
