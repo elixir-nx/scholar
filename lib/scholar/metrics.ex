@@ -510,6 +510,32 @@ defmodule Scholar.Metrics do
     (diff * diff) |> Nx.mean()
   end
 
+  @doc ~S"""
+  Calculates the $R^2$ score of predictions with respect to targets.
+
+  $$R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}$$
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([3, -0.5, 2, 7], type: {:f, 32})
+      iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8], type: {:f, 32})
+      iex> Scholar.Metrics.r2_score(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.9486081600189209
+      >
+  """
+  defn r2_score(y_true, y_pred) do
+    diff = y_true - y_pred
+    ssr = (diff * diff) |> Nx.sum()
+
+    y_mean = Nx.mean(y_true)
+    diff = y_true - y_mean
+    sst = (diff * diff) |> Nx.sum()
+
+    1 - ssr/sst
+  end
+
   deftransformp check_num_classes(num_classes) do
     num_classes || raise ArgumentError, "missing option :num_classes"
   end
