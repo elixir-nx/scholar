@@ -45,7 +45,7 @@ defmodule Scholar.Linear.Ridge do
       doc: """
       Solver to use in the computational routines:
 
-      * `:svd` - Uses a Singular Value Decomposition of X to compute the Ridge coefficients.
+      * `:svd` - Uses a Singular Value Decomposition of A to compute the Ridge coefficients.
       In particular, it is more stable for singular matrices than `:cholesky` at the cost of being slower.
 
       * `:cholesky` - Uses the standard `Nx.LinAlg.solve` function to obtain a closed-form solution.
@@ -170,7 +170,7 @@ defmodule Scholar.Linear.Ridge do
           else
             kernel = Nx.dot(a, [1], a, [1])
             dual_coeff = solve_cholesky_kernel(kernel, b, alpha, sample_weights, opts)
-            Nx.dot(a, [0], dual_coeff, [0]) |> Nx.transpose()
+            Nx.dot(dual_coeff, [0], a, [0])
           end
 
         _ ->
@@ -202,41 +202,39 @@ defmodule Scholar.Linear.Ridge do
 
   # Implements sample weighting by rescaling inputs and
   # targets by sqrt(sample_weight).
-  defn rescale(x, y, sample_weights) do
+  defn rescale(a, b, sample_weights) do
     case Nx.shape(sample_weights) do
       {} = scalar ->
         scalar = Nx.sqrt(scalar)
-        {scalar * x, scalar * y}
+        {scalar * a, scalar * b}
 
       _ ->
         scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
-        {Nx.dot(scale, x), Nx.dot(scale, y)}
+        {Nx.dot(scale, a), Nx.dot(scale, b)}
     end
   end
 
-  defnp solve_cholesky_kernel(kernel, y, alpha, sample_weights, opts) do
+  defnp solve_cholesky_kernel(kernel, b, alpha, sample_weights, opts) do
     num_samples = Nx.axis_size(kernel, 0)
-    num_targets = Nx.axis_size(y, 1)
+    num_targets = Nx.axis_size(b, 1)
     one_alpha = Nx.all(alpha[[0]] == alpha)
     sample_weights = Nx.sqrt(sample_weights)
 
-    {kernel, y} =
+    {kernel, b} =
       if opts[:sample_weights_flag] do
-        y = y * Nx.new_axis(sample_weights, 1)
-        {kernel * Nx.outer(sample_weights, sample_weights), y}
+        b = b * Nx.new_axis(sample_weights, 1)
+        {kernel * Nx.outer(sample_weights, sample_weights), b}
       end
 
     if one_alpha do
       kernel = kernel + Nx.eye(num_samples) * alpha[[0]]
-      dual_coeff = Nx.LinAlg.solve(kernel, y)
+      dual_coeff = Nx.LinAlg.solve(kernel, b)
 
       if opts[:sample_weights_flag],
         do: dual_coeff * Nx.new_axis(sample_weights, 1),
         else: dual_coeff
     else
-      y = Nx.transpose(y)
-
-      y = Nx.new_axis(y, -1)
+      b = Nx.transpose(b) |> Nx.new_axis(-1)
 
       kernel = Nx.new_axis(kernel, 0) |> Nx.broadcast({num_targets, num_samples, num_samples})
 
@@ -246,7 +244,7 @@ defmodule Scholar.Linear.Ridge do
 
       reg = reg * Nx.reshape(alpha, {:auto, 1, 1})
       kernel = kernel + reg
-      dual_coeff = Nx.LinAlg.solve(kernel, y) |> Nx.squeeze(axes: [-1])
+      dual_coeff = Nx.LinAlg.solve(kernel, b) |> Nx.squeeze(axes: [-1])
 
       dual_coeff =
         if opts[:sample_weights_flag],
@@ -257,23 +255,21 @@ defmodule Scholar.Linear.Ridge do
     end
   end
 
-  defnp solve_cholesky(x, y, alpha) do
-    num_features = Nx.axis_size(x, 1)
-    num_targets = Nx.axis_size(y, 1)
+  defnp solve_cholesky(a, b, alpha) do
+    num_features = Nx.axis_size(a, 1)
+    num_targets = Nx.axis_size(b, 1)
 
-    kernel = Nx.dot(x, [0], x, [0])
+    kernel = Nx.dot(a, [0], a, [0])
 
-    xy = Nx.dot(x, [0], y, [0])
+    ab = Nx.dot(a, [0], b, [0])
 
     one_alpha = Nx.all(alpha[[0]] == alpha)
 
-    {kernel, xy}
-
     if one_alpha do
       kernel = kernel + Nx.eye(num_features) * alpha[[0]]
-      Nx.LinAlg.solve(kernel, xy) |> Nx.transpose()
+      Nx.LinAlg.solve(kernel, ab) |> Nx.transpose()
     else
-      target = Nx.transpose(xy)
+      target = Nx.transpose(ab)
 
       target = Nx.new_axis(target, -1)
 
@@ -289,8 +285,8 @@ defmodule Scholar.Linear.Ridge do
     end
   end
 
-  defn solve_svd(x, y, alpha) do
-    {u, s, vt} = Nx.LinAlg.svd(x)
+  defn solve_svd(a, b, alpha) do
+    {u, s, vt} = Nx.LinAlg.svd(a)
     min_shape = Kernel.min(Nx.axis_size(u, -1), Nx.axis_size(vt, -1))
     u = Nx.slice_along_axis(u, 0, min_shape, axis: -1)
     vt = Nx.slice_along_axis(vt, 0, min_shape, axis: -2)
@@ -301,9 +297,9 @@ defmodule Scholar.Linear.Ridge do
     alpha = Nx.new_axis(alpha, 0) |> Nx.broadcast({s_size, alpha_size})
     d = Nx.broadcast(0.0, {s_size, alpha_size})
     d = Nx.select(idx, s / (s ** 2 + alpha), d)
-    uty = Nx.dot(u, [0], y, [0])
+    uty = Nx.dot(u, [0], b, [0])
     d_uty = d * uty
-    Nx.dot(vt, [0], d_uty, [0]) |> Nx.transpose()
+    Nx.dot(d_uty, [0], vt, [0])
   end
 
   defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
@@ -314,11 +310,11 @@ defmodule Scholar.Linear.Ridge do
     end
   end
 
-  defn preprocess_data(x, y, sample_weights, opts) do
+  defn preprocess_data(a, b, sample_weights, opts) do
     if opts[:sample_weights_flag],
       do:
-        {Nx.weighted_mean(x, sample_weights, axes: [0]),
-         Nx.weighted_mean(y, sample_weights, axes: [0])},
-      else: {Nx.mean(x, axes: [0]), Nx.mean(y, axes: [0])}
+        {Nx.weighted_mean(a, sample_weights, axes: [0]),
+         Nx.weighted_mean(b, sample_weights, axes: [0])},
+      else: {Nx.mean(a, axes: [0]), Nx.mean(b, axes: [0])}
   end
 end
