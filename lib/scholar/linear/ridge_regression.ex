@@ -23,7 +23,13 @@ defmodule Scholar.Linear.Ridge do
 
   opts = [
     sample_weights: [
-      type: {:custom, Scholar.Options, :weights, []},
+      type:
+        {:or,
+         [
+           {:custom, Scholar.Options, :non_negative_number, []},
+           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
+           {:custom, Scholar.Options, :weights, []}
+         ]},
       doc: """
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
@@ -56,7 +62,8 @@ defmodule Scholar.Linear.Ridge do
         {:or,
          [
            {:custom, Scholar.Options, :non_negative_number, []},
-           {:list, {:custom, Scholar.Options, :non_negative_number, []}}
+           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
+           {:custom, Scholar.Options, :weights, []}
          ]},
       default: 1.0,
       doc: ~S"""
@@ -197,7 +204,7 @@ defmodule Scholar.Linear.Ridge do
       >
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
-    Nx.dot(x, coeff) + intercept
+    Nx.dot(x, [1], coeff, [1]) + intercept
   end
 
   # Implements sample weighting by rescaling inputs and
@@ -224,6 +231,8 @@ defmodule Scholar.Linear.Ridge do
       if opts[:sample_weights_flag] do
         b = b * Nx.new_axis(sample_weights, 1)
         {kernel * Nx.outer(sample_weights, sample_weights), b}
+      else
+        {kernel, b}
       end
 
     if one_alpha do
