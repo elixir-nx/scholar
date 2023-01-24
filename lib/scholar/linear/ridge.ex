@@ -72,7 +72,7 @@ defmodule Scholar.Linear.Ridge do
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
-  Fits a ridge regression model for sample inputs `a` and
+  Fits a Ridge regression model for sample inputs `a` and
   sample targets `b`.
 
   ## Options
