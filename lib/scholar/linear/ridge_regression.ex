@@ -209,7 +209,7 @@ defmodule Scholar.Linear.Ridge do
 
   # Implements sample weighting by rescaling inputs and
   # targets by sqrt(sample_weight).
-  defn rescale(a, b, sample_weights) do
+  defnp rescale(a, b, sample_weights) do
     case Nx.shape(sample_weights) do
       {} = scalar ->
         scalar = Nx.sqrt(scalar)
@@ -294,7 +294,7 @@ defmodule Scholar.Linear.Ridge do
     end
   end
 
-  defn solve_svd(a, b, alpha) do
+  defnp solve_svd(a, b, alpha) do
     {u, s, vt} = Nx.LinAlg.svd(a)
     min_shape = Kernel.min(Nx.axis_size(u, -1), Nx.axis_size(vt, -1))
     u = Nx.slice_along_axis(u, 0, min_shape, axis: -1)
@@ -319,7 +319,7 @@ defmodule Scholar.Linear.Ridge do
     end
   end
 
-  defn preprocess_data(a, b, sample_weights, opts) do
+  defnp preprocess_data(a, b, sample_weights, opts) do
     if opts[:sample_weights_flag],
       do:
         {Nx.weighted_mean(a, sample_weights, axes: [0]),
