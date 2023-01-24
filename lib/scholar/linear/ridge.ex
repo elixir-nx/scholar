@@ -236,17 +236,6 @@ defmodule Scholar.Linear.Ridge do
     else
       y = Nx.transpose(y)
 
-      # {_, _, _, dual_coeff, _} =
-      #   while {kernel, y, alpha, dual_coeff = Nx.broadcast(0.0, {num_targets, num_samples}),
-      #          i = 0},
-      #         i < num_targets do
-      #     kernel = kernel + Nx.eye(num_samples) * alpha[[i]]
-      #     dual_coeff_slice = Nx.LinAlg.solve(kernel, y[[i]]) |> Nx.new_axis(0)
-      #     dual_coeff = Nx.put_slice(dual_coeff, [i, 0], dual_coeff_slice)
-      #     kernel = kernel - Nx.eye(num_samples) * alpha[[i]]
-      #     {kernel, y, alpha, dual_coeff, i + 1}
-      #   end
-
       y = Nx.new_axis(y, -1)
 
       kernel = Nx.new_axis(kernel, 0) |> Nx.broadcast({num_targets, num_samples, num_samples})
@@ -285,17 +274,6 @@ defmodule Scholar.Linear.Ridge do
       Nx.LinAlg.solve(kernel, xy) |> Nx.transpose()
     else
       target = Nx.transpose(xy)
-
-      # {_, _, _, coeff, _} =
-      #   while {kernel, target, alpha, coeff = Nx.broadcast(0.0, {num_targets, num_features}),
-      #          i = 0},
-      #         i < num_targets do
-      #     kernel = kernel + Nx.eye(num_features) * alpha[[i]]
-      #     coeff_slice = Nx.LinAlg.solve(kernel, target[[i]]) |> Nx.new_axis(0)
-      #     coeff = Nx.put_slice(coeff, [i, 0], coeff_slice)
-      #     kernel = kernel - Nx.eye(num_features) * alpha[[i]]
-      #     {kernel, target, alpha, coeff, i + 1}
-      #   end
 
       target = Nx.new_axis(target, -1)
 
