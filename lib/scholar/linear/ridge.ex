@@ -12,9 +12,9 @@ defmodule Scholar.Linear.Ridge do
 
   * $y$ is an input target
 
-  * $w$ is a model weights matrix
+  * $w$ is the model weights matrix
 
-  * $\alpha$ ia a parameter that controls level of regularization
+  * $\alpha$ is the parameter that controls level of regularization
   """
   import Nx.Defn
 
@@ -46,7 +46,7 @@ defmodule Scholar.Linear.Ridge do
       Solver to use in the computational routines:
 
       * `:svd` - Uses a Singular Value Decomposition of X to compute the Ridge coefficients.
-      In particular more stable for singular matrices than `:cholesky` at the cost of being slower.
+      In particular, it is more stable for singular matrices than `:cholesky` at the cost of being slower.
 
       * `:cholesky` - Uses the standard `Nx.LinAlg.solve` function to obtain a closed-form solution.
       """
@@ -63,8 +63,8 @@ defmodule Scholar.Linear.Ridge do
       Constant that multiplies the $L_2$ term, controlling regularization strength.
       `:alpha` must be a non-negative float i.e. in [0, inf).
 
-      If `:alpha` is set to 0.0 than objective is ordinary least squares regression.
-      For numerical reasons you should use `Scholar.Linear.LinearRegression` instead.
+      If `:alpha` is set to 0.0 the objective is the ordinary least squares regression.
+      In this case, for numerical reasons, you should use `Scholar.Linear.LinearRegression` instead.
       """
     ]
   ]
