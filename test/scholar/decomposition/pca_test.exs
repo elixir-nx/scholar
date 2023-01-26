@@ -4,6 +4,7 @@ defmodule Scholar.Decomposition.PCATest do
   @x Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
   @x2 Nx.tensor([[1, 4], [54, 6], [26, 7]])
   @x3 Nx.tensor([[-1, -1, 3], [-2, -1, 2], [-3, -2, 1], [3, 1, 1], [21, 2, 1], [5, 3, 2]])
+  @x_wide Nx.tensor([[1, 2, 3], [56, 2, 4]])
 
   test "fit test - all default options" do
     model = Scholar.Decomposition.PCA.fit(@x)
@@ -33,6 +34,31 @@ defmodule Scholar.Decomposition.PCATest do
   test "fit test - :num_components is integer" do
     model = Scholar.Decomposition.PCA.fit(@x, num_components: 1)
     assert model.num_components == 1
+  end
+
+  test "fit test - :num_components is integer and wide matrix" do
+    model = Scholar.Decomposition.PCA.fit(@x_wide, num_components: 1)
+
+    assert_all_close(
+      model.components,
+      Nx.tensor([
+        [-0.9998347759246826, 0.0, -0.01817881315946579]
+      ]),
+      atol: 1.0e-3
+    )
+
+    assert_all_close(model.explained_variance, Nx.tensor([1513.000244140625]), atol: 1.0e-3)
+
+    assert_all_close(
+      model.explained_variance_ratio,
+      Nx.tensor([1.0])
+    )
+
+    assert_all_close(model.singular_values, Nx.tensor([38.89730453491211]), atol: 1.0e-3)
+    assert model.mean == Nx.tensor([28.5, 2.0, 3.5])
+    assert model.num_components == 1
+    assert model.num_samples == Nx.tensor(2)
+    assert model.num_features == Nx.tensor(3)
   end
 
   test "transform test - :whiten set to false" do
