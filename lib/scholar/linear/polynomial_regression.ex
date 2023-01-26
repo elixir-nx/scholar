@@ -48,7 +48,7 @@ defmodule Scholar.Linear.PolynomialRegression do
 
   ## Return Values
 
-    The function returns a struct with the following parameters:
+  The function returns a struct with the following parameters:
 
     * `:coefficients` - Estimated coefficients for the linear regression problem.
 
