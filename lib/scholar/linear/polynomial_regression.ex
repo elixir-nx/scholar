@@ -89,11 +89,12 @@ defmodule Scholar.Linear.PolynomialRegression do
   end
 
   @doc """
-    Computes the feature matrix for polynomial regression.
+  Computes the feature matrix for polynomial regression.
 
-    #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@opts_schema)}
 
-    ## Examples
+  ## Examples
+
       iex> x = Nx.tensor([[2]])
       iex> Scholar.Linear.PolynomialRegression.transform(x, degree: 0)
       ** (NimbleOptions.ValidationError) invalid value for :degree option: expected positive integer, got: 0
