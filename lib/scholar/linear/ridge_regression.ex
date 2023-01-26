@@ -295,10 +295,7 @@ defmodule Scholar.Linear.Ridge do
   end
 
   defnp solve_svd(a, b, alpha) do
-    {u, s, vt} = Nx.LinAlg.svd(a)
-    min_shape = Kernel.min(Nx.axis_size(u, -1), Nx.axis_size(vt, -1))
-    u = Nx.slice_along_axis(u, 0, min_shape, axis: -1)
-    vt = Nx.slice_along_axis(vt, 0, min_shape, axis: -2)
+    {u, s, vt} = Nx.LinAlg.svd(a, full_matrices?: false)
     s_size = Nx.size(s)
     alpha_size = Nx.size(alpha)
     idx = (s > 1.0e-15) |> Nx.new_axis(1) |> Nx.broadcast({s_size, alpha_size})
