@@ -129,32 +129,27 @@ defmodule Scholar.Linear.PolynomialRegression do
       >
   """
   deftransform transform(x, opts \\ []) do
-    opts = NimbleOptions.validate!(opts, @opts_schema)
-    transform_n(x, opts)
+    transform_n(x, NimbleOptions.validate!(opts, @opts_schema))
   end
 
   deftransform transform_n(x, opts) do
-    x_split = initial_data_split(x)
+    {_n_samples, n_features} = Nx.shape(x)
 
-    1..(opts[:degree] - 1)//1
-    |> Enum.reduce([x_split], fn _, prev_degree ->
-      [prev_degree, compute_degree(x, List.last(prev_degree))]
-    end)
+    x_split = Enum.map(0..(n_features - 1), &get_column(x, &1))
+
+    Enum.reduce(
+      1..(opts[:degree] - 1)//1,
+      [x_split],
+      fn _, prev_degree ->
+        [
+          prev_degree,
+          compute_degree(x, List.last(prev_degree))
+        ]
+      end
+    )
     |> List.flatten()
     |> Nx.concatenate(axis: 1)
     |> add_intercept(opts)
-  end
-
-  @spec initial_data_split(Nx.Tensor) :: list(Nx.Tensor)
-  deftransform initial_data_split(x) do
-    {n_samples, n_features} = Nx.shape(x)
-
-    Enum.map(
-      0..(n_features - 1),
-      fn n ->
-        Nx.reshape(x[[0..-1//1, n]], {n_samples, :auto})
-      end
-    )
   end
 
   @spec compute_degree(Nx.Tensor, list(Nx.Tensor)) :: list(Nx.Tensor)
@@ -169,12 +164,13 @@ defmodule Scholar.Linear.PolynomialRegression do
     end)
   end
 
-  defnp compute_column(previous, x, n) do
-    {n_samples, _n_features} = Nx.shape(x)
+  defnp get_column(x, n) do
+    Nx.transpose(x)[n]
+    |> Nx.reshape({:auto, 1})
+  end
 
-    x[[0..-1//1, n]]
-    |> Nx.reshape({n_samples, :auto})
-    |> Nx.multiply(previous)
+  defnp compute_column(previous, x, n) do
+    get_column(x, n) * previous
   end
 
   defnp add_intercept(x, opts) do
