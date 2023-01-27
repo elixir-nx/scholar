@@ -50,7 +50,7 @@ defmodule Scholar.Linear.PolynomialRegression do
 
   The function returns a struct with the following parameters:
 
-    * `:coefficients` - Estimated coefficients for the linear regression problem.
+    * `:coefficients` - Estimated coefficients for the polynomial regression problem.
 
     * `:intercept` - Independent term in the linear model.
 
