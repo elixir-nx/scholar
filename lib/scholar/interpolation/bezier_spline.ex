@@ -105,10 +105,13 @@ defmodule Scholar.Interpolation.BezierSpline do
 
     b = 2 * (2 * k[0..(n - 1)] + k[1..n])
 
+    b_comp = Nx.tensor([[0, 0], [0, 1], [0, 0], [0, 1]])
+    b_comp = Nx.indexed_put(b_comp, Nx.tensor([[2, 0], [3, 0]]), Nx.broadcast(n - 1, {2}))
+
     b =
       Nx.indexed_put(
         b,
-        Nx.tensor([[0, 0], [0, 1], [n - 1, 0], [n - 1, 1]]),
+        b_comp,
         Nx.concatenate([k[0] + 2 * k[1], 8 * k[n - 1] + k[n]])
       )
 
@@ -174,7 +177,7 @@ defmodule Scholar.Interpolation.BezierSpline do
     predict_n(model, target_x, NimbleOptions.validate!(opts, @predict_opts_schema))
   end
 
-  defnp predict_n(%__MODULE__{coefficients: coefficients, k: k}, target_x, opts \\ []) do
+  defnp predict_n(%__MODULE__{coefficients: coefficients, k: k}, target_x, opts) do
     input_shape = Nx.shape(target_x)
     x_poly = Nx.flatten(target_x)
 
@@ -207,7 +210,7 @@ defmodule Scholar.Interpolation.BezierSpline do
     Nx.reshape(result, input_shape)
   end
 
-  defnp t_from_x(x_poly, x_curr, x_next, coef_poly, opts \\ []) do
+  defnp t_from_x(x_poly, x_curr, x_next, coef_poly, opts) do
     # for each polynomial, we need to transform x_poly into t
     # the mapping from x to t isn't necessarily linear.
     # so we first guess the initial t as the linear counterpart

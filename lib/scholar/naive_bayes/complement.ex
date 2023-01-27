@@ -56,7 +56,7 @@ defmodule Scholar.NaiveBayes.Complement do
       """
     ],
     priors: [
-      type: {:list, :float},
+      type: {:custom, Scholar.Options, :weights, []},
       doc: ~S"""
       Prior probabilities of the classes. If specified, the priors are not
       adjusted according to the data.
@@ -70,7 +70,7 @@ defmodule Scholar.NaiveBayes.Complement do
       """
     ],
     sample_weights: [
-      type: {:list, {:or, [:float, :integer]}},
+      type: {:custom, Scholar.Options, :weights, []},
       doc: ~S"""
       List of `n_samples` elements.
       A list of 1.0 values is used if none is given.
@@ -179,8 +179,10 @@ defmodule Scholar.NaiveBayes.Complement do
 
     {priors, opts} = Keyword.pop(opts, :priors, 0.0)
     class_priors = Nx.tensor(priors)
+    {alpha, opts} = Keyword.pop!(opts, :alpha)
+    alpha = Nx.tensor(alpha)
 
-    fit_n(x, y, sample_weights, class_priors, opts)
+    fit_n(x, y, sample_weights, class_priors, alpha, opts)
   end
 
   @doc """
@@ -278,7 +280,7 @@ defmodule Scholar.NaiveBayes.Complement do
     joint_log_likelihood(model, x)
   end
 
-  defnp fit_n(x, y, sample_weights, class_priors, opts \\ []) do
+  defnp fit_n(x, y, sample_weights, class_priors, alpha, opts) do
     input_rank = Nx.rank(x)
     targets_rank = Nx.rank(y)
 
@@ -361,7 +363,7 @@ defmodule Scholar.NaiveBayes.Complement do
     feature_count = feature_count + Nx.dot(Nx.transpose(classes), x)
     class_count = class_count + Nx.sum(classes, axes: [0])
     feature_all = Nx.sum(feature_count, axes: [0])
-    alpha = check_alpha(Nx.tensor(opts[:alpha]), opts[:force_alpha], num_features)
+    alpha = check_alpha(alpha, opts[:force_alpha], num_features)
     complement_count = feature_all + alpha - feature_count
 
     logged_normalized_complement_count =

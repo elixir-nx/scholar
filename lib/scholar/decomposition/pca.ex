@@ -143,7 +143,7 @@ defmodule Scholar.Decomposition.PCA do
   end
 
   # TODO Add support for :num_components as a float when dynamic shapes will be implemented
-  defnp fit_n(x, opts \\ []) do
+  defnp fit_n(x, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
     end
@@ -153,16 +153,16 @@ defmodule Scholar.Decomposition.PCA do
 
     mean = Nx.mean(x, axes: [0])
     x = x - mean
-    {decomposer, singular_values, components} = Nx.LinAlg.svd(x)
+    {decomposer, singular_values, components} = Nx.LinAlg.svd(x, full_matrices?: false)
 
-    {num_components, trim_dim} =
+    num_components =
       calculate_num_components(
         num_components,
         num_features,
         num_samples
       )
 
-    {_, components} = flip_svd(decomposer[[0..-1//1, 0..(trim_dim - 1)]], components)
+    {_, components} = flip_svd(decomposer, components)
     components = components[[0..(num_components - 1), 0..-1//1]]
 
     explained_variance = singular_values * singular_values / (num_samples - 1)
@@ -220,7 +220,7 @@ defmodule Scholar.Decomposition.PCA do
             mean: mean
           } = _model,
           x,
-          opts \\ []
+          opts
         ) do
     whiten? = opts[:whiten]
 
@@ -270,7 +270,7 @@ defmodule Scholar.Decomposition.PCA do
     fit_transform_n(x, NimbleOptions.validate!(opts, @fit_transform_opts_schema))
   end
 
-  defnp fit_transform_n(x, opts \\ []) do
+  defnp fit_transform_n(x, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
     end
@@ -278,16 +278,16 @@ defmodule Scholar.Decomposition.PCA do
     {num_samples, num_features} = Nx.shape(x)
     num_components = opts[:num_components]
     x = x - Nx.mean(x, axes: [0])
-    {decomposer, singular_values, components} = Nx.LinAlg.svd(x)
+    {decomposer, singular_values, components} = Nx.LinAlg.svd(x, full_matrices?: false)
 
-    {num_components, trim_dim} =
+    num_components =
       calculate_num_components(
         num_components,
         num_features,
         num_samples
       )
 
-    {decomposer, _components} = flip_svd(decomposer[[0..-1//1, 0..(trim_dim - 1)]], components)
+    {decomposer, _components} = flip_svd(decomposer, components)
     decomposer = decomposer[[0..-1//1, 0..(num_components - 1)]]
 
     if opts[:whiten] do
@@ -315,11 +315,11 @@ defmodule Scholar.Decomposition.PCA do
 
     cond do
       num_components == nil ->
-        {default_num_components, default_num_components}
+        default_num_components
 
       num_components > 0 and num_components <= min(num_features, num_samples) and
           is_integer(num_components) ->
-        {num_components, default_num_components}
+        num_components
 
       is_integer(num_components) ->
         raise ArgumentError,

@@ -51,7 +51,7 @@ defmodule Scholar.Metrics.Clustering do
     silhouette_samples_n(x, labels, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp silhouette_samples_n(x, labels, opts \\ []) do
+  defnp silhouette_samples_n(x, labels, opts) do
     verify_num_clusters(x, opts)
     {inner, alone?, outer} = inner_and_outer_dist(x, labels, opts)
     result = (outer - inner) / Nx.max(outer, inner)
@@ -87,11 +87,11 @@ defmodule Scholar.Metrics.Clustering do
     silhouette_score_n(x, labels, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp silhouette_score_n(x, labels, opts \\ []) do
+  defnp silhouette_score_n(x, labels, opts) do
     Nx.mean(silhouette_samples(x, labels, opts))
   end
 
-  defnp inner_and_outer_dist(x, labels, opts \\ []) do
+  defnp inner_and_outer_dist(x, labels, opts) do
     num_clusters = opts[:num_clusters]
     {num_samples, num_features} = Nx.shape(x)
     inf = Nx.Constants.infinity()

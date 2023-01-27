@@ -24,9 +24,9 @@ defmodule Scholar.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.27", only: :dev, runtime: false},
-      {:nx, "~> 0.4.0", github: "elixir-nx/nx", sparse: "nx", override: true},
-      {:explorer, "~> 0.4.0", only: [:test, :dev]},
+      {:ex_doc, "~> 0.29", only: :dev, runtime: false},
+      {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
+      {:explorer, "~> 0.5.0", only: [:test, :dev]},
       {:nimble_options, "~> 0.5.2"}
     ]
   end
@@ -36,7 +36,7 @@ defmodule Scholar.MixProject do
       main: "Scholar",
       source_url: "https://github.com/elixir-nx/scholar",
       logo: "images/scholar_simplified.png",
-      extras: ["notebooks/k_means.livemd"],
+      extras: ["notebooks/k_means.livemd", "notebooks/linear_regression.livemd"],
       groups_for_modules: [
         Models: [
           Scholar.Cluster.KMeans,

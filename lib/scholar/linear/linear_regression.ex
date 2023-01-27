@@ -9,7 +9,7 @@ defmodule Scholar.Linear.LinearRegression do
 
   opts = [
     sample_weights: [
-      type: {:list, {:custom, Scholar.Options, :positive_number, []}},
+      type: {:custom, Scholar.Options, :weights, []},
       doc: """
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
@@ -76,7 +76,7 @@ defmodule Scholar.Linear.LinearRegression do
     fit_n(a, b, sample_weights, opts)
   end
 
-  defnp fit_n(a, b, sample_weights, opts \\ []) do
+  defnp fit_n(a, b, sample_weights, opts) do
     {a_offset, b_offset} =
       if opts[:fit_intercept?] do
         preprocess_data(a, b, sample_weights, opts)
@@ -149,7 +149,7 @@ defmodule Scholar.Linear.LinearRegression do
     end
   end
 
-  defnp preprocess_data(x, y, sample_weights, opts \\ []) do
+  defnp preprocess_data(x, y, sample_weights, opts) do
     if opts[:sample_weights_flag],
       do:
         {Nx.weighted_mean(x, sample_weights, axes: [0]),
