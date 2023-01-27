@@ -98,8 +98,8 @@ defmodule Scholar.Linear.RidgeRegression do
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
-      iex> Scholar.Linear.Ridge.fit(x, y)
-      %Scholar.Linear.Ridge{
+      iex> Scholar.Linear.RidgeRegression.fit(x, y)
+      %Scholar.Linear.RidgeRegression{
         coefficients: #Nx.Tensor<
           f32[2]
           [-0.42378732562065125, -0.6891375780105591]
@@ -196,8 +196,8 @@ defmodule Scholar.Linear.RidgeRegression do
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
-      iex> model = Scholar.Linear.Ridge.fit(x, y)
-      iex> Scholar.Linear.Ridge.predict(model, Nx.tensor([[2.0, 1.0]]))
+      iex> model = Scholar.Linear.RidgeRegression.fit(x, y)
+      iex> Scholar.Linear.RidgeRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
       #Nx.Tensor<
         f32[1]
         [4.120225429534912]
