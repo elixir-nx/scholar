@@ -52,7 +52,7 @@ defmodule Scholar.Linear.PolynomialRegression do
 
     * `:coefficients` - Estimated coefficients for the polynomial regression problem.
 
-    * `:intercept` - Independent term in the linear model.
+    * `:intercept` - Independent term in the polynomial model.
 
   ## Examples
 
