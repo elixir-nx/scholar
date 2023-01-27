@@ -5,8 +5,8 @@ defmodule Scholar.Linear.PolynomialRegression do
 
   import Nx.Defn
 
-  # @derive {Nx.Container, containers: [:coefficients, :intercept]}
-  # defstruct [:coefficients, :intercept]
+  @derive {Nx.Container, containers: [:coefficients, :intercept]}
+  defstruct [:coefficients, :intercept]
 
   opts = [
     sample_weights: [
@@ -59,7 +59,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
       iex> Scholar.Linear.PolynomialRegression.fit(x, y, degree: 1)
-      %Scholar.Linear.LinearRegression{
+      %Scholar.Linear.PolynomialRegression{
         coefficients: #Nx.Tensor<
           f32[2]
           [-0.4972473084926605, -0.70103919506073]
@@ -72,7 +72,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
       iex> model = Scholar.Linear.PolynomialRegression.fit(x, y, degree: 2)
-      %Scholar.Linear.LinearRegression{
+      %Scholar.Linear.PolynomialRegression{
         coefficients: #Nx.Tensor<
           f32[5]
           [-0.021396497264504433, -0.004854593891650438, -0.08849877119064331, -0.062211357057094574, -0.04369127377867699]
@@ -85,7 +85,11 @@ defmodule Scholar.Linear.PolynomialRegression do
   deftransform fit(a, b, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     a_transform = transform(a, opts |> Keyword.put(:fit_intercept?, false))
-    Scholar.Linear.LinearRegression.fit(a_transform, b, Keyword.delete(opts, :degree))
+
+    %{
+      Scholar.Linear.LinearRegression.fit(a_transform, b, Keyword.delete(opts, :degree))
+      | __struct__: Scholar.Linear.PolynomialRegression
+    }
   end
 
   @doc """
