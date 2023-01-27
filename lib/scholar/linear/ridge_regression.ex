@@ -1,4 +1,4 @@
-defmodule Scholar.Linear.Ridge do
+defmodule Scholar.Linear.RidgeRegression do
   @moduledoc ~S"""
   Linear least squares with $L_2$ regularization.
 

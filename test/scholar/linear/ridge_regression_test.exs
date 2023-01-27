@@ -1,4 +1,4 @@
-defmodule Scholar.Linear.RidgeTest do
+defmodule Scholar.Linear.RidgeRegressionTest do
   use Scholar.Case, async: true
 
   describe "fit" do
