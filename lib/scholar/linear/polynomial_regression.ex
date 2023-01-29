@@ -5,8 +5,8 @@ defmodule Scholar.Linear.PolynomialRegression do
 
   import Nx.Defn
 
-  @derive {Nx.Container, containers: [:coefficients, :intercept]}
-  defstruct [:coefficients, :intercept]
+  @derive {Nx.Container, containers: [:coefficients, :intercept, :degree]}
+  defstruct [:coefficients, :intercept, :degree]
 
   opts = [
     sample_weights: [
@@ -90,6 +90,28 @@ defmodule Scholar.Linear.PolynomialRegression do
       Scholar.Linear.LinearRegression.fit(a_transform, b, Keyword.delete(opts, :degree))
       | __struct__: Scholar.Linear.PolynomialRegression
     }
+    |> Map.merge(%{degree: opts[:degree]})
+  end
+
+  @doc """
+  Makes predictions with the given `model` on input `x`.
+
+  ## Examples
+
+      iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
+      iex> y = Nx.tensor([4.0, 3.0, -1.0])
+      iex> model = Scholar.Linear.PolynomialRegression.fit(x, y, degree: 2)
+      iex> Scholar.Linear.PolynomialRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
+      #Nx.Tensor<
+        f32[1]
+        [3.84888117]
+      >
+  """
+  deftransform predict(model, x) do
+    Scholar.Linear.LinearRegression.predict(
+      %{model | __struct__: Scholar.Linear.LinearRegression},
+      transform_n(x, degree: model.degree, fit_intercept?: false)
+    )
   end
 
   @doc """
