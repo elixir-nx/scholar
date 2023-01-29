@@ -36,7 +36,10 @@ defmodule Scholar.Linear.PolynomialRegression do
     ]
   ]
 
+  transform_opts = Keyword.take(opts, [:degree, :fit_intercept])
+
   @opts_schema NimbleOptions.new!(opts)
+  @transform_opts_schema NimbleOptions.new!(transform_opts)
 
   @doc """
   Fits a polynomial regression model for sample inputs `a` and
@@ -117,7 +120,7 @@ defmodule Scholar.Linear.PolynomialRegression do
   @doc """
   Computes the feature matrix for polynomial regression.
 
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@transform_opts_schema)}
 
   ## Examples
 
@@ -155,7 +158,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       >
   """
   deftransform transform(x, opts \\ []) do
-    transform_n(x, NimbleOptions.validate!(opts, @opts_schema))
+    transform_n(x, NimbleOptions.validate!(opts, @transform_opts_schema))
   end
 
   deftransform transform_n(x, opts) do
