@@ -1,0 +1,157 @@
+# defn transform
+
+```elixir
+Mix.install(
+  [
+    {:nx, "~> 0.4.2"},
+    {:exla, "~> 0.4.2"},
+    {:nimble_options, "~> 0.5.2"},
+    {:kino_bumblebee, "~> 0.1.0"}
+  ]
+  # ,
+  # config: [nx: [default_backend: EXLA.Backend]]
+)
+```
+
+## Section
+
+```elixir
+defmodule Polynomial do
+  import Nx.Defn
+
+  opts = [
+    degree: [type: :pos_integer, default: 2],
+    fit_intercept?: [type: :boolean, default: true]
+  ]
+
+  @opts_schema NimbleOptions.new!(opts)
+
+  @doc """
+    Computes the feature matrix for polynomial regression.
+
+    ## Examples
+      iex> x = Nx.tensor([[2]])
+      iex> Polynomial.transform(x, degree: 0)
+      ** (NimbleOptions.ValidationError) invalid value for :degree option: expected positive integer, got: 0
+
+      iex> x = Nx.tensor([[2]])
+      iex> Polynomial.transform(x, degree: 5, fit_intercept?: false)
+      #Nx.Tensor<
+        f32[1][5]
+        [
+          [2.0, 4.0, 8.0, 16.0, 32.0]
+        ]
+      >
+
+      iex> x = Nx.tensor([[2, 3], [1, 3]])
+      iex> Polynomial.transform(x, degree: 1, fit_intercept?: false)
+      #Nx.Tensor<
+        f32[2][2]
+        [
+          [2.0, 3.0],
+          [1.0, 3.0]
+        ]
+      >
+
+      iex> x = Nx.tensor([[2, 3, 5, 7], [2, 3, 5, 7]])
+      iex> Polynomial.transform(x, degree: 3, fit_intercept?: false)
+      #Nx.Tensor<
+        f32[2][34]
+        [
+          [2.0, 3.0, 5.0, 7.0, 4.0, 6.0, 10.0, 14.0, 9.0, 15.0, 21.0, 25.0, 35.0, 49.0, 8.0, 12.0, 20.0, 28.0, 18.0, 30.0, 42.0, 50.0, 70.0, 98.0, 27.0, 45.0, 63.0, 75.0, 105.0, 147.0, 125.0, 175.0, 245.0, 343.0],
+          [2.0, 3.0, 5.0, 7.0, 4.0, 6.0, 10.0, 14.0, 9.0, 15.0, 21.0, 25.0, 35.0, 49.0, 8.0, 12.0, 20.0, 28.0, 18.0, 30.0, 42.0, 50.0, 70.0, 98.0, 27.0, 45.0, 63.0, 75.0, 105.0, 147.0, 125.0, 175.0, 245.0, 343.0]
+        ]
+      >
+
+      iex> x = Nx.tensor([[2, 3]])
+      iex> Polynomial.transform(x, degree: 6, fit_intercept?: false)
+      #Nx.Tensor<
+        f32[1][27]
+        [
+          [2.0, 3.0, 4.0, 6.0, 9.0, 8.0, 12.0, 18.0, 27.0, 16.0, 24.0, 36.0, 54.0, 81.0, 32.0, 48.0, 72.0, 108.0, 162.0, 243.0, 64.0, 96.0, 144.0, 216.0, 324.0, 486.0, 729.0]
+        ]
+      >
+  """
+  deftransform transform(x, opts \\ []) do
+    opts = NimbleOptions.validate!(opts, @opts_schema)
+    transform_n(x, initial_xp(x, opts), opts)
+  end
+
+  defn transform_n(x, xp, opts) do
+    indices = Nx.iota({Nx.shape(x) |> elem(1)})
+
+    {_, _, _, _, xp} =
+      while {d = 1, indices, start = 0, x, xp}, d < opts[:degree] do
+        {_, indices, start, _, xp} = compute_degree(indices, start, x, xp)
+
+        {d + 1, indices, start, x, xp}
+      end
+
+    xp
+  end
+
+  defn compute_degree(indices, start, x, xp) do
+    {n_samples, n_features} = Nx.shape(x)
+    l = Nx.size(indices)
+
+    while {i = 0, indices, start, x, xp}, i < l do
+      factor_col = Nx.transpose(x)[i] |> Nx.reshape({n_samples, :auto})
+
+      previous_deg_cols =
+        Nx.transpose(xp)[start]
+        |> Nx.reshape({n_samples, :auto})
+
+      {_, new_size} = Nx.shape(previous_deg_cols)
+
+      xp =
+        Nx.put_slice(
+          xp,
+          [0, n_features + start],
+          factor_col * previous_deg_cols
+        )
+
+      {i + 1, indices, start + new_size, x, xp}
+    end
+  end
+
+  deftransform initial_xp(x, opts) do
+    {n_samples, _n_features} = Nx.shape(x)
+
+    :nan
+    |> Nx.broadcast({n_samples, Helper.comb(x, opts[:degree])})
+    |> Nx.put_slice([0, 0], x)
+  end
+end
+```
+
+```elixir
+defmodule Helper do
+  import Nx.Defn
+
+  deftransform comb(x, degree) do
+    comb_n(x, degree)
+    |> Nx.as_type(:s64)
+    |> Nx.to_number()
+  end
+
+  defn comb_n(x, degree) do
+    {_, nf} = Nx.shape(x)
+    binom(nf + degree, degree) - 1
+  end
+
+  defnp binom(k, n) do
+    gamma(k + 1) / (gamma(n + 1) * gamma(k - n + 1))
+  end
+
+  defnp gamma(x) do
+    x = x - 1
+
+    {factorial, _} =
+      while {factorial = 1, x}, Nx.greater(x, 1) do
+        {factorial * x, x - 1}
+      end
+
+    factorial
+  end
+end
+```
