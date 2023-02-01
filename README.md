@@ -1,6 +1,8 @@
 <h1><img src="./images/scholar.png" alt="Scholar" width="400"></h1>
 
-Machine learning tools built on top of Nx.
+Machine learning tools built on top of Nx. Scholar implements several
+algorithms for classification, regression, clustering, dimensionality
+reduction, metrics, and preprocessing.
 
 For deep learning, see [Axon](https://github.com/elixir-nx/axon).
 
