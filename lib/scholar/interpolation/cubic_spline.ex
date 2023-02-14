@@ -275,7 +275,7 @@ defmodule Scholar.Interpolation.CubicSpline do
     result =
       x_poly
       |> Nx.new_axis(1)
-      |> Nx.power(Nx.tensor([3, 2, 1, 0]))
+      |> Nx.pow(Nx.tensor([3, 2, 1, 0]))
       |> Nx.dot([1], [0], coef_poly, [1], [0])
 
     result =
