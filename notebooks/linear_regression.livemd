@@ -223,14 +223,13 @@ data =
     "https://raw.githubusercontent.com/sonarsushant/California-House-Price-Prediction/master/housing.csv"
   ).body
 
-df = Explorer.DataFrame.load_csv!(data)
+df = DF.load_csv!(data)
 ```
 
 Firstly, let's look at the distribution of houses based on the distance to the ocean.
 
 ```elixir
-Explorer.DataFrame.pull(df, "ocean_proximity")
-|> Explorer.Series.frequencies()
+S.frequencies(df["ocean_proximity"])
 ```
 
 Now, we will plot univariate histograms for each feature of the data set.
@@ -417,8 +416,8 @@ In the next step, we will find the correlation matrix. But to do this, we need t
 defmodule ToTensor do
   def df_to_matrix(df) do
     df
-    |> Explorer.DataFrame.names()
-    |> Enum.map(&Explorer.Series.to_tensor(df[&1], backend: EXLA.Backend))
+    |> DF.names()
+    |> Enum.map(&S.to_tensor(df[&1]))
     |> Nx.stack(axis: 1)
   end
 end
@@ -432,7 +431,7 @@ names =
   |> List.delete("ocean_proximity")
 
 after_preprocessing =
-  for name <- names, into: %{}, do: {name, Explorer.Series.fill_missing(df[name], :nan)}
+  for name <- names, into: %{}, do: {name, S.fill_missing(df[name], :nan)}
 
 preprocessed_data = DF.new(after_preprocessing)
 
@@ -448,7 +447,7 @@ mapping = %{
 }
 
 mapped_location =
-  Explorer.Series.transform(df["ocean_proximity"], fn x -> Map.fetch!(mapping, x) end)
+  S.transform(df["ocean_proximity"], fn x -> Map.fetch!(mapping, x) end)
 
 df = DF.put(preprocessed_data, :ocean_proximity, mapped_location)
 ```
@@ -469,7 +468,7 @@ y =
 
 x =
   df
-  |> Explorer.DataFrame.discard("median_house_value")
+  |> DF.discard("median_house_value")
   |> ToTensor.df_to_matrix()
   |> Nx.take(permutation_indices)
 
@@ -548,7 +547,7 @@ names = [
 ]
 
 corr_to_plot =
-  Explorer.DataFrame.new(
+  DF.new(
     x: List.flatten(List.duplicate(names, corr_size)),
     y: List.flatten(for name <- names, do: List.duplicate(name, corr_size)),
     corr_val: correlation_list
