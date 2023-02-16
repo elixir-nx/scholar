@@ -481,7 +481,7 @@ Since we don't have a stratified split of data implemented (to learn more see [S
 train_ratio = 0.8
 num_train = round(train_ratio * num_rows)
 
-{x_train, x_test} = {x[[0..(num_train - 1), 0..-1//1]], x[[num_train..(num_rows - 1), 0..-1//1]]}
+{x_train, x_test} = {x[[0..(num_train - 1), ..]], x[[num_train..(num_rows - 1), ..]]}
 {y_train, y_test} = {y[[0..(num_train - 1)]], y[[num_train..(num_rows - 1)]]}
 ```
 
