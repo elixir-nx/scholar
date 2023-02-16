@@ -224,8 +224,11 @@ defmodule Scholar.Cluster.KMeans do
 
     case opts[:init] do
       :random ->
-        Nx.iota({num_runs, num_samples}, axis: 1)
-        |> Nx.Random.shuffle(axis: 1)
+        key = Nx.Random.key(seed)
+        nums = Nx.iota({num_runs, num_samples}, axis: 1)
+        {temp, _} = Nx.Random.shuffle(key, nums, axis: 1)
+
+        temp
         |> Nx.slice_along_axis(0, num_clusters, axis: 1)
         |> then(&Nx.take(x, &1))
 
