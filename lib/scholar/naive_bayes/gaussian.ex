@@ -17,6 +17,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
   @derive {Nx.Container,
            containers: [:theta, :var, :class_count, :class_priors, :classes, :epsilon]}
   defstruct [:theta, :var, :class_count, :class_priors, :classes, :epsilon]
+  @pi :math.pi()
 
   opts_schema = [
     var_smoothing: [
@@ -395,7 +396,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
     {samples_x, _} = Nx.shape(x)
 
     n1 =
-      (-0.5 * Nx.sum(Nx.log(2.0 * Nx.Constants.pi() * var), axes: [1]))
+      (-0.5 * Nx.sum(Nx.log(2.0 * @pi * var), axes: [1]))
       |> Nx.new_axis(1)
       |> Nx.broadcast({num_classes, samples_x})
 
