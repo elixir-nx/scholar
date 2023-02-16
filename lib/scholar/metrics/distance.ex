@@ -322,9 +322,9 @@ defmodule Scholar.Metrics.Distance do
       true ->
         (x - y)
         |> Nx.abs()
-        |> Nx.power(p)
+        |> Nx.pow(p)
         |> Nx.sum(axes: opts[:axes])
-        |> Nx.power(1.0 / p)
+        |> Nx.pow(1.0 / p)
     end
   end
 

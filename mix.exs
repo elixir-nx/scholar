@@ -46,6 +46,7 @@ defmodule Scholar.MixProject do
           Scholar.Interpolation.Linear,
           Scholar.Linear.LinearRegression,
           Scholar.Linear.LogisticRegression,
+          Scholar.Linear.RidgeRegression,
           Scholar.NaiveBayes.Complement,
           Scholar.NaiveBayes.Gaussian,
           Scholar.NaiveBayes.Multinomial

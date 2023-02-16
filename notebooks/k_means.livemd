@@ -3,13 +3,14 @@
 ```elixir
 Mix.install(
   [
-    {:scholar, github: "elixir-nx/scholar"},
-    {:exla, "~> 0.4.1"},
-    {:explorer, "~> 0.4"},
+    {:scholar, github: "elixir-nx/scholar", override: true},
+    {:nx, "~> 0.5.0", override: true},
+    {:exla, "~> 0.5.0"},
+    {:explorer, "~> 0.5.0"},
     {:stb_image, "~> 0.6"},
     {:scidata, "~> 0.1.9"},
-    {:req, "~> 0.3.3"},
-    {:kino, "~> 0.8.0"},
+    {:req, "~> 0.3.5"},
+    {:kino, "~> 0.8.1"},
     {:vega_lite, "~> 0.1.6"},
     {:kino_vega_lite, "~> 0.1.7"}
   ],
