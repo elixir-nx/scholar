@@ -20,6 +20,23 @@ defmodule Scholar.Cluster.KMeansTest do
       assert predictions == Nx.tensor([1, 0])
     end
 
+    test "fit and predict without weights and :init set as :random" do
+      model =
+        Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
+          num_clusters: 2,
+          seed: @seed,
+          init: :random
+        )
+
+      assert model.clusters == Nx.tensor([[2.0, 4.5], [1.0, 2.5]])
+      assert model.inertia == Nx.tensor(1.0, type: {:f, 32})
+      assert model.labels == Nx.tensor([1, 0, 1, 0])
+      assert model.num_iterations == Nx.tensor(3)
+
+      predictions = Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      assert predictions == Nx.tensor([0, 1])
+    end
+
     test "fit and predict with weights as a list" do
       model =
         Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
