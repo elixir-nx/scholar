@@ -176,7 +176,7 @@ defmodule Iris.Clusters do
 
   defn sort_clusters(model) do
     # We sort clusters by the first coordinate
-    order = Nx.argsort(model.clusters[[0..-1//1, 0]])
+    order = Nx.argsort(model.clusters[[.., 0]])
     labels_maping = Nx.argsort(order)
 
     %{
@@ -198,8 +198,8 @@ Accuracy is nearly 90% - that's pretty decent! Let's look at our results plotted
 
 ```elixir
 coords = [
-  cluster_petal_length: best_model.clusters[[0..-1//1, 2]] |> Nx.to_flat_list(),
-  cluster_petal_width: best_model.clusters[[0..-1//1, 3]] |> Nx.to_flat_list()
+  cluster_petal_length: best_model.clusters[[.., 2]] |> Nx.to_flat_list(),
+  cluster_petal_width: best_model.clusters[[.., 3]] |> Nx.to_flat_list()
 ]
 
 Vl.new(
