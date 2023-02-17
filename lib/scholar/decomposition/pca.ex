@@ -163,7 +163,7 @@ defmodule Scholar.Decomposition.PCA do
       )
 
     {_, components} = flip_svd(decomposer, components)
-    components = components[[0..(num_components - 1), 0..-1//1]]
+    components = components[[0..(num_components - 1), ..]]
 
     explained_variance = singular_values * singular_values / (num_samples - 1)
 
@@ -288,7 +288,7 @@ defmodule Scholar.Decomposition.PCA do
       )
 
     {decomposer, _components} = flip_svd(decomposer, components)
-    decomposer = decomposer[[0..-1//1, 0..(num_components - 1)]]
+    decomposer = decomposer[[.., 0..(num_components - 1)]]
 
     if opts[:whiten] do
       decomposer * Nx.sqrt(num_samples - 1)

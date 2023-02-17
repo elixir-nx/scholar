@@ -310,8 +310,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
         {new_mu, new_var, new_n} =
           update_mean_variance_init(
-            theta[[i, 0..-1//1]],
-            var[[i, 0..-1//1]],
+            theta[[i, ..]],
+            var[[i, ..]],
             x,
             sample_weights,
             mask,
@@ -326,8 +326,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
                 new_n,
                 new_mu,
                 new_var,
-                theta[[i, 0..-1//1]],
-                var[[i, 0..-1//1]]
+                theta[[i, ..]],
+                var[[i, ..]]
               ),
             else: {new_mu, new_var}
 
