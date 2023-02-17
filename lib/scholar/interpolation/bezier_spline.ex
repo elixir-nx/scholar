@@ -181,7 +181,7 @@ defmodule Scholar.Interpolation.BezierSpline do
     input_shape = Nx.shape(target_x)
     x_poly = Nx.flatten(target_x)
 
-    x = k[[0..-1//1, 0]]
+    x = k[[.., 0]]
     idx_selector = Nx.new_axis(x_poly, 1) > Nx.new_axis(x, 0)
 
     idx_poly =
@@ -206,7 +206,7 @@ defmodule Scholar.Interpolation.BezierSpline do
 
     # polynomial_at_t returns pairs of [x, y] points.
     # we slice to get only the y values
-    result = polynomial_at_t(t, coef_poly)[[0..-1//1, 1]]
+    result = polynomial_at_t(t, coef_poly)[[.., 1]]
     Nx.reshape(result, input_shape)
   end
 
@@ -229,9 +229,9 @@ defmodule Scholar.Interpolation.BezierSpline do
              coef_poly, i = 0},
             i < max_iter and Nx.any(update_mask) do
         # if update_mask[i] = 1, we update the entry, otherwise, we keep it
-        value = polynomial_at_t(t, coef_poly)[[0..-1//1, 0]]
+        value = polynomial_at_t(t, coef_poly)[[.., 0]]
 
-        derivative = (polynomial_at_t(t + eps, coef_poly)[[0..-1//1, 0]] - value) / eps
+        derivative = (polynomial_at_t(t + eps, coef_poly)[[.., 0]] - value) / eps
 
         convergence_selector = Nx.abs(value - x_poly) < eps or Nx.abs(derivative) < eps
 
@@ -258,7 +258,7 @@ defmodule Scholar.Interpolation.BezierSpline do
         t_min = Nx.select(upd_selector, t, t_min)
         t_max = Nx.select(upd_selector, t_max, t)
         t = Nx.select(upd_selector, (t + t_max) / 2, (t + t_min) / 2)
-        value = polynomial_at_t(t, coef_poly)[[0..-1//1, 0]]
+        value = polynomial_at_t(t, coef_poly)[[.., 0]]
 
         update_mask = Nx.select(Nx.abs(value - x_poly) > eps, update_mask, 0)
 
