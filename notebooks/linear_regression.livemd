@@ -4,8 +4,8 @@
 Mix.install(
   [
     {:scholar, github: "elixir-nx/scholar"},
-    {:nx, "~> 0.5.0", override: true},
-    {:explorer, "~> 0.5.0"},
+    {:nx, "~> 0.5.1"},
+    {:explorer, "~> 0.5.1"},
     {:exla, "~> 0.5.0"},
     {:req, "~> 0.3.3"},
     {:vega_lite, "~> 0.1.6"},
@@ -55,10 +55,7 @@ Now let's plot the generated points.
 size = 100
 {x, y} = LinearData.data()
 
-df =
-  DF.new([])
-  |> DF.put(:x, x)
-  |> DF.put(:y, y)
+df = DF.new(x: x, y: y)
 
 Vl.new(
   title: [
@@ -411,17 +408,7 @@ df =
 
 In the next step, we will find the correlation matrix. But to do this, we need to cast our data frame to Nx tensor and split data into train and test sets.
 
-```elixir
-# Module to convert Explorer data frames into tensors.
-defmodule ToTensor do
-  def df_to_matrix(df) do
-    df
-    |> DF.names()
-    |> Enum.map(&S.to_tensor(df[&1]))
-    |> Nx.stack(axis: 1)
-  end
-end
-```
+First let's remove all `:nan`s from our data and then convert the "ocean_proximity" string column to a numerical one. Explorer supports a `:category` type but, in this case, we will do a custom conversion as we can consider the ocean proximity as ordinal data since we can order them by the distance to the ocean. The bigger value the further from the ocean.
 
 ```elixir
 # Replace all nils with :nan so we are able to convert to tensor.
@@ -435,9 +422,6 @@ after_preprocessing =
 
 preprocessed_data = DF.new(after_preprocessing)
 
-# Map ocean_proximity from categorical to float
-# We can consider this categorical as ordinal data since we can order them by the distance
-# to the ocean. The bigger value the further from the ocean.
 mapping = %{
   "ISLAND" => 0.0,
   "<1H OCEAN" => 1.0,
@@ -452,6 +436,8 @@ mapped_location =
 df = DF.put(preprocessed_data, :ocean_proximity, mapped_location)
 ```
 
+Now we convert dataframes into tensors. We can do so by concatenating and stacking the columns accordingly:
+
 ```elixir
 # Shuffle data to make splitting more resonable
 {num_rows, _num_cols} = DF.shape(df)
@@ -462,14 +448,13 @@ key = Nx.Random.key(42)
 
 y =
   df[["median_house_value"]]
-  |> ToTensor.df_to_matrix()
+  |> Nx.concatenate()
   |> Nx.take(permutation_indices)
-  |> Nx.squeeze()
 
 x =
   df
   |> DF.discard("median_house_value")
-  |> ToTensor.df_to_matrix()
+  |> Nx.stack(axis: 1)
   |> Nx.take(permutation_indices)
 
 {x, y}
