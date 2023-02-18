@@ -1,23 +1,18 @@
 # K-means Tutorial
 
 ```elixir
-Mix.install(
-  [
-    {:scholar, github: "elixir-nx/scholar", override: true},
-    {:nx, "~> 0.5.0", override: true},
-    {:exla, "~> 0.5.0"},
-    {:explorer, "~> 0.5.0"},
-    {:stb_image, "~> 0.6"},
-    {:scidata, "~> 0.1.9"},
-    {:req, "~> 0.3.5"},
-    {:kino, "~> 0.8.1"},
-    {:vega_lite, "~> 0.1.6"},
-    {:kino_vega_lite, "~> 0.1.7"}
-  ],
-  config: [
-    nx: [default_defn_options: [compiler: EXLA]]
-  ]
-)
+Mix.install([
+  {:scholar, github: "elixir-nx/scholar"},
+  {:nx, "~> 0.5.1"},
+  {:exla, "~> 0.5.0"},
+  {:explorer, "~> 0.5.1"},
+  {:stb_image, "~> 0.6"},
+  {:scidata, "~> 0.1.9"},
+  {:req, "~> 0.3.5"},
+  {:kino, "~> 0.8.1"},
+  {:vega_lite, "~> 0.1.6"},
+  {:kino_vega_lite, "~> 0.1.7"}
+])
 ```
 
 ## Introduction
@@ -26,7 +21,10 @@ The main purpose of this livebook is to introduce the KMeans clustering algorith
 
 ```elixir
 alias VegaLite, as: Vl
-require Explorer.DataFrame
+alias Scholar.Cluster.KMeans
+require Explorer.DataFrame, as: DF
+require Explorer.Series, as: S
+Nx.global_default_backend(EXLA.Backend)
 seed = 42
 ```
 
@@ -38,36 +36,19 @@ The first example we will focus on is the **Iris Dataset**. It is one of the mos
 
 <!-- livebook:{"break_markdown":true} -->
 
-Let's define some utility functions that will help us load data from Explorer Dataframe into Nx tensors.
-
-```elixir
-defmodule Iris.Data do
-  def df_to_matrix(df) do
-    df
-    |> Explorer.DataFrame.names()
-    |> Enum.map(&Explorer.Series.to_tensor(df[&1]))
-    |> Nx.stack(axis: 1)
-  end
-
-  def df_to_label_vector(df, name) do
-    Explorer.DataFrame.dummies(df, [name])
-    |> df_to_matrix()
-    |> Nx.argmax(axis: 1)
-  end
-end
-```
-
 Firstly, we load the data, then we split it into Training Data (x) and Target (y) and cast those into Nx tensors.
 
 ```elixir
 df = Explorer.Datasets.iris()
+x = df |> DF.discard(["species"]) |> Nx.stack(axis: 1)
 
-y = Iris.Data.df_to_label_vector(df, "species")
+y =
+  df[["species"]]
+  |> DF.dummies(["species"])
+  |> Nx.stack(axis: 1)
+  |> Nx.argmax(axis: 1)
 
-x =
-  df
-  |> Explorer.DataFrame.discard(["species"])
-  |> Iris.Data.df_to_matrix()
+{x, y}
 ```
 
 ### Exploratory Data Analysis
@@ -81,10 +62,10 @@ An important part of Data Science workflow is so-called **Exploratory Data Analy
 We start our EDA by finding the mean values of each feature by species.
 
 ```elixir
-grouped_data = Explorer.DataFrame.group_by(df, "species")
+grouped_data = DF.group_by(df, "species")
 
 grouped_data
-|> Explorer.DataFrame.summarise(
+|> DF.summarise(
   petal_length: mean(petal_length),
   petal_width: mean(petal_width),
   sepal_width: mean(sepal_width),
@@ -146,7 +127,7 @@ clusterings = 1..11
 
 models =
   for num_clusters <- clusterings do
-    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters, seed: seed)
+    KMeans.fit(x, num_clusters: num_clusters, seed: seed)
   end
 
 inertias = for model <- models, do: Nx.to_number(model.inertia)
@@ -258,7 +239,7 @@ Now we will try to use only ten colors to represent the same picture.
 x = image |> StbImage.to_nx() |> Nx.reshape({:auto, 3})
 
 model =
-  Scholar.Cluster.KMeans.fit(x,
+  KMeans.fit(x,
     num_clusters: 10,
     num_runs: 10,
     max_iterations: 200,
@@ -287,7 +268,7 @@ clusterings = [5, 10, 15, 20, 40]
 
 models =
   for num_clusters <- clusterings do
-    Scholar.Cluster.KMeans.fit(x, num_clusters: num_clusters, seed: seed)
+    KMeans.fit(x, num_clusters: num_clusters, seed: seed)
   end
 ```
 
@@ -407,7 +388,7 @@ nums_clusters = 2..20
 
 models =
   for num_clusters <- 2..20 do
-    Scholar.Cluster.KMeans.fit(images, num_clusters: num_clusters, seed: seed)
+    KMeans.fit(images, num_clusters: num_clusters, seed: seed)
   end
 ```
 
