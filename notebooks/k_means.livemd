@@ -23,7 +23,6 @@ The main purpose of this livebook is to introduce the KMeans clustering algorith
 alias VegaLite, as: Vl
 alias Scholar.Cluster.KMeans
 require Explorer.DataFrame, as: DF
-require Explorer.Series, as: S
 Nx.global_default_backend(EXLA.Backend)
 seed = 42
 ```
