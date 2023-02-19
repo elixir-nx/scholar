@@ -1,18 +1,16 @@
 # Linear Regression in Practice
 
 ```elixir
-Mix.install(
-  [
-    {:scholar, github: "elixir-nx/scholar"},
-    {:nx, "~> 0.5.1"},
-    {:explorer, "~> 0.5.1"},
-    {:exla, "~> 0.5.0"},
-    {:req, "~> 0.3.3"},
-    {:vega_lite, "~> 0.1.6"},
-    {:kino_vega_lite, "~> 0.1.7"},
-    {:kino, "~> 0.8.1"}
-  ]
-)
+Mix.install([
+  {:scholar, github: "elixir-nx/scholar"},
+  {:nx, "~> 0.5.1"},
+  {:explorer, "~> 0.5.1"},
+  {:exla, "~> 0.5.0"},
+  {:req, "~> 0.3.3"},
+  {:vega_lite, "~> 0.1.6"},
+  {:kino_vega_lite, "~> 0.1.7"},
+  {:kino, "~> 0.8.1"}
+])
 ```
 
 ## Introduction
@@ -143,11 +141,10 @@ x_prediction = Nx.tensor([[0.83]])
 ```
 
 ```elixir
-prediction =
-  %{
-    x: [x_prediction],
-    y: [y_prediction]
-  }
+prediction = %{
+  x: [x_prediction],
+  y: [y_prediction]
+}
 
 Vl.new(
   title: [
@@ -417,8 +414,7 @@ names =
   |> DF.names()
   |> List.delete("ocean_proximity")
 
-after_preprocessing =
-  for name <- names, into: %{}, do: {name, S.fill_missing(df[name], :nan)}
+after_preprocessing = for name <- names, into: %{}, do: {name, S.fill_missing(df[name], :nan)}
 
 preprocessed_data = DF.new(after_preprocessing)
 
@@ -430,8 +426,7 @@ mapping = %{
   "INLAND" => 4.0
 }
 
-mapped_location =
-  S.transform(df["ocean_proximity"], fn x -> Map.fetch!(mapping, x) end)
+mapped_location = S.transform(df["ocean_proximity"], fn x -> Map.fetch!(mapping, x) end)
 
 df = DF.put(preprocessed_data, :ocean_proximity, mapped_location)
 ```
