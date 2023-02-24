@@ -81,7 +81,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
   ## Return Values
 
-    The function returns a struct with the following parameters:
+  The function returns a struct with the following parameters:
 
     * `:data` - Training data.
 
@@ -348,7 +348,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
     indices = Nx.argsort(tensor, axis: axis)
 
-    sorted = Nx.sort(tensor, axis: axis)
+    sorted = Nx.take_along_axis(tensor, indices, axis: axis)
 
     size_to_broadcast = {num_samples, 1}
 
