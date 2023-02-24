@@ -33,20 +33,12 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
           a query point will have a greater influence than neighbors which are further away.
       """
     ],
-    p: [
-      type: {:custom, Scholar.Options, :positive_number, []},
-      default: 2,
-      doc: """
-      Power parameter for the Minkowski metric. When p = 1, this is equivalent
-      to using manhattan_distance ($L_1$), and euclidean_distance ($L_2$) for p = 2.
-      """
-    ],
     metric: [
-      type: {:in, [:minkowski, :cosine]},
-      default: :minkowski,
+      type: {:custom, Scholar.Options, :metric, []},
+      default: {:minkowski, 2},
       doc: ~S"""
       Name of the metric. Possible values:
-      * `:minkowski` - Minkowski metric. By changing value of `:p` parameter we can set Euclidean, Chebyshev, Manhattan or any arbitrary $L_p$ metric.
+      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter we can set Euclidean, Chebyshev, Manhattan or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
       """
@@ -95,7 +87,8 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
   ## Examples
 
-      iex>  Scholar.Neighbors.KNearestNeighbors.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]), Nx.tensor([1, 0, 1, 1]),
+      iex>  x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
+      iex>  Scholar.Neighbors.KNearestNeighbors.fit(x, Nx.tensor([1, 0, 1, 1]),
       ...>    num_classes: 2
       ...>  )
       %Scholar.Neighbors.KNearestNeighbors{
@@ -115,9 +108,8 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
         default_num_neighbors: 5,
         weights: :uniform,
         num_classes: 2,
-        p: 2,
         task: :classification,
-        metric: :minkowski
+        metric: {:minkowski, 2}
       }
   """
   deftransform fit(x, y, opts \\ []) do
@@ -150,7 +142,6 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       default_num_neighbors: min(opts[:num_neighbors], num_samples),
       weights: opts[:weights],
       num_classes: opts[:num_classes],
-      p: opts[:p],
       task: opts[:task],
       metric: opts[:metric]
     }
@@ -165,8 +156,9 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
   ## Examples
 
+      iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> model =
-      iex>  Scholar.Neighbors.KNearestNeighbors.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]), Nx.tensor([1, 0, 1, 1]),
+      iex>  Scholar.Neighbors.KNearestNeighbors.fit(x, Nx.tensor([1, 0, 1, 1]),
       ...>    num_classes: 2
       ...>  )
       iex> Scholar.Neighbors.KNearestNeighbors.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
@@ -178,11 +170,12 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
   defn predict(%__MODULE__{labels: labels, weights: weights, task: task} = model, x) do
     {neigh_distances, neigh_indices} = k_neighbors(model, x)
     pred_labels = Nx.take(labels, neigh_indices)
+    check_weights(neigh_distances)
 
     case task do
       :classification ->
         case weights do
-          :distance -> mode_weighted(pred_labels, 1 / neigh_distances, axis: 1)
+          :distance -> mode_weighted(pred_labels, check_weights(neigh_distances), axis: 1)
           :uniform -> Nx.mode(pred_labels, axis: 1)
         end
 
@@ -190,8 +183,15 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
         case weights do
           :distance ->
             if Nx.rank(labels) == 2,
-              do: Nx.weighted_mean(pred_labels, 1 / neigh_distances, axes: [1, 0]),
-              else: Nx.weighted_mean(pred_labels, 1 / neigh_distances, axes: [1])
+              do:
+                Nx.weighted_mean(
+                  pred_labels,
+                  check_weights(neigh_distances)
+                  |> Nx.new_axis(-1)
+                  |> Nx.broadcast(Nx.shape(pred_labels)),
+                  axes: [1]
+                ),
+              else: Nx.weighted_mean(pred_labels, check_weights(neigh_distances), axes: [1])
 
           :uniform ->
             Nx.mean(pred_labels, axes: [1])
@@ -245,7 +245,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
     weights_vals =
       case weights do
-        :distance -> 1 / neigh_distances
+        :distance -> check_weights(neigh_distances)
         :uniform -> Nx.broadcast(1.0, Nx.shape(neigh_indices))
       end
 
@@ -293,7 +293,6 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
          %__MODULE__{
            data: data,
            default_num_neighbors: default_num_neighbors,
-           p: p,
            metric: metric
          } = _model,
          x
@@ -303,7 +302,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
     dist =
       case metric do
-        :minkowski ->
+        {:minkowski, p} ->
           Scholar.Metrics.Distance.minkowski(
             Nx.new_axis(data, 0) |> Nx.broadcast({num_samples_x, num_samples, num_features}),
             Nx.new_axis(x, 1) |> Nx.broadcast({num_samples_x, num_samples, num_features}),
@@ -321,6 +320,14 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
     {val, ind} = Nx.top_k(-dist, k: default_num_neighbors)
     {-val, ind}
+  end
+
+  defnp check_weights(weights) do
+    zero_mask = weights == 0
+    zero_rows = zero_mask |> Nx.any(axes: [1], keep_axes: true) |> Nx.broadcast(Nx.shape(weights))
+    weights = Nx.select(zero_mask, 1, weights)
+    weights_inv = 1 / weights
+    Nx.select(zero_rows, Nx.select(zero_mask, 1, 0), weights_inv)
   end
 
   defnp mode_weighted(tensor, weights, opts \\ []) do
@@ -376,11 +383,11 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       ]
       |> Nx.concatenate(axis: 1)
 
-    to_add = Nx.broadcast(1, {num_elements}) * (weights |> Nx.reshape({:auto}))
+    to_add = Nx.flatten(weights)
 
     indices =
       (indices + num_features * Nx.iota({num_samples, num_features}, axis: 0))
-      |> Nx.reshape({:auto})
+      |> Nx.flatten()
 
     weights = Nx.take(to_add, indices)
 
