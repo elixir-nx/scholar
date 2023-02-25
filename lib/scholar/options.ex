@@ -42,8 +42,10 @@ defmodule Scholar.Options do
     end
   end
 
-  def metric(:cosine), do: :ok
-  def metric({:minkowski, p}) when p == :infinity or (is_number(p) and p > 0), do: :ok
+  def metric(:cosine), do: {:ok, :cosine}
+
+  def metric({:minkowski, p}) when p == :infinity or (is_number(p) and p > 0),
+    do: {:ok, {:minkowski, p}}
 
   def metric(metric) do
     {:error,
