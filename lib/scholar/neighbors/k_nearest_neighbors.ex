@@ -38,7 +38,8 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       default: {:minkowski, 2},
       doc: ~S"""
       Name of the metric. Possible values:
-      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter we can set Euclidean, Chebyshev, Manhattan or any arbitrary $L_p$ metric.
+      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or :infinity)
+        we can set Manhattan (1), Euclidean (2), Chebyshev (:infinity), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
       """
