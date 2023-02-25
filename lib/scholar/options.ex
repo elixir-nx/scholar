@@ -42,15 +42,11 @@ defmodule Scholar.Options do
     end
   end
 
+  def metric(:cosine), do: :ok
+  def metric({:minkowski, p}) when p == :infinity or (is_number(p) and p > 0), do: :ok
+
   def metric(metric) do
-    if metric == :cosine or
-         (is_tuple(metric) and tuple_size(metric) == 2 and elem(metric, 0) == :minkowski and
-            is_number(elem(metric, 1)) and
-            elem(metric, 1) >= 0) do
-      {:ok, metric}
-    else
-      {:error,
-       "expected metric to be a :cosine or tuple {:minkowski, p} where p is non-negative number, got: #{inspect(metric)}"}
-    end
+    {:error,
+     "expected metric to be a :cosine or tuple {:minkowski, p} where p is a positive number or :infinity, got: #{inspect(metric)}"}
   end
 end
