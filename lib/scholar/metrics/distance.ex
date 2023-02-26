@@ -25,10 +25,10 @@ defmodule Scholar.Metrics.Distance do
       """
     ],
     p: [
-      type: {:custom, Scholar.Options, :non_negative_number, []},
+      type: {:or, [{:custom, Scholar.Options, :positive_number, []}, {:in, [:infinity]}]},
       default: 2.0,
       doc: """
-      A non-negative parameter of Minkowski distance.
+      A positive parameter of Minkowski distance or :infinity (then Chebyshev metric computed).
       """
     ]
   ]
@@ -310,7 +310,7 @@ defmodule Scholar.Metrics.Distance do
     p = opts[:p]
 
     cond do
-      p == 0 ->
+      p == :infinity ->
         chebyshev(x, y, axes: opts[:axes])
 
       p == 1 ->
