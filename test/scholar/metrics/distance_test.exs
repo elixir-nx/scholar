@@ -49,6 +49,10 @@ defmodule Scholar.Metrics.DistanceTest do
     assert_all_close(Distance.minkowski(@x, @y), Nx.tensor(3.388213202573845))
   end
 
+  test "minkowski with p set to :infinity matches chebyshev" do
+    assert_all_close(Distance.minkowski(@x, @y, p: :infinity), Nx.tensor(2.043651282787323))
+  end
+
   test "cosine matches scipy" do
     assert_all_close(Distance.cosine(@x, @y), Nx.tensor(0.7650632810164779))
   end
