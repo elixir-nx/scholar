@@ -41,4 +41,14 @@ defmodule Scholar.Options do
       {:error, "expected weights to be a flat tensor or a flat list, got: #{inspect(weights)}"}
     end
   end
+
+  def metric(:cosine), do: {:ok, :cosine}
+
+  def metric({:minkowski, p}) when p == :infinity or (is_number(p) and p > 0),
+    do: {:ok, {:minkowski, p}}
+
+  def metric(metric) do
+    {:error,
+     "expected metric to be a :cosine or tuple {:minkowski, p} where p is a positive number or :infinity, got: #{inspect(metric)}"}
+  end
 end
