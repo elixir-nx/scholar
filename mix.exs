@@ -49,7 +49,8 @@ defmodule Scholar.MixProject do
           Scholar.Linear.RidgeRegression,
           Scholar.NaiveBayes.Complement,
           Scholar.NaiveBayes.Gaussian,
-          Scholar.NaiveBayes.Multinomial
+          Scholar.NaiveBayes.Multinomial,
+          Scholar.Neighbors.KNearestNeighbors
         ],
         Utilities: [
           Scholar.Covariance,
