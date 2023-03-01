@@ -61,7 +61,7 @@ defmodule Scholar.Linear.LinearRegression do
         5.896470069885254
       >
   """
-  deftransform fit(a, b, opts \\ []) do
+  deftransform fit(x, y, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     opts =
@@ -73,7 +73,7 @@ defmodule Scholar.Linear.LinearRegression do
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     sample_weights = Nx.tensor(sample_weights)
 
-    fit_n(a, b, sample_weights, opts)
+    fit_n(x, y, sample_weights, opts)
   end
 
   defnp fit_n(a, b, sample_weights, opts) do
