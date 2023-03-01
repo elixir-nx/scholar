@@ -61,7 +61,7 @@ defmodule Scholar.Linear.LinearRegression do
         >
       }
   """
-  deftransform fit(a, b, opts \\ []) do
+  deftransform fit(x, y, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     opts =
