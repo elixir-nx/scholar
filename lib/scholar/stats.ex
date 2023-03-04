@@ -66,15 +66,11 @@ defmodule Scholar.Stats do
   @kurtosis_schema NimbleOptions.new!(kurtosis_schema)
 
   @doc """
-  Calculate the nth moment about the mean for a sample.
+  Calculates the nth moment about the mean for a sample.
 
   ## Options
 
   #{NimbleOptions.docs(@moment_schema)}
-
-  ## Return Values
-
-    The appropriate moment along the given axis or whole tensor.
 
   ## Examples
 
@@ -106,15 +102,11 @@ defmodule Scholar.Stats do
   end
 
   @doc """
-  Compute the sample skewness of a data set.
+  Computes the sample skewness of a data set.
 
   ## Options
 
   #{NimbleOptions.docs(@skew_schema)}
-
-  ## Return Values
-
-    The skewness of values along an axis, returning NaN where all values are equal.
 
   ## Examples
 
@@ -144,15 +136,11 @@ defmodule Scholar.Stats do
   end
 
   @doc """
-  Compute the kurtosis (Fisher or Pearson) of a dataset.
+  Computes the kurtosis (Fisher or Pearson) of a dataset.
 
   ## Options
 
   #{NimbleOptions.docs(@kurtosis_schema)}
-
-  ## Return Values
-
-    The kurtosis of values along an axis, returning NaN where all values are equal.
 
   ## Examples
 
