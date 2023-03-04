@@ -10,30 +10,20 @@ defmodule Scholar.Stats do
   import Nx.Defn
 
   general = [
-    axis: [
-      type: {:or, [:non_neg_integer, :atom]},
-      default: 0,
+    axes: [
+      type: {:custom, Scholar.Options, :axes, []},
+      default: [0],
       doc: """
       Axis to calculate the operation. If set to `nil` then
       the operation is performed on the whole tensor.
       """
     ],
-    keep_axis: [
+    keep_axes: [
       type: :boolean,
       default: false,
-      doc: "If set to true, the axis which is reduced is left."
+      doc: "If set to true, the axes which are reduced are left."
     ]
   ]
-
-  moment_schema =
-    general ++
-      [
-        moment: [
-          type: :pos_integer,
-          default: 1,
-          doc: "Order of central moment that is returned."
-        ]
-      ]
 
   skew_schema =
     general ++
@@ -61,7 +51,7 @@ defmodule Scholar.Stats do
         ]
       ]
 
-  @moment_schema NimbleOptions.new!(moment_schema)
+  @moment_schema NimbleOptions.new!(general)
   @skew_schema NimbleOptions.new!(skew_schema)
   @kurtosis_schema NimbleOptions.new!(kurtosis_schema)
 
@@ -75,30 +65,21 @@ defmodule Scholar.Stats do
   ## Examples
 
       iex> x = Nx.tensor([[3, 5, 3], [2, 6, 1], [9, 3, 2], [1, 6, 8]])
-      iex> Scholar.Stats.moment(x, moment: 2)
+      iex> Scholar.Stats.moment(x, 2)
       #Nx.Tensor<
         f32[3]
         [9.6875, 1.5, 7.25]
       >
   """
-  deftransform moment(tensor, opts \\ []) do
+  deftransform moment(tensor, moment, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @moment_schema)
-
-    axis =
-      if axis_opt = opts[:axis] do
-        Nx.Shape.normalize_axis(Nx.shape(tensor), axis_opt, Nx.names(tensor))
-      end
-
-    opts = Keyword.put(opts, :axis, if(axis == nil, do: nil, else: [axis]))
-    num_samples = if opts[:axis] == nil, do: Nx.size(tensor), else: Nx.axis_size(tensor, 0)
-    moment_n(tensor, num_samples, opts)
+    num_samples = Enum.product(Enum.map(opts[:axes] || Nx.axes(tensor), &Nx.axis_size(tensor, &1)))
+    moment_n(tensor, moment, num_samples, opts)
   end
 
-  defnp moment_n(tensor, num_samples, opts) do
-    mean = Nx.mean(tensor, axes: opts[:axis], keep_axes: opts[:keep_axis])
-
-    Nx.sum((tensor - mean) ** opts[:moment], axes: opts[:axis], keep_axes: opts[:keep_axis]) /
-      num_samples
+  defnp moment_n(tensor, moment, num_samples, opts) do
+    mean = Nx.mean(tensor, axes: opts[:axes], keep_axes: true) |> Nx.broadcast(Nx.shape(tensor))
+    Nx.sum((tensor - mean) ** moment, opts) / num_samples
   end
 
   @doc """
@@ -119,18 +100,19 @@ defmodule Scholar.Stats do
   """
 
   deftransform skew(tensor, opts \\ []) do
-    skew_n(tensor, NimbleOptions.validate!(opts, @skew_schema))
+    opts = NimbleOptions.validate!(opts, @skew_schema)
+    num_samples = Enum.product(Enum.map(opts[:axes] || Nx.axes(tensor), &Nx.axis_size(tensor, &1)))
+    skew_n(tensor, num_samples, opts)
   end
 
-  defnp skew_n(tensor, opts \\ []) do
-    m2 = moment(tensor, moment: 2, axis: opts[:axis], keep_axis: opts[:keep_axis])
-    m3 = moment(tensor, moment: 3, axis: opts[:axis], keep_axis: opts[:keep_axis])
+  defnp skew_n(tensor, num_samples, opts \\ []) do
+    m2 = moment(tensor, 2, axes: opts[:axes], keep_axes: opts[:keep_axes])
+    m3 = moment(tensor, 3, axes: opts[:axes], keep_axes: opts[:keep_axes])
     m2_mod = m2 ** (3 / 2)
 
     if opts[:bias] do
       m3 / m2_mod
     else
-      num_samples = Nx.axis_size(tensor, 0)
       m3 / m2_mod * Nx.sqrt(num_samples * (num_samples - 1)) / (num_samples - 2)
     end
   end
@@ -147,24 +129,23 @@ defmodule Scholar.Stats do
       iex> x = Nx.tensor([[3, 5, 3], [2, 6, 1], [9, 3, 2], [1, 6, 8]])
       iex> Scholar.Stats.kurtosis(x)
       #Nx.Tensor<
-        f64[3]
-        [-0.7980853277835589, -1.0, -0.839476813317479]
+        f32[3]
+        [-0.7980852127075195, -1.0, -0.8394768238067627]
       >
   """
   deftransform kurtosis(tensor, opts \\ []) do
-    kurtosis_n(tensor, NimbleOptions.validate!(opts, @kurtosis_schema))
+    opts = NimbleOptions.validate!(opts, @kurtosis_schema)
+    num_samples = Enum.product(Enum.map(opts[:axes] || Nx.axes(tensor), &Nx.axis_size(tensor, &1)))
+    kurtosis_n(tensor, num_samples, opts)
   end
 
-  defnp kurtosis_n(tensor, opts) do
-    m2 = moment(tensor, moment: 2, axis: opts[:axis], keep_axis: opts[:keep_axis])
-    m4 = moment(tensor, moment: 4, axis: opts[:axis], keep_axis: opts[:keep_axis])
-    {_, num_bits} = Nx.type(tensor)
+  defnp kurtosis_n(tensor, num_samples, opts) do
+    m2 = moment(tensor, 2, axes: opts[:axes], keep_axes: opts[:keep_axes])
+    m4 = moment(tensor, 4, axes: opts[:axes], keep_axes: opts[:keep_axes])
 
-    m2_mask =
-      Nx.select(m2 == 0, Nx.Constants.nan(if num_bits < 64, do: {:f, 32}, else: {:f, 64}), m2)
+    m2_mask = Nx.select(m2 == 0, Nx.Constants.nan(Nx.Type.to_floating(Nx.type(tensor))), m2)
 
     vals = m4 / m2_mask ** 2
-    num_samples = Nx.axis_size(tensor, 0)
 
     vals =
       cond do
@@ -173,7 +154,7 @@ defmodule Scholar.Stats do
 
         true ->
           1.0 / (num_samples - 2) / (num_samples - 3) *
-            ((num_samples ** 2 - 1) * vals - 3 * (num_samples - 1) ** 2)
+            ((num_samples ** 2 - 1) * vals - 3 * (num_samples - 1) ** 2) + 3
       end
 
     case opts[:variant] do
