@@ -61,14 +61,12 @@ defmodule Scholar.Linear.LogisticRegression do
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
       iex> Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
       %Scholar.Linear.LogisticRegression{
-        coefficients: #Nx.Tensor<
-          f32[2]
+        coefficients: Nx.tensor(
           [7.674156665802002, -5.888940811157227]
-        >,
-        bias: #Nx.Tensor<
-          f32
+        ),
+        bias: Nx.tensor(
           11.289297103881836
-        >,
+        ),
         mode: :binary
       }
   """
@@ -186,14 +184,13 @@ defmodule Scholar.Linear.LogisticRegression do
 
   ## Examples
 
-      iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
-      iex> y = Nx.tensor([4.0, 3.0, -1.0])
-      iex> model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
-      iex> Scholar.Linear.LogisticRegression.predict(model, Nx.tensor([-3.0, 5.0]))
-      #Nx.Tensor<
-        u8
+      > x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
+      > y = Nx.tensor([4.0, 3.0, -1.0])
+      > model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
+      > Scholar.Linear.LogisticRegression.predict(model, Nx.tensor([-3.0, 5.0]))
+      Nx.tensor(
         0
-      >
+      )
   """
   defn predict(%__MODULE__{mode: mode} = model, x) do
     case mode do

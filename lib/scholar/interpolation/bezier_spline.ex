@@ -37,8 +37,7 @@ defmodule Scholar.Interpolation.BezierSpline do
       iex> y = Nx.tensor([2.0, 0.0, 1.0, 0.5])
       iex> Scholar.Interpolation.BezierSpline.fit(x, y)
       %Scholar.Interpolation.BezierSpline{
-        coefficients: #Nx.Tensor<
-          f32[3][4][2]
+        coefficients: Nx.tensor(
           [
             [
               [0.0, 2.0],
@@ -59,16 +58,15 @@ defmodule Scholar.Interpolation.BezierSpline do
               [3.0, 0.5]
             ]
           ]
-        >,
-        k: #Nx.Tensor<
-          f32[4][2]
+        ),
+        k: Nx.tensor(
           [
             [0.0, 2.0],
             [1.0, 0.0],
             [2.0, 1.0],
             [3.0, 0.5]
           ]
-        >
+        )
       }
   """
   defn fit(x, y) do
@@ -168,10 +166,9 @@ defmodule Scholar.Interpolation.BezierSpline do
       iex> y = Nx.tensor([2.0, 0.0, 1.0, 0.5])
       iex> model = Scholar.Interpolation.BezierSpline.fit(x, y)
       iex> Scholar.Interpolation.BezierSpline.predict(model, Nx.tensor([3.0, 4.0, 2.0, 7.0]))
-      #Nx.Tensor<
-        f32[4]
+      Nx.tensor(
         [0.5000335574150085, -4.2724612285383046e-5, 0.9999786615371704, 34.5]
-      >
+      )
   """
   deftransform predict(%__MODULE__{} = model, target_x, opts \\ []) do
     predict_n(model, target_x, NimbleOptions.validate!(opts, @predict_opts_schema))

@@ -1,5 +1,5 @@
 defmodule Scholar.MetricsTest do
-  use ExUnit.Case, async: true
+  use Scholar.Case, async: true
 
   doctest Scholar.Metrics
 end

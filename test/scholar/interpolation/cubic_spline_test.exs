@@ -3,6 +3,7 @@ defmodule Scholar.Interpolation.CubicSplineTest do
   import Nx, only: :sigils
 
   alias Scholar.Interpolation.CubicSpline
+  doctest CubicSpline
 
   describe "cubic spline" do
     test "fit/2" do

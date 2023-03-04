@@ -1,7 +1,7 @@
 defmodule Scholar.Interpolation.LinearTest do
-  use ExUnit.Case, async: true
-
+  use Scholar.Case, async: true
   alias Scholar.Interpolation.Linear
+  doctest Linear
 
   describe "linear" do
     test "fit/2" do

@@ -1,5 +1,7 @@
 defmodule Scholar.Linear.RidgeRegressionTest do
   use Scholar.Case, async: true
+  alias Scholar.Linear.RidgeRegression
+  doctest Scholar.Linear.RidgeRegression
 
   describe "fit" do
     test "solver - :svd, options set to default, and x with shape num_samples >= num_features" do
@@ -9,8 +11,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       expected_coeff = Nx.tensor([0.17647059, 1.41176471])
       expected_intercept = Nx.tensor(-6.509803921568629)
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y, solver: :svd)
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y, solver: :svd)
 
       assert_all_close(expected_coeff, actual_coeff, atol: 1.0e-3, rtol: 1.0e-3)
       assert_all_close(expected_intercept, actual_intercept, atol: 1.0e-3, rtol: 1.0e-3)
@@ -23,8 +25,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       expected_coeff = Nx.tensor([-0.49019608, 0.74509804, 0.66666667, 0.66666667])
       expected_intercept = Nx.tensor(-7.176470588235292)
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y, solver: :svd)
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y, solver: :svd)
 
       assert_all_close(expected_coeff, actual_coeff, atol: 1.0e-3, rtol: 1.0e-3)
       assert_all_close(expected_intercept, actual_intercept, atol: 1.0e-3, rtol: 1.0e-3)
@@ -37,8 +39,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       expected_coeff = Nx.tensor([-0.46651827, 0.70766092, 0.63253571, 0.63253571])
       expected_intercept = Nx.tensor(-6.671118530884806)
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y, alpha: 1.2, solver: :svd)
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y, alpha: 1.2, solver: :svd)
 
       assert_all_close(expected_coeff, actual_coeff, atol: 1.0e-3, rtol: 1.0e-3)
       assert_all_close(expected_intercept, actual_intercept, atol: 1.0e-3, rtol: 1.0e-3)
@@ -51,8 +53,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       expected_coeff = Nx.tensor([-0.33184292, 0.46423017, 0.39774495, 0.39774495])
       expected_intercept = Nx.tensor(-3.088452566096427)
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y,
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y,
           alpha: 1.2,
           sample_weights: [0.3, 0.4, 0.5],
           solver: :svd
@@ -74,8 +76,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
 
       expected_intercept = Nx.tensor([-3.08845257, -1.09499771])
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y,
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y,
           alpha: [1.2, 2.0],
           sample_weights: [0.3, 0.4, 0.5],
           solver: :svd
@@ -97,8 +99,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
 
       expected_intercept = Nx.tensor([-0.71357362, 1.71675846])
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y,
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y,
           alpha: [1.2, 2.0],
           sample_weights: [0.3, 0.4, 0.5],
           solver: :svd
@@ -120,8 +122,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
 
       expected_intercept = Nx.tensor([-0.71357362, 1.71675846])
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y,
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y,
           alpha: Nx.tensor([1.2, 2.0]),
           sample_weights: Nx.tensor([0.3, 0.4, 0.5]),
           solver: :svd
@@ -138,8 +140,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       expected_coeff = Nx.tensor([0.17647059, 1.41176471])
       expected_intercept = Nx.tensor(-6.509803921568629)
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y, solver: :cholesky)
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y, solver: :cholesky)
 
       assert_all_close(expected_coeff, actual_coeff)
       assert_all_close(expected_intercept, actual_intercept)
@@ -152,8 +154,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       expected_coeff = Nx.tensor([-0.49019608, 0.74509804, 0.66666667, 0.66666667])
       expected_intercept = Nx.tensor(-7.176470588235292)
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y, solver: :cholesky)
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y, solver: :cholesky)
 
       assert_all_close(expected_coeff, actual_coeff)
       assert_all_close(expected_intercept, actual_intercept)
@@ -166,8 +168,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       expected_coeff = Nx.tensor([-0.46651827, 0.70766092, 0.63253571, 0.63253571])
       expected_intercept = Nx.tensor(-6.671118530884806)
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y, alpha: 1.2, solver: :cholesky)
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y, alpha: 1.2, solver: :cholesky)
 
       assert_all_close(expected_coeff, actual_coeff)
       assert_all_close(expected_intercept, actual_intercept)
@@ -180,8 +182,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       expected_coeff = Nx.tensor([-0.33184292, 0.46423017, 0.39774495, 0.39774495])
       expected_intercept = Nx.tensor(-3.088452566096427)
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y,
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y,
           alpha: 1.2,
           sample_weights: [0.3, 0.4, 0.5],
           solver: :cholesky
@@ -203,8 +205,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
 
       expected_intercept = Nx.tensor([-3.08845257, -1.09499771])
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y,
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y,
           alpha: [1.2, 2.0],
           sample_weights: [0.3, 0.4, 0.5],
           solver: :cholesky
@@ -226,8 +228,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
 
       expected_intercept = Nx.tensor([-0.71357362, 1.71675846])
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y,
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y,
           alpha: [1.2, 2.0],
           sample_weights: [0.3, 0.4, 0.5],
           solver: :cholesky
@@ -249,8 +251,8 @@ defmodule Scholar.Linear.RidgeRegressionTest do
 
       expected_intercept = Nx.tensor([-0.71357362, 1.71675846])
 
-      %Scholar.Linear.RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.RidgeRegression.fit(x, y,
+      %RidgeRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        RidgeRegression.fit(x, y,
           alpha: Nx.tensor([1.2, 2.0]),
           sample_weights: Nx.tensor([0.3, 0.4, 0.5]),
           solver: :cholesky
@@ -267,7 +269,7 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       y = Nx.tensor([[1, 2], [5, 7], [2, 5]])
 
       model =
-        Scholar.Linear.RidgeRegression.fit(x, y,
+        RidgeRegression.fit(x, y,
           alpha: Nx.tensor([1.2, 2.0]),
           sample_weights: Nx.tensor([0.3, 0.4, 0.5]),
           solver: :cholesky
@@ -275,7 +277,7 @@ defmodule Scholar.Linear.RidgeRegressionTest do
 
       to_predict = Nx.tensor([[4, 17]])
       expected_prediction = Nx.tensor([[9.33550613, 9.59323367]])
-      actual_prediction = Scholar.Linear.RidgeRegression.predict(model, to_predict)
+      actual_prediction = RidgeRegression.predict(model, to_predict)
       assert_all_close(expected_prediction, actual_prediction)
     end
   end
