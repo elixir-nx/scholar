@@ -73,7 +73,10 @@ defmodule Scholar.Stats do
   """
   deftransform moment(tensor, moment, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @moment_schema)
-    num_samples = Enum.product(Enum.map(opts[:axes] || Nx.axes(tensor), &Nx.axis_size(tensor, &1)))
+
+    num_samples =
+      Enum.product(Enum.map(opts[:axes] || Nx.axes(tensor), &Nx.axis_size(tensor, &1)))
+
     moment_n(tensor, moment, num_samples, opts)
   end
 
@@ -101,7 +104,10 @@ defmodule Scholar.Stats do
 
   deftransform skew(tensor, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @skew_schema)
-    num_samples = Enum.product(Enum.map(opts[:axes] || Nx.axes(tensor), &Nx.axis_size(tensor, &1)))
+
+    num_samples =
+      Enum.product(Enum.map(opts[:axes] || Nx.axes(tensor), &Nx.axis_size(tensor, &1)))
+
     skew_n(tensor, num_samples, opts)
   end
 
@@ -135,7 +141,10 @@ defmodule Scholar.Stats do
   """
   deftransform kurtosis(tensor, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @kurtosis_schema)
-    num_samples = Enum.product(Enum.map(opts[:axes] || Nx.axes(tensor), &Nx.axis_size(tensor, &1)))
+
+    num_samples =
+      Enum.product(Enum.map(opts[:axes] || Nx.axes(tensor), &Nx.axis_size(tensor, &1)))
+
     kurtosis_n(tensor, num_samples, opts)
   end
 
