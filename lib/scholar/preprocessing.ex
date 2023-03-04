@@ -25,47 +25,37 @@ defmodule Scholar.Preprocessing do
     ]
   ]
 
-  min_max_schema = [
-    axes: [
-      type: {:custom, Scholar.Options, :axes, []},
-      doc: """
-      Axes to calculate the distance over. By default the distance
-      is calculated between the whole tensors.
-      """
-    ],
-    min: [
-      type: {:or, [:integer, :float]},
-      default: 0,
-      doc: """
-      The lower boundary of the desired range of transformed data.
-      """
-    ],
-    max: [
-      type: {:or, [:integer, :float]},
-      default: 1,
-      doc: """
-      The upper boundary of the desired range of transformed data.
-      """
-    ]
-  ]
+  min_max_schema =
+    general_schema ++
+      [
+        min: [
+          type: {:or, [:integer, :float]},
+          default: 0,
+          doc: """
+          The lower boundary of the desired range of transformed data.
+          """
+        ],
+        max: [
+          type: {:or, [:integer, :float]},
+          default: 1,
+          doc: """
+          The upper boundary of the desired range of transformed data.
+          """
+        ]
+      ]
 
-  normalize_schema = [
-    axes: [
-      type: {:custom, Scholar.Options, :axes, []},
-      doc: """
-      Axes to calculate the distance over. By default the distance
-      is calculated between the whole tensors.
-      """
-    ],
-    norm: [
-      type: {:in, [:euclidean, :chebyshev, :manhattan]},
-      default: :euclidean,
-      doc: """
-      The norm to use to normalize each non zero sample.
-      Possible options are `:euclidean`, `:manhattan`, and `:chebyshev`
-      """
-    ]
-  ]
+  normalize_schema =
+    general_schema ++
+      [
+        norm: [
+          type: {:in, [:euclidean, :chebyshev, :manhattan]},
+          default: :euclidean,
+          doc: """
+          The norm to use to normalize each non zero sample.
+          Possible options are `:euclidean`, `:manhattan`, and `:chebyshev`
+          """
+        ]
+      ]
 
   binarize_schema = [
     type: [
