@@ -203,7 +203,7 @@ defmodule Scholar.Linear.RidgeRegression do
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
     original_rank = Nx.rank(coeff)
     coeff = if original_rank == 1, do: Nx.new_axis(coeff, 0), else: coeff
-    Nx.dot(x, [1], coeff, [1]) + intercept |> Nx.squeeze(axes: [0])
+    (Nx.dot(x, [1], coeff, [1]) + intercept) |> Nx.squeeze(axes: [0])
   end
 
   # Implements sample weighting by rescaling inputs and
