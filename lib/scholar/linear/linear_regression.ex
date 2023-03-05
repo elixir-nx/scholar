@@ -109,10 +109,9 @@ defmodule Scholar.Linear.LinearRegression do
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
       iex> model = Scholar.Linear.LinearRegression.fit(x, y)
       iex> Scholar.Linear.LinearRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
-      #Nx.Tensor<
-        f32[1]
+      Nx.tensor(
         [4.200936317443848]
-      >
+      )
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
     Nx.dot(x, coeff) + intercept

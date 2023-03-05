@@ -94,20 +94,18 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       ...>    num_classes: 2
       ...>  )
       %Scholar.Neighbors.KNearestNeighbors{
-        data: #Nx.Tensor<
-          s64[4][2]
+        data: Nx.tensor(
           [
             [1, 2],
             [2, 4],
             [1, 3],
             [2, 5]
           ]
-        >,
-        labels: #Nx.Tensor<
-          s64[4]
+        ),
+        labels: Nx.tensor(
           [1, 0, 1, 1]
-        >,
-        default_num_neighbors: 5,
+        ),
+        default_num_neighbors: 4,
         weights: :uniform,
         num_classes: 2,
         task: :classification,
@@ -164,10 +162,9 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       ...>    num_classes: 2
       ...>  )
       iex> Scholar.Neighbors.KNearestNeighbors.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
-      #Nx.Tensor<
-        s64[2]
+      Nx.tensor(
         [1, 1]
-      >
+      )
   """
   defn predict(%__MODULE__{labels: labels, weights: weights, task: task} = model, x) do
     {neigh_distances, neigh_indices} = k_neighbors(model, x)
@@ -215,13 +212,12 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       ...>    num_classes: 2
       ...>  )
       iex> Scholar.Neighbors.KNearestNeighbors.predict_proba(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
-      #Nx.Tensor<
-        f32[2][2]
+      Nx.tensor(
         [
           [0.75, 0.25],
           [0.75, 0.25]
         ]
-      >
+      )
   """
   deftransform predict_proba(
                  %__MODULE__{
@@ -276,20 +272,18 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       ...>    num_classes: 2
       ...>  )
       iex> Scholar.Neighbors.KNearestNeighbors.k_neighbors(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
-      {#Nx.Tensor<
-        f32[2][4]
+      {Nx.tensor(
         [
           [0.3162279427051544, 0.7071065902709961, 1.5811389684677124, 2.469817876815796],
           [0.10000002384185791, 1.0049875974655151, 2.193171262741089, 3.132091760635376]
         ]
-      >,
-      #Nx.Tensor<
-        s64[2][4]
+      ),
+      Nx.tensor(
         [
           [1, 3, 2, 0],
           [0, 2, 1, 3]
         ]
-      >}
+      )}
   """
   defn k_neighbors(
          %__MODULE__{
