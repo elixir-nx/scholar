@@ -1,5 +1,5 @@
 defmodule Scholar.Metrics.DistanceTest do
-  use Scholar.Case
+  use Scholar.Case, async: true
   alias Scholar.Metrics.Distance
   doctest Distance
 

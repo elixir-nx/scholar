@@ -100,14 +100,12 @@ defmodule Scholar.Linear.RidgeRegression do
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
       iex> Scholar.Linear.RidgeRegression.fit(x, y)
       %Scholar.Linear.RidgeRegression{
-        coefficients: #Nx.Tensor<
-          f32[2]
+        coefficients: Nx.tensor(
           [-0.42378732562065125, -0.6891375780105591]
-        >,
-        intercept: #Nx.Tensor<
-          f32
+        ),
+        intercept: Nx.tensor(
           5.656937599182129
-        >
+        )
       }
   """
   deftransform fit(a, b, opts \\ []) do
@@ -198,13 +196,14 @@ defmodule Scholar.Linear.RidgeRegression do
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
       iex> model = Scholar.Linear.RidgeRegression.fit(x, y)
       iex> Scholar.Linear.RidgeRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
-      #Nx.Tensor<
-        f32[1]
+      Nx.tensor(
         [4.120225429534912]
-      >
+      )
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
-    Nx.dot(x, [1], coeff, [1]) + intercept
+    original_rank = Nx.rank(coeff)
+    coeff = if original_rank == 1, do: Nx.new_axis(coeff, 0), else: coeff
+    (Nx.dot(x, [1], coeff, [1]) + intercept) |> Nx.squeeze(axes: [0])
   end
 
   # Implements sample weighting by rescaling inputs and

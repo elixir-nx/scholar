@@ -104,38 +104,31 @@ defmodule Scholar.Decomposition.PCA do
       iex> x = Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
       iex> Scholar.Decomposition.PCA.fit(x)
       %Scholar.Decomposition.PCA{
-        components: #Nx.Tensor<
-          f32[2][2]
+        components: Nx.tensor(
           [
             [-0.8387274146080017, -0.544551432132721],
             [0.544551432132721, -0.8387274146080017]
           ]
-        >,
-        explained_variance: #Nx.Tensor<
-          f32[2]
+        ),
+        explained_variance: Nx.tensor(
           [7.939539909362793, 0.060457102954387665]
-        >,
-        explained_variance_ratio: #Nx.Tensor<
-          f32[2]
+        ),
+        explained_variance_ratio: Nx.tensor(
           [0.9924428462982178, 0.007557140663266182]
-        >,
-        singular_values: #Nx.Tensor<
-          f32[2]
+        ),
+        singular_values: Nx.tensor(
           [6.3006110191345215, 0.5498049855232239]
-        >,
-        mean: #Nx.Tensor<
-          f32[2]
+        ),
+        mean: Nx.tensor(
           [0.0, 0.0]
-        >,
+        ),
         num_components: 2,
-        num_features: #Nx.Tensor<
-          s64
+        num_features: Nx.tensor(
           2
-        >,
-        num_samples: #Nx.Tensor<
-          s64
+        ),
+        num_samples: Nx.tensor(
           6
-        >
+        )
       }
   """
   deftransform fit(x, opts \\ []) do
@@ -197,8 +190,7 @@ defmodule Scholar.Decomposition.PCA do
       iex> x = Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
       iex> model = Scholar.Decomposition.PCA.fit(x)
       iex> Scholar.Decomposition.PCA.transform(model, x)
-      #Nx.Tensor<
-        f32[6][2]
+      Nx.tensor(
         [
           [1.3832788467407227, 0.29417598247528076],
           [2.222006320953369, -0.2503754496574402],
@@ -207,7 +199,7 @@ defmodule Scholar.Decomposition.PCA do
           [-2.222006320953369, 0.2503754496574402],
           [-3.605285167694092, -0.043800532817840576]
         ]
-      >
+      )
   """
   deftransform transform(model, x, opts \\ []) do
     transform_n(model, x, NimbleOptions.validate!(opts, @transform_opts_schema))
@@ -253,8 +245,7 @@ defmodule Scholar.Decomposition.PCA do
 
       iex> x = Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
       iex> Scholar.Decomposition.PCA.fit_transform(x)
-      #Nx.Tensor<
-        f32[6][2]
+      Nx.tensor(
         [
           [1.3819527626037598, 0.29363134503364563],
           [2.2231407165527344, -0.25125157833099365],
@@ -263,7 +254,7 @@ defmodule Scholar.Decomposition.PCA do
           [-2.2231407165527344, 0.25125157833099365],
           [-3.605093240737915, -0.04237978905439377]
         ]
-      >
+      )
   """
 
   deftransform fit_transform(x, opts \\ []) do

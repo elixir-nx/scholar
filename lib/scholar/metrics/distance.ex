@@ -16,22 +16,17 @@ defmodule Scholar.Metrics.Distance do
     ]
   ]
 
-  minkowski_schema = [
-    axes: [
-      type: {:custom, Scholar.Options, :axes, []},
-      doc: """
-      Axes to calculate the distance over. By default the distance
-      is calculated between the whole tensors.
-      """
-    ],
-    p: [
-      type: {:or, [{:custom, Scholar.Options, :positive_number, []}, {:in, [:infinity]}]},
-      default: 2.0,
-      doc: """
-      A positive parameter of Minkowski distance or :infinity (then Chebyshev metric computed).
-      """
-    ]
-  ]
+  minkowski_schema =
+    general_schema ++
+      [
+        p: [
+          type: {:or, [{:custom, Scholar.Options, :positive_number, []}, {:in, [:infinity]}]},
+          default: 2.0,
+          doc: """
+          A positive parameter of Minkowski distance or :infinity (then Chebyshev metric computed).
+          """
+        ]
+      ]
 
   @general_schema NimbleOptions.new!(general_schema)
   @minkowski_schema NimbleOptions.new!(minkowski_schema)
