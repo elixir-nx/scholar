@@ -59,7 +59,8 @@ defmodule Scholar.MixProject do
           Scholar.Metrics.Clustering,
           Scholar.Metrics.Distance,
           Scholar.Metrics.Similarity,
-          Scholar.Preprocessing
+          Scholar.Preprocessing,
+          Scholar.Stats
         ]
       ],
       before_closing_body_tag: &before_closing_body_tag/1
