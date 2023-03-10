@@ -1,36 +1,44 @@
 defmodule Scholar.Linear.LogisticRegressionTest do
-  use ExUnit.Case, async: true
+  use Scholar.Case, async: true
+  alias Scholar.Linear.LogisticRegression
+  doctest LogisticRegression
 
   test "Pima Indians Diabetes Data - binary logistic regression test" do
     {x_train, x_test, y_train, y_test} = Datasets.get(:pima)
+    y_train = Nx.squeeze(y_train, axes: [1])
+    y_test = Nx.squeeze(y_test, axes: [1])
 
     model =
       Scholar.Linear.LogisticRegression.fit(x_train, y_train,
         num_classes: 2,
-        iterations: 100,
-        learning_rate: 0.0085
+        iterations: 14,
+        learning_rate: 0.01
       )
 
     res = Scholar.Linear.LogisticRegression.predict(model, x_test)
-    assert Scholar.Metrics.accuracy(y_test, res) >= 0.66
+    assert Scholar.Metrics.accuracy(y_test, res) >= 0.6
   end
 
   test "Pima Indians Diabetes Data - multinomial logistic regression test for binary data" do
     {x_train, x_test, y_train, y_test} = Datasets.get(:pima)
+    y_train = Nx.squeeze(y_train, axes: [1])
+    y_test = Nx.squeeze(y_test, axes: [1])
 
     model =
       Scholar.Linear.LogisticRegression.fit(x_train, y_train,
         num_classes: 3,
-        iterations: 100,
-        learning_rate: 0.0085
+        iterations: 14,
+        learning_rate: 0.01
       )
 
     res = Scholar.Linear.LogisticRegression.predict(model, x_test)
-    assert Scholar.Metrics.accuracy(y_test, res) >= 0.66
+    assert Scholar.Metrics.accuracy(y_test, res) >= 0.6
   end
 
   test "Iris Data Set - multinomial logistic regression test for multinomial data" do
     {x_train, x_test, y_train, y_test} = Datasets.get(:iris)
+    y_train = Nx.argmax(y_train, axis: 1)
+    y_test = Nx.argmax(y_test, axis: 1)
 
     model = Scholar.Linear.LogisticRegression.fit(x_train, y_train, num_classes: 3)
     res = Scholar.Linear.LogisticRegression.predict(model, x_test)

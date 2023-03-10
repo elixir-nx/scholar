@@ -4,8 +4,8 @@ defmodule Scholar.Linear.LogisticRegression do
   """
   import Nx.Defn
 
-  @derive {Nx.Container, containers: [:coefficients, :bias], keep: [:mode]}
-  defstruct [:coefficients, :bias, :mode]
+  @derive {Nx.Container, containers: [:coefficients, :bias]}
+  defstruct [:coefficients, :bias]
 
   opts = [
     num_classes: [
@@ -58,25 +58,21 @@ defmodule Scholar.Linear.LogisticRegression do
   ## Examples
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
-      iex> y = Nx.tensor([4.0, 3.0, -1.0])
+      iex> y = Nx.tensor([1, 0, 1])
       iex> Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
       %Scholar.Linear.LogisticRegression{
-        coefficients: #Nx.Tensor<
-          f32[2]
-          [7.674156665802002, -5.888940811157227]
-        >,
-        bias: #Nx.Tensor<
-          f32
-          11.289297103881836
-        >,
-        mode: :binary
+        coefficients: Nx.tensor(
+          [
+            [2.0225093364715576, 0.0742921456694603],
+            [-0.022509099915623665, 1.925706386566162]
+          ]
+        ),
+        bias: Nx.tensor(
+          [-0.11229754239320755, 0.11229754239320755]
+        )
       }
   """
   deftransform fit(x, y, opts \\ []) do
-    fit_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
-  end
-
-  defnp fit_n(x, y, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
@@ -87,98 +83,54 @@ defmodule Scholar.Linear.LogisticRegression do
             "expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
     end
 
-    if opts[:num_classes] < 3 do
-      fit_binary(x, y, opts)
-    else
-      fit_multinomial(x, y, opts)
-    end
+    fit_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  # Binary logistic regression
-
-  defnp fit_binary(x, y, opts) do
-    iterations = opts[:iterations]
-    learning_rate = opts[:learning_rate]
-    x_t = Nx.transpose(x)
-    y_t = Nx.transpose(y)
-
-    {_m, n} = Nx.shape(x)
-    coeff = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {n})
-
-    {_, _, _, _, _, _, final_coeff, final_bias} =
-      while {iter = 0, x, learning_rate, iterations, x_t, y_t, coeff,
-             bias = Nx.tensor(0, type: Nx.type(x))},
-            Nx.less(iter, iterations) do
-        {coeff, bias} = update_coefficients(x, x_t, y_t, {coeff, bias}, learning_rate)
-        {iter + 1, x, learning_rate, iterations, x_t, y_t, coeff, bias}
-      end
-
-    %__MODULE__{coefficients: final_coeff, bias: final_bias, mode: :binary}
-  end
-
-  # Multinomial logistic regression
-
-  defnp fit_multinomial(x, y, opts) do
+  # Logistic Regression training loop
+  defnp fit_n(x, y, opts) do
     {_m, n} = x.shape
     iterations = opts[:iterations]
     learning_rate = opts[:learning_rate]
     num_classes = opts[:num_classes]
-    one_hot = Scholar.Preprocessing.one_hot_encode(y, num_classes: num_classes)
-    x_t = Nx.transpose(x)
+    y = Scholar.Preprocessing.one_hot_encode(y, num_classes: num_classes)
 
-    {_, _, _, _, _, _, _, final_coeff} =
-      while {iter = 0, x, learning_rate, n, iterations, one_hot, x_t,
-             coeff = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {n, num_classes})},
+    {_, _, _, _, _, _, final_coeff, final_bias} =
+      while {iter = 0, x, learning_rate, n, iterations, y,
+             coeff = Nx.broadcast(Nx.tensor(1.0, type: Nx.type(x)), {n, num_classes}),
+             bias = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {num_classes})},
             iter < iterations do
-        coeff = update_coefficients_multinomial(x, x_t, one_hot, coeff, learning_rate)
-        {iter + 1, x, learning_rate, n, iterations, one_hot, x_t, coeff}
+        {coeff_grad, bias_grad} = grad_loss(coeff, bias, x, y)
+        coeff = coeff - learning_rate * coeff_grad
+        bias = bias - learning_rate * bias_grad
+        {iter + 1, x, learning_rate, n, iterations, y, coeff, bias}
       end
 
     %__MODULE__{
-      coefficients: final_coeff,
-      bias: Nx.tensor(0, type: Nx.type(x)),
-      mode: :multinomial
+      coefficients: Nx.transpose(final_coeff),
+      bias: final_bias
     }
+  end
+
+  defnp cross_entropy(log_probs, targets) do
+    target_class = Nx.argmax(targets, axis: 1)
+    nll = Nx.log(Nx.take_along_axis(log_probs, Nx.new_axis(target_class, 1), axis: 1))
+    -Nx.mean(nll)
+  end
+
+  defnp loss_fn(coeff, bias, xs, ys) do
+    probs = softmax(Nx.dot(xs, coeff) + bias)
+    cross_entropy(probs, ys)
+  end
+
+  defnp grad_loss(coeff, bias, xs, ys) do
+    grad({coeff, bias}, fn {coeff, bias} -> loss_fn(coeff, bias, xs, ys) end)
   end
 
   # Normalized softmax
 
-  defnp softmax(t) do
-    normalized_exp = (t - Nx.reduce_max(t, axes: [0], keep_axes: true)) |> Nx.exp()
-    normalized_exp / Nx.sum(normalized_exp, axes: [0])
-  end
-
-  # Gradient descent for binary regression
-
-  defnp update_coefficients(x, x_t, y_t, {coeff, bias}, learning_rate) do
-    {m, _n} = x.shape
-
-    logit = 1 / (Nx.exp(-(Nx.dot(x, coeff) + bias)) + 1)
-
-    diff = Nx.reshape(logit - y_t, {m})
-
-    coeff_diff = Nx.dot(x_t, diff) / m
-
-    bias_diff = Nx.sum(diff) / m
-
-    new_coeff = coeff - coeff_diff * learning_rate
-    new_bias = bias - bias_diff * learning_rate
-
-    {new_coeff, new_bias}
-  end
-
-  # Gradient descent for multinomial regression
-
-  defnp update_coefficients_multinomial(x, x_t, one_hot, coeff, learning_rate) do
-    {m, _n} = x.shape
-
-    dot_prod = Nx.dot(x, coeff)
-
-    prob = softmax(dot_prod)
-
-    diff = Nx.dot(x_t, prob - one_hot) / m
-
-    coeff - diff * learning_rate
+  defn softmax(t) do
+    normalized_exp = (t - Nx.reduce_max(t, axes: [-1], keep_axes: true)) |> Nx.exp()
+    normalized_exp / Nx.sum(normalized_exp, axes: [-1], keep_axes: true)
   end
 
   @doc """
@@ -187,28 +139,36 @@ defmodule Scholar.Linear.LogisticRegression do
   ## Examples
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
-      iex> y = Nx.tensor([4.0, 3.0, -1.0])
+      iex> y = Nx.tensor([1, 0, 1])
       iex> model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
-      iex> Scholar.Linear.LogisticRegression.predict(model, Nx.tensor([-3.0, 5.0]))
+      iex> Scholar.Linear.LogisticRegression.predict(model, Nx.tensor([[-3.0, 5.0]]))
       #Nx.Tensor<
-        u8
-        0
+        s64[1]
+        [1]
       >
   """
-  defn predict(%__MODULE__{mode: mode} = model, x) do
-    case mode do
-      :binary -> predict_binary(model, x)
-      :multinomial -> predict_multinomial(model, x)
-    end
+  defn predict(%__MODULE__{coefficients: coeff, bias: bias}, x) do
+    inter = Nx.dot(x, Nx.transpose(coeff)) + bias
+    Nx.argmax(inter, axis: 1)
   end
 
-  defnp predict_binary(%__MODULE__{coefficients: coeff, bias: bias}, x) do
-    logit = 1 / (Nx.exp(-(Nx.dot(coeff, Nx.transpose(x)) + bias)) + 1)
-    logit > 0.5
-  end
+  @doc """
+  Makes predictions with the given model on inputs `x`.
 
-  defnp predict_multinomial(%__MODULE__{coefficients: coeff}, x) do
-    dot_prod = Nx.dot(x, coeff)
-    Nx.argmax(dot_prod, axis: 1)
+  ## Examples
+
+      iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
+      iex> y = Nx.tensor([1, 0, 1])
+      iex> model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
+      iex> Scholar.Linear.LogisticRegression.predict_proba(model, Nx.tensor([[-3.0, 5.0]]))
+      #Nx.Tensor<
+        f32[1][2]
+        [
+          [1.650987258017267e-7, 0.9999998807907104]
+        ]
+      >
+  """
+  defn predict_proba(%__MODULE__{coefficients: coeff, bias: bias}, x) do
+    softmax(Nx.dot(x, Nx.transpose(coeff)) + bias)
   end
 end
