@@ -1,5 +1,7 @@
-defmodule Scholar.Impute.SimpleImputerTest do
-  use ExUnit.Case, async: true
+defmodule SimpleImputerTest do
+  use Scholar.Case, async: true
+  alias Scholar.Impute.SimpleImputer
+  doctest SimpleImputer
 
   describe "general cases" do
     def generate_data() do
@@ -12,13 +14,13 @@ defmodule Scholar.Impute.SimpleImputerTest do
       x = generate_data()
 
       simple_imputer_mode =
-        %Scholar.Impute.SimpleImputer{statistics: statistics, missing_values: missing_values} =
-        Scholar.Impute.SimpleImputer.fit(x, missing_values: :nan, strategy: :mode)
+        %SimpleImputer{statistics: statistics, missing_values: missing_values} =
+        SimpleImputer.fit(x, missing_values: :nan, strategy: :mode)
 
       assert statistics == Nx.tensor([0.0, 1.0, 6.0, 3.0])
       assert missing_values == :nan
 
-      assert Scholar.Impute.SimpleImputer.transform(simple_imputer_mode, x) ==
+      assert SimpleImputer.transform(simple_imputer_mode, x) ==
                Nx.tensor([
                  [0.0, 1.0, 2.0, 3.0],
                  [4.0, 5.0, 6.0, 7.0],
@@ -32,13 +34,13 @@ defmodule Scholar.Impute.SimpleImputerTest do
       x = generate_data()
 
       simple_imputer_median =
-        %Scholar.Impute.SimpleImputer{statistics: statistics, missing_values: missing_values} =
-        Scholar.Impute.SimpleImputer.fit(x, missing_values: :nan, strategy: :median)
+        %SimpleImputer{statistics: statistics, missing_values: missing_values} =
+        SimpleImputer.fit(x, missing_values: :nan, strategy: :median)
 
       assert statistics == Nx.tensor([6.0, 7.0, 6.0, 11.0])
       assert missing_values == :nan
 
-      assert Scholar.Impute.SimpleImputer.transform(simple_imputer_median, x) ==
+      assert SimpleImputer.transform(simple_imputer_median, x) ==
                Nx.tensor([
                  [0.0, 1.0, 2.0, 3.0],
                  [4.0, 5.0, 6.0, 7.0],
@@ -52,13 +54,13 @@ defmodule Scholar.Impute.SimpleImputerTest do
       x = generate_data()
 
       simple_imputer_mean =
-        %Scholar.Impute.SimpleImputer{statistics: statistics, missing_values: missing_values} =
-        Scholar.Impute.SimpleImputer.fit(x, missing_values: :nan, strategy: :mean)
+        %SimpleImputer{statistics: statistics, missing_values: missing_values} =
+        SimpleImputer.fit(x, missing_values: :nan, strategy: :mean)
 
       assert statistics == Nx.tensor([7.0, 8.0, 4.666666507720947, 11.0])
       assert missing_values == :nan
 
-      assert Scholar.Impute.SimpleImputer.transform(simple_imputer_mean, x) ==
+      assert SimpleImputer.transform(simple_imputer_mean, x) ==
                Nx.tensor([
                  [0.0, 1.0, 2.0, 3.0],
                  [4.0, 5.0, 6.0, 7.0],
@@ -72,14 +74,14 @@ defmodule Scholar.Impute.SimpleImputerTest do
       x = generate_data()
 
       simple_imputer_constant_with_zeros =
-        %Scholar.Impute.SimpleImputer{statistics: statistics, missing_values: missing_values} =
-        Scholar.Impute.SimpleImputer.fit(x, missing_values: :nan, strategy: :constant)
+        %SimpleImputer{statistics: statistics, missing_values: missing_values} =
+        SimpleImputer.fit(x, missing_values: :nan, strategy: :constant)
 
       assert statistics == Nx.tensor([0.0, 0.0, 0.0, 0.0])
       assert missing_values == :nan
 
-      %Scholar.Impute.SimpleImputer{statistics: statistics, missing_values: missing_values} =
-        Scholar.Impute.SimpleImputer.fit(x,
+      %SimpleImputer{statistics: statistics, missing_values: missing_values} =
+        SimpleImputer.fit(x,
           missing_values: :nan,
           strategy: :constant,
           fill_value: 1.37
@@ -88,7 +90,7 @@ defmodule Scholar.Impute.SimpleImputerTest do
       assert statistics == Nx.tensor([1.37, 1.37, 1.37, 1.37])
       assert missing_values == :nan
 
-      assert Scholar.Impute.SimpleImputer.transform(simple_imputer_constant_with_zeros, x) ==
+      assert SimpleImputer.transform(simple_imputer_constant_with_zeros, x) ==
                Nx.tensor([
                  [0.0, 1.0, 2.0, 3.0],
                  [4.0, 5.0, 6.0, 7.0],
@@ -103,13 +105,13 @@ defmodule Scholar.Impute.SimpleImputerTest do
     x = Nx.tile(Nx.tensor([1, 2, 1, 2, 1, 2]), [5, 1]) |> Nx.reshape({6, 5})
 
     simple_imputer_constant_with_zeros =
-      %Scholar.Impute.SimpleImputer{statistics: statistics, missing_values: missing_values} =
-      Scholar.Impute.SimpleImputer.fit(x, missing_values: 1, strategy: :mode)
+      %SimpleImputer{statistics: statistics, missing_values: missing_values} =
+      SimpleImputer.fit(x, missing_values: 1, strategy: :mode)
 
     assert statistics == Nx.tensor([2, 2, 2, 2, 2])
     assert missing_values == 1
 
-    assert Scholar.Impute.SimpleImputer.transform(simple_imputer_constant_with_zeros, x) ==
+    assert SimpleImputer.transform(simple_imputer_constant_with_zeros, x) ==
              Nx.broadcast(2, {6, 5})
   end
 
@@ -120,7 +122,7 @@ defmodule Scholar.Impute.SimpleImputerTest do
       assert_raise ArgumentError,
                    "Wrong input rank. Expected: 2, got: 1",
                    fn ->
-                     Scholar.Impute.SimpleImputer.fit(x, missing_values: 1, strategy: :mode)
+                     SimpleImputer.fit(x, missing_values: 1, strategy: :mode)
                    end
     end
 
@@ -130,7 +132,7 @@ defmodule Scholar.Impute.SimpleImputerTest do
       assert_raise ArgumentError,
                    ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array",
                    fn ->
-                     Scholar.Impute.SimpleImputer.fit(x, missing_values: 1.0, strategy: :mode)
+                     SimpleImputer.fit(x, missing_values: 1.0, strategy: :mode)
                    end
     end
 
@@ -140,7 +142,7 @@ defmodule Scholar.Impute.SimpleImputerTest do
       assert_raise ArgumentError,
                    "Wrong type of `:fill_value` for the given data. Expected: :f or :bf, got: :s",
                    fn ->
-                     Scholar.Impute.SimpleImputer.fit(x,
+                     SimpleImputer.fit(x,
                        missing_values: 1.0,
                        strategy: :constant,
                        fill_value: 2

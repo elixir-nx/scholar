@@ -104,29 +104,27 @@ defmodule Scholar.Cluster.KMeans do
 
   ## Examples
 
+      iex> seed = 42
       iex>  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
-      ...>    num_clusters: 2
+      ...>    num_clusters: 2,
+      ...>    seed: seed
       ...>  )
       %Scholar.Cluster.KMeans{
-        num_iterations: #Nx.Tensor<
-          s64
+        num_iterations: Nx.tensor(
           2
-        >,
-        clusters: #Nx.Tensor<
-          f32[2][2]
+        ),
+        clusters: Nx.tensor(
           [
             [1.0, 2.5],
             [2.0, 4.5]
           ]
-        >,
-        inertia: #Nx.Tensor<
-          f32
+        ),
+        inertia: Nx.tensor(
           1.0
-        >,
-        labels: #Nx.Tensor<
-          s64[4]
+        ),
+        labels: Nx.tensor(
           [0, 1, 0, 1]
-        >
+        )
       }
   """
   deftransform fit(x, opts \\ []) do
@@ -304,15 +302,16 @@ defmodule Scholar.Cluster.KMeans do
 
   ## Examples
 
+      iex> seed = 42
       iex> model =
       ...>  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
-      ...>    num_clusters: 2
+      ...>    num_clusters: 2,
+      ...>    seed: seed
       ...>  )
       iex> Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
-      #Nx.Tensor<
-        s64[2]
+      Nx.tensor(
         [1, 0]
-      >
+      )
   """
   defn predict(%__MODULE__{clusters: clusters} = _model, x) do
     assert_same_shape!(x[0], clusters[0])
@@ -345,17 +344,18 @@ defmodule Scholar.Cluster.KMeans do
 
   ## Examples
 
+      iex> seed = 40
       iex> model =
       ...>  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
-      ...>    num_clusters: 2
+      ...>    num_clusters: 2,
+      ...>    seed: seed
       ...>  )
       iex> Scholar.Cluster.KMeans.transform(model, Nx.tensor([[1.0, 2.5]]))
-      #Nx.Tensor<
-        f32[1][2]
+      Nx.tensor(
         [
           [2.2360680103302, 0.0]
         ]
-      >
+      )
   """
   defn transform(%__MODULE__{clusters: clusters} = _model, x) do
     {num_clusters, num_features} = Nx.shape(clusters)

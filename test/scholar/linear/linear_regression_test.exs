@@ -1,5 +1,7 @@
 defmodule Scholar.Linear.LinearRegressionTest do
   use Scholar.Case, async: true
+  alias Scholar.Linear.LinearRegression
+  doctest LinearRegression
 
   describe "fit" do
     test "matches sklearn for shapes {1, 1}, {1, 1} and type {:f, 32}" do
@@ -8,8 +10,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
       expected_coeff = Nx.tensor([[0.0]])
       expected_intercept = Nx.tensor([0.89047176])
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b)
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b)
 
       assert_all_close(expected_coeff, actual_coeff)
       assert_all_close(expected_intercept, actual_intercept)
@@ -67,8 +69,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       expected_intercept = Nx.tensor(0.8032849746598018)
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b)
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b)
 
       assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-2, atol: 1.0e-2)
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-2, atol: 1.0e-3)
@@ -151,8 +153,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       expected_intercept = Nx.tensor([1.31901913])
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b)
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b)
 
       assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-2, atol: 1.0e-2)
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-2, atol: 1.0e-3)
@@ -277,8 +279,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       expected_intercept = Nx.tensor([1.9170046, 0.3207544, 0.61264162, -0.42393678])
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b)
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b)
 
       assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-1, atol: 1.0e-2)
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-1, atol: 1.0e-2)
@@ -291,8 +293,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
       expected_coeff = Nx.tensor([[0.0]])
       expected_intercept = Nx.tensor([0.62539542])
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b, sample_weights: sample_weights)
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b, sample_weights: sample_weights)
 
       assert_all_close(expected_coeff, actual_coeff)
       assert_all_close(expected_intercept, actual_intercept)
@@ -355,8 +357,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       expected_intercept = Nx.tensor(0.3153022844013592)
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b, sample_weights: sample_weights)
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b, sample_weights: sample_weights)
 
       assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-1, atol: 1.0e-2)
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-3, atol: 1.0e-2)
@@ -439,8 +441,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       expected_intercept = Nx.tensor([1.52024138])
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b, sample_weights: sample_weights)
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b, sample_weights: sample_weights)
 
       assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-2, atol: 1.0e-2)
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-2, atol: 1.0e-3)
@@ -554,8 +556,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
           1.1566576434693598
         ])
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b, sample_weights: sample_weights)
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b, sample_weights: sample_weights)
 
       assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-1, atol: 1.0e-0)
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-1, atol: 1.0e-0)
@@ -618,8 +620,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       expected_intercept = Nx.tensor(0.0)
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b,
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b,
           sample_weights: sample_weights,
           fit_intercept?: false
         )
@@ -686,8 +688,8 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       expected_intercept = Nx.tensor(0.0)
 
-      %Scholar.Linear.LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
-        Scholar.Linear.LinearRegression.fit(a, b,
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b,
           sample_weights: sample_weights,
           fit_intercept?: false
         )
@@ -754,12 +756,12 @@ defmodule Scholar.Linear.LinearRegressionTest do
       expected_prediction = Nx.tensor([0.16187817])
 
       model =
-        Scholar.Linear.LinearRegression.fit(a, b,
+        LinearRegression.fit(a, b,
           sample_weights: sample_weights,
           fit_intercept?: true
         )
 
-      actual_prediction = Scholar.Linear.LinearRegression.predict(model, prediction_input)
+      actual_prediction = LinearRegression.predict(model, prediction_input)
       assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-1, atol: 1.0e-1)
     end
 
@@ -819,12 +821,12 @@ defmodule Scholar.Linear.LinearRegressionTest do
       expected_prediction = Nx.tensor([2.32356805])
 
       model =
-        Scholar.Linear.LinearRegression.fit(a, b,
+        LinearRegression.fit(a, b,
           sample_weights: sample_weights,
           fit_intercept?: false
         )
 
-      actual_prediction = Scholar.Linear.LinearRegression.predict(model, prediction_input)
+      actual_prediction = LinearRegression.predict(model, prediction_input)
       assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-3, atol: 1.0e-3)
     end
   end
