@@ -153,7 +153,7 @@ defmodule Scholar.Linear.LogisticRegression do
   end
 
   @doc """
-  Makes predictions with the given model on inputs `x`.
+  Calculates probabilities of predictions with the given model on inputs `x`.
 
   ## Examples
 
