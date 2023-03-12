@@ -63,12 +63,12 @@ defmodule Scholar.Linear.LogisticRegression do
       %Scholar.Linear.LogisticRegression{
         coefficients: Nx.tensor(
           [
-            [2.0225093364715576, 0.0742921456694603],
-            [-0.022509099915623665, 1.925706386566162]
+            [2.0225090980529785, 0.0742921307682991],
+            [-0.02250923588871956, 1.9257065057754517]
           ]
         ),
         bias: Nx.tensor(
-          [-0.11229754239320755, 0.11229754239320755]
+          [-0.11229748278856277, 0.11229748278856277]
         )
       }
   """
@@ -87,6 +87,7 @@ defmodule Scholar.Linear.LogisticRegression do
   end
 
   # Logistic Regression training loop
+
   defnp fit_n(x, y, opts) do
     {_m, n} = x.shape
     iterations = opts[:iterations]
@@ -96,8 +97,13 @@ defmodule Scholar.Linear.LogisticRegression do
 
     {_, _, _, _, _, _, final_coeff, final_bias} =
       while {iter = 0, x, learning_rate, n, iterations, y,
-             coeff = Nx.broadcast(Nx.tensor(1.0, type: Nx.type(x)), {n, num_classes}),
-             bias = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {num_classes})},
+             coeff =
+               Nx.broadcast(
+                 Nx.tensor(1.0, type: Nx.Type.to_floating(Nx.type(x))),
+                 {n, num_classes}
+               ),
+             bias =
+               Nx.broadcast(Nx.tensor(0, type: Nx.Type.to_floating(Nx.type(x))), {num_classes})},
             iter < iterations do
         {coeff_grad, bias_grad} = grad_loss(coeff, bias, x, y)
         coeff = coeff - learning_rate * coeff_grad
@@ -113,12 +119,12 @@ defmodule Scholar.Linear.LogisticRegression do
 
   defnp cross_entropy(log_probs, targets) do
     target_class = Nx.argmax(targets, axis: 1)
-    nll = Nx.log(Nx.take_along_axis(log_probs, Nx.new_axis(target_class, 1), axis: 1))
+    nll = Nx.take_along_axis(log_probs, Nx.new_axis(target_class, 1), axis: 1)
     -Nx.mean(nll)
   end
 
   defnp loss_fn(coeff, bias, xs, ys) do
-    probs = softmax(Nx.dot(xs, coeff) + bias)
+    probs = Axon.Activations.log_softmax(Nx.dot(xs, coeff) + bias)
     cross_entropy(probs, ys)
   end
 
@@ -129,7 +135,8 @@ defmodule Scholar.Linear.LogisticRegression do
   # Normalized softmax
 
   defn softmax(t) do
-    normalized_exp = (t - Nx.reduce_max(t, axes: [-1], keep_axes: true)) |> Nx.exp()
+    max = Nx.Defn.Kernel.stop_grad(Nx.reduce_max(t, axes: [-1], keep_axes: true))
+    normalized_exp = (t - max) |> Nx.exp()
     normalized_exp / Nx.sum(normalized_exp, axes: [-1], keep_axes: true)
   end
 
@@ -160,7 +167,7 @@ defmodule Scholar.Linear.LogisticRegression do
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
       iex> y = Nx.tensor([1, 0, 1])
       iex> model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
-      iex> Scholar.Linear.LogisticRegression.predict_proba(model, Nx.tensor([[-3.0, 5.0]]))
+      iex> Scholar.Linear.LogisticRegression.predict_probability(model, Nx.tensor([[-3.0, 5.0]]))
       #Nx.Tensor<
         f32[1][2]
         [
@@ -168,7 +175,7 @@ defmodule Scholar.Linear.LogisticRegression do
         ]
       >
   """
-  defn predict_proba(%__MODULE__{coefficients: coeff, bias: bias}, x) do
+  defn predict_probability(%__MODULE__{coefficients: coeff, bias: bias}, x) do
     softmax(Nx.dot(x, Nx.transpose(coeff)) + bias)
   end
 end

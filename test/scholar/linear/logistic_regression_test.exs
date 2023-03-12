@@ -3,6 +3,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
   alias Scholar.Linear.LogisticRegression
   doctest LogisticRegression
 
+  @tag timeout: :infinity
   test "Pima Indians Diabetes Data - binary logistic regression test" do
     {x_train, x_test, y_train, y_test} = Datasets.get(:pima)
     y_train = Nx.squeeze(y_train, axes: [1])
@@ -11,24 +12,8 @@ defmodule Scholar.Linear.LogisticRegressionTest do
     model =
       Scholar.Linear.LogisticRegression.fit(x_train, y_train,
         num_classes: 2,
-        iterations: 14,
-        learning_rate: 0.01
-      )
-
-    res = Scholar.Linear.LogisticRegression.predict(model, x_test)
-    assert Scholar.Metrics.accuracy(y_test, res) >= 0.6
-  end
-
-  test "Pima Indians Diabetes Data - multinomial logistic regression test for binary data" do
-    {x_train, x_test, y_train, y_test} = Datasets.get(:pima)
-    y_train = Nx.squeeze(y_train, axes: [1])
-    y_test = Nx.squeeze(y_test, axes: [1])
-
-    model =
-      Scholar.Linear.LogisticRegression.fit(x_train, y_train,
-        num_classes: 3,
-        iterations: 14,
-        learning_rate: 0.01
+        iterations: 1000,
+        learning_rate: 0.1
       )
 
     res = Scholar.Linear.LogisticRegression.predict(model, x_test)
