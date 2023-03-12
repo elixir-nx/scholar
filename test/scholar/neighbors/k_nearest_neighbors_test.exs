@@ -1,6 +1,7 @@
 defmodule Scholar.Neighbors.KNearestNeighborsTest do
-  use Scholar.Case
+  use Scholar.Case, async: true
   alias Scholar.Neighbors.KNearestNeighbors
+  doctest KNearestNeighbors
 
   @x Nx.tensor([
        [3, 6, 7, 5],

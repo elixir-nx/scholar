@@ -1,5 +1,5 @@
 defmodule Scholar.NaiveBayes.ComplementTest do
-  use Scholar.Case
+  use Scholar.Case, async: true
   alias Scholar.NaiveBayes.Complement
   doctest Complement
 
@@ -8,7 +8,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       x = Nx.iota({5, 6})
       y = Nx.tensor([1, 2, 0, 3, 1])
 
-      model = Scholar.NaiveBayes.Complement.fit(x, y, num_classes: 4)
+      model = Complement.fit(x, y, num_classes: 4)
 
       assert model.feature_count ==
                Nx.tensor([
@@ -75,7 +75,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       x = Nx.iota({5, 6})
       y = Nx.tensor([1, 2, 0, 3, 1])
 
-      model = Scholar.NaiveBayes.Complement.fit(x, y, num_classes: 4, alpha: 1.0e-6)
+      model = Complement.fit(x, y, num_classes: 4, alpha: 1.0e-6)
 
       assert model.feature_count ==
                Nx.tensor([
@@ -142,7 +142,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       x = Nx.iota({5, 6})
       y = Nx.tensor([1, 2, 0, 3, 1])
 
-      model = Scholar.NaiveBayes.Complement.fit(x, y, num_classes: 4, fit_priors: false)
+      model = Complement.fit(x, y, num_classes: 4, fit_priors: false)
 
       assert model.feature_count ==
                Nx.tensor([
@@ -209,8 +209,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       x = Nx.iota({5, 6})
       y = Nx.tensor([1, 2, 0, 3, 1])
 
-      model =
-        Scholar.NaiveBayes.Complement.fit(x, y, num_classes: 4, priors: [0.15, 0.25, 0.4, 0.2])
+      model = Complement.fit(x, y, num_classes: 4, priors: [0.15, 0.25, 0.4, 0.2])
 
       assert model.feature_count ==
                Nx.tensor([
@@ -278,7 +277,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       y = Nx.tensor([1, 2, 0, 3, 1])
 
       model =
-        Scholar.NaiveBayes.Complement.fit(x, y,
+        Complement.fit(x, y,
           num_classes: 4,
           priors: Nx.tensor([0.15, 0.25, 0.4, 0.2])
         )
@@ -348,8 +347,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       x = Nx.iota({5, 6})
       y = Nx.tensor([1, 2, 0, 3, 1])
 
-      model =
-        Scholar.NaiveBayes.Complement.fit(x, y, num_classes: 4, sample_weights: [1.5, 4, 2, 7, 4])
+      model = Complement.fit(x, y, num_classes: 4, sample_weights: [1.5, 4, 2, 7, 4])
 
       assert model.feature_count ==
                Nx.tensor([
@@ -417,7 +415,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       y = Nx.tensor([1, 2, 0, 3, 1])
 
       model =
-        Scholar.NaiveBayes.Complement.fit(x, y,
+        Complement.fit(x, y,
           num_classes: 4,
           sample_weights: Nx.tensor([1.5, 4, 2, 7, 4])
         )
@@ -487,7 +485,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       x = Nx.iota({5, 6})
       y = Nx.tensor([1, 2, 0, 3, 1])
 
-      model = Scholar.NaiveBayes.Complement.fit(x, y, num_classes: 4, norm: true)
+      model = Complement.fit(x, y, num_classes: 4, norm: true)
 
       assert model.feature_count ==
                Nx.tensor([
@@ -556,7 +554,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       assert_raise ArgumentError,
                    "wrong input rank. Expected x to be rank 2 got: 1",
                    fn ->
-                     Scholar.NaiveBayes.Complement.fit(
+                     Complement.fit(
                        Nx.tensor([1, 2, 5, 8]),
                        Nx.tensor([1, 2, 3, 4]),
                        num_classes: 4
@@ -568,7 +566,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       assert_raise ArgumentError,
                    "wrong target rank. Expected target to be rank 1 got: 2",
                    fn ->
-                     Scholar.NaiveBayes.Complement.fit(
+                     Complement.fit(
                        Nx.tensor([[1, 2, 5, 8]]),
                        Nx.tensor([[1, 2, 3, 4]]),
                        num_classes: 4
@@ -580,7 +578,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       assert_raise ArgumentError,
                    "wrong input shape. Expected x to have the same first dimension as y, got: 1 for x and 4 for y",
                    fn ->
-                     Scholar.NaiveBayes.Complement.fit(
+                     Complement.fit(
                        Nx.tensor([[1, 2, 5, 8]]),
                        Nx.tensor([1, 2, 3, 4]),
                        num_classes: 4
@@ -592,7 +590,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       assert_raise ArgumentError,
                    "number of priors must match number of classes. Number of priors: 3 does not match number of classes: 2",
                    fn ->
-                     Scholar.NaiveBayes.Complement.fit(
+                     Complement.fit(
                        Nx.tensor([[1, 2, 5, 8], [2, 5, 7, 3]]),
                        Nx.tensor([1, 0]),
                        num_classes: 2,
@@ -605,7 +603,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       assert_raise ArgumentError,
                    "number of weights must match number of samples. Number of weights: 3 does not match number of samples: 2",
                    fn ->
-                     Scholar.NaiveBayes.Complement.fit(
+                     Complement.fit(
                        Nx.tensor([[1, 2, 5, 8], [2, 5, 7, 3]]),
                        Nx.tensor([1, 0]),
                        num_classes: 2,
@@ -618,7 +616,7 @@ defmodule Scholar.NaiveBayes.ComplementTest do
       assert_raise ArgumentError,
                    "when alpha is a list it should contain num_features values",
                    fn ->
-                     Scholar.NaiveBayes.Complement.fit(
+                     Complement.fit(
                        Nx.tensor([[1, 2, 5, 8], [2, 5, 7, 3]]),
                        Nx.tensor([1, 0]),
                        num_classes: 2,
@@ -632,13 +630,13 @@ defmodule Scholar.NaiveBayes.ComplementTest do
                    "wrong input shape. Expected x to have the same second dimension as the data for fitting process, got: 3 for x and 4 for training data",
                    fn ->
                      model =
-                       Scholar.NaiveBayes.Complement.fit(
+                       Complement.fit(
                          Nx.tensor([[1, 2, 5, 8], [1, 3, 5, 2]]),
                          Nx.tensor([0, 1]),
                          num_classes: 2
                        )
 
-                     Scholar.NaiveBayes.Complement.predict(model, Nx.tensor([[1, 4, 2]]))
+                     Complement.predict(model, Nx.tensor([[1, 4, 2]]))
                    end
     end
   end

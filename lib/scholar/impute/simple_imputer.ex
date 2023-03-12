@@ -63,10 +63,9 @@ defmodule Scholar.Impute.SimpleImputer do
       iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
       iex> Scholar.Impute.SimpleImputer.fit(x, strategy: :mean)
       %Scholar.Impute.SimpleImputer{
-        statistics: #Nx.Tensor<
-          f32[3]
+        statistics: Nx.tensor(
           [2.0, 4.333333492279053, 5.0]
-        >,
+        ),
         missing_values: :nan
       }
   """
@@ -227,27 +226,25 @@ defmodule Scholar.Impute.SimpleImputer do
       iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
       iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :mean)
       iex> Scholar.Impute.SimpleImputer.transform(imputer, x)
-      #Nx.Tensor<
-        f32[3][3]
+      Nx.tensor(
         [
           [1.0, 2.0, 5.0],
           [3.0, 7.0, 5.0],
           [2.0, 4.0, 5.0]
         ]
-      >
+      )
 
       iex> x = Nx.tensor([[1, 2, :nan], [3, 7, :nan], [:nan, 4, 5]])
       iex> y = Nx.tensor([[7, :nan, 6], [6, 9, :nan], [8, :nan, 1]])
       iex> imputer = Scholar.Impute.SimpleImputer.fit(x, strategy: :median)
       iex> Scholar.Impute.SimpleImputer.transform(imputer, y)
-      #Nx.Tensor<
-        f32[3][3]
+      Nx.tensor(
         [
           [7.0, 4.0, 6.0],
           [6.0, 9.0, 5.0],
           [8.0, 4.0, 1.0]
         ]
-      >
+      )
   """
   deftransform transform(%__MODULE__{statistics: statistics, missing_values: missing_values}, x) do
     {num_rows, num_cols} = Nx.shape(x)

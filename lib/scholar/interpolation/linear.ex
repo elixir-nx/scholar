@@ -32,17 +32,15 @@ defmodule Scholar.Interpolation.Linear do
       iex> y = Nx.tensor([2.0, 0.0, 1.0])
       iex> Scholar.Interpolation.Linear.fit(x, y)
       %Scholar.Interpolation.Linear{
-        coefficients: #Nx.Tensor<
-          f32[2][2]
+        coefficients: Nx.tensor(
           [
             [-2.0, 2.0],
             [1.0, -1.0]
           ]
-        >,
-        x: #Nx.Tensor<
-          s64[2]
+        ),
+        x: Nx.tensor(
           [0, 1]
-        >
+        )
       }
   """
   defn fit(x, y) do
@@ -91,13 +89,12 @@ defmodule Scholar.Interpolation.Linear do
       iex> y = Nx.tensor([2.0, 0.0, 1.0])
       iex> model = Scholar.Interpolation.Linear.fit(x, y)
       iex> Scholar.Interpolation.Linear.predict(model, Nx.tensor([[1.0, 4.0], [3.0, 7.0]]))
-      #Nx.Tensor<
-        f32[2][2]
+      Nx.tensor(
         [
           [0.0, 3.0],
           [2.0, 6.0]
         ]
-      >
+      )
   """
   defn predict(%__MODULE__{x: x, coefficients: coefficients} = _model, target_x) do
     original_shape = Nx.shape(target_x)

@@ -22,31 +22,28 @@ defmodule Scholar.Metrics do
     ]
   ]
 
-  f1_score_schema = [
-    num_classes: [
-      required: true,
-      type: :pos_integer,
-      doc: "Number of classes contained in the input tensors"
-    ],
-    average: [
-      type: {:in, [:micro, :macro, :weighted, :none]},
-      default: :none,
-      doc: """
-      This determines the type of averaging performed on the data.
+  f1_score_schema =
+    general_schema ++
+      [
+        average: [
+          type: {:in, [:micro, :macro, :weighted, :none]},
+          default: :none,
+          doc: """
+          This determines the type of averaging performed on the data.
 
-      * `:macro` - Calculate metrics for each label, and find their unweighted mean.
-      This does not take label imbalance into account.
+          * `:macro` - Calculate metrics for each label, and find their unweighted mean.
+          This does not take label imbalance into account.
 
-      * `:weighted` - Calculate metrics for each label, and find their average weighted by
-      support (the number of true instances for each label).
+          * `:weighted` - Calculate metrics for each label, and find their average weighted by
+          support (the number of true instances for each label).
 
-      * `:micro` - Calculate metrics globally by counting the total true positives,
-      false negatives and false positives.
+          * `:micro` - Calculate metrics globally by counting the total true positives,
+          false negatives and false positives.
 
-      * `:none` - The f1 scores for each class are returned.
-      """
-    ]
-  ]
+          * `:none` - The f1 scores for each class are returned.
+          """
+        ]
+      ]
 
   @general_schema NimbleOptions.new!(general_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)

@@ -1,5 +1,5 @@
 defmodule Scholar.Metrics.ClusteringTest do
-  use Scholar.Case
+  use Scholar.Case, async: true
   alias Scholar.Metrics.Clustering
   doctest Clustering
 

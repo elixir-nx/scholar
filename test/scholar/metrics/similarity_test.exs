@@ -1,5 +1,5 @@
 defmodule Scholar.Metrics.SimilarityTest do
-  use ExUnit.Case
+  use Scholar.Case, async: true
   alias Scholar.Metrics.Similarity
   doctest Similarity
 
