@@ -135,7 +135,7 @@ defmodule Scholar.Linear.LogisticRegression do
   # Normalized softmax
 
   defn softmax(t) do
-    max = Nx.Defn.Kernel.stop_grad(Nx.reduce_max(t, axes: [-1], keep_axes: true))
+    max = stop_grad(Nx.reduce_max(t, axes: [-1], keep_axes: true))
     normalized_exp = (t - max) |> Nx.exp()
     normalized_exp / Nx.sum(normalized_exp, axes: [-1], keep_axes: true)
   end
