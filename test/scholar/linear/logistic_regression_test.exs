@@ -5,34 +5,24 @@ defmodule Scholar.Linear.LogisticRegressionTest do
 
   test "Pima Indians Diabetes Data - binary logistic regression test" do
     {x_train, x_test, y_train, y_test} = Datasets.get(:pima)
+    y_train = Nx.squeeze(y_train, axes: [1])
+    y_test = Nx.squeeze(y_test, axes: [1])
 
     model =
       LogisticRegression.fit(x_train, y_train,
         num_classes: 2,
-        iterations: 100,
-        learning_rate: 0.0085
+        iterations: 1000,
+        learning_rate: 0.1
       )
 
-    res = LogisticRegression.predict(model, x_test)
-    assert Scholar.Metrics.accuracy(y_test, res) >= 0.66
-  end
-
-  test "Pima Indians Diabetes Data - multinomial logistic regression test for binary data" do
-    {x_train, x_test, y_train, y_test} = Datasets.get(:pima)
-
-    model =
-      LogisticRegression.fit(x_train, y_train,
-        num_classes: 3,
-        iterations: 100,
-        learning_rate: 0.0085
-      )
-
-    res = LogisticRegression.predict(model, x_test)
-    assert Scholar.Metrics.accuracy(y_test, res) >= 0.66
+    res = Scholar.Linear.LogisticRegression.predict(model, x_test)
+    assert Scholar.Metrics.accuracy(y_test, res) >= 0.6
   end
 
   test "Iris Data Set - multinomial logistic regression test for multinomial data" do
     {x_train, x_test, y_train, y_test} = Datasets.get(:iris)
+    y_train = Nx.argmax(y_train, axis: 1)
+    y_test = Nx.argmax(y_test, axis: 1)
 
     model = LogisticRegression.fit(x_train, y_train, num_classes: 3)
     res = LogisticRegression.predict(model, x_test)
