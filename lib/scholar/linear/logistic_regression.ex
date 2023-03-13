@@ -124,12 +124,23 @@ defmodule Scholar.Linear.LogisticRegression do
   end
 
   defnp loss_fn(coeff, bias, xs, ys) do
-    probs = Axon.Activations.log_softmax(Nx.dot(xs, coeff) + bias)
+    probs = log_softmax(Nx.dot(xs, coeff) + bias)
     cross_entropy(probs, ys)
   end
 
   defnp grad_loss(coeff, bias, xs, ys) do
     grad({coeff, bias}, fn {coeff, bias} -> loss_fn(coeff, bias, xs, ys) end)
+  end
+
+  defnp log_softmax(x) do
+    shifted = x - stop_grad(Nx.reduce_max(x, axes: [-1], keep_axes: true))
+
+    shifted
+    |> Nx.exp()
+    |> Nx.sum(axes: [-1], keep_axes: true)
+    |> Nx.log()
+    |> Nx.negate()
+    |> Nx.add(shifted)
   end
 
   # Normalized softmax
