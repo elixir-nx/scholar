@@ -63,12 +63,12 @@ defmodule Scholar.Linear.LogisticRegression do
       %Scholar.Linear.LogisticRegression{
         coefficients: Nx.tensor(
           [
-            [2.0225090980529785, 0.0742921307682991],
-            [-0.02250923588871956, 1.9257065057754517]
+            [2.5531527996063232, -0.35652396082878113],
+            [-0.5531544089317322, 2.3565237522125244]
           ]
         ),
         bias: Nx.tensor(
-          [-0.11229748278856277, 0.11229748278856277]
+          [-0.28847914934158325, 0.28847917914390564]
         )
       }
   """
@@ -117,19 +117,40 @@ defmodule Scholar.Linear.LogisticRegression do
     }
   end
 
-  defnp cross_entropy(log_probs, targets) do
-    target_class = Nx.argmax(targets, axis: 1)
-    nll = Nx.take_along_axis(log_probs, Nx.new_axis(target_class, 1), axis: 1)
-    -Nx.mean(nll)
-  end
+  defnp softmax_cross_entropy_from_logits(y_true, y_pred, opts \\ []) do
+    opts = keyword!(opts, sparse: false)
 
-  defnp loss_fn(coeff, bias, xs, ys) do
-    probs = log_softmax(Nx.dot(xs, coeff) + bias)
-    cross_entropy(probs, ys)
+    if opts[:sparse] do
+      # If y_true is not at least rank 2, add a new axis to select
+      # one index per value along the batch axis
+      y_true =
+        if Nx.rank(y_true) < 2 do
+          Nx.new_axis(y_true, -1)
+        else
+          y_true
+        end
+
+      if Nx.axis_size(y_true, -1) != 1 do
+        raise ArgumentError,
+              "target values must have size 1 in last dimension," <>
+                " got shape #{inspect(Nx.shape(y_true))}"
+      end
+
+      # Finally compute the loss of values taken from targets
+      # along last axis
+      -Nx.sum(
+        Nx.take_along_axis(log_softmax(y_pred), y_true, axis: -1),
+        axes: [-1]
+      )
+    else
+      -Nx.sum(y_true * log_softmax(y_pred), axes: [-1])
+    end
   end
 
   defnp grad_loss(coeff, bias, xs, ys) do
-    grad({coeff, bias}, fn {coeff, bias} -> loss_fn(coeff, bias, xs, ys) end)
+    grad({coeff, bias}, fn {coeff, bias} ->
+      softmax_cross_entropy_from_logits(ys, Nx.dot(xs, coeff) + bias)
+    end)
   end
 
   defnp log_softmax(x) do
@@ -182,7 +203,7 @@ defmodule Scholar.Linear.LogisticRegression do
       #Nx.Tensor<
         f32[1][2]
         [
-          [1.650987258017267e-7, 0.9999998807907104]
+          [6.470913388456623e-11, 1.0]
         ]
       >
   """
