@@ -117,39 +117,9 @@ defmodule Scholar.Linear.LogisticRegression do
     }
   end
 
-  defnp softmax_cross_entropy_from_logits(y_true, y_pred, opts \\ []) do
-    opts = keyword!(opts, sparse: false)
-
-    if opts[:sparse] do
-      # If y_true is not at least rank 2, add a new axis to select
-      # one index per value along the batch axis
-      y_true =
-        if Nx.rank(y_true) < 2 do
-          Nx.new_axis(y_true, -1)
-        else
-          y_true
-        end
-
-      if Nx.axis_size(y_true, -1) != 1 do
-        raise ArgumentError,
-              "target values must have size 1 in last dimension," <>
-                " got shape #{inspect(Nx.shape(y_true))}"
-      end
-
-      # Finally compute the loss of values taken from targets
-      # along last axis
-      -Nx.sum(
-        Nx.take_along_axis(log_softmax(y_pred), y_true, axis: -1),
-        axes: [-1]
-      )
-    else
-      -Nx.sum(y_true * log_softmax(y_pred), axes: [-1])
-    end
-  end
-
   defnp grad_loss(coeff, bias, xs, ys) do
     grad({coeff, bias}, fn {coeff, bias} ->
-      softmax_cross_entropy_from_logits(ys, Nx.dot(xs, coeff) + bias)
+      -Nx.sum(ys * log_softmax(Nx.dot(xs, coeff) + bias), axes: [-1])
     end)
   end
 
