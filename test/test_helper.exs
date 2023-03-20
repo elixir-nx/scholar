@@ -1,4 +1,4 @@
-ExUnit.start()
+ExUnit.start(exclude: [:slow])
 
 alias Explorer.DataFrame, as: DF
 

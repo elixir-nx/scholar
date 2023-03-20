@@ -18,7 +18,6 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
     ],
     num_classes: [
       type: :pos_integer,
-      required: true,
       doc: "Number of classes in provided labels"
     ],
     weights: [
@@ -135,6 +134,11 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
     end
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
+
+    if opts[:num_classes] == nil and opts[:task] == :classification do
+      raise ArgumentError,
+            "expected :num_classes to be provided for task :classification"
+    end
 
     %__MODULE__{
       data: x,

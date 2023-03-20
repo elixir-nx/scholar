@@ -271,5 +271,16 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
                      KNearestNeighbors.fit(x, y, num_classes: 5)
                    end
     end
+
+    test ":num_classes not provided for task :classification" do
+      x = Nx.tensor([[1], [2], [3], [4], [5], [6]])
+      y = Nx.tensor([1, 2, 3, 4, 5, 6])
+
+      assert_raise ArgumentError,
+                   "expected :num_classes to be provided for task :classification",
+                   fn ->
+                     KNearestNeighbors.fit(x, y, task: :classification)
+                   end
+    end
   end
 end
