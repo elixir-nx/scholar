@@ -3,85 +3,93 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
   alias Scholar.Neighbors.KNearestNeighbors
   doctest KNearestNeighbors
 
-  @x Nx.tensor([
-       [3, 6, 7, 5],
-       [9, 8, 5, 4],
-       [4, 4, 4, 1],
-       [9, 4, 5, 6],
-       [6, 4, 5, 7],
-       [4, 5, 3, 3],
-       [4, 5, 7, 8],
-       [9, 4, 4, 5],
-       [8, 4, 3, 9],
-       [2, 8, 4, 4]
-     ])
+  defp x() do
+    Nx.tensor([
+      [3, 6, 7, 5],
+      [9, 8, 5, 4],
+      [4, 4, 4, 1],
+      [9, 4, 5, 6],
+      [6, 4, 5, 7],
+      [4, 5, 3, 3],
+      [4, 5, 7, 8],
+      [9, 4, 4, 5],
+      [8, 4, 3, 9],
+      [2, 8, 4, 4]
+    ])
+  end
 
-  @y Nx.tensor([0, 1, 1, 1, 1, 1, 1, 1, 0, 0])
+  defp y() do
+    Nx.tensor([0, 1, 1, 1, 1, 1, 1, 1, 0, 0])
+  end
 
-  @x_pred Nx.tensor([[4, 3, 8, 4], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
+  defp x_pred() do
+    Nx.tensor([[4, 3, 8, 4], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
+  end
 
   describe "fit" do
     test "fit with default parameters - :num_classes set to 2" do
-      model = KNearestNeighbors.fit(@x, @y, num_classes: 2)
+      model = KNearestNeighbors.fit(x(), y(), num_classes: 2)
 
       assert model.default_num_neighbors == 5
       assert model.weights == :uniform
       assert model.task == :classification
       assert model.metric == {:minkowski, 2}
       assert model.num_classes == 2
-      assert model.data == @x
-      assert model.labels == @y
+      assert model.data == x()
+      assert model.labels == y()
     end
   end
 
   describe "predict" do
     test "predict with default values - classification task" do
-      model = KNearestNeighbors.fit(@x, @y, num_classes: 2, num_neighbors: 3)
-      predictions = KNearestNeighbors.predict(model, @x_pred)
+      model = KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3)
+      predictions = KNearestNeighbors.predict(model, x_pred())
       assert predictions == Nx.tensor([1, 1, 0, 1])
     end
 
     test "predict with default values - regression task" do
-      model = KNearestNeighbors.fit(@x, @y, num_classes: 2, num_neighbors: 3, task: :regression)
-      predictions = KNearestNeighbors.predict(model, @x_pred)
+      model = KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3, task: :regression)
+      predictions = KNearestNeighbors.predict(model, x_pred())
       assert_all_close(predictions, Nx.tensor([0.66666667, 0.66666667, 0.33333333, 1.0]))
     end
 
     test "predict with weights set to :distance - classification task" do
-      model = KNearestNeighbors.fit(@x, @y, num_classes: 2, num_neighbors: 3, weights: :distance)
-      predictions = KNearestNeighbors.predict(model, @x_pred)
+      model =
+        KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3, weights: :distance)
+
+      predictions = KNearestNeighbors.predict(model, x_pred())
       assert predictions == Nx.tensor([1, 1, 0, 1])
     end
 
     test "predict with weights set to :distance - regression task" do
       model =
-        KNearestNeighbors.fit(@x, @y,
+        KNearestNeighbors.fit(x(), y(),
           num_classes: 2,
           num_neighbors: 3,
           task: :regression,
           weights: :distance
         )
 
-      predictions = KNearestNeighbors.predict(model, @x_pred)
+      predictions = KNearestNeighbors.predict(model, x_pred())
       assert_all_close(predictions, Nx.tensor([0.59648849, 0.68282796, 0.2716506, 1.0]))
     end
 
     test "predict with weights set to :distance and with specific metric - classification task" do
       model =
-        KNearestNeighbors.fit(@x, @y,
+        KNearestNeighbors.fit(x(), y(),
           num_classes: 2,
           num_neighbors: 3,
           weights: :distance,
           metric: {:minkowski, 1.5}
         )
 
-      predictions = KNearestNeighbors.predict(model, @x_pred)
+      predictions = KNearestNeighbors.predict(model, x_pred())
       assert predictions == Nx.tensor([1, 1, 0, 1])
     end
 
     test "predict with weights set to :distance and with specific metric - regression task" do
       model =
-        KNearestNeighbors.fit(@x, @y,
+        KNearestNeighbors.fit(x(), y(),
           num_classes: 2,
           num_neighbors: 3,
           task: :regression,
@@ -89,7 +97,7 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
           metric: :cosine
         )
 
-      predictions = KNearestNeighbors.predict(model, @x_pred)
+      predictions = KNearestNeighbors.predict(model, x_pred())
       assert_all_close(predictions, Nx.tensor([0.5736568, 0.427104, 0.33561941, 1.0]))
     end
 
@@ -98,7 +106,7 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
         Nx.tensor([[1, 4], [0, 3], [2, 5], [0, 3], [0, 3], [1, 4], [2, 5], [0, 3], [1, 4], [2, 5]])
 
       model =
-        KNearestNeighbors.fit(@x, y,
+        KNearestNeighbors.fit(x(), y,
           num_classes: 3,
           num_neighbors: 3,
           task: :regression,
@@ -106,7 +114,7 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
           metric: :cosine
         )
 
-      predictions = KNearestNeighbors.predict(model, @x_pred)
+      predictions = KNearestNeighbors.predict(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -121,7 +129,10 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
 
     test "predict with weights set to :distance and with x_pred that contains sample with zero-distance" do
       x_pred = Nx.tensor([[3, 6, 7, 5], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
-      model = KNearestNeighbors.fit(@x, @y, num_classes: 2, num_neighbors: 3, weights: :distance)
+
+      model =
+        KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3, weights: :distance)
+
       predictions = KNearestNeighbors.predict(model, x_pred)
       assert predictions == Nx.tensor([0, 1, 0, 1])
     end
@@ -129,8 +140,8 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
 
   describe "predict_proba" do
     test "predict_proba with default values" do
-      model = KNearestNeighbors.fit(@x, @y, num_classes: 2, num_neighbors: 3)
-      predictions = KNearestNeighbors.predict_proba(model, @x_pred)
+      model = KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3)
+      predictions = KNearestNeighbors.predict_proba(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -144,8 +155,10 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
     end
 
     test "predict_proba with weights set to :distance" do
-      model = KNearestNeighbors.fit(@x, @y, num_classes: 2, num_neighbors: 3, weights: :distance)
-      predictions = KNearestNeighbors.predict_proba(model, @x_pred)
+      model =
+        KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3, weights: :distance)
+
+      predictions = KNearestNeighbors.predict_proba(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -160,14 +173,14 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
 
     test "predict_proba with weights set to :distance and with specific metric" do
       model =
-        KNearestNeighbors.fit(@x, @y,
+        KNearestNeighbors.fit(x(), y(),
           num_classes: 2,
           num_neighbors: 3,
           weights: :distance,
           metric: {:minkowski, 1.5}
         )
 
-      predictions = KNearestNeighbors.predict_proba(model, @x_pred)
+      predictions = KNearestNeighbors.predict_proba(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -182,7 +195,10 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
 
     test "predict_proba with weights set to :distance and with x_pred that contains sample with zero-distance" do
       x_pred = Nx.tensor([[3, 6, 7, 5], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
-      model = KNearestNeighbors.fit(@x, @y, num_classes: 2, num_neighbors: 3, weights: :distance)
+
+      model =
+        KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3, weights: :distance)
+
       predictions = KNearestNeighbors.predict_proba(model, x_pred)
 
       assert_all_close(
@@ -199,8 +215,8 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
 
   describe "k_neighbors" do
     test "k_neighbors with default values" do
-      model = KNearestNeighbors.fit(@x, @y, num_classes: 2, num_neighbors: 3)
-      {distances, indices} = KNearestNeighbors.k_neighbors(model, @x_pred)
+      model = KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3)
+      {distances, indices} = KNearestNeighbors.k_neighbors(model, x_pred())
 
       assert_all_close(
         distances,
@@ -217,9 +233,13 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
 
     test "k_neighbors with specific metric" do
       model =
-        KNearestNeighbors.fit(@x, @y, num_classes: 2, num_neighbors: 3, metric: {:minkowski, 1.5})
+        KNearestNeighbors.fit(x(), y(),
+          num_classes: 2,
+          num_neighbors: 3,
+          metric: {:minkowski, 1.5}
+        )
 
-      {distances, indices} = KNearestNeighbors.k_neighbors(model, @x_pred)
+      {distances, indices} = KNearestNeighbors.k_neighbors(model, x_pred())
 
       assert_all_close(
         distances,
