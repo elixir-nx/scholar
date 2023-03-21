@@ -123,9 +123,8 @@ defmodule KFold do
     {splits_data, splits_labels, {test_data, test_labels}} =
       split_data(data, labels, num_splits, seed, train_size)
 
-    res =
-      Enum.reduce_while(0..(param_space_size * num_splits - 1), {0, []}, fn x,
-                                                                            {idx, vals} = acc ->
+    {_, res} =
+      Enum.reduce_while(0..(param_space_size * num_splits - 1), {0, []}, fn x, {idx, vals} ->
         if x < param_space_size * num_splits,
           do:
             {:cont,
@@ -497,7 +496,8 @@ best_neighbors = Nx.add(Nx.argmax(res), min_num_neighbors) |> Nx.to_number()
 Ok, let's test our best model on test data.
 
 ```elixir
-best_model = KNearestNeighbors.fit(train_data, train_labels, num_neighbors: 1, num_classes: 3)
+best_model =
+  KNearestNeighbors.fit(train_data, train_labels, num_neighbors: best_neighbors, num_classes: 3)
 
 final_prediction = KNearestNeighbors.predict(best_model, test_data)
 Scholar.Metrics.accuracy(test_labels, final_prediction)
@@ -723,7 +723,7 @@ Vl.new(
 best_neighbors = Nx.add(Nx.argmin(res), min_num_neighbors) |> Nx.to_number()
 ```
 
-The best value is 1. Now try this value to a final prediction.
+The best value is 2. Now try this value to a final prediction.
 
 ```elixir
 best_model =
@@ -744,7 +744,7 @@ Scholar.Metrics.mean_absolute_error(test_labels, final_prediction) |> Nx.sqrt()
 KNNs can be used for outlier detection. In this task, we will also use the Airfoil Self-Noise dataset. We will calculate for each sample a mean value of distances to the three closest points from dataset.
 
 ```elixir
-model = KNearestNeighbors.fit(x, y, num_neighbors: 3)
+model = KNearestNeighbors.fit(x, y, num_neighbors: 3, task: :regression)
 {num_samples, _} = Nx.shape(x)
 {distances, indices} = KNearestNeighbors.k_neighbors(model, x)
 
