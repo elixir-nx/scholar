@@ -4,7 +4,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
   doctest LogisticRegression
 
   test "Pima Indians Diabetes Data - binary logistic regression test" do
-    {x_train, x_test, y_train, y_test} = Datasets.get(:pima)
+    {x_train, x_test, y_train, y_test} = Datasets.get(:pima) |> Nx.backend_transfer(EXLA.Backend)
     y_train = Nx.squeeze(y_train, axes: [1])
     y_test = Nx.squeeze(y_test, axes: [1])
 
@@ -20,7 +20,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
   end
 
   test "Iris Data Set - multinomial logistic regression test for multinomial data" do
-    {x_train, x_test, y_train, y_test} = Datasets.get(:iris)
+    {x_train, x_test, y_train, y_test} = Datasets.get(:iris) |> Nx.backend_transfer(EXLA.Backend)
     y_train = Nx.argmax(y_train, axis: 1)
     y_test = Nx.argmax(y_test, axis: 1)
 
