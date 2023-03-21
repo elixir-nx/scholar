@@ -36,7 +36,11 @@ defmodule Scholar.MixProject do
       main: "Scholar",
       source_url: "https://github.com/elixir-nx/scholar",
       logo: "images/scholar_simplified.png",
-      extras: ["notebooks/k_means.livemd", "notebooks/linear_regression.livemd"],
+      extras: [
+        "notebooks/k_means.livemd",
+        "notebooks/linear_regression.livemd",
+        "notebooks/k_nearest_neighbors.livemd"
+      ],
       groups_for_modules: [
         Models: [
           Scholar.Cluster.KMeans,
