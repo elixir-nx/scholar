@@ -3,7 +3,6 @@ defmodule Scholar.Linear.LogisticRegressionTest do
   alias Scholar.Linear.LogisticRegression
   doctest LogisticRegression
 
-  @tag :slow
   test "Pima Indians Diabetes Data - binary logistic regression test" do
     {x_train, x_test, y_train, y_test} = Datasets.get(:pima)
     y_train = Nx.squeeze(y_train, axes: [1])
