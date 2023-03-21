@@ -123,7 +123,7 @@ defmodule KFold do
     {splits_data, splits_labels, {test_data, test_labels}} =
       split_data(data, labels, num_splits, seed, train_size)
 
-    {_, res} =
+    res =
       Enum.reduce_while(0..(param_space_size * num_splits - 1), {0, []}, fn x,
                                                                             {idx, vals} = acc ->
         if x < param_space_size * num_splits,
@@ -132,7 +132,7 @@ defmodule KFold do
              {idx + 1,
               [one_round_fold(x, splits_data, splits_labels, num_splits, task, num_classes)] ++
                 vals}},
-          else: {:halt, acc}
+          else: {:halt, vals}
       end)
 
     res = Enum.reverse(res)
