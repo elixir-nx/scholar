@@ -469,24 +469,10 @@ Vl.new(
   width: 630,
   height: 630
 )
-|> Vl.layers([
-  Vl.new()
-  |> Vl.data_from_values(results)
-  |> Vl.mark(:circle, color: :darkblue, size: 30)
-  |> Vl.encode_field(:x, "num_neighbors",
-    type: :quantitative,
-    scale: [domain: [1, 31]]
-  )
-  |> Vl.encode_field(:y, "accuracy",
-    type: :quantitative,
-    scale: [domain: [0.6, 0.8]]
-  ),
-  Vl.new()
-  |> Vl.data_from_values(results)
-  |> Vl.mark(:line, color: :gray, stroke_dash: [5, 5])
-  |> Vl.encode_field(:x, "num_neighbors", type: :quantitative, scale: [domain: [1, 31]])
-  |> Vl.encode_field(:y, "accuracy", type: :quantitative, scale: [domain: [0.6, 0.8]])
-])
+|> Vl.data_from_values(results)
+|> Vl.mark(:line, color: :gray, stroke_dash: [5, 5], point: true)
+|> Vl.encode_field(:x, "num_neighbors", type: :quantitative, scale: [domain: [1, 31]])
+|> Vl.encode_field(:y, "accuracy", type: :quantitative, scale: [domain: [0.6, 0.8]])
 ```
 
 ```elixir
@@ -699,24 +685,10 @@ Vl.new(
   width: 630,
   height: 630
 )
-|> Vl.layers([
-  Vl.new()
-  |> Vl.data_from_values(results)
-  |> Vl.mark(:circle, color: :darkblue, size: 30)
-  |> Vl.encode_field(:x, "num_neighbors",
-    type: :quantitative,
-    scale: [domain: [1, 31]]
-  )
-  |> Vl.encode_field(:y, "RMSE",
-    type: :quantitative,
-    scale: [domain: [1.2, 2.3]]
-  ),
-  Vl.new()
-  |> Vl.data_from_values(results)
-  |> Vl.mark(:line, color: :gray, stroke_dash: [5, 5])
-  |> Vl.encode_field(:x, "num_neighbors", type: :quantitative, scale: [domain: [1, 31]])
-  |> Vl.encode_field(:y, "RMSE", type: :quantitative, scale: [domain: [1.2, 2.3]])
-])
+|> Vl.data_from_values(results)
+|> Vl.mark(:line, color: :gray, stroke_dash: [5, 5], point: true)
+|> Vl.encode_field(:x, "num_neighbors", type: :quantitative, scale: [domain: [1, 31]])
+|> Vl.encode_field(:y, "RMSE", type: :quantitative, scale: [domain: [1.2, 2.3]])
 ```
 
 ```elixir
@@ -802,11 +774,24 @@ Vl.new(
   height: 630
 )
 |> Vl.data_from_values(data)
-|> Vl.mark(:circle)
-|> Vl.encode_field(:x, "frequency_log", type: :quantitative, scale: [domain: [4.5, 10.5]])
-|> Vl.encode_field(:y, "suction_side_displacement_thickness_log",
-  type: :quantitative,
-  scale: [domain: [-8.0, -2.5]]
-)
-|> Vl.encode_field(:color, "is_outlier")
+|> Vl.layers([
+  Vl.new()
+  |> Vl.param("brush", select: :interval)
+  |> Vl.mark(:circle)
+  |> Vl.encode_field(:x, "frequency_log", type: :quantitative, scale: [domain: [4.5, 10.5]])
+  |> Vl.encode_field(:y, "suction_side_displacement_thickness_log",
+    type: :quantitative,
+    scale: [domain: [-8.0, -2.5]]
+  )
+  |> Vl.encode(:color,
+    condition: [param: "brush", field: "is_outlier", type: :nominal],
+    value: :gray
+  ),
+  Vl.new()
+  |> Vl.transform(filter: [param: "brush", field: "is_outlier", equal: true])
+  |> Vl.mark(:text)
+  |> Vl.encode(:x, value: 11)
+  |> Vl.encode(:y, value: -3.5)
+  |> Vl.encode_field(:text, "filter", type: :quantitative, aggregate: :count)
+])
 ```
