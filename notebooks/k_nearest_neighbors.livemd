@@ -3,11 +3,9 @@
 ```elixir
 Mix.install([
   {:scholar, github: "elixir-nx/scholar"},
-  {:nx, "~> 0.5.2"},
   {:explorer, "~> 0.5.5"},
   {:exla, "~> 0.5.2"},
   {:req, "~> 0.3.6"},
-  {:vega_lite, "~> 0.1.6"},
   {:kino_vega_lite, "~> 0.1.8"},
   {:kino, "~> 0.9.0"},
   {:scidata, "~> 0.1.9"},
@@ -17,24 +15,33 @@ Mix.install([
 
 ## Setup
 
+We will extensively use VegaLite, Explorer, and Scholar throughout this guide, so let's define some aliases:
+
 ```elixir
 alias VegaLite, as: Vl
 require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 require Explorer.Query, as: Q
 alias Scholar.Neighbors.KNearestNeighbors
+```
+
+And let's configure `EXLA.Backend` as our default across the notebook and all branched sections:
+
+```elixir
 Nx.global_default_backend(EXLA.Backend)
 ```
 
-## Implementation of KFold Cross Validation
+## Introduction
 
-The concept of KFold will be explained later in the notebook. Below, you can find an implementation of the method:
+This notebook will cover the three primary applications of K-Nearest Neighbors: classification, regression, and
+anomaly detection.
+
+We will also use a different approach for this notebook. First, we are going to implement KFold, and then we will explain
+how it works later on. So feel free to skip the implementation below for now and come back later once you grasp the concepts.
 
 ```elixir
 defmodule KFold do
-  import Nx.Defn
-
-  deftransform split_data(data, labels, num_splits, seed, train_size) do
+  def split_data(data, labels, num_splits, seed, train_size) do
     key = Nx.Random.key(seed)
     {indices, _new_key} = Nx.Random.shuffle(key, Nx.iota(Nx.shape(labels)))
     data = Nx.take(data, indices)
@@ -97,11 +104,7 @@ defmodule KFold do
     end
   end
 
-  def apply_k_fold(
-        data,
-        labels,
-        opts
-      ) do
+  def apply_k_fold(data, labels, opts) do
     opts =
       Keyword.validate!(opts,
         param_space_size: 24,
@@ -144,17 +147,13 @@ defmodule KFold do
 end
 ```
 
-## Introduction
-
-This notebook will cover the three primary applications of K-Nearest Neighbors: classification, regression, and anomaly detection.
-
 <!-- livebook:{"branch_parent_index":1} -->
 
 ## Classification
 
 The process of classification using KNN is relatively straightforward. We start by working with a dataset where each sample is assigned a label. To predict the label of a new sample, we compute the distance between it and all the other samples in the dataset. Next, we select only the $k$ closest samples based on the distance metric, where $k$ is a user-defined parameter. We then examine the labels of these $k$ samples and choose the label that appears most frequently. This label is assigned as the predicted label for the new sample.
 
-Let's now try it out on a small example."
+Let's first grasp how kNN works visually with a small example.
 
 ```elixir
 data =
@@ -232,9 +231,9 @@ Vl.new(
 ])
 ```
 
-Note that the final prediction may vary depending on the value of $k$. For example, with $k = 3$, we would predict the green triangle as an orange square (1), whereas with $k = 5$, the purple circle (0) would be the final prediction. Let's now test this using Scholar code.
+Note that the final prediction may vary depending on the value of $k$. For example, with $k = 3$, we would predict the green triangle as an orange square (1), whereas with $k = 5$, the purple circle (0) would be the final prediction.
 
-First, we will define our data.
+Let's now test this using Scholar code. First, we will define our data.
 
 ```elixir
 x = Nx.stack(DF.discard(data, "label"), axis: 1)
@@ -300,7 +299,7 @@ Scholar.Stats.skew(tensor_data)
 
 As we can see, all features have positive skewness, which means that their distributions are more similar to the left plot in the picture above.
 
-Moving on to another statistical function, let's discuss *kurtosis*. Kurtosis measures how much data is located in the tails of distributions. If the kurtosis is greater than 0, the distribution is said to be "platykurtic," indicating that it has more extreme values than a univariate normal distribution. Similarly, a "leptokurtic" distribution has positive kurtosis and less extreme values, while a "mesokurtic" distribution has the same kurtosis as a normal distribution. Let's check the kurtosis of our dataset.
+Moving on to another statistical function, let's discuss *kurtosis*. Kurtosis measures how much data is located in the tails of distributions. If the kurtosis is greater than 0, the distribution is said to be "platykurtic", indicating that it has more extreme values than a univariate normal distribution. Similarly, a "leptokurtic" distribution has positive kurtosis and less extreme values, while a "mesokurtic" distribution has the same kurtosis as a normal distribution. Let's check the kurtosis of our dataset.
 
 | ![Skewness](https://vitalflux.com/wp-content/uploads/2023/01/fourth-moment-kurtosis-640x334.png) |
 | :----------------------------------------------------------------------------------------------: |
@@ -354,9 +353,7 @@ Vl.new(
 The previous analysis indicates that the alcohol feature has more extreme values than pH. Now, we will create a correlation heatmap to investigate the relationships between the features in the dataset.
 
 ```elixir
-correlation =
-  tensor_data
-  |> Scholar.Covariance.correlation_matrix(biased: true)
+correlation = Scholar.Covariance.correlation_matrix(tensor_data, biased: true)
 ```
 
 ```elixir
@@ -751,9 +748,7 @@ model = KNearestNeighbors.fit(x, y, num_neighbors: 3, task: :regression)
 mean_distances = Nx.mean(distances, axes: [1], keep_axes: true)
 
 samples_mean_distances =
-  Nx.concatenate([mean_distances, Nx.iota({num_samples, 1})],
-    axis: 1
-  )
+  Nx.concatenate([mean_distances, Nx.iota({num_samples, 1})], axis: 1)
   |> DF.new()
   |> DF.rename(["mean_distances", "index"])
 ```
