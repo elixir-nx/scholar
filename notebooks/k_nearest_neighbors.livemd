@@ -502,7 +502,7 @@ Scholar.Metrics.accuracy(test_labels, final_prediction)
 
 Pretty well, now let's move on to a regression task using KNN.
 
-<!-- livebook:{"branch_parent_index":0} -->
+<!-- livebook:{"branch_parent_index":1} -->
 
 ## Regression
 
