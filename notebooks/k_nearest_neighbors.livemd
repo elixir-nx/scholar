@@ -41,7 +41,12 @@ how it works later on. So feel free to skip the implementation below for now and
 
 ```elixir
 defmodule KFold do
-  def split_data(data, labels, num_splits, seed, train_size) do
+  import Nx.Defn
+
+  defnp split_data(data, labels, seed, opts) do
+    train_size = opts[:train_size]
+    num_splits = opts[:num_splits]
+    split_size = opts[:split_size]
     key = Nx.Random.key(seed)
     {indices, _new_key} = Nx.Random.shuffle(key, Nx.iota(Nx.shape(labels)))
     data = Nx.take(data, indices)
@@ -49,29 +54,60 @@ defmodule KFold do
 
     {train_data, test_data} = {data[[0..(train_size - 1), ..]], data[[train_size..-1//1, ..]]}
     {train_labels, test_labels} = {labels[[0..(train_size - 1)]], labels[[train_size..-1//1]]}
-    {num_samples, _} = Nx.shape(train_data)
-    split_size = div(num_samples, num_splits)
+    {_, num_features} = Nx.shape(train_data)
+    {labels_type, _} = Nx.type(labels)
 
-    splits_data =
-      for(
-        i <- 0..(num_splits - 1),
-        do: train_data[[(split_size * i)..min(num_samples - 1, split_size * (i + 1) - 1), ..]]
-      )
-      |> Nx.stack(axis: 0)
+    {_, _, _, splits_data, splits_labels} =
+      while {train_data, train_labels, i = 0,
+             s_data =
+               Nx.broadcast(Nx.tensor(0.0, type: :f64), {num_splits, split_size, num_features}),
+             s_labels =
+               Nx.broadcast(Nx.tensor(0, type: {labels_type, 64}), {num_splits, split_size})},
+            i < num_splits do
+        s_data =
+          Nx.put_slice(
+            s_data,
+            [i, 0, 0],
+            Nx.new_axis(
+              Nx.slice_along_axis(
+                train_data,
+                split_size * i,
+                split_size,
+                axis: 0
+              ),
+              0
+            )
+          )
 
-    splits_labels =
-      for(
-        i <- 0..(num_splits - 1),
-        do: train_labels[[(split_size * i)..min(num_samples - 1, split_size * (i + 1) - 1)]]
-      )
-      |> Nx.stack(axis: 0)
+        s_labels =
+          Nx.put_slice(
+            s_labels,
+            [i, 0],
+            Nx.new_axis(
+              Nx.slice_along_axis(
+                train_labels,
+                split_size * i,
+                split_size,
+                axis: 0
+              ),
+              0
+            )
+          )
+
+        {train_data, train_labels, i + 1, s_data, s_labels}
+      end
 
     {splits_data, splits_labels, {test_data, test_labels}}
   end
 
-  defp one_round_fold(i, splits_data, splits_labels, num_splits, task, num_classes) do
+  defnp one_round_fold(splits_data, splits_labels, opts) do
     {_, _, num_features} = Nx.shape(splits_data)
-    min_num_neighbors = 1
+
+    min_num_neighbors = opts[:min_num_neighbors]
+    i = opts[:i]
+    num_splits = opts[:num_splits]
+    task = opts[:task]
+    num_classes = opts[:num_classes]
 
     indices_train =
       Nx.add(
@@ -121,20 +157,28 @@ defmodule KFold do
     param_space_size = opts[:param_space_size]
     task = opts[:task]
     num_classes = opts[:num_classes]
-    {_, num_features} = Nx.shape(data)
+    {num_samples, num_features} = Nx.shape(data)
+    split_size = div(num_samples, num_splits)
 
     {splits_data, splits_labels, {test_data, test_labels}} =
-      split_data(data, labels, num_splits, seed, train_size)
+      split_data(data, labels, seed,
+        train_size: train_size,
+        num_splits: num_splits,
+        split_size: split_size
+      )
 
-    {_, res} =
-      Enum.reduce_while(0..(param_space_size * num_splits - 1), {0, []}, fn x, {idx, vals} ->
-        if x < param_space_size * num_splits,
-          do:
-            {:cont,
-             {idx + 1,
-              [one_round_fold(x, splits_data, splits_labels, num_splits, task, num_classes)] ++
-                vals}},
-          else: {:halt, vals}
+    res =
+      Enum.reduce(0..(param_space_size * num_splits - 1), [], fn i, vals ->
+        [
+          one_round_fold(splits_data, splits_labels,
+            min_num_neighbors: 1,
+            i: i,
+            num_splits: num_splits,
+            task: task,
+            num_classes: num_classes
+          )
+        ] ++
+          vals
       end)
 
     res = Enum.reverse(res)
@@ -469,7 +513,7 @@ Vl.new(
 |> Vl.data_from_values(results)
 |> Vl.mark(:line, color: :gray, stroke_dash: [5, 5], point: true)
 |> Vl.encode_field(:x, "num_neighbors", type: :quantitative, scale: [domain: [1, 31]])
-|> Vl.encode_field(:y, "accuracy", type: :quantitative, scale: [domain: [0.6, 0.8]])
+|> Vl.encode_field(:y, "accuracy", type: :quantitative, scale: [domain: [0.7, 0.85]])
 ```
 
 ```elixir
@@ -685,7 +729,7 @@ Vl.new(
 |> Vl.data_from_values(results)
 |> Vl.mark(:line, color: :gray, stroke_dash: [5, 5], point: true)
 |> Vl.encode_field(:x, "num_neighbors", type: :quantitative, scale: [domain: [1, 31]])
-|> Vl.encode_field(:y, "RMSE", type: :quantitative, scale: [domain: [1.2, 2.3]])
+|> Vl.encode_field(:y, "RMSE", type: :quantitative, scale: [domain: [0.9, 2.2]])
 ```
 
 ```elixir
