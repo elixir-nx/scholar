@@ -3,13 +3,13 @@
 ```elixir
 Mix.install([
   {:scholar, github: "elixir-nx/scholar"},
-  {:explorer, "~> 0.5.5"},
+  {:explorer, github: "elixir-nx/explorer", override: true},
   {:exla, "~> 0.5.2"},
   {:req, "~> 0.3.6"},
   {:kino_vega_lite, "~> 0.1.8"},
   {:kino, "~> 0.9.0"},
   {:scidata, "~> 0.1.9"},
-  {:kino_explorer, "~> 0.1.2"}
+  {:kino_explorer, "~> 0.1.2", override: true}
 ])
 ```
 
@@ -677,16 +677,13 @@ Vl.new(
 The Suction Side Displacement Thickness and Frequency features have asymmetric distributions with many observations having small values. To make these distributions less skewed, we will use the logarithms of these two features.
 
 ```elixir
-freq_log = data["frequency"] |> S.to_tensor() |> Nx.log() |> Nx.as_type(:f64)
-
-suction_side_displacement_thickness_log =
-  data["suction_side_displacement_thickness"] |> S.to_tensor() |> Nx.log() |> Nx.as_type(:f64)
+data =
+  DF.mutate(data,
+    frequency_log: log(frequency),
+    suction_side_displacement_thickness_log: log(suction_side_displacement_thickness)
+  )
 
 data = DF.discard(data, ["frequency", "suction_side_displacement_thickness"])
-data = DF.put(data, :frequency_log, freq_log)
-
-data =
-  DF.put(data, :suction_side_displacement_thickness_log, suction_side_displacement_thickness_log)
 ```
 
 Scale data and convert them to tensors.
