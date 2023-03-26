@@ -1,0 +1,836 @@
+# K-Nearest Neighbors
+
+```elixir
+Mix.install([
+  {:scholar, github: "elixir-nx/scholar"},
+  {:explorer, "~> 0.5.6"},
+  {:exla, "~> 0.5.2"},
+  {:req, "~> 0.3.6"},
+  {:kino_vega_lite, "~> 0.1.8"},
+  {:kino, "~> 0.9.0"},
+  {:scidata, "~> 0.1.9"},
+  {:kino_explorer, "~> 0.1.2"}
+])
+```
+
+## Setup
+
+We will extensively use VegaLite, Explorer, and Scholar throughout this guide, so let's define some aliases:
+
+```elixir
+alias VegaLite, as: Vl
+require Explorer.DataFrame, as: DF
+require Explorer.Series, as: S
+require Explorer.Query, as: Q
+alias Scholar.Neighbors.KNearestNeighbors
+```
+
+And let's configure `EXLA.Backend` as our default across the notebook and all branched sections:
+
+```elixir
+Nx.global_default_backend(EXLA.Backend)
+```
+
+## Introduction
+
+This notebook will cover the three primary applications of K-Nearest Neighbors: classification, regression, and
+anomaly detection.
+
+We will also use a different approach for this notebook. First, we are going to implement KFold, and then we will explain
+how it works later on. So feel free to skip the implementation below for now and come back later once you grasp the concepts.
+
+```elixir
+defmodule KFold do
+  import Nx.Defn
+
+  defnp split_data(data, labels, seed, opts) do
+    train_size = opts[:train_size]
+    num_splits = opts[:num_splits]
+    split_size = opts[:split_size]
+    key = Nx.Random.key(seed)
+    {indices, _new_key} = Nx.Random.shuffle(key, Nx.iota(Nx.shape(labels)))
+    data = Nx.take(data, indices)
+    labels = Nx.take(labels, indices)
+
+    {train_data, test_data} = {data[[0..(train_size - 1), ..]], data[[train_size..-1//1, ..]]}
+    {train_labels, test_labels} = {labels[[0..(train_size - 1)]], labels[[train_size..-1//1]]}
+    {_, num_features} = Nx.shape(train_data)
+    {labels_type, _} = Nx.type(labels)
+
+    {_, _, _, splits_data, splits_labels} =
+      while {train_data, train_labels, i = 0,
+             s_data =
+               Nx.broadcast(Nx.tensor(0.0, type: :f64), {num_splits, split_size, num_features}),
+             s_labels =
+               Nx.broadcast(Nx.tensor(0, type: {labels_type, 64}), {num_splits, split_size})},
+            i < num_splits do
+        s_data =
+          Nx.put_slice(
+            s_data,
+            [i, 0, 0],
+            Nx.new_axis(
+              Nx.slice_along_axis(
+                train_data,
+                split_size * i,
+                split_size,
+                axis: 0
+              ),
+              0
+            )
+          )
+
+        s_labels =
+          Nx.put_slice(
+            s_labels,
+            [i, 0],
+            Nx.new_axis(
+              Nx.slice_along_axis(
+                train_labels,
+                split_size * i,
+                split_size,
+                axis: 0
+              ),
+              0
+            )
+          )
+
+        {train_data, train_labels, i + 1, s_data, s_labels}
+      end
+
+    {splits_data, splits_labels, {test_data, test_labels}}
+  end
+
+  defnp one_round_fold(splits_data, splits_labels, opts) do
+    {_, _, num_features} = Nx.shape(splits_data)
+
+    min_num_neighbors = opts[:min_num_neighbors]
+    i = opts[:i]
+    num_splits = opts[:num_splits]
+    task = opts[:task]
+    num_classes = opts[:num_classes]
+
+    indices_train =
+      Nx.add(
+        Nx.iota({num_splits - 1}),
+        Nx.greater_equal(Nx.iota({num_splits - 1}), Nx.remainder(i, num_splits))
+      )
+
+    indices_val = Nx.remainder(i, num_splits)
+    train_data = Nx.take(splits_data, indices_train) |> Nx.reshape({:auto, num_features})
+    train_labels = Nx.take(splits_labels, indices_train) |> Nx.flatten()
+    val_data = Nx.take(splits_data, indices_val)
+    val_labels = Nx.take(splits_labels, indices_val)
+
+    model =
+      KNearestNeighbors.fit(train_data, train_labels,
+        num_classes: num_classes,
+        num_neighbors: div(i, num_splits) + min_num_neighbors,
+        task: task
+      )
+
+    prediction = KNearestNeighbors.predict(model, val_data)
+
+    case task do
+      :classification ->
+        Scholar.Metrics.accuracy(val_labels, prediction)
+
+      # RMSE
+      :regression ->
+        Scholar.Metrics.mean_absolute_error(val_labels, prediction) |> Nx.sqrt()
+    end
+  end
+
+  def apply_k_fold(data, labels, opts) do
+    opts =
+      Keyword.validate!(opts,
+        param_space_size: 24,
+        num_splits: 10,
+        seed: 43,
+        task: :classification,
+        train_size: 4000,
+        num_classes: 3
+      )
+
+    num_splits = opts[:num_splits]
+    train_size = opts[:train_size]
+    seed = opts[:seed]
+    param_space_size = opts[:param_space_size]
+    task = opts[:task]
+    num_classes = opts[:num_classes]
+    {num_samples, num_features} = Nx.shape(data)
+    split_size = div(num_samples, num_splits)
+
+    {splits_data, splits_labels, {test_data, test_labels}} =
+      split_data(data, labels, seed,
+        train_size: train_size,
+        num_splits: num_splits,
+        split_size: split_size
+      )
+
+    res =
+      Enum.reduce(0..(param_space_size * num_splits - 1), [], fn i, vals ->
+        [
+          one_round_fold(splits_data, splits_labels,
+            min_num_neighbors: 1,
+            i: i,
+            num_splits: num_splits,
+            task: task,
+            num_classes: num_classes
+          )
+        ] ++
+          vals
+      end)
+
+    res = Enum.reverse(res)
+    res = Nx.stack(res) |> Nx.reshape({param_space_size, num_splits})
+    res = Nx.mean(res, axes: [1]) |> Nx.as_type(:f64)
+
+    {res, Nx.reshape(splits_data, {:auto, num_features}), Nx.flatten(splits_labels), test_data,
+     test_labels}
+  end
+end
+```
+
+<!-- livebook:{"branch_parent_index":1} -->
+
+## Classification
+
+The process of classification using KNN is relatively straightforward. We start by working with a dataset where each sample is assigned a label. To predict the label of a new sample, we compute the distance between it and all the other samples in the dataset. Next, we select only the $k$ closest samples based on the distance metric, where $k$ is a user-defined parameter. We then examine the labels of these $k$ samples and choose the label that appears most frequently. This label is assigned as the predicted label for the new sample.
+
+Let's first grasp how kNN works visually with a small example.
+
+```elixir
+data =
+  DF.new(
+    x: [-1, 0.2, -0.5, -2.1, -2.3, -2.2, 0.1, 0.3, 0.4, 0.7, 1.3],
+    y: [-0.1, 0.4, 0.5, 0.4, 1.1, -1.0, -0.1, 0.2, 1.5, 1.6, 0.9],
+    label: [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+  )
+
+point_to_predict = DF.new(x: [0.0], y: [0.0])
+
+k_eq_3 = DF.new(x: [0.45], y: [0.45], name: ["k = 3"])
+k_eq_5 = DF.new(x: [0.72], y: [0.72], name: ["k = 5"])
+
+Vl.new(
+  title: [
+    text: "Scatterplot showing KNN prediction process",
+    offset: 20
+  ],
+  width: 630,
+  height: 630
+)
+|> Vl.layers([
+  Vl.new()
+  |> Vl.data_from_values(data)
+  |> Vl.mark(:point, size: 200, filled: true)
+  |> Vl.encode_field(:shape, "label", type: :nominal)
+  |> Vl.encode_field(:x, "x",
+    type: :quantitative,
+    scale: [domain: [-2.4, 1.5]],
+    axis: [grid: false]
+  )
+  |> Vl.encode_field(:y, "y",
+    type: :quantitative,
+    scale: [domain: [-1.2, 1.8]],
+    axis: [grid: false]
+  )
+  |> Vl.encode_field(:color, "label", type: :nominal, scale: [scheme: :plasma]),
+  Vl.new()
+  |> Vl.data_from_values(point_to_predict)
+  |> Vl.mark(:point, color: :green, size: 400, shape: :triangle, filled: true)
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative),
+  Vl.new()
+  |> Vl.data_from_values(point_to_predict)
+  |> Vl.mark(:arc,
+    outer_radius: 99,
+    inner_radius: 97,
+    color: :brown,
+    stroke_dash: [stroke_dash: [5, 5]]
+  )
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative),
+  Vl.new()
+  |> Vl.data_from_values(point_to_predict)
+  |> Vl.mark(:arc,
+    outer_radius: 170,
+    inner_radius: 168,
+    color: :blue
+  )
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative),
+  Vl.new()
+  |> Vl.data_from_values(k_eq_3)
+  |> Vl.mark(:text, size: 20, color: :brown)
+  |> Vl.encode_field(:text, "name", type: :nominal)
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative),
+  Vl.new()
+  |> Vl.data_from_values(k_eq_5)
+  |> Vl.mark(:text, size: 20, color: :blue)
+  |> Vl.encode_field(:text, "name", type: :nominal)
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative)
+])
+```
+
+Note that the final prediction may vary depending on the value of $k$. For example, with $k = 3$, we would predict the green triangle as an orange square (1), whereas with $k = 5$, the purple circle (0) would be the final prediction.
+
+Let's now test this using Scholar code. First, we will define our data.
+
+```elixir
+x = Nx.stack(DF.discard(data, "label"), axis: 1)
+labels = Nx.stack(DF.select(data, "label"), axis: 1) |> Nx.squeeze(axes: [1])
+x_pred = Nx.stack(point_to_predict, axis: 1)
+```
+
+Let's now try with $k = 3$.
+
+```elixir
+model = KNearestNeighbors.fit(x, labels, num_classes: 2, num_neighbors: 3)
+KNearestNeighbors.predict(model, x_pred)
+```
+
+And $k = 5$.
+
+```elixir
+model = KNearestNeighbors.fit(x, labels, num_classes: 2, num_neighbors: 5)
+KNearestNeighbors.predict(model, x_pred)
+```
+
+As we can see, the predictions match our intuition from analyzing the plot.
+
+Now, let's try KNN on a more complicated dataset: the Wine dataset. Our task will be to classify the quality of the wine. Before we load the dataset into `Explorer.DataFrame` for more efficient exploration, let's check some more detailed information about the dataset.
+
+```elixir
+info =
+  Req.get!(
+    "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality.names"
+  ).body
+
+Kino.Markdown.new(info)
+```
+
+```elixir
+data =
+  Req.get!(
+    "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-white.csv"
+  ).body
+
+df_data = DF.load_csv!(data, delimiter: ";", dtypes: %{"total sulfur dioxide": :float})
+tensor_data = Nx.stack(df_data, axis: 1)
+df_data
+```
+
+As we can see, there are no null values in the dataset. Now, let's check the size of the dataset.
+
+```elixir
+DF.shape(df_data)
+```
+
+Let's check some statistical properties of the dataset. We will start with *skewness*, which measures the asymmetry of the probability distribution of a random variable about its mean. To better understand this concept, please take a look at the picture below.
+
+| ![Skewness](https://upload.wikimedia.org/wikipedia/commons/c/cc/Relationship_between_mean_and_median_under_different_skewness.png) |
+| :--------------------------------------------------------------------------------------------------------------------------------: |
+| Figure 1: A general relationship of mean and median under differently skewed unimodal distribution                                 |
+
+Now, let's check the skewness of our dataset using Scholar.Stats.skew function.
+
+```elixir
+Scholar.Stats.skew(tensor_data)
+```
+
+As we can see, all features have positive skewness, which means that their distributions are more similar to the left plot in the picture above.
+
+Moving on to another statistical function, let's discuss *kurtosis*. Kurtosis measures how much data is located in the tails of distributions. If the kurtosis is greater than 0, the distribution is said to be "platykurtic", indicating that it has more extreme values than a univariate normal distribution. Similarly, a "leptokurtic" distribution has positive kurtosis and less extreme values, while a "mesokurtic" distribution has the same kurtosis as a normal distribution. Let's check the kurtosis of our dataset.
+
+| ![Skewness](https://vitalflux.com/wp-content/uploads/2023/01/fourth-moment-kurtosis-640x334.png) |
+| :----------------------------------------------------------------------------------------------: |
+| Figure 2: Plot showing Platykurtic, Mesokurtic and Leptokurtic distributions                     |
+
+```elixir
+Scholar.Stats.kurtosis(tensor_data)
+```
+
+Almost all features have positive kurtosis (they are leptokurtic). `alcohol` has negative excess kurtosis, which means it is platykurtic. Below there is Kernel Density Estimate (KDE) to check how exactly this tail look like.
+
+```elixir
+Vl.new(
+  title: [
+    text: "KDE plots of Features",
+    offset: 20
+  ],
+  width: 700,
+  height: 300
+)
+|> Vl.concat([
+  Vl.new(
+    title: [
+      text: "KDE plot of alcohol feature",
+      offset: 20
+    ],
+    width: 350,
+    height: 300
+  )
+  |> Vl.data_from_values(df_data)
+  |> Vl.transform(density: "alcohol")
+  |> Vl.mark(:area, color: "lightblue")
+  |> Vl.encode_field(:x, "value", type: :quantitative, title: "% of alcohol")
+  |> Vl.encode_field(:y, "density", type: :quantitative),
+  Vl.new(
+    title: [
+      text: "KDE plot of pH feature",
+      offset: 20
+    ],
+    width: 350,
+    height: 300
+  )
+  |> Vl.data_from_values(df_data)
+  |> Vl.transform(density: "pH")
+  |> Vl.mark(:area, color: "lightgreen")
+  |> Vl.encode_field(:x, "value", type: :quantitative, title: "pH")
+  |> Vl.encode_field(:y, "density", type: :quantitative)
+])
+```
+
+The previous analysis indicates that the alcohol feature has more extreme values than pH. Now, we will create a correlation heatmap to investigate the relationships between the features in the dataset.
+
+```elixir
+correlation = Scholar.Covariance.correlation_matrix(tensor_data, biased: true)
+```
+
+```elixir
+{corr_size, _} = Nx.shape(correlation)
+correlation_list = Nx.to_flat_list(correlation)
+column_names = DF.names(df_data)
+
+width = 630
+height = 630
+
+corr_to_plot =
+  DF.new(
+    x: List.flatten(List.duplicate(column_names, corr_size)),
+    y: List.flatten(for name <- column_names, do: List.duplicate(name, corr_size)),
+    corr_val: Enum.map(correlation_list, fn x -> Float.round(x, 2) end)
+  )
+
+Vl.new(
+  title: [
+    text: "Correlation Matrix for Wine Dataset",
+    offset: 20
+  ],
+  width: width,
+  height: height
+)
+|> Vl.config(axis: [grid: true, tickband: :extent])
+|> Vl.layers([
+  Vl.new()
+  |> Vl.data_from_values(corr_to_plot)
+  |> Vl.mark(:rect)
+  |> Vl.encode_field(:x, "x", type: :nominal, title: "", sort: false)
+  |> Vl.encode_field(:y, "y", type: :nominal, title: "", sort: false)
+  |> Vl.encode_field(:color, "corr_val", type: :quantitative, scale: [scheme: :inferno]),
+  Vl.new()
+  |> Vl.data_from_values(corr_to_plot)
+  |> Vl.mark(:text)
+  |> Vl.encode_field(:x, "x", type: :nominal, title: "")
+  |> Vl.encode_field(:y, "y", type: :nominal, title: "")
+  |> Vl.encode_field(:text, "corr_val", type: :quantitative)
+  |> Vl.encode_field(:color, "corr_val",
+    type: :quantitative,
+    condition: [
+      [test: "datum['corr_val'] < 0", value: :white],
+      [test: "datum['corr_val'] >= 0", value: :black]
+    ]
+  )
+])
+```
+
+We can observe from the correlation heatmap that there is no strong correlation between the quality of wine and any single feature. However, we can see that there are two strong correlations: density is proportional to the amount of residual sugar and inversely proportional to the amount of alcohol.
+
+Given that citric acid, free sulfur dioxide, and sulphates are not strongly correlated with the quality of wine or any other features, we can drop them from the dataset to simplify our analysis.
+
+Before dropping the features, it is important to consider their potential impact on the final prediction. Even if they are not strongly correlated with the target variable (quality), they may still provide useful information for the KNN algorithm. It is recommended to experiment with different feature subsets to find the optimal combination for the given task. You can try running the notebook again without dropping these features.
+
+```elixir
+tensor_data =
+  DF.discard(df_data, ["citric acid", "free sulfur dioxide", "sulphates"]) |> Nx.stack(axis: 1)
+```
+
+The next step will be splitting the dataset into features and labels. To make the classification task easier, we will convert the labels into three categories: "poor," "medium," and "excellent". Additionally, we will normalize the features using the standard scaler.
+
+```elixir
+x = tensor_data[[.., 0..-2//1]]
+y = tensor_data[[.., -1]]
+
+# convert quality into labels quality: (0, 4) poor => 0, (5, 6) medium => 1, (7, 10) excelent => 2
+
+poor_and_better_mask = Nx.greater(y, 4)
+medium_and_better_mask = Nx.greater(y, 6)
+
+y = Nx.select(poor_and_better_mask, Nx.select(medium_and_better_mask, 2, 1), 0)
+x = Scholar.Preprocessing.standard_scale(x)
+
+{x, y}
+```
+
+After performing EDA on our wine dataset, we can now train our KNN model and make predictions. However, the question arises as to what value of neighbors should we choose for the KNN model. To answer this question, we will use *K-Fold Cross-Validation* (specifically, Nested Cross-Validation). K-Fold is a procedure performed on the training dataset where we split the data into k smaller subsets (folds). For each tested parameter value, we run k separate trainings and testings, where one fold is the validation (test) dataset, and the other k-1 folds are the training dataset. To make this process clear, there is a GIF below that explains it visually.
+
+| ![KFold](https://upload.wikimedia.org/wikipedia/commons/4/4b/KfoldCV.gif)                                                                                    |
+| :----------------------------------------------------------------------------------------------------------------------------------------------------------: |
+| Figure 3: Illustration of KFold Cross-Validation when n = 12 observations and k = 3. After data is shuffled, a total of 3 models will be trained and tested. |
+
+<!-- livebook:{"break_markdown":true} -->
+
+The code implementing KFold cross-validation is located at the beginning of the notebook.
+
+```elixir
+min_num_neighbors = 1
+param_space_size = 30
+
+# K in KFold
+k = 10
+
+{res, train_data, train_labels, test_data, test_labels} =
+  KFold.apply_k_fold(x, y, param_space_size: param_space_size, num_splits: k)
+
+results =
+  DF.new(accuracy: res, num_neighbors: Nx.add(Nx.iota({param_space_size}), min_num_neighbors))
+```
+
+To potentially improve our KNN model's performance, we can try setting the weights parameter to `:distance` in `KFold.one_round_fold()`. Next, we can visualize the results of KFold using a plot.
+
+```elixir
+Vl.new(
+  title: [
+    text: "Accuracy vs Number of Neighbors",
+    offset: 20
+  ],
+  width: 630,
+  height: 630
+)
+|> Vl.data_from_values(results)
+|> Vl.mark(:line, color: :gray, stroke_dash: [5, 5], point: true)
+|> Vl.encode_field(:x, "num_neighbors", type: :quantitative, scale: [domain: [1, 31]])
+|> Vl.encode_field(:y, "accuracy", type: :quantitative, scale: [domain: [0.7, 0.85]])
+```
+
+```elixir
+best_neighbors = Nx.add(Nx.argmax(res), min_num_neighbors) |> Nx.to_number()
+```
+
+Ok, let's test our best model on test data.
+
+```elixir
+best_model =
+  KNearestNeighbors.fit(train_data, train_labels, num_neighbors: best_neighbors, num_classes: 3)
+
+final_prediction = KNearestNeighbors.predict(best_model, test_data)
+Scholar.Metrics.accuracy(test_labels, final_prediction)
+```
+
+Pretty well, now let's move on to a regression task using KNN.
+
+<!-- livebook:{"branch_parent_index":1} -->
+
+## Regression
+
+KNNs can also be used in regression tasks. We will explore this on a dataset about Airfoil Self-Noise. Here's a brief description of the dataset:
+
+**Data Set Information**:
+
+The NASA data set comprises different size NACA 0012 airfoils at various wind tunnel speeds and angles of attack. The span of the airfoil and the observer position were the same in all of the experiments.
+
+**Attribute Information**:
+
+This problem has the following inputs:
+
+1. Frequency, in Hertzs.
+2. Angle of attack, in degrees.
+3. Chord length, in meters.
+4. Free-stream velocity, in meters per second.
+5. Suction side displacement thickness, in meters.
+
+The only output is:
+
+1. Scaled sound pressure level, in decibels.
+
+Dua, D. and Graff, C. (2019). UCI Machine Learning Repository [http://archive.ics.uci.edu/ml]. Irvine, CA: University of California, School of Information and Computer Science.
+
+```elixir
+dataset =
+  Req.get!(
+    "https://archive.ics.uci.edu/ml/machine-learning-databases/00291/airfoil_self_noise.dat"
+  ).body
+
+column_names = [
+  "frequency",
+  "angle_of_attack",
+  "chord_length",
+  "free_stream_velocity",
+  "suction_side_displacement_thickness",
+  "scaled_sound_pressure_level"
+]
+
+dataset_df = DF.load_csv!(dataset, header: false, delimiter: "\t") |> DF.rename(column_names)
+labels = DF.select(dataset_df, "scaled_sound_pressure_level")
+data = DF.discard(dataset_df, "scaled_sound_pressure_level")
+```
+
+Below are the KDE plots of the dataset's features. We will analyze them in the next step.
+
+```elixir
+Vl.new(
+  title: [
+    text: "KDE plots of Features",
+    offset: 20
+  ]
+)
+|> Vl.concat(
+  [
+    Vl.new()
+    |> Vl.concat(
+      [
+        Vl.new(
+          title: [
+            text: "KDE plot of Frequency feature",
+            offset: 20
+          ],
+          width: 350,
+          height: 300
+        )
+        |> Vl.data_from_values(data)
+        |> Vl.transform(density: "frequency")
+        |> Vl.mark(:area, color: "lightblue")
+        |> Vl.encode_field(:x, "value", type: :quantitative, title: "Frequency (Hz)")
+        |> Vl.encode_field(:y, "density", type: :quantitative),
+        Vl.new(
+          title: [
+            text: "KDE plot of Angle of Attack feature",
+            offset: 20
+          ],
+          width: 350,
+          height: 300
+        )
+        |> Vl.data_from_values(data)
+        |> Vl.transform(density: "angle_of_attack")
+        |> Vl.mark(:area, color: "lightgreen")
+        |> Vl.encode_field(:x, "value", type: :quantitative, title: "Angle of attack")
+        |> Vl.encode_field(:y, "density", type: :quantitative),
+        Vl.new(
+          title: [
+            text: "KDE plot of Chord length feature",
+            offset: 20
+          ],
+          width: 350,
+          height: 300
+        )
+        |> Vl.data_from_values(data)
+        |> Vl.transform(density: "chord_length")
+        |> Vl.mark(:area, color: "pink")
+        |> Vl.encode_field(:x, "value", type: :quantitative, title: "Chord length")
+        |> Vl.encode_field(:y, "density", type: :quantitative)
+      ],
+      :vertical
+    ),
+    Vl.new()
+    |> Vl.concat(
+      [
+        Vl.new(
+          title: [
+            text: "KDE plot of Free Stream Velocity feature",
+            offset: 20
+          ],
+          width: 350,
+          height: 300
+        )
+        |> Vl.data_from_values(data)
+        |> Vl.transform(density: "free_stream_velocity")
+        |> Vl.mark(:area, color: "purple")
+        |> Vl.encode_field(:x, "value", type: :quantitative, title: "Free-stream velocity")
+        |> Vl.encode_field(:y, "density", type: :quantitative),
+        Vl.new(
+          title: [
+            text: ["KDE plot of Suction Side Displacement", "Thickness feature"],
+            offset: 20
+          ],
+          width: 350,
+          height: 300
+        )
+        |> Vl.data_from_values(data)
+        |> Vl.transform(density: "suction_side_displacement_thickness")
+        |> Vl.mark(:area, color: "red")
+        |> Vl.encode_field(:x, "value",
+          type: :quantitative,
+          title: "Suction Side Displacement Thickness"
+        )
+        |> Vl.encode_field(:y, "density", type: :quantitative)
+      ],
+      :vertical
+    )
+  ],
+  :horizontal
+)
+```
+
+The Suction Side Displacement Thickness and Frequency features have asymmetric distributions with many observations having small values. To make these distributions less skewed, we will use the logarithms of these two features.
+
+```elixir
+data =
+  DF.mutate(data,
+    frequency_log: log(frequency),
+    suction_side_displacement_thickness_log: log(suction_side_displacement_thickness)
+  )
+
+data = DF.discard(data, ["frequency", "suction_side_displacement_thickness"])
+```
+
+Scale data and convert them to tensors.
+
+```elixir
+x = Nx.stack(data, axis: 1) |> Scholar.Preprocessing.standard_scale()
+y = Nx.stack(labels, axis: 1) |> Nx.squeeze(axes: [1])
+{x, y}
+```
+
+In this section, we will apply a similar KFold procedure as in the classification section to find the best value for the `:num_neighbors` parameter in the KNN regression model.
+
+```elixir
+min_num_neighbors = 1
+param_space_size = 30
+
+# K in KFold
+k = 10
+
+{res, train_data, train_labels, test_data, test_labels} =
+  KFold.apply_k_fold(x, y,
+    param_space_size: param_space_size,
+    num_splits: k,
+    train_size: 1100,
+    task: :regression
+  )
+
+results = DF.new(RMSE: res, num_neighbors: Nx.add(Nx.iota({param_space_size}), min_num_neighbors))
+```
+
+```elixir
+Vl.new(
+  title: [
+    text: "RMSE vs. Number of Neighbors",
+    offset: 20
+  ],
+  width: 630,
+  height: 630
+)
+|> Vl.data_from_values(results)
+|> Vl.mark(:line, color: :gray, stroke_dash: [5, 5], point: true)
+|> Vl.encode_field(:x, "num_neighbors", type: :quantitative, scale: [domain: [1, 31]])
+|> Vl.encode_field(:y, "RMSE", type: :quantitative, scale: [domain: [0.9, 2.2]])
+```
+
+```elixir
+best_neighbors = Nx.add(Nx.argmin(res), min_num_neighbors) |> Nx.to_number()
+```
+
+The best value is 2. Now try this value to a final prediction.
+
+```elixir
+best_model =
+  KNearestNeighbors.fit(train_data, train_labels,
+    num_neighbors: best_neighbors,
+    num_classes: 3,
+    task: :regression
+  )
+
+final_prediction = KNearestNeighbors.predict(best_model, test_data)
+Scholar.Metrics.mean_absolute_error(test_labels, final_prediction) |> Nx.sqrt()
+```
+
+### Outliers prediction
+
+<!-- livebook:{"break_markdown":true} -->
+
+KNNs can be used for outlier detection. In this task, we will also use the Airfoil Self-Noise dataset. We will calculate for each sample a mean value of distances to the three closest points from dataset.
+
+```elixir
+model = KNearestNeighbors.fit(x, y, num_neighbors: 3, task: :regression)
+{num_samples, _} = Nx.shape(x)
+{distances, indices} = KNearestNeighbors.k_neighbors(model, x)
+
+mean_distances = Nx.mean(distances, axes: [1], keep_axes: true)
+
+samples_mean_distances =
+  Nx.concatenate([mean_distances, Nx.iota({num_samples, 1})], axis: 1)
+  |> DF.new()
+  |> DF.rename(["mean_distances", "index"])
+```
+
+Now, plot the mean values of distances.
+
+```elixir
+Vl.new(
+  title: [
+    text: "Plot to check anomalies",
+    offset: 20
+  ],
+  width: 800,
+  height: 630
+)
+|> Vl.layers([
+  Vl.new()
+  |> Vl.data_from_values(samples_mean_distances)
+  |> Vl.mark(:line, color: :jet)
+  |> Vl.encode_field(:x, "index", type: :quantitative, scale: [domain: [0, 1510]])
+  |> Vl.encode_field(:y, "mean_distances",
+    type: :quantitative,
+    title: "Mean distance to clusters",
+    scale: [domain: [0.0065, 0.012]]
+  ),
+  Vl.new()
+  |> Vl.data_from_values(DF.new(y: [0.009]))
+  |> Vl.mark(:rule, color: :red, stroke_dash: [5, 5])
+  |> Vl.encode_field(:y, "y", type: :quantitative, title: "")
+])
+```
+
+We can assume, that samples with average distance bigger than 0.009 can be treated as outliers.
+
+```elixir
+data = DF.put(data, :is_outlier, Nx.greater(mean_distances, 0.009))
+```
+
+```elixir
+Vl.new(
+  title: [
+    text: "Logarithm of Frequency vs Logarithm of Suction Side Displacement Thickness",
+    offset: 20
+  ],
+  width: 630,
+  height: 630
+)
+|> Vl.data_from_values(data)
+|> Vl.layers([
+  Vl.new()
+  |> Vl.param("brush", select: :interval)
+  |> Vl.mark(:circle)
+  |> Vl.encode_field(:x, "frequency_log", type: :quantitative, scale: [domain: [4.5, 10.5]])
+  |> Vl.encode_field(:y, "suction_side_displacement_thickness_log",
+    type: :quantitative,
+    scale: [domain: [-8.0, -2.5]]
+  )
+  |> Vl.encode(:color,
+    condition: [param: "brush", field: "is_outlier", type: :nominal],
+    value: :gray
+  ),
+  Vl.new()
+  |> Vl.transform(filter: [param: "brush", field: "is_outlier", equal: true])
+  |> Vl.mark(:text)
+  |> Vl.encode(:x, value: 11)
+  |> Vl.encode(:y, value: -3.5)
+  |> Vl.encode_field(:text, "filter",
+    type: :quantitative,
+    aggregate: :count
+  )
+])
+```
