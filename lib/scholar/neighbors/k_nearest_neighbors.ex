@@ -191,7 +191,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
                   pred_labels,
                   check_weights(neigh_distances)
                   |> Nx.new_axis(-1)
-                  |> Nx.broadcast(Nx.shape(pred_labels)),
+                  |> Nx.broadcast(pred_labels),
                   axes: [1]
                 ),
               else: Nx.weighted_mean(pred_labels, check_weights(neigh_distances), axes: [1])
@@ -248,7 +248,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
     weights_vals =
       case weights do
         :distance -> check_weights(neigh_distances)
-        :uniform -> Nx.broadcast(1.0, Nx.shape(neigh_indices))
+        :uniform -> Nx.broadcast(1.0, neigh_indices)
       end
 
     indices =
@@ -327,7 +327,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
   defnp check_weights(weights) do
     zero_mask = weights == 0
-    zero_rows = zero_mask |> Nx.any(axes: [1], keep_axes: true) |> Nx.broadcast(Nx.shape(weights))
+    zero_rows = zero_mask |> Nx.any(axes: [1], keep_axes: true) |> Nx.broadcast(weights)
     weights = Nx.select(zero_mask, 1, weights)
     weights_inv = 1 / weights
     Nx.select(zero_rows, Nx.select(zero_mask, 1, 0), weights_inv)
@@ -389,7 +389,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
     to_add = Nx.flatten(weights)
 
     indices =
-      (indices + num_features * Nx.iota({num_samples, num_features}, axis: 0))
+      (indices + num_features * Nx.iota(tensor_shape, axis: 0))
       |> Nx.flatten()
 
     weights = Nx.take(to_add, indices)
@@ -401,7 +401,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
     indices =
       largest_group_indices
-      |> Nx.broadcast(Nx.shape(group_indices))
+      |> Nx.broadcast(group_indices)
       |> Nx.equal(group_indices)
       |> Nx.argmax(axis: axis, keep_axis: true)
 

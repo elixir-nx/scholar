@@ -3,6 +3,7 @@ defmodule Scholar.Impute.SimpleImputer do
   Univariate imputer for completing missing values with simple strategies.
   """
   import Nx.Defn
+  import Scholar.Shared
 
   @derive {Nx.Container, keep: [:missing_values], containers: [:statistics]}
   defstruct [:statistics, :missing_values]
@@ -84,13 +85,13 @@ defmodule Scholar.Impute.SimpleImputer do
             ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array"
     end
 
-    {type, _num_bits} = Nx.type(x)
+    {type, _num_bits} = x_type = Nx.type(x)
 
     x =
       cond do
         validated_opts[:strategy] == :constant and is_float(validated_opts[:fill_value]) and
             type in [:s, :u] ->
-          Nx.as_type(x, :f32)
+          to_float(x)
 
         validated_opts[:strategy] == :constant and is_integer(validated_opts[:fill_value]) and
             type in [:f, :bf] ->
@@ -102,8 +103,6 @@ defmodule Scholar.Impute.SimpleImputer do
         true ->
           x
       end
-
-    x_type = Nx.type(x)
 
     x =
       if validated_opts[:missing_values] != :nan,
@@ -156,8 +155,8 @@ defmodule Scholar.Impute.SimpleImputer do
     indices = Nx.broadcast(num_rows - 1, {num_cols})
     indices = indices - Nx.sum(Nx.is_nan(x), axes: [axis])
     half_indices = indices / 2
-    floor = Nx.as_type(Nx.floor(half_indices), :s64) |> Nx.new_axis(0)
-    ceil = Nx.as_type(Nx.ceil(half_indices), :s64) |> Nx.new_axis(0)
+    floor = Nx.as_type(Nx.floor(half_indices), :s64) |> Nx.new_axis(axis)
+    ceil = Nx.as_type(Nx.ceil(half_indices), :s64) |> Nx.new_axis(axis)
     nums1 = Nx.take_along_axis(x, floor, axis: axis)
     nums2 = Nx.take_along_axis(x, ceil, axis: axis)
     ((nums1 + nums2) / 2) |> Nx.squeeze()
@@ -182,10 +181,8 @@ defmodule Scholar.Impute.SimpleImputer do
       Nx.concatenate(
         [
           Nx.broadcast(0, {1, num_cols}),
-          Nx.not_equal(
-            Nx.slice_along_axis(sorted, 0, num_rows - 1, axis: axis),
+          Nx.slice_along_axis(sorted, 0, num_rows - 1, axis: axis) !=
             Nx.slice_along_axis(sorted, 1, num_rows - 1, axis: axis)
-          )
         ],
         axis: axis
       )
@@ -207,7 +204,7 @@ defmodule Scholar.Impute.SimpleImputer do
 
     indices =
       largest_group_indices
-      |> Nx.broadcast(Nx.shape(group_indices))
+      |> Nx.broadcast(group_indices)
       |> Nx.equal(group_indices)
       |> Nx.argmax(axis: axis, keep_axis: true)
 
@@ -247,8 +244,7 @@ defmodule Scholar.Impute.SimpleImputer do
       )
   """
   deftransform transform(%__MODULE__{statistics: statistics, missing_values: missing_values}, x) do
-    {num_rows, num_cols} = Nx.shape(x)
-    impute_values = Nx.new_axis(statistics, 0) |> Nx.broadcast({num_rows, num_cols})
+    impute_values = Nx.new_axis(statistics, 0) |> Nx.broadcast(x)
     mask = if missing_values == :nan, do: Nx.is_nan(x), else: Nx.equal(x, missing_values)
     Nx.select(mask, impute_values, x)
   end

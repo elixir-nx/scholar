@@ -98,12 +98,12 @@ defmodule Scholar.Metrics.Clustering do
 
     x_a =
       x
-      |> Nx.reshape({1, num_samples, num_features})
+      |> Nx.new_axis(0)
       |> Nx.broadcast({num_samples, num_samples, num_features})
 
     x_b =
       x
-      |> Nx.reshape({num_samples, 1, num_features})
+      |> Nx.new_axis(1)
       |> Nx.broadcast({num_samples, num_samples, num_features})
 
     pairwise_dist = Scholar.Metrics.Distance.euclidean(x_a, x_b, axes: [2])
