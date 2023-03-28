@@ -70,11 +70,8 @@ defmodule Scholar.Metrics do
       >
   """
   defn accuracy(y_true, y_pred) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
-
-    (y_pred == y_true)
-    |> Nx.mean()
+    check_shape(y_true, y_pred)
+    Nx.mean(y_pred == y_true)
   end
 
   @doc ~S"""
@@ -93,8 +90,7 @@ defmodule Scholar.Metrics do
       >
   """
   defn binary_precision(y_true, y_pred) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
+    check_shape(y_true, y_pred)
 
     true_positives = binary_true_positives(y_true, y_pred)
     false_positives = binary_false_positives(y_true, y_pred)
@@ -128,8 +124,7 @@ defmodule Scholar.Metrics do
   end
 
   defnp precision_n(y_true, y_pred, opts) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
+    check_shape(y_true, y_pred)
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positives = Nx.take_diagonal(cm)
@@ -154,8 +149,7 @@ defmodule Scholar.Metrics do
       >
   """
   defn binary_recall(y_true, y_pred) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
+    check_shape(y_true, y_pred)
 
     true_positives = binary_true_positives(y_true, y_pred)
     false_negatives = binary_false_negatives(y_true, y_pred)
@@ -189,45 +183,33 @@ defmodule Scholar.Metrics do
   end
 
   defnp recall_n(y_true, y_pred, opts) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_pred, y_true)
+    check_shape(y_pred, y_true)
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positive = Nx.take_diagonal(cm)
     false_negative = Nx.sum(cm, axes: [1]) - true_positive
+
     safe_division(true_positive, true_positive + false_negative)
   end
 
   defnp binary_true_positives(y_true, y_pred) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
-
-    (y_pred == y_true and y_pred == 1)
-    |> Nx.sum()
+    check_shape(y_true, y_pred)
+    Nx.sum(y_pred == y_true and y_pred == 1)
   end
 
   defnp binary_false_negatives(y_true, y_pred) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
-
-    (y_pred != y_true and y_pred == 0)
-    |> Nx.sum()
+    check_shape(y_true, y_pred)
+    Nx.sum(y_pred != y_true and y_pred == 0)
   end
 
   defnp binary_true_negatives(y_true, y_pred) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
-
-    (y_pred == y_true and y_pred == 0)
-    |> Nx.sum()
+    check_shape(y_true, y_pred)
+    Nx.sum(y_pred == y_true and y_pred == 0)
   end
 
   defnp binary_false_positives(y_true, y_pred) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
-
-    (y_pred != y_true and y_pred == 1)
-    |> Nx.sum()
+    check_shape(y_true, y_pred)
+    Nx.sum(y_pred != y_true and y_pred == 1)
   end
 
   @doc """
@@ -243,9 +225,7 @@ defmodule Scholar.Metrics do
       >
   """
   defn binary_sensitivity(y_true, y_pred) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
-
+    check_shape(y_true, y_pred)
     binary_recall(y_true, y_pred)
   end
 
@@ -272,9 +252,7 @@ defmodule Scholar.Metrics do
   end
 
   defnp sensitivity_n(y_true, y_pred, opts) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_pred, y_true)
-
+    check_shape(y_pred, y_true)
     recall(y_true, y_pred, opts)
   end
 
@@ -294,8 +272,7 @@ defmodule Scholar.Metrics do
       >
   """
   defn binary_specificity(y_true, y_pred) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_true, y_pred)
+    check_shape(y_true, y_pred)
 
     true_negatives = binary_true_negatives(y_true, y_pred)
     false_positives = binary_false_positives(y_true, y_pred)
@@ -329,8 +306,7 @@ defmodule Scholar.Metrics do
   end
 
   defnp specificity_n(y_true, y_pred, opts) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_pred, y_true)
+    check_shape(y_pred, y_true)
 
     cm = confusion_matrix(y_true, y_pred, opts)
     true_positive = Nx.take_diagonal(cm)
@@ -368,14 +344,13 @@ defmodule Scholar.Metrics do
   end
 
   defnp confusion_matrix_n(y_true, y_pred, opts) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_pred, y_true)
+    check_shape(y_pred, y_true)
 
     num_classes = check_num_classes(opts[:num_classes])
 
     zeros = Nx.broadcast(0, {num_classes, num_classes})
     indices = Nx.stack([y_true, y_pred], axis: 1)
-    updates = Nx.broadcast(1, {Nx.size(y_true)})
+    updates = Nx.broadcast(1, y_true)
 
     Nx.indexed_add(zeros, indices, updates)
   end
@@ -426,8 +401,7 @@ defmodule Scholar.Metrics do
   end
 
   defnp f1_score_n(y_true, y_pred, opts) do
-    assert_rank!(y_true, 1)
-    assert_same_shape!(y_pred, y_true)
+    check_shape(y_pred, y_true)
     num_classes = check_num_classes(opts[:num_classes])
 
     case opts[:average] do
@@ -516,5 +490,10 @@ defmodule Scholar.Metrics do
     nominator = Nx.select(is_zero?, 0, nominator)
     denominator = Nx.select(is_zero?, 1, denominator)
     nominator / denominator
+  end
+
+  defnp check_shape(y_true, y_pred) do
+    assert_rank!(y_true, 1)
+    assert_same_shape!(y_true, y_pred)
   end
 end

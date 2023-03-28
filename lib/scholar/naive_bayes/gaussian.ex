@@ -215,7 +215,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
       |> Nx.sum(axes: [1])
       |> Nx.log()
       |> Nx.new_axis(1)
-      |> Nx.broadcast(Nx.shape(jll))
+      |> Nx.broadcast(jll)
 
     jll - log_proba_x
   end
@@ -255,7 +255,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
             "wrong target rank. Expected target to be rank 1 got: #{targets_rank}"
     end
 
-    {num_samples, _} = Nx.shape(x)
+    {num_samples, num_features} = Nx.shape(x)
     {num_targets} = Nx.shape(y)
 
     if num_samples != num_targets do
@@ -266,7 +266,6 @@ defmodule Scholar.NaiveBayes.Gaussian do
     eps = opts[:var_smoothing] * Nx.reduce_max(Nx.variance(x, axes: [0]))
     num_classes = opts[:num_classes]
     priors_flag = opts[:priors_flag]
-    {num_samples, num_features} = Nx.shape(x)
 
     classes = Nx.iota({num_classes}) |> Nx.sort()
 
@@ -399,17 +398,19 @@ defmodule Scholar.NaiveBayes.Gaussian do
       |> Nx.new_axis(1)
       |> Nx.broadcast({num_classes, samples_x})
 
+    broadcast_shape = {num_classes, samples_x, num_features}
+
     x_broadcast =
       Nx.new_axis(x, 0)
-      |> Nx.broadcast({num_classes, samples_x, num_features})
+      |> Nx.broadcast(broadcast_shape)
 
     theta_broadcast =
       Nx.new_axis(theta, 1)
-      |> Nx.broadcast({num_classes, samples_x, num_features})
+      |> Nx.broadcast(broadcast_shape)
 
     var_broadcast =
       Nx.new_axis(var, 1)
-      |> Nx.broadcast({num_classes, samples_x, num_features})
+      |> Nx.broadcast(broadcast_shape)
 
     n2 = -0.5 * Nx.sum((x_broadcast - theta_broadcast) ** 2 / var_broadcast, axes: [2])
 
@@ -417,19 +418,14 @@ defmodule Scholar.NaiveBayes.Gaussian do
   end
 
   defnp mean_masked(t, mask) do
-    {num_samples, num_features} = Nx.shape(t)
-
-    broadcast_mask = mask |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
-
+    broadcast_mask = mask |> Nx.new_axis(1) |> Nx.broadcast(t)
     Nx.sum(t * broadcast_mask, axes: [0]) / Nx.sum(broadcast_mask, axes: [0])
   end
 
   defnp mean_weighted_masked(t, mask, weights) do
-    {num_samples, num_features} = Nx.shape(t)
+    broadcast_mask = mask |> Nx.new_axis(1) |> Nx.broadcast(t)
 
-    broadcast_mask = mask |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
-
-    broadcast_weights = weights |> Nx.new_axis(1) |> Nx.broadcast({num_samples, num_features})
+    broadcast_weights = weights |> Nx.new_axis(1) |> Nx.broadcast(t)
 
     Nx.sum(t * broadcast_mask * broadcast_weights, axes: [0]) /
       Nx.sum(broadcast_mask * broadcast_weights, axes: [0])

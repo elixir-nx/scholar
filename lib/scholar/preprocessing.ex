@@ -301,7 +301,6 @@ defmodule Scholar.Preprocessing do
   end
 
   defnp ordinal_encode_n(tensor, opts) do
-    {num_samples} = Nx.shape(tensor)
     sorted = Nx.sort(tensor)
     num_classes = opts[:num_classes]
 
@@ -319,10 +318,8 @@ defmodule Scholar.Preprocessing do
 
     representative_values = Nx.take(sorted, representative_indices)
 
-    Nx.equal(
-      Nx.reshape(tensor, {num_samples, 1}),
-      Nx.reshape(representative_values, {1, num_classes})
-    )
+    (Nx.new_axis(tensor, 1) ==
+       Nx.new_axis(representative_values, 0))
     |> Nx.argmax(axis: 1)
   end
 
@@ -404,7 +401,8 @@ defmodule Scholar.Preprocessing do
   end
 
   defnp normalize_n(tensor, opts) do
-    zeros = Nx.broadcast(0.0, Nx.shape(tensor))
+    shape = Nx.shape(tensor)
+    zeros = Nx.broadcast(Nx.tensor(0.0, type: Nx.Type.to_floating(Nx.type(tensor))), shape)
 
     norm =
       case opts[:norm] do
@@ -422,7 +420,6 @@ defmodule Scholar.Preprocessing do
                 "expected :norm to be one of: :euclidean, :manhattan, and :chebyshev, got: #{inspect(other)}"
       end
 
-    shape = Nx.shape(tensor)
     shape_to_broadcast = unsqueezed_reduced_shape(shape, opts[:axes])
     norm = Nx.select(norm == 0.0, 1.0, norm) |> Nx.reshape(shape_to_broadcast)
     tensor / norm

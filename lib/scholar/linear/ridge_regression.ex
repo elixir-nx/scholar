@@ -244,11 +244,12 @@ defmodule Scholar.Linear.RidgeRegression do
     else
       b = Nx.transpose(b) |> Nx.new_axis(-1)
 
-      kernel = Nx.new_axis(kernel, 0) |> Nx.broadcast({num_targets, num_samples, num_samples})
+      broadcast_shape = {num_targets, num_samples, num_samples}
+      kernel = Nx.new_axis(kernel, 0) |> Nx.broadcast(broadcast_shape)
 
       reg =
         Nx.new_axis(Nx.eye(num_samples), 0)
-        |> Nx.broadcast({num_targets, num_samples, num_samples})
+        |> Nx.broadcast(broadcast_shape)
 
       reg = reg * Nx.reshape(alpha, {:auto, 1, 1})
       kernel = kernel + reg
@@ -281,11 +282,12 @@ defmodule Scholar.Linear.RidgeRegression do
 
       target = Nx.new_axis(target, -1)
 
-      kernel = Nx.new_axis(kernel, 0) |> Nx.broadcast({num_targets, num_features, num_features})
+      broadcast_shape = {num_targets, num_features, num_features}
+      kernel = Nx.new_axis(kernel, 0) |> Nx.broadcast(broadcast_shape)
 
       reg =
         Nx.new_axis(Nx.eye(num_features), 0)
-        |> Nx.broadcast({num_targets, num_features, num_features})
+        |> Nx.broadcast(broadcast_shape)
 
       reg = reg * Nx.reshape(alpha, {:auto, 1, 1})
       kernel = kernel + reg
@@ -297,10 +299,11 @@ defmodule Scholar.Linear.RidgeRegression do
     {u, s, vt} = Nx.LinAlg.svd(a, full_matrices?: false)
     s_size = Nx.size(s)
     alpha_size = Nx.size(alpha)
-    idx = (s > 1.0e-15) |> Nx.new_axis(1) |> Nx.broadcast({s_size, alpha_size})
-    s = Nx.new_axis(s, 1) |> Nx.broadcast({s_size, alpha_size})
-    alpha = Nx.new_axis(alpha, 0) |> Nx.broadcast({s_size, alpha_size})
-    d = Nx.broadcast(0.0, {s_size, alpha_size})
+    broadcast_size = {s_size, alpha_size}
+    idx = (s > 1.0e-15) |> Nx.new_axis(1) |> Nx.broadcast(broadcast_size)
+    s = Nx.new_axis(s, 1) |> Nx.broadcast(broadcast_size)
+    alpha = Nx.new_axis(alpha, 0) |> Nx.broadcast(broadcast_size)
+    d = Nx.broadcast(0.0, broadcast_size)
     d = Nx.select(idx, s / (s ** 2 + alpha), d)
     uty = Nx.dot(u, [0], b, [0])
     d_uty = d * uty

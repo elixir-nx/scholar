@@ -205,7 +205,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
       |> Nx.sum(axes: [1])
       |> Nx.log()
       |> Nx.reshape({:auto, 1})
-      |> Nx.broadcast(Nx.shape(jll))
+      |> Nx.broadcast(jll)
 
     jll - log_proba_x
   end
@@ -267,7 +267,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
             "wrong target rank. Expected target to be rank 1 got: #{targets_rank}"
     end
 
-    {num_samples, _} = Nx.shape(x)
+    {num_samples, num_features} = Nx.shape(x)
     {num_targets} = Nx.shape(y)
 
     if num_samples != num_targets do
@@ -276,7 +276,6 @@ defmodule Scholar.NaiveBayes.Multinomial do
     end
 
     num_classes = opts[:num_classes]
-    {num_samples, num_features} = Nx.shape(x)
 
     class_priors =
       case Nx.shape(class_priors) do
@@ -333,7 +332,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
     {_, n_classes} = Nx.shape(classes)
     class_count = Nx.broadcast(0.0, {n_classes})
     feature_count = Nx.broadcast(0.0, {n_classes, num_features})
-    feature_count = feature_count + Nx.dot(Nx.transpose(classes), x)
+    feature_count = feature_count + Nx.dot(classes, [0], x, [0])
     class_count = class_count + Nx.sum(classes, axes: [0])
     alpha = check_alpha(alpha, opts[:force_alpha], num_features)
     smoothed_feature_count = feature_count + alpha

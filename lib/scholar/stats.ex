@@ -80,7 +80,7 @@ defmodule Scholar.Stats do
   end
 
   defnp moment_n(tensor, moment, num_samples, opts) do
-    mean = Nx.mean(tensor, axes: opts[:axes], keep_axes: true) |> Nx.broadcast(Nx.shape(tensor))
+    mean = Nx.mean(tensor, axes: opts[:axes], keep_axes: true) |> Nx.broadcast(tensor)
     Nx.sum((tensor - mean) ** moment, opts) / num_samples
   end
 

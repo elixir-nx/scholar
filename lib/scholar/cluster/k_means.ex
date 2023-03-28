@@ -154,19 +154,15 @@ defmodule Scholar.Cluster.KMeans do
 
     broadcast_weights =
       weights
-      |> Nx.as_type(:f32)
-      |> Nx.broadcast({num_runs, num_samples})
-      |> Nx.reshape({num_runs, 1, num_samples})
+      |> to_float()
       |> Nx.broadcast({num_runs, num_clusters, num_samples})
 
-    broadcast_x =
-      x
-      |> Nx.broadcast({num_runs, num_samples, num_features})
+    broadcast_x = Nx.broadcast(x, {num_runs, num_samples, num_features})
 
     centroids = initialize_centroids(x, seed, opts)
     inf = Nx.Constants.infinity(Nx.type(centroids))
     distance = Nx.broadcast(inf, {num_runs})
-    tol = (x |> Nx.variance(axes: [0]) |> Nx.mean()) * opts[:tol]
+    tol = Nx.mean(Nx.variance(x, axes: [0])) * opts[:tol]
 
     {i, _, _, _, _, _, _, final_centroids, nearest_centroids} =
       while {i = 0, tol, x, distance, weights, broadcast_weights, broadcast_x, centroids,
@@ -181,15 +177,14 @@ defmodule Scholar.Cluster.KMeans do
         nearest_centroids = Nx.argmin(inertia_for_centroids, axis: 1)
 
         group_masks =
-          (Nx.broadcast(Nx.iota({num_clusters, 1}), {num_runs, num_clusters, 1}) ==
-             Nx.reshape(nearest_centroids, {num_runs, 1, num_samples})) * broadcast_weights
+          (Nx.iota({num_runs, num_clusters, 1}, axis: 1) == Nx.new_axis(nearest_centroids, 1)) *
+            broadcast_weights
 
         group_sizes = Nx.sum(group_masks, axes: [2], keep_axes: true)
 
         centroids =
-          ((Nx.reshape(group_masks, {num_runs, num_clusters, num_samples, 1}) *
-              Nx.reshape(broadcast_x, {num_runs, 1, num_samples, num_features}))
-           |> Nx.sum(axes: [2])) / group_sizes
+          ((Nx.new_axis(group_masks, -1) * Nx.new_axis(broadcast_x, 1)) |> Nx.sum(axes: [2])) /
+            group_sizes
 
         distance =
           Scholar.Metrics.Distance.squared_euclidean(centroids, previous_iteration_centroids,
@@ -240,7 +235,7 @@ defmodule Scholar.Cluster.KMeans do
 
     modified_centroids =
       centroids
-      |> Nx.reshape({num_runs, num_clusters, 1, num_features})
+      |> Nx.new_axis(2)
       |> Nx.broadcast({num_runs, num_clusters, num_samples, num_features})
       |> Nx.reshape({num_runs, num_clusters * num_samples, num_features})
 
@@ -269,7 +264,7 @@ defmodule Scholar.Cluster.KMeans do
   end
 
   defnp k_means_plus_plus(x, num_clusters, num_runs, seed) do
-    inf = Nx.Constants.infinity()
+    inf = Nx.Constants.infinity(Nx.type(x) |> Nx.Type.to_floating())
     {num_samples, num_features} = Nx.shape(x)
     centroids = Nx.broadcast(inf, {num_runs, num_clusters, num_features})
     inertia = Nx.broadcast(0.0, {num_runs, num_samples})
@@ -320,7 +315,7 @@ defmodule Scholar.Cluster.KMeans do
 
     clusters =
       clusters
-      |> Nx.reshape({num_clusters, 1, num_features})
+      |> Nx.new_axis(1)
       |> Nx.broadcast({num_clusters, num_samples, num_features})
       |> Nx.reshape({num_clusters * num_samples, num_features})
 
@@ -360,10 +355,11 @@ defmodule Scholar.Cluster.KMeans do
   defn transform(%__MODULE__{clusters: clusters} = _model, x) do
     {num_clusters, num_features} = Nx.shape(clusters)
     {num_samples, _} = Nx.shape(x)
+    broadcast_shape = {num_samples, num_clusters, num_features}
 
     Scholar.Metrics.Distance.euclidean(
-      Nx.new_axis(x, 1) |> Nx.broadcast({num_samples, num_clusters, num_features}),
-      Nx.new_axis(clusters, 0) |> Nx.broadcast({num_samples, num_clusters, num_features}),
+      Nx.new_axis(x, 1) |> Nx.broadcast(broadcast_shape),
+      Nx.new_axis(clusters, 0) |> Nx.broadcast(broadcast_shape),
       axes: [-1]
     )
   end
