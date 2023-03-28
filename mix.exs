@@ -26,8 +26,9 @@ defmodule Scholar.MixProject do
     [
       {:ex_doc, "~> 0.29", only: :dev, runtime: false},
       {:nx, "~> 0.5.1"},
-      {:explorer, "~> 0.5.1", only: [:test, :dev]},
-      {:nimble_options, "~> 0.5.2 or ~> 1.0"}
+      {:nimble_options, "~> 0.5.2 or ~> 1.0"},
+      {:exla, ">= 0.0.0", only: [:test, :dev]},
+      {:explorer, "~> 0.5.1", only: [:test, :dev]}
     ]
   end
 
