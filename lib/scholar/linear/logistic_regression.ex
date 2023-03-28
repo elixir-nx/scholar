@@ -157,7 +157,7 @@ defmodule Scholar.Linear.LogisticRegression do
       >
   """
   defn predict(%__MODULE__{coefficients: coeff, bias: bias}, x) do
-    inter = Nx.dot(x, Nx.transpose(coeff)) + bias
+    inter = Nx.dot(x, [1], coeff, [1]) + bias
     Nx.argmax(inter, axis: 1)
   end
 
@@ -178,6 +178,6 @@ defmodule Scholar.Linear.LogisticRegression do
       >
   """
   defn predict_probability(%__MODULE__{coefficients: coeff, bias: bias}, x) do
-    softmax(Nx.dot(x, Nx.transpose(coeff)) + bias)
+    softmax(Nx.dot(x, [1], coeff, [1]) + bias)
   end
 end

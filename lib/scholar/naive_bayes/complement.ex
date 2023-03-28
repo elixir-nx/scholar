@@ -232,7 +232,7 @@ defmodule Scholar.NaiveBayes.Complement do
       |> Nx.sum(axes: [1])
       |> Nx.log()
       |> Nx.reshape({:auto, 1})
-      |> Nx.broadcast(Nx.shape(jll))
+      |> Nx.broadcast(jll)
 
     jll - log_proba_x
   end
@@ -294,7 +294,7 @@ defmodule Scholar.NaiveBayes.Complement do
             "wrong target rank. Expected target to be rank 1 got: #{targets_rank}"
     end
 
-    {num_samples, _} = Nx.shape(x)
+    {num_samples, num_features} = Nx.shape(x)
     {num_targets} = Nx.shape(y)
 
     if num_samples != num_targets do
@@ -303,7 +303,6 @@ defmodule Scholar.NaiveBayes.Complement do
     end
 
     num_classes = opts[:num_classes]
-    {num_samples, num_features} = Nx.shape(x)
 
     class_priors =
       case Nx.shape(class_priors) do
@@ -338,7 +337,7 @@ defmodule Scholar.NaiveBayes.Complement do
       |> Scholar.Preprocessing.ordinal_encode(num_classes: num_classes)
       |> Scholar.Preprocessing.one_hot_encode(num_classes: num_classes)
 
-    {_, classes_features} = Nx.shape(classes)
+    {_, classes_features} = classes_shape = Nx.shape(classes)
 
     classes =
       cond do
@@ -346,7 +345,7 @@ defmodule Scholar.NaiveBayes.Complement do
           Nx.concatenate([1 - classes, classes], axis: 1)
 
         classes_features == 1 and num_classes != 2 ->
-          Nx.broadcast(1.0, Nx.shape(classes))
+          Nx.broadcast(1.0, classes_shape)
 
         true ->
           classes
@@ -360,7 +359,7 @@ defmodule Scholar.NaiveBayes.Complement do
     {_, n_classes} = Nx.shape(classes)
     class_count = Nx.broadcast(0.0, {n_classes})
     feature_count = Nx.broadcast(0.0, {n_classes, num_features})
-    feature_count = feature_count + Nx.dot(Nx.transpose(classes), x)
+    feature_count = feature_count + Nx.dot(classes, [0], x, [0])
     class_count = class_count + Nx.sum(classes, axes: [0])
     feature_all = Nx.sum(feature_count, axes: [0])
     alpha = check_alpha(alpha, opts[:force_alpha], num_features)
