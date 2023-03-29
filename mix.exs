@@ -1,16 +1,20 @@
 defmodule Scholar.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/elixir-nx/scholar"
+  @version "0.1.0"
+
   def project do
     [
       app: :scholar,
       name: "Scholar",
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      docs: docs()
+      docs: docs(),
+      package: package()
     ]
   end
 
@@ -33,15 +37,23 @@ defmodule Scholar.MixProject do
     ]
   end
 
+  defp package do
+    [
+      maintainers: ["Mateusz Słuszniak"],
+      licenses: ["Apache-2.0"],
+      links: %{"GitHub" => @source_url}
+    ]
+  end
+
   defp docs do
     [
       main: "Scholar",
-      source_url: "https://github.com/elixir-nx/scholar",
+      source_url: @source_url,
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [
-        "notebooks/k_means.livemd",
         "notebooks/linear_regression.livemd",
+        "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd"
       ],
       groups_for_modules: [
@@ -87,6 +99,25 @@ defmodule Scholar.MixProject do
             { left: "$", right: "$", display: false },
           ]
         });
+      });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5.20.2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.1.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.18.2"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        for (const codeEl of document.querySelectorAll("pre code.vega-lite")) {
+          try {
+            const preEl = codeEl.parentElement;
+            const spec = JSON.parse(codeEl.textContent);
+            const plotEl = document.createElement("div");
+            preEl.insertAdjacentElement("afterend", plotEl);
+            vegaEmbed(plotEl, spec);
+            preEl.remove();
+          } catch (error) {
+            console.log("Failed to render Vega-Lite plot: " + error)
+          }
+        }
       });
     </script>
     """

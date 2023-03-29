@@ -1,16 +1,22 @@
+<!-- livebook:{"persist_outputs":true} -->
+
 # Linear Regression in Practice
 
 ```elixir
 Mix.install([
-  {:scholar, github: "elixir-nx/scholar"},
-  {:nx, "~> 0.5.1"},
-  {:explorer, "~> 0.5.1"},
-  {:exla, "~> 0.5.0"},
-  {:req, "~> 0.3.3"},
-  {:vega_lite, "~> 0.1.6"},
-  {:kino_vega_lite, "~> 0.1.7"},
-  {:kino, "~> 0.8.1"}
+  {:scholar, "~> 0.1"},
+  {:explorer, "~> 0.5.6"},
+  {:exla, "~> 0.5.2"},
+  {:req, "~> 0.3.6"},
+  {:kino_vega_lite, "~> 0.1.8"},
+  {:kino, "~> 0.9.0"}
 ])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+:ok
 ```
 
 ## Introduction
@@ -22,6 +28,13 @@ alias VegaLite, as: Vl
 require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 Nx.global_default_backend(EXLA.Backend)
+seed = 42
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+42
 ```
 
 <!-- livebook:{"branch_parent_index":0} -->
@@ -45,6 +58,12 @@ defmodule LinearData do
     {x, y}
   end
 end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, LinearData, <<70, 79, 82, 49, 0, 0, 11, ...>>, true}
 ```
 
 Now let's plot the generated points.
@@ -73,10 +92,35 @@ Vl.new(
 |> Vl.encode_field(:y, "y", type: :quantitative, scale: [domain: [2.5, 12]], axis: [grid: false])
 ```
 
+<!-- livebook:{"output":true} -->
+
+```vega-lite
+{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","data":{"values":[{"x":1.9004864711486005,"y":9.588568089587561},{"x":1.4863498556419192,"y":8.128091393416636},{"x":1.7991174211376775,"y":9.789160149027026},{"x":0.12072062082750934,"y":3.9726630516564603},{"x":1.857364920863604,"y":9.25767072810677},{"x":0.3501109776898361,"y":5.016196041913261},{"x":1.0511571984036023,"y":7.0072175252613835},{"x":0.2684341945193349,"y":4.529725798132315},{"x":1.2610012264029522,"y":7.981418930695978},{"x":0.4076748594070785,"y":4.789392547766224},{"x":0.6277976898420019,"y":5.473504548640071},{"x":1.1925149126570633,"y":7.979905959554976},{"x":1.9099838593057608,"y":9.933633616185963},{"x":1.11272036330339,"y":7.576762743580341},{"x":1.802092739386969,"y":9.325967122317106},{"x":1.196864286097009,"y":7.638266926193305},{"x":0.03815120245380177,"y":4.518300718070865},{"x":0.6918418995897215,"y":5.594422797388837},{"x":0.04790910633931178,"y":4.622640731795469},{"x":1.0082350389606831,"y":6.573314789785342},{"x":1.3268160391024382,"y":8.167074289870962},{"x":1.116235950693984,"y":7.205542036877259},{"x":1.5635870611482732,"y":9.11314041027242},{"x":1.5325239230646464,"y":8.46042736714775},{"x":0.22518938365611207,"y":4.359911858835845},{"x":1.8818046241717257,"y":9.422655165383151},{"x":0.866399894741126,"y":6.273503204133702},{"x":1.7074705527133416,"y":9.1952114549056},{"x":0.7228909843461526,"y":6.399740242846538},{"x":0.8645396760222455,"y":6.921156361139643},{"x":1.8376110894013347,"y":9.599848131970901},{"x":1.442060988129032,"y":8.259326839274358},{"x":1.1443219627898706,"y":7.398380325540283},{"x":1.9442669979686977,"y":9.916636301589834},{"x":1.7051984640589528,"y":8.810676014365272},{"x":0.9316907243298531,"y":6.706793253908984},{"x":0.32105137135146666,"y":5.33310397346077},{"x":1.4251172135313435,"y":8.204359875917337},{"x":0.21636814613954103,"y":5.060604277707321},{"x":0.8400572418693812,"y":6.803452904281498},{"x":0.9280411984247863,"y":6.879738120117415},{"x":0.6748888124318428,"y":5.668202282091746},{"x":0.9269337184466582,"y":6.309717290697355},{"x":1.614491258449418,"y":8.584383516652984},{"x":1.7556955423296916,"y":8.88204901427903},{"x":0.742569049365005,"y":6.3831292487291265},{"x":0.04689839244109928,"y":4.047375477112247},{"x":1.3063798501777497,"y":7.7838559727772125},{"x":0.7399148832784985,"y":5.7390385507242065},{"x":0.609370240470565,"y":5.496753043300161},{"x":0.5288005556403474,"y":5.710591843063962},{"x":1.8613281986490335,"y":9.617393755825786},{"x":1.4934621266846162,"y":8.775190727806926},{"x":1.3841503724034614,"y":8.097058620455151},{"x":1.4411812067428929,"y":8.714222294939118},{"x":0.07275682745349732,"y":3.8582708188217256},{"x":1.6964330896073725,"y":9.558937877400908},{"x":0.9736420283819163,"y":6.666882792923979},{"x":1.5039805870455312,"y":8.704474518801195},{"x":0.2945974391450479,"y":4.7723887278383},{"x":0.1868592779917515,"y":4.731889701559963},{"x":1.335963209381183,"y":8.49731857456425},{"x":1.12438463727741,"y":7.846542179584407},{"x":0.9611253246535423,"y":7.302305818866566},{"x":0.944121396326294,"y":6.59392561989239},{"x":0.9160306018359226,"y":6.537631541250617},{"x":1.8140749900473794,"y":8.956656518284662},{"x":1.2494284448899267,"y":7.462139448629185},{"x":1.5981009200282497,"y":8.488717108113233},{"x":1.5216871497808855,"y":8.239844283942187},{"x":1.0141522485693928,"y":7.119631726438168},{"x":0.24505073662469545,"y":4.76994960528683},{"x":0.23453054126675754,"y":4.740933976429053},{"x":0.8375073700191651,"y":6.203902724203168},{"x":0.9555904929091139,"y":6.539672305648001},{"x":1.5116208882261697,"y":8.251922682601373},{"x":0.5430644133381208,"y":5.94392000741476},{"x":1.5396799405255837,"y":8.562605860505936},{"x":1.3288332597446675,"y":8.394908971950938},{"x":0.8098737558236753,"y":6.119922380724123},{"x":0.7300870101089743,"y":5.820357872554606},{"x":0.6003486177307833,"y":6.046316972091446},{"x":1.6984776836543856,"y":8.777896137233139},{"x":0.7881943630297616,"y":6.2074823217226704},{"x":0.8022304689606252,"y":6.421563438226328},{"x":0.9461487553849501,"y":7.224992163390045},{"x":1.1062159638629834,"y":7.778505164261029},{"x":0.5336394605277772,"y":5.208679631530884},{"x":0.4584282301025495,"y":5.523717683548369},{"x":0.274737610635972,"y":5.32305240175822},{"x":1.2533091829664782,"y":7.266026618765184},{"x":0.10113017428721793,"y":4.752841138832883},{"x":0.14571861443282952,"y":4.726179278830611},{"x":1.15906054645597,"y":7.915833252969062},{"x":0.27790158114728714,"y":5.013847161673044},{"x":1.239949192481978,"y":7.517406034765404},{"x":0.6661499949625322,"y":5.568160896538142},{"x":1.2693312956846792,"y":7.889092741514168},{"x":1.2086907347723854,"y":7.6883993210876},{"x":1.7333203144056522,"y":8.889281033197426}]},"encoding":{"x":{"axis":{"grid":false},"field":"x","scale":{"domain":[-0.05,2.05]},"type":"quantitative"},"y":{"axis":{"grid":false},"field":"y","scale":{"domain":[2.5,12]},"type":"quantitative"}},"height":630,"mark":"circle","title":{"offset":20,"text":"Scatterplot of Generated Data"},"width":630}
+```
+
 For a regression task, we will use the `Scholar.Linear.LinearRegression` module.
 
 ```elixir
 model = Scholar.Linear.LinearRegression.fit(x, y)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+%Scholar.Linear.LinearRegression{
+  coefficients: #Nx.Tensor<
+    f64[1][1]
+    EXLA.Backend<host:0, 0.3046247866.3959029776.160585>
+    [
+      [2.9578183089017]
+    ]
+  >,
+  intercept: #Nx.Tensor<
+    f64[1]
+    EXLA.Backend<host:0, 0.3046247866.3959029776.160589>
+    [4.023067929858136]
+  >
+}
 ```
 
 As we can see, the coefficient is almost 3.0, and the intercept is nearly 4.0. Those are decent estimations. They are not exactly equal to 3.0 and 4.0 because we introduce noise to our samples.
@@ -124,6 +168,12 @@ Vl.new(
 ])
 ```
 
+<!-- livebook:{"output":true} -->
+
+```vega-lite
+{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","height":630,"layer":[{"data":{"values":[{"x":1.9004864711486005,"y":9.588568089587561},{"x":1.4863498556419192,"y":8.128091393416636},{"x":1.7991174211376775,"y":9.789160149027026},{"x":0.12072062082750934,"y":3.9726630516564603},{"x":1.857364920863604,"y":9.25767072810677},{"x":0.3501109776898361,"y":5.016196041913261},{"x":1.0511571984036023,"y":7.0072175252613835},{"x":0.2684341945193349,"y":4.529725798132315},{"x":1.2610012264029522,"y":7.981418930695978},{"x":0.4076748594070785,"y":4.789392547766224},{"x":0.6277976898420019,"y":5.473504548640071},{"x":1.1925149126570633,"y":7.979905959554976},{"x":1.9099838593057608,"y":9.933633616185963},{"x":1.11272036330339,"y":7.576762743580341},{"x":1.802092739386969,"y":9.325967122317106},{"x":1.196864286097009,"y":7.638266926193305},{"x":0.03815120245380177,"y":4.518300718070865},{"x":0.6918418995897215,"y":5.594422797388837},{"x":0.04790910633931178,"y":4.622640731795469},{"x":1.0082350389606831,"y":6.573314789785342},{"x":1.3268160391024382,"y":8.167074289870962},{"x":1.116235950693984,"y":7.205542036877259},{"x":1.5635870611482732,"y":9.11314041027242},{"x":1.5325239230646464,"y":8.46042736714775},{"x":0.22518938365611207,"y":4.359911858835845},{"x":1.8818046241717257,"y":9.422655165383151},{"x":0.866399894741126,"y":6.273503204133702},{"x":1.7074705527133416,"y":9.1952114549056},{"x":0.7228909843461526,"y":6.399740242846538},{"x":0.8645396760222455,"y":6.921156361139643},{"x":1.8376110894013347,"y":9.599848131970901},{"x":1.442060988129032,"y":8.259326839274358},{"x":1.1443219627898706,"y":7.398380325540283},{"x":1.9442669979686977,"y":9.916636301589834},{"x":1.7051984640589528,"y":8.810676014365272},{"x":0.9316907243298531,"y":6.706793253908984},{"x":0.32105137135146666,"y":5.33310397346077},{"x":1.4251172135313435,"y":8.204359875917337},{"x":0.21636814613954103,"y":5.060604277707321},{"x":0.8400572418693812,"y":6.803452904281498},{"x":0.9280411984247863,"y":6.879738120117415},{"x":0.6748888124318428,"y":5.668202282091746},{"x":0.9269337184466582,"y":6.309717290697355},{"x":1.614491258449418,"y":8.584383516652984},{"x":1.7556955423296916,"y":8.88204901427903},{"x":0.742569049365005,"y":6.3831292487291265},{"x":0.04689839244109928,"y":4.047375477112247},{"x":1.3063798501777497,"y":7.7838559727772125},{"x":0.7399148832784985,"y":5.7390385507242065},{"x":0.609370240470565,"y":5.496753043300161},{"x":0.5288005556403474,"y":5.710591843063962},{"x":1.8613281986490335,"y":9.617393755825786},{"x":1.4934621266846162,"y":8.775190727806926},{"x":1.3841503724034614,"y":8.097058620455151},{"x":1.4411812067428929,"y":8.714222294939118},{"x":0.07275682745349732,"y":3.8582708188217256},{"x":1.6964330896073725,"y":9.558937877400908},{"x":0.9736420283819163,"y":6.666882792923979},{"x":1.5039805870455312,"y":8.704474518801195},{"x":0.2945974391450479,"y":4.7723887278383},{"x":0.1868592779917515,"y":4.731889701559963},{"x":1.335963209381183,"y":8.49731857456425},{"x":1.12438463727741,"y":7.846542179584407},{"x":0.9611253246535423,"y":7.302305818866566},{"x":0.944121396326294,"y":6.59392561989239},{"x":0.9160306018359226,"y":6.537631541250617},{"x":1.8140749900473794,"y":8.956656518284662},{"x":1.2494284448899267,"y":7.462139448629185},{"x":1.5981009200282497,"y":8.488717108113233},{"x":1.5216871497808855,"y":8.239844283942187},{"x":1.0141522485693928,"y":7.119631726438168},{"x":0.24505073662469545,"y":4.76994960528683},{"x":0.23453054126675754,"y":4.740933976429053},{"x":0.8375073700191651,"y":6.203902724203168},{"x":0.9555904929091139,"y":6.539672305648001},{"x":1.5116208882261697,"y":8.251922682601373},{"x":0.5430644133381208,"y":5.94392000741476},{"x":1.5396799405255837,"y":8.562605860505936},{"x":1.3288332597446675,"y":8.394908971950938},{"x":0.8098737558236753,"y":6.119922380724123},{"x":0.7300870101089743,"y":5.820357872554606},{"x":0.6003486177307833,"y":6.046316972091446},{"x":1.6984776836543856,"y":8.777896137233139},{"x":0.7881943630297616,"y":6.2074823217226704},{"x":0.8022304689606252,"y":6.421563438226328},{"x":0.9461487553849501,"y":7.224992163390045},{"x":1.1062159638629834,"y":7.778505164261029},{"x":0.5336394605277772,"y":5.208679631530884},{"x":0.4584282301025495,"y":5.523717683548369},{"x":0.274737610635972,"y":5.32305240175822},{"x":1.2533091829664782,"y":7.266026618765184},{"x":0.10113017428721793,"y":4.752841138832883},{"x":0.14571861443282952,"y":4.726179278830611},{"x":1.15906054645597,"y":7.915833252969062},{"x":0.27790158114728714,"y":5.013847161673044},{"x":1.239949192481978,"y":7.517406034765404},{"x":0.6661499949625322,"y":5.568160896538142},{"x":1.2693312956846792,"y":7.889092741514168},{"x":1.2086907347723854,"y":7.6883993210876},{"x":1.7333203144056522,"y":8.889281033197426}]},"encoding":{"x":{"axis":{"grid":false},"field":"x","scale":{"domain":[-0.05,2.05]},"type":"quantitative"},"y":{"axis":{"grid":false},"field":"y","scale":{"domain":[2.5,12]},"type":"quantitative"}},"mark":"circle"},{"data":{"values":[{"x":0,"y":4.023067929858136},{"x":2,"y":9.938704547661537}]},"encoding":{"x":{"field":"x","scale":{"domain":[-0.05,2.05]},"type":"quantitative"},"y":{"field":"y","scale":{"domain":[2.5,12]},"type":"quantitative"}},"mark":{"color":"green","type":"line"}}],"title":{"offset":20,"text":"Scatterplot of Generated Data"},"width":630}
+```
+
 Using `Scholar.Linear.LinearRegression.predict`, we can predict an expected value for a given input. However, we must remember that our prediction will be valid only if we consider linearly dependent data. Fortunately, our data set is perfect for this kind of prediction.
 
 Now we will predict one value and draw it on the previous graph in a different color.
@@ -138,6 +188,12 @@ x_prediction = Nx.tensor([[0.83]])
 
 [x_prediction] = Nx.to_flat_list(x_prediction)
 {x_prediction, y_prediction}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{0.8299999833106995, 6.478057076882628}
 ```
 
 ```elixir
@@ -190,6 +246,19 @@ x_b = Nx.concatenate([Nx.broadcast(1.0, {size, 1}), x], axis: 1)
 x_b |> Nx.LinAlg.pinv() |> Nx.dot(y)
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+#Nx.Tensor<
+  f64[2][1]
+  EXLA.Backend<host:0, 0.4179879677.2404253708.130193>
+  [
+    [4.023067929858136],
+    [2.957818308901698]
+  ]
+>
+```
+
 <!-- livebook:{"branch_parent_index":0} -->
 
 ## Polynomial Regression on Synthetic Data
@@ -216,6 +285,12 @@ defmodule PolynomialData do
     {x, y}
   end
 end
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{:module, PolynomialData, <<70, 79, 82, 49, 0, 0, 11, ...>>, true}
 ```
 
 Now let's plot the generated data:
@@ -248,6 +323,20 @@ Vl.new(
   scale: y_scale,
   axis: [grid: false]
 )
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+
+12:58:47.915 [info] TfrtCpuClient created.
+
+```
+
+<!-- livebook:{"output":true} -->
+
+```vega-lite
+{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","data":{"values":[{"x":-0.8965015411376953,"y":3.8109235763549805},{"x":0.021173477172851562,"y":5.0468549728393555},{"x":1.0788373947143555,"y":10.559005737304688},{"x":0.34316205978393555,"y":5.828140735626221},{"x":1.5906281471252441,"y":14.507883071899414},{"x":0.13052892684936523,"y":5.494438171386719},{"x":-0.017606735229492188,"y":5.139791965484619},{"x":-1.7063984870910645,"y":6.048481464385986},{"x":-0.8232769966125488,"y":4.1755475997924805},{"x":1.239438533782959,"y":11.804141998291016},{"x":-0.7493696212768555,"y":3.7624857425689697},{"x":1.5685210227966309,"y":15.080747604370117},{"x":1.2736377716064453,"y":11.830965042114258},{"x":0.28627920150756836,"y":6.291994571685791},{"x":-0.8452377319335938,"y":4.183845043182373},{"x":1.0702204704284668,"y":10.536632537841797},{"x":0.5425329208374023,"y":6.9816107749938965},{"x":0.8072428703308105,"y":8.398423194885254},{"x":0.06005859375,"y":5.642594337463379},{"x":-1.6828784942626953,"y":5.228835582733154},{"x":-1.6979928016662598,"y":5.282017707824707},{"x":-1.339439868927002,"y":4.808953762054443},{"x":-1.6378440856933594,"y":5.889084815979004},{"x":-0.9949426651000977,"y":4.288919448852539},{"x":-0.1635441780090332,"y":4.933962345123291},{"x":0.5056014060974121,"y":7.2391276359558105},{"x":-0.6962909698486328,"y":4.337333679199219},{"x":-0.011175155639648438,"y":5.329751968383789},{"x":1.9765315055847168,"y":18.869409561157227},{"x":-0.7610149383544922,"y":3.423267126083374},{"x":-1.946864128112793,"y":6.530677795410156},{"x":-0.021459579467773438,"y":5.185998916625977},{"x":0.5230484008789062,"y":7.557127475738525},{"x":1.1505427360534668,"y":11.130593299865723},{"x":0.33158349990844727,"y":6.636468887329102},{"x":1.9051923751831055,"y":18.391712188720703},{"x":0.7064709663391113,"y":8.222036361694336},{"x":0.832550048828125,"y":8.481558799743652},{"x":-1.5429472923278809,"y":4.780819892883301},{"x":1.910013198852539,"y":18.196731567382812},{"x":0.2634763717651367,"y":6.009212970733643},{"x":1.823348045349121,"y":17.614534378051758},{"x":-0.2560157775878906,"y":4.535557270050049},{"x":1.5738868713378906,"y":14.52468204498291},{"x":0.24407672882080078,"y":5.911610126495361},{"x":1.7351713180541992,"y":16.576759338378906},{"x":0.022307872772216797,"y":5.328531265258789},{"x":1.665010929107666,"y":15.157777786254883},{"x":-0.5437688827514648,"y":3.5709950923919678},{"x":1.312476634979248,"y":11.939286231994629},{"x":-1.4770846366882324,"y":4.936985492706299},{"x":1.6605911254882812,"y":15.417658805847168},{"x":1.7454309463500977,"y":15.889360427856445},{"x":-1.189291000366211,"y":4.214474678039551},{"x":-0.6745319366455078,"y":3.46466064453125},{"x":-1.3367595672607422,"y":4.8975324630737305},{"x":-0.0439295768737793,"y":5.127323627471924},{"x":-0.9130129814147949,"y":3.7275986671447754},{"x":1.0283713340759277,"y":10.355329513549805},{"x":-1.742908000946045,"y":6.096266746520996},{"x":1.6933608055114746,"y":16.230039596557617},{"x":-1.065746784210205,"y":3.970182418823242},{"x":0.9606437683105469,"y":9.539725303649902},{"x":0.04618549346923828,"y":4.721081733703613},{"x":-1.1336445808410645,"y":4.19744873046875},{"x":-1.0706229209899902,"y":3.8512279987335205},{"x":-1.884141445159912,"y":6.373000144958496},{"x":-0.14725208282470703,"y":4.171361923217773},{"x":1.1883292198181152,"y":11.732460021972656},{"x":0.1410541534423828,"y":5.41363525390625},{"x":1.3752241134643555,"y":12.717113494873047},{"x":-1.3611302375793457,"y":4.9649810791015625},{"x":0.08020591735839844,"y":5.477242946624756},{"x":1.7457842826843262,"y":16.750232696533203},{"x":-1.6559224128723145,"y":5.075651168823242},{"x":0.5720343589782715,"y":7.4426116943359375},{"x":-1.715710163116455,"y":6.0133891105651855},{"x":-1.6484870910644531,"y":5.388364791870117},{"x":-1.13641357421875,"y":4.0211639404296875},{"x":-1.8201804161071777,"y":5.7477922439575195},{"x":0.16124916076660156,"y":5.036750793457031},{"x":1.6229968070983887,"y":14.848661422729492},{"x":0.9078593254089355,"y":9.316896438598633},{"x":-1.973616123199463,"y":7.31505823135376},{"x":-1.08573579788208,"y":4.497128963470459},{"x":-1.9856038093566895,"y":7.066302299499512},{"x":1.0161328315734863,"y":9.7346830368042},{"x":1.637150764465332,"y":15.480567932128906},{"x":-0.8749380111694336,"y":3.704550266265869},{"x":0.5326972007751465,"y":7.397686958312988},{"x":-0.8989872932434082,"y":3.6920485496520996},{"x":1.6606526374816895,"y":15.98570442199707},{"x":1.3893942832946777,"y":13.498802185058594},{"x":-1.3748388290405273,"y":4.680605411529541},{"x":-0.22421789169311523,"y":4.457881927490234},{"x":-0.04375505447387695,"y":5.263555526733398},{"x":1.2894659042358398,"y":12.095159530639648},{"x":1.116281509399414,"y":10.542726516723633},{"x":1.725419044494629,"y":16.511856079101562},{"x":-1.203160285949707,"y":3.808946132659912}]},"encoding":{"x":{"axis":{"grid":false},"field":"x","scale":{"domain":[-2.05,2.05]},"type":"quantitative"},"y":{"axis":{"grid":false},"field":"y","scale":{"domain":[2.5,20]},"type":"quantitative"}},"height":630,"mark":"circle","title":{"offset":20,"text":"Scatterplot of Generated Data"},"width":630}
 ```
 
 As is clear in the picture, the plotted data would most likely not be accurately estimated by a straight line like the ones linear regression estimates, so polynomial regression will better fit the data in this case. We do this with the `Scholar.Linear.PolynomialRegression` module. If you're familiar with the `Scholar.Linear.LinearRegression` module, the next steps will feel familiar.
@@ -437,24 +526,56 @@ data =
 df = DF.load_csv!(data)
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+#Explorer.DataFrame<
+  Polars[20640 x 10]
+  longitude float [-122.23, -122.22, -122.24, -122.25, -122.25, ...]
+  latitude float [37.88, 37.86, 37.85, 37.85, 37.85, ...]
+  housing_median_age float [41.0, 21.0, 52.0, 52.0, 52.0, ...]
+  total_rooms float [880.0, 7099.0, 1467.0, 1274.0, 1627.0, ...]
+  total_bedrooms float [129.0, 1106.0, 190.0, 235.0, 280.0, ...]
+  population float [322.0, 2401.0, 496.0, 558.0, 565.0, ...]
+  households float [126.0, 1138.0, 177.0, 219.0, 259.0, ...]
+  median_income float [8.3252, 8.3014, 7.2574, 5.6431, 3.8462, ...]
+  median_house_value float [4.526e5, 3.585e5, 3.521e5, 3.413e5, 3.422e5, ...]
+  ocean_proximity string ["NEAR BAY", "NEAR BAY", "NEAR BAY", "NEAR BAY", "NEAR BAY", ...]
+>
+```
+
 Firstly, let's look at the distribution of houses based on the distance to the ocean.
 
 ```elixir
 S.frequencies(df["ocean_proximity"])
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+#Explorer.DataFrame<
+  Polars[5 x 2]
+  values string ["<1H OCEAN", "INLAND", "NEAR OCEAN", "NEAR BAY", "ISLAND"]
+  counts integer [9136, 6551, 2658, 2290, 5]
+>
+```
+
 Now, we will plot univariate histograms for each feature of the data set.
 
 ```elixir
+# Increase the sample size (or use 1.0 to plot all data)
+sample = DF.sample(df, 0.2, seed: seed)
+
 Vl.new(
   title: [
-    text: "Univariate Histograms of all features"
+    text: "Univariate Histograms of all features",
+    anchor: :middle
   ],
   width: 500,
   height: 500,
   columns: 3
 )
-|> Vl.data_from_values(df)
+|> Vl.data_from_values(sample)
 |> Vl.concat(
   for name <- List.delete(df.names, "ocean_proximity") do
     Vl.new()
@@ -469,84 +590,7 @@ From histograms, we can spot that *median_income* and *median_house_values* have
 
 <!-- livebook:{"break_markdown":true} -->
 
-Now, let's plot the distribution of houses on a scatter plot.
-
-```elixir
-Vl.new(
-  title: [
-    text: "Distribution of houses across California",
-    offset: 20
-  ],
-  width: 630,
-  height: 630
-)
-|> Vl.data_from_values(df)
-|> Vl.mark(:circle)
-|> Vl.encode_field(:x, "longitude",
-  type: :quantitative,
-  axis: [grid: false],
-  scale: [domain: [-124.55, -113.80]]
-)
-|> Vl.encode_field(:y, "latitude",
-  type: :quantitative,
-  axis: [grid: false],
-  scale: [domain: [32.45, 42.05]]
-)
-```
-
-This plot indeed presents the map of California. But it's hard to spot any pattern in this picture. To make it easier, change the value of the *opacity* parameter to 0.2.
-
-```elixir
-Vl.new(
-  title: [
-    text: "Distribution of houses across California",
-    offset: 20
-  ],
-  width: 630,
-  height: 630
-)
-|> Vl.data_from_values(df)
-|> Vl.mark(:circle, opacity: 0.2)
-|> Vl.encode_field(:x, "longitude",
-  type: :quantitative,
-  axis: [grid: false],
-  scale: [domain: [-124.55, -113.80]]
-)
-|> Vl.encode_field(:y, "latitude",
-  type: :quantitative,
-  axis: [grid: false],
-  scale: [domain: [32.45, 42.05]]
-)
-```
-
-We can see better the more dense areas of the plot. Now we will focus more on house prices. Encode them in color on the map. The size of a circle will indicate the population of districts.
-
-```elixir
-Vl.new(
-  title: [
-    text: "Distribution of houses across California",
-    offset: 20
-  ],
-  width: 630,
-  height: 630
-)
-|> Vl.data_from_values(df)
-|> Vl.mark(:circle, opacity: 0.4)
-|> Vl.encode_field(:x, "longitude",
-  type: :quantitative,
-  axis: [grid: false],
-  scale: [domain: [-124.55, -113.80]]
-)
-|> Vl.encode_field(:y, "latitude",
-  type: :quantitative,
-  axis: [grid: false],
-  scale: [domain: [32.45, 42.05]]
-)
-|> Vl.encode_field(:color, "median_house_value", type: :quantitative, scale: [scheme: :viridis])
-|> Vl.encode_field(:size, "population", type: :quantitative)
-```
-
-In the end, we may also add the map of California.
+Now let's render the houses as a scatter plot using the latitude and longitude, overlayed on top of California's map. Let's also use color to encode the house prices and use the circle size to indicate the population of districts.
 
 ```elixir
 Vl.new(
@@ -572,7 +616,7 @@ Vl.new(
   )
   |> Vl.encode_field(:url, "url", type: :nominal),
   Vl.new()
-  |> Vl.data_from_values(df)
+  |> Vl.data_from_values(df, only: ~w(latitude longitude median_house_value population))
   |> Vl.mark(:circle, opacity: 0.4)
   |> Vl.encode_field(:x, "longitude",
     type: :quantitative,
@@ -620,6 +664,30 @@ df =
   )
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+#Explorer.DataFrame<
+  Polars[20640 x 13]
+  longitude float [-122.23, -122.22, -122.24, -122.25, -122.25, ...]
+  latitude float [37.88, 37.86, 37.85, 37.85, 37.85, ...]
+  housing_median_age float [41.0, 21.0, 52.0, 52.0, 52.0, ...]
+  total_rooms float [880.0, 7099.0, 1467.0, 1274.0, 1627.0, ...]
+  total_bedrooms float [129.0, 1106.0, 190.0, 235.0, 280.0, ...]
+  population float [322.0, 2401.0, 496.0, 558.0, 565.0, ...]
+  households float [126.0, 1138.0, 177.0, 219.0, 259.0, ...]
+  median_income float [8.3252, 8.3014, 7.2574, 5.6431, 3.8462, ...]
+  median_house_value float [4.526e5, 3.585e5, 3.521e5, 3.413e5, 3.422e5, ...]
+  ocean_proximity string ["NEAR BAY", "NEAR BAY", "NEAR BAY", "NEAR BAY", "NEAR BAY", ...]
+  rooms_per_family float [6.984126984126984, 6.238137082601054, 8.288135593220339,
+   5.8173515981735155, 6.281853281853282, ...]
+  bedrooms_per_rooms float [0.14659090909090908, 0.15579659106916466, 0.12951601908657123,
+   0.18445839874411302, 0.1720958819913952, ...]
+  population_per_family float [2.5555555555555554, 2.109841827768014, 2.8022598870056497,
+   2.547945205479452, 2.1814671814671813, ...]
+>
+```
+
 In the next step, we will find the correlation matrix. But to do this, we need to cast our data frame to Nx tensor and split data into train and test sets.
 
 First let's remove all `:nan`s from our data and then convert the "ocean_proximity" string column to a numerical one. Explorer supports a `:category` type but, in this case, we will do a custom conversion as we can consider the ocean proximity as ordinal data since we can order them by the distance to the ocean. The bigger value the further from the ocean.
@@ -648,6 +716,30 @@ mapped_location = S.transform(df["ocean_proximity"], fn x -> Map.fetch!(mapping,
 df = DF.put(preprocessed_data, :ocean_proximity, mapped_location)
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+#Explorer.DataFrame<
+  Polars[20640 x 13]
+  bedrooms_per_rooms float [0.14659090909090908, 0.15579659106916466, 0.12951601908657123,
+   0.18445839874411302, 0.1720958819913952, ...]
+  households float [126.0, 1138.0, 177.0, 219.0, 259.0, ...]
+  housing_median_age float [41.0, 21.0, 52.0, 52.0, 52.0, ...]
+  latitude float [37.88, 37.86, 37.85, 37.85, 37.85, ...]
+  longitude float [-122.23, -122.22, -122.24, -122.25, -122.25, ...]
+  median_house_value float [4.526e5, 3.585e5, 3.521e5, 3.413e5, 3.422e5, ...]
+  median_income float [8.3252, 8.3014, 7.2574, 5.6431, 3.8462, ...]
+  population float [322.0, 2401.0, 496.0, 558.0, 565.0, ...]
+  population_per_family float [2.5555555555555554, 2.109841827768014, 2.8022598870056497,
+   2.547945205479452, 2.1814671814671813, ...]
+  rooms_per_family float [6.984126984126984, 6.238137082601054, 8.288135593220339,
+   5.8173515981735155, 6.281853281853282, ...]
+  total_bedrooms float [129.0, 1106.0, 190.0, 235.0, 280.0, ...]
+  total_rooms float [880.0, 7099.0, 1467.0, 1274.0, 1627.0, ...]
+  ocean_proximity float [3.0, 3.0, 3.0, 3.0, 3.0, ...]
+>
+```
+
 Now we convert dataframes into tensors. We can do so by concatenating and stacking the columns accordingly:
 
 ```elixir
@@ -672,6 +764,28 @@ x =
 {x, y}
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+{#Nx.Tensor<
+   f64[20640][12]
+   EXLA.Backend<host:0, 0.4179879677.2404253708.131378>
+   [
+     [0.2707641196013289, 326.0, 15.0, 32.76, -117.02, 1.0278, 543.0, 1.665644171779141, 3.6932515337423313, 326.0, 1204.0, 1.0],
+     [0.2598343685300207, 230.0, 27.0, 38.44, -122.71, 1.7, 462.0, 2.008695652173913, 4.2, 251.0, 966.0, 1.0],
+     [0.2902033271719039, 793.0, 35.0, 34.09, -118.35, 3.0349, 1526.0, 1.9243379571248425, 3.41109709962169, 785.0, 2705.0, 1.0],
+     [0.2940552016985138, 549.0, 25.0, 33.91, -118.35, 2.8512, 1337.0, 2.435336976320583, 3.431693989071038, 554.0, 1884.0, 1.0],
+     [0.2067861321509945, ...],
+     ...
+   ]
+ >,
+ #Nx.Tensor<
+   f64[20640]
+   EXLA.Backend<host:0, 0.4179879677.2404253708.131349>
+   [1.542e5, 3.5e5, 2.667e5, 2.728e5, 1.163e5, 2.941e5, 4.178e5, 1.851e5, 5.68e4, 500001.0, 500001.0, 1.152e5, 2.343e5, 8.75e4, 8.37e4, 500001.0, 1.669e5, 3.003e5, 1.546e5, 6.69e4, 2.325e5, 1.367e5, 1.375e5, 1.27e5, 1.683e5, 1.441e5, 9.53e4, 1.834e5, 1.435e5, 6.85e4, 1.625e5, 1.661e5, 1.908e5, 2.431e5, 1.488e5, 3.036e5, 1.479e5, 1.5e5, 3.288e5, 7.08e4, 2.25e5, 1.375e5, 3.5e5, 3.742e5, 1.549e5, 4.5e5, 3.063e5, 2.051e5, ...]
+ >}
+```
+
 Since we don't have a stratified split of data implemented (to learn more see [Stratified Sampling](https://en.wikipedia.org/wiki/Stratified_sampling)), we shuffle data set and take advantage of [Law of large numbers](https://en.wikipedia.org/wiki/Law_of_large_numbers). It says that the average of the results obtained from a large number of trials should be close to the expected value and tends to become closer to the expected value as more trials are performed. As we take a lot of samples from shuffled data it implies that the sampled data sets will be stratified. Now, we will split the data into training and test sets.
 
 ```elixir
@@ -682,12 +796,42 @@ num_train = round(train_ratio * num_rows)
 {y_train, y_test} = {y[[0..(num_train - 1)]], y[[num_train..(num_rows - 1)]]}
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+{#Nx.Tensor<
+   f64[16512]
+   EXLA.Backend<host:0, 0.4179879677.2404253708.131384>
+   [1.542e5, 3.5e5, 2.667e5, 2.728e5, 1.163e5, 2.941e5, 4.178e5, 1.851e5, 5.68e4, 500001.0, 500001.0, 1.152e5, 2.343e5, 8.75e4, 8.37e4, 500001.0, 1.669e5, 3.003e5, 1.546e5, 6.69e4, 2.325e5, 1.367e5, 1.375e5, 1.27e5, 1.683e5, 1.441e5, 9.53e4, 1.834e5, 1.435e5, 6.85e4, 1.625e5, 1.661e5, 1.908e5, 2.431e5, 1.488e5, 3.036e5, 1.479e5, 1.5e5, 3.288e5, 7.08e4, 2.25e5, 1.375e5, 3.5e5, 3.742e5, 1.549e5, 4.5e5, 3.063e5, 2.051e5, 2.737e5, ...]
+ >,
+ #Nx.Tensor<
+   f64[4128]
+   EXLA.Backend<host:0, 0.4179879677.2404253708.131386>
+   [8.55e4, 1.743e5, 5.65e4, 1.308e5, 1.375e5, 2.472e5, 2.25e5, 1.164e5, 500001.0, 1.154e5, 1.269e5, 1.229e5, 7.04e4, 3.534e5, 7.14e4, 4.083e5, 3.0e5, 1.648e5, 1.125e5, 2.028e5, 1.139e5, 2.15e5, 500001.0, 1.48e5, 1.683e5, 2.819e5, 3.338e5, 1.078e5, 3.277e5, 3.412e5, 3.289e5, 2.879e5, 2.545e5, 2.667e5, 6.82e4, 1.406e5, 2.795e5, 2.25e5, 1.17e5, 1.375e5, 3.115e5, 2.423e5, 4.93e5, 3.458e5, 1.542e5, 3.728e5, 6.6e4, 1.281e5, ...]
+ >}
+```
+
 Before we compute the correlation matrix, we will check if we have NaNs (Not a Number) in the data set.
 
 ```elixir
 y_nan_count = Nx.sum(Nx.is_nan(y))
 x_nan_count = Nx.sum(Nx.is_nan(x))
 {x_nan_count, y_nan_count}
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+{#Nx.Tensor<
+   u64
+   EXLA.Backend<host:0, 0.4179879677.2404253708.131394>
+   414
+ >,
+ #Nx.Tensor<
+   u64
+   EXLA.Backend<host:0, 0.4179879677.2404253708.131390>
+   0
+ >}
 ```
 
 Ups, we have some. Fortunately, for y, we don't have any NaNs. If we dig a little bit more, it turns out that NaNs are in <pre> bedrooms_per_rooms (1st row) </pre>  <pre> total_bedrooms (10th row) </pre>
@@ -697,6 +841,16 @@ Ups, we have some. Fortunately, for y, we don't have any NaNs. If we dig a littl
 bedrooms_per_rooms_nan_count = Nx.sum(Nx.is_nan(x[[.., bedrooms_per_rooms_idx]]))
 total_bedrooms_nan_count = Nx.sum(Nx.is_nan(x[[.., total_bedrooms_idx]]))
 Nx.equal(x_nan_count, Nx.add(bedrooms_per_rooms_nan_count, total_bedrooms_nan_count))
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Nx.Tensor<
+  u8
+  EXLA.Backend<host:0, 0.4179879677.2404253708.131409>
+  1
+>
 ```
 
 For these two, we use `Scholar.Impute.SimpleImputer` with startegy set to median of values. Function `fit` learn the median of features and `transform` for trained model replace all NaNs with a given startegy. It is important that we perform imputation after splitting data because otherwise we will have a leakage of information from test data.
@@ -713,12 +867,45 @@ x_test =
   |> Scholar.Impute.SimpleImputer.transform(x_test)
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+#Nx.Tensor<
+  f64[4128][12]
+  EXLA.Backend<host:0, 0.4179879677.2404253708.131493>
+  [
+    [0.20019126554032515, 548.0, 23.0, 36.32, -119.33, 2.5, 1446.0, 2.6386861313868613, 5.724452554744525, 628.0, 3137.0, 4.0],
+    [0.18461538461538463, 83.0, 34.0, 34.26, -118.44, 5.5124, 433.0, 5.216867469879518, 3.9156626506024095, 60.0, 325.0, 1.0],
+    [0.23362175525339926, 398.0, 35.0, 35.77, -119.25, 1.6786, 1449.0, 3.64070351758794, 4.065326633165829, 378.0, 1618.0, 4.0],
+    [0.20259128386336867, 313.0, 24.0, 37.8, -121.2, 3.5625, 927.0, 2.961661341853035, 5.424920127795527, 344.0, 1698.0, 4.0],
+    [0.42487046632124353, 155.0, ...],
+    ...
+  ]
+>
+```
+
 Eventually, we can compute the correlation matrix. We will use `Scholar.Covariance` to calculate the correlation matrix.
 
 ```elixir
 correlation =
   Nx.concatenate([x_train, Nx.new_axis(y_train, 1)], axis: 1)
   |> Scholar.Covariance.correlation_matrix(biased: true)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Nx.Tensor<
+  f64[13][13]
+  EXLA.Backend<host:0, 0.4179879677.2404253708.131527>
+  [
+    [1.0000000000000002, 0.06144282875654085, 0.13311283521287637, -0.12216156759996018, 0.09984860365269956, -0.612630933680883, 0.03517997111673592, 0.004697459810143742, -0.4078383723411937, 0.08095666109618091, -0.18612145325855575, -0.11835385450623682, -0.25385512001635363],
+    [0.06144282875654085, 1.0, -0.305555948690877, -0.07566125267999342, 0.06170866872453172, 0.01398821983308101, 0.907460734474932, -0.02634672373043427, -0.07388109216765114, 0.9735036322842058, 0.9198029415934222, -0.04626792658479704, 0.0639675034251392],
+    [0.13311283521287637, -0.305555948690877, 0.9999999999999998, 0.017212690983879612, -0.11382253728911094, -0.12557649464959478, -0.2961765721596695, 0.012442541870155687, -0.14834326174239934, -0.32094539339262423, -0.3602627671081426, -0.11940626101050672, 0.10251505008793772],
+    [-0.12216156759996018, -0.07566125267999342, 0.017212690983879612, 0.9999999999999992, -0.92526150146814, -0.0709535112221358, -0.11317680203176562, 0.0032929374670018535, 0.10562463526360089, -0.07174931649052743, -0.038747214812891013, ...],
+    ...
+  ]
+>
 ```
 
 Maybe visual representation would be nicer. 😅
@@ -747,7 +934,7 @@ corr_to_plot =
   DF.new(
     x: List.flatten(List.duplicate(names, corr_size)),
     y: List.flatten(for name <- names, do: List.duplicate(name, corr_size)),
-    corr_val: correlation_list
+    corr_val: Enum.map(correlation_list, fn x -> Float.round(x, 2) end)
   )
 
 Vl.new(
@@ -759,11 +946,25 @@ Vl.new(
   height: 630
 )
 |> Vl.data_from_values(corr_to_plot)
-|> Vl.mark(:rect)
-|> Vl.encode_field(:x, "x", type: :nominal, title: "")
-|> Vl.encode_field(:y, "y", type: :nominal, title: "")
-|> Vl.encode_field(:color, "corr_val", type: :quantitative, scale: [scheme: :viridis])
-|> Vl.config(axis: [grid: true, tickband: :extent])
+|> Vl.layers([
+  Vl.new()
+  |> Vl.mark(:rect)
+  |> Vl.encode_field(:x, "x", type: :nominal, title: "", sort: false)
+  |> Vl.encode_field(:y, "y", type: :nominal, title: "", sort: false)
+  |> Vl.encode_field(:color, "corr_val", type: :quantitative, scale: [scheme: :viridis]),
+  Vl.new()
+  |> Vl.mark(:text)
+  |> Vl.encode_field(:x, "x", type: :nominal, title: "")
+  |> Vl.encode_field(:y, "y", type: :nominal, title: "")
+  |> Vl.encode_field(:text, "corr_val", type: :quantitative)
+  |> Vl.encode_field(:color, "corr_val",
+    type: :quantitative,
+    condition: [
+      [test: "datum['corr_val'] < 0", value: :white],
+      [test: "datum['corr_val'] >= 0", value: :black]
+    ]
+  )
+])
 ```
 
 We can spot that _median_house_value_ is strongly correlated with _median_income_. It's pretty straightforward, the more money you have, the more expensive house you can buy. Non-obvious is a negative correlation with _bedrooms_per_rooms_. But it also can be explained. Bedrooms are the most crucial rooms in the house. Firstly, you need to guarantee that you have a house with enough bedrooms. If this condition is satisfied, then you can focus on "additional rooms" like a chill room, cabinets and so on. So if you buy a house with more additional rooms, then you decrease the ratio.
@@ -776,6 +977,23 @@ Now we are ready to train a model for the _median_house_value_ prediction. We wi
 model = Scholar.Linear.LinearRegression.fit(x_train, y_train)
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+%Scholar.Linear.LinearRegression{
+  coefficients: #Nx.Tensor<
+    f64[12]
+    EXLA.Backend<host:0, 0.4179879677.2404253708.132054>
+    [292661.1879978386, 111.46237796967083, 1170.1666131366273, -33322.29721781791, -35394.90464853701, 41384.64324873476, -41.31598131072877, 50.507900596456054, 3040.877192253343, 7.253624678472774, 3.272614960520949, -8059.519389730254]
+  >,
+  intercept: #Nx.Tensor<
+    f64
+    EXLA.Backend<host:0, 0.4179879677.2404253708.132058>
+    -3101555.563125743
+  >
+}
+```
+
 Now we can predict the values for the test set and measure the error of our prediction. We will calculate root mean square error (RMSE) and mean absolute error (MAE).
 
 ```elixir
@@ -785,10 +1003,35 @@ mae = Scholar.Metrics.mean_absolute_error(y_test, predictions)
 {rmse, mae}
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+{#Nx.Tensor<
+   f64
+   EXLA.Backend<host:0, 0.4179879677.2404253708.132070>
+   67648.9435367406
+ >,
+ #Nx.Tensor<
+   f64
+   EXLA.Backend<host:0, 0.4179879677.2404253708.132075>
+   48942.11908533544
+ >}
+```
+
 Ok, but is it a good or poor estimation? Huh, check the mean value of the target and then compare it to the value of errors.
 
 ```elixir
 Nx.mean(y)
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Nx.Tensor<
+  f64
+  EXLA.Backend<host:0, 0.4179879677.2404253708.132078>
+  206855.81690891474
+>
 ```
 
 For such a simple model as linear regression, it seems to be a pretty good result. But there is space to improve this result. You can, for example, add some additional features to the data set. In the future, you will be able to try more complicated models, such as random forests.
