@@ -1,6 +1,6 @@
 defmodule Scholar.Cluster.KMeans do
   @moduledoc """
-  K-Means Algorithm
+  K-Means Algorithm.
 
   K-Means is simple clustering method that works iteratively [1]. In the first iteration,
   centroids are chosen randomly from input data. It turned out that some initialization

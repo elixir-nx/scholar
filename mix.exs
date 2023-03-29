@@ -4,6 +4,7 @@ defmodule Scholar.MixProject do
   def project do
     [
       app: :scholar,
+      name: "Scholar",
       version: "0.1.0",
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -24,7 +25,7 @@ defmodule Scholar.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.29", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.29", only: :docs},
       {:nx, "~> 0.5.1"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, ">= 0.0.0", only: [:test, :dev]},
@@ -37,6 +38,7 @@ defmodule Scholar.MixProject do
       main: "Scholar",
       source_url: "https://github.com/elixir-nx/scholar",
       logo: "images/scholar_simplified.png",
+      extra_section: "Guides",
       extras: [
         "notebooks/k_means.livemd",
         "notebooks/linear_regression.livemd",

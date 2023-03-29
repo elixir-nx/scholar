@@ -1,9 +1,10 @@
 defmodule Scholar.NaiveBayes.Complement do
   @moduledoc """
-  The Complement Naive Bayes classifier described in Rennie et al. (2003) [1].
+  The Complement Naive Bayes classifier.
 
-  The Complement Naive Bayes classifier was designed to correct the assumption of Multinomial Naive Bayes that each class has roughly the
-  same representation. It is particularly suited for imbalanced data sets.
+  It was designed to correct the assumption of Multinomial Naive Bayes
+  that each class has roughly the same representation. It is particularly
+  suited for imbalanced data sets.
 
   Reference:
 

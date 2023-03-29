@@ -1,8 +1,7 @@
 defmodule Scholar.NaiveBayes.Gaussian do
   @moduledoc ~S"""
-  Gaussian Naive Bayes.
+  Gaussian Naive Bayes algorithm for classification.
 
-  Module implements the Gaussian Naive Bayes algorithm for classification [1].
   The likelihood of the features is assumed to be Gaussian:
   $$ P(x\_{i} | y) = \frac{1}{\sqrt{2\pi\sigma\_{y}^{2}}} \exp \left(-\frac{(x\_{i} - \mu\_{y})^2}{2\sigma\_{y}^{2}}\right) $$
 
