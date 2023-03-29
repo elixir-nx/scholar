@@ -1,15 +1,16 @@
 <h1><img src="./images/scholar.png" alt="Scholar" width="400"></h1>
 
-Machine learning tools built on top of Nx. Scholar implements several
-algorithms for classification, regression, clustering, dimensionality
+Traditional machine learning tools built on top of Nx. Scholar implements
+several algorithms for classification, regression, clustering, dimensionality
 reduction, metrics, and preprocessing.
 
 For deep learning, see [Axon](https://github.com/elixir-nx/axon).
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `scholar` to your list of dependencies in `mix.exs`:
+### Mix projects
+
+Add to your `mix.exs`:
 
 ```elixir
 def deps do
@@ -19,9 +20,37 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/scholar>.
+Besides Scholar, you will most likely want to use an existing Nx compiler/backend,
+such as EXLA:
+
+```elixir
+def deps do
+  [
+    {:scholar, "~> 0.1"},
+    {:exla, ">= 0.0.0"}
+  ]
+end
+```
+
+And then in your `config/config.exs` file:
+
+```elixir
+import Config
+config :nx, :default_backend, EXLA.Backend
+```
+
+### Notebooks
+
+To use Scholar inside code notebooks, run:
+
+```elixir
+Mix.install([
+  {:scholar, "~> 0.1"},
+  {:exla, ">= 0.0.0"}
+])
+
+Nx.global_default_backend(EXLA.Backend)
+```
 
 ## License
 
