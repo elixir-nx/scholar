@@ -40,6 +40,7 @@ defmodule Scholar.MixProject do
   defp package do
     [
       maintainers: ["Mateusz Słuszniak"],
+      description: "Traditional machine learning on top of Nx",
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url}
     ]
