@@ -15,7 +15,7 @@ Add to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:scholar, "~> 0.1.0"}
+    {:scholar, "~> 0.1"}
   ]
 end
 ```
