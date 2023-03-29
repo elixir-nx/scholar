@@ -17,133 +17,6 @@ Mix.install([
 <!-- livebook:{"output":true} -->
 
 ```
-Resolving Hex dependencies...
-Resolution completed in 0.686s
-New:
-  castore 1.0.1
-  complex 0.5.0
-  elixir_make 0.7.6
-  exla 0.5.2
-  explorer 0.5.6
-  finch 0.15.0
-  hpax 0.1.2
-  jason 1.4.0
-  kino 0.8.1
-  kino_vega_lite 0.1.8
-  mime 2.0.3
-  mint 1.5.1
-  nimble_options 1.0.1
-  nimble_pool 0.2.6
-  nx 0.5.2
-  req 0.3.6
-  rustler_precompiled 0.6.1
-  scholar 0.1.0
-  table 0.1.2
-  table_rex 3.1.1
-  telemetry 1.2.1
-  vega_lite 0.1.7
-  xla 0.4.4
-* Getting scholar (Hex package)
-* Getting nx (Hex package)
-* Getting explorer (Hex package)
-* Getting exla (Hex package)
-* Getting req (Hex package)
-* Getting kino_vega_lite (Hex package)
-* Getting kino (Hex package)
-* Getting table (Hex package)
-* Getting vega_lite (Hex package)
-* Getting finch (Hex package)
-* Getting jason (Hex package)
-* Getting mime (Hex package)
-* Getting castore (Hex package)
-* Getting mint (Hex package)
-* Getting nimble_options (Hex package)
-* Getting nimble_pool (Hex package)
-* Getting telemetry (Hex package)
-* Getting hpax (Hex package)
-* Getting elixir_make (Hex package)
-* Getting xla (Hex package)
-* Getting rustler_precompiled (Hex package)
-* Getting table_rex (Hex package)
-* Getting complex (Hex package)
-==> table
-Compiling 5 files (.ex)
-Generated table app
-==> vega_lite
-Compiling 5 files (.ex)
-Generated vega_lite app
-==> mime
-Compiling 1 file (.ex)
-Generated mime app
-==> nimble_options
-Compiling 3 files (.ex)
-Generated nimble_options app
-===> Analyzing applications...
-===> Compiling telemetry
-==> jason
-Compiling 10 files (.ex)
-Generated jason app
-==> hpax
-Compiling 4 files (.ex)
-Generated hpax app
-==> complex
-Compiling 2 files (.ex)
-Generated complex app
-==> nx
-Compiling 31 files (.ex)
-Generated nx app
-==> kino
-Compiling 37 files (.ex)
-Generated kino app
-==> kino_vega_lite
-Compiling 4 files (.ex)
-Generated kino_vega_lite app
-==> table_rex
-Compiling 7 files (.ex)
-Generated table_rex app
-==> nimble_pool
-Compiling 2 files (.ex)
-Generated nimble_pool app
-==> castore
-Compiling 1 file (.ex)
-Generated castore app
-==> mint
-Compiling 1 file (.erl)
-Compiling 19 files (.ex)
-Generated mint app
-==> finch
-Compiling 13 files (.ex)
-Generated finch app
-==> req
-Compiling 5 files (.ex)
-Generated req app
-==> rustler_precompiled
-Compiling 4 files (.ex)
-Generated rustler_precompiled app
-==> explorer
-Compiling 19 files (.ex)
-
-22:05:44.040 [debug] Copying NIF from cache and extracting to /home/mateusz/.cache/mix/installs/elixir-1.14.2-erts-13.1.4/657fcb38edfd0c94028d16806e9cf9ac/_build/dev/lib/explorer/priv/native/libexplorer-v0.5.6-nif-2.16-x86_64-unknown-linux-gnu.so
-Generated explorer app
-==> elixir_make
-Compiling 6 files (.ex)
-Generated elixir_make app
-==> xla
-Compiling 2 files (.ex)
-Generated xla app
-==> exla
-Unpacking /home/mateusz/.cache/xla/0.4.4/cache/download/xla_extension-x86_64-linux-gnu-cpu.tar.gz into /home/mateusz/.cache/mix/installs/elixir-1.14.2-erts-13.1.4/657fcb38edfd0c94028d16806e9cf9ac/deps/exla/cache
-Using libexla.so from /home/mateusz/.cache/xla/exla/elixir-1.14.2-erts-13.1.4-xla-0.4.4-exla-0.5.2-rdl56tye7r5ngzfl2ruuhpbewi/libexla.so
-Compiling 21 files (.ex)
-Generated exla app
-==> scholar
-Compiling 23 files (.ex)
-Generated scholar app
-```
-
-<!-- livebook:{"output":true} -->
-
-```
 :ok
 ```
 
@@ -224,7 +97,7 @@ Vl.new(
 
 ```
 
-22:33:21.773 [info] TfrtCpuClient created.
+23:13:52.540 [info] TfrtCpuClient created.
 
 ```
 
@@ -246,14 +119,14 @@ model = Scholar.Linear.LinearRegression.fit(x, y)
 %Scholar.Linear.LinearRegression{
   coefficients: #Nx.Tensor<
     f64[1][1]
-    EXLA.Backend<host:0, 0.1725116846.2639396871.79076>
+    EXLA.Backend<host:0, 0.1766168485.4260495372.100751>
     [
       [2.9578183089017]
     ]
   >,
   intercept: #Nx.Tensor<
     f64[1]
-    EXLA.Backend<host:0, 0.1725116846.2639396871.79080>
+    EXLA.Backend<host:0, 0.1766168485.4260495372.100755>
     [4.023067929858136]
   >
 }
@@ -393,7 +266,7 @@ x_b |> Nx.LinAlg.pinv() |> Nx.dot(y)
 ```
 #Nx.Tensor<
   f64[2][1]
-  EXLA.Backend<host:0, 0.1725116846.2639396871.79598>
+  EXLA.Backend<host:0, 0.1766168485.4260495371.99138>
   [
     [4.023067929858136],
     [2.957818308901698]
@@ -686,7 +559,7 @@ x =
 ```
 {#Nx.Tensor<
    f64[20640][12]
-   EXLA.Backend<host:0, 0.1725116846.2639396871.80834>
+   EXLA.Backend<host:0, 0.1766168485.4260495371.100323>
    [
      [0.2707641196013289, 326.0, 15.0, 32.76, -117.02, 1.0278, 543.0, 1.665644171779141, 3.6932515337423313, 326.0, 1204.0, 1.0],
      [0.2598343685300207, 230.0, 27.0, 38.44, -122.71, 1.7, 462.0, 2.008695652173913, 4.2, 251.0, 966.0, 1.0],
@@ -698,7 +571,7 @@ x =
  >,
  #Nx.Tensor<
    f64[20640]
-   EXLA.Backend<host:0, 0.1725116846.2639396871.80805>
+   EXLA.Backend<host:0, 0.1766168485.4260495371.100294>
    [1.542e5, 3.5e5, 2.667e5, 2.728e5, 1.163e5, 2.941e5, 4.178e5, 1.851e5, 5.68e4, 500001.0, 500001.0, 1.152e5, 2.343e5, 8.75e4, 8.37e4, 500001.0, 1.669e5, 3.003e5, 1.546e5, 6.69e4, 2.325e5, 1.367e5, 1.375e5, 1.27e5, 1.683e5, 1.441e5, 9.53e4, 1.834e5, 1.435e5, 6.85e4, 1.625e5, 1.661e5, 1.908e5, 2.431e5, 1.488e5, 3.036e5, 1.479e5, 1.5e5, 3.288e5, 7.08e4, 2.25e5, 1.375e5, 3.5e5, 3.742e5, 1.549e5, 4.5e5, 3.063e5, 2.051e5, ...]
  >}
 ```
@@ -718,12 +591,12 @@ num_train = round(train_ratio * num_rows)
 ```
 {#Nx.Tensor<
    f64[16512]
-   EXLA.Backend<host:0, 0.1725116846.2639396871.80840>
+   EXLA.Backend<host:0, 0.1766168485.4260495371.100329>
    [1.542e5, 3.5e5, 2.667e5, 2.728e5, 1.163e5, 2.941e5, 4.178e5, 1.851e5, 5.68e4, 500001.0, 500001.0, 1.152e5, 2.343e5, 8.75e4, 8.37e4, 500001.0, 1.669e5, 3.003e5, 1.546e5, 6.69e4, 2.325e5, 1.367e5, 1.375e5, 1.27e5, 1.683e5, 1.441e5, 9.53e4, 1.834e5, 1.435e5, 6.85e4, 1.625e5, 1.661e5, 1.908e5, 2.431e5, 1.488e5, 3.036e5, 1.479e5, 1.5e5, 3.288e5, 7.08e4, 2.25e5, 1.375e5, 3.5e5, 3.742e5, 1.549e5, 4.5e5, 3.063e5, 2.051e5, 2.737e5, ...]
  >,
  #Nx.Tensor<
    f64[4128]
-   EXLA.Backend<host:0, 0.1725116846.2639396871.80842>
+   EXLA.Backend<host:0, 0.1766168485.4260495371.100331>
    [8.55e4, 1.743e5, 5.65e4, 1.308e5, 1.375e5, 2.472e5, 2.25e5, 1.164e5, 500001.0, 1.154e5, 1.269e5, 1.229e5, 7.04e4, 3.534e5, 7.14e4, 4.083e5, 3.0e5, 1.648e5, 1.125e5, 2.028e5, 1.139e5, 2.15e5, 500001.0, 1.48e5, 1.683e5, 2.819e5, 3.338e5, 1.078e5, 3.277e5, 3.412e5, 3.289e5, 2.879e5, 2.545e5, 2.667e5, 6.82e4, 1.406e5, 2.795e5, 2.25e5, 1.17e5, 1.375e5, 3.115e5, 2.423e5, 4.93e5, 3.458e5, 1.542e5, 3.728e5, 6.6e4, 1.281e5, ...]
  >}
 ```
@@ -741,12 +614,12 @@ x_nan_count = Nx.sum(Nx.is_nan(x))
 ```
 {#Nx.Tensor<
    u64
-   EXLA.Backend<host:0, 0.1725116846.2639396871.80850>
+   EXLA.Backend<host:0, 0.1766168485.4260495371.100339>
    414
  >,
  #Nx.Tensor<
    u64
-   EXLA.Backend<host:0, 0.1725116846.2639396871.80846>
+   EXLA.Backend<host:0, 0.1766168485.4260495371.100335>
    0
  >}
 ```
@@ -765,7 +638,7 @@ Nx.equal(x_nan_count, Nx.add(bedrooms_per_rooms_nan_count, total_bedrooms_nan_co
 ```
 #Nx.Tensor<
   u8
-  EXLA.Backend<host:0, 0.1725116846.2639396871.80865>
+  EXLA.Backend<host:0, 0.1766168485.4260495371.100354>
   1
 >
 ```
@@ -789,7 +662,7 @@ x_test =
 ```
 #Nx.Tensor<
   f64[4128][12]
-  EXLA.Backend<host:0, 0.1725116846.2639396871.80949>
+  EXLA.Backend<host:0, 0.1766168485.4260495371.100438>
   [
     [0.20019126554032515, 548.0, 23.0, 36.32, -119.33, 2.5, 1446.0, 2.6386861313868613, 5.724452554744525, 628.0, 3137.0, 4.0],
     [0.18461538461538463, 83.0, 34.0, 34.26, -118.44, 5.5124, 433.0, 5.216867469879518, 3.9156626506024095, 60.0, 325.0, 1.0],
@@ -814,7 +687,7 @@ correlation =
 ```
 #Nx.Tensor<
   f64[13][13]
-  EXLA.Backend<host:0, 0.1725116846.2639396871.80983>
+  EXLA.Backend<host:0, 0.1766168485.4260495371.100472>
   [
     [1.0000000000000002, 0.06144282875654085, 0.13311283521287637, -0.12216156759996018, 0.09984860365269956, -0.612630933680883, 0.03517997111673592, 0.004697459810143742, -0.4078383723411937, 0.08095666109618091, -0.18612145325855575, -0.11835385450623682, -0.25385512001635363],
     [0.06144282875654085, 1.0, -0.305555948690877, -0.07566125267999342, 0.06170866872453172, 0.01398821983308101, 0.907460734474932, -0.02634672373043427, -0.07388109216765114, 0.9735036322842058, 0.9198029415934222, -0.04626792658479704, 0.0639675034251392],
@@ -906,13 +779,13 @@ model = Scholar.Linear.LinearRegression.fit(x_train, y_train)
 %Scholar.Linear.LinearRegression{
   coefficients: #Nx.Tensor<
     f64[12]
-    EXLA.Backend<host:0, 0.3258092402.733347859.193386>
-    [292305.2448966373, 112.04264082024156, 1170.00012972681, -33326.1914859859, -35395.833929673034, 41364.13001642746, -41.354504818503116, 50.96705378546059, 3047.0048257092462, 6.624637713748793, 3.3099313922654625, -8055.968226612922]
+    EXLA.Backend<host:0, 0.1766168485.4260495371.100999>
+    [292661.1879978386, 111.46237796967083, 1170.1666131366273, -33322.29721781791, -35394.90464853701, 41384.64324873476, -41.31598131072877, 50.507900596456054, 3040.877192253343, 7.253624678472774, 3.272614960520949, -8059.519389730254]
   >,
   intercept: #Nx.Tensor<
     f64
-    EXLA.Backend<host:0, 0.3258092402.733347859.193388>
-    -3101491.4495200696
+    EXLA.Backend<host:0, 0.1766168485.4260495371.101003>
+    -3101555.563125743
   >
 }
 ```
@@ -931,13 +804,13 @@ mae = Scholar.Metrics.mean_absolute_error(y_test, predictions)
 ```
 {#Nx.Tensor<
    f64
-   EXLA.Backend<host:0, 0.3258092402.733347859.193395>
-   67644.92610276888
+   EXLA.Backend<host:0, 0.1766168485.4260495371.101015>
+   67648.9435367406
  >,
  #Nx.Tensor<
    f64
-   EXLA.Backend<host:0, 0.3258092402.733347859.193399>
-   48931.208818819556
+   EXLA.Backend<host:0, 0.1766168485.4260495371.101020>
+   48942.11908533544
  >}
 ```
 
@@ -952,7 +825,7 @@ Nx.mean(y)
 ```
 #Nx.Tensor<
   f64
-  EXLA.Backend<host:0, 0.3258092402.733347859.193401>
+  EXLA.Backend<host:0, 0.1766168485.4260495371.101023>
   206855.81690891474
 >
 ```
