@@ -3,12 +3,12 @@ defmodule Scholar.Cluster.KMeans do
   K-Means Algorithm.
 
   K-Means is simple clustering method that works iteratively [1]. In the first iteration,
-  centroids are chosen randomly from input data. It turned out that some initialization
+  centroids are chosen randomly from input data. It turned out that some initializations
   are especially effective. In 2007 David Arthur and Sergei Vassilvitskii proposed initialization
-  called k-means++ which speed up conergence of algorithm drastically [2]. After initialization, from each centroid
-  find points that are the clostest to that centroid. Then, for each centroid replace it with the
+  called k-means++ which speed up convergence of algorithm drastically [2]. After initialization, from each centroid
+  find points that are the closest to that centroid. Then, for each centroid replace it with the
   center of mass of associated points. These two steps mentioned above are repeated until the solution
-  converge. Since some initializations are unfortunate and converge to sub-optimal results
+  converges. Since some initializations are unfortunate and converge to sub-optimal results
   we need repeat the whole procedure a few times and take the best result.
 
   Reference:
