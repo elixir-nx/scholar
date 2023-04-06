@@ -105,10 +105,8 @@ defmodule Scholar.Cluster.KMeans do
   ## Examples
 
       iex> seed = 42
-      iex>  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
-      ...>    num_clusters: 2,
-      ...>    seed: seed
-      ...>  )
+      iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
+      iex> Scholar.Cluster.KMeans.fit(x, num_clusters: 2, seed: seed)
       %Scholar.Cluster.KMeans{
         num_iterations: Nx.tensor(
           2
@@ -143,18 +141,18 @@ defmodule Scholar.Cluster.KMeans do
 
     seed = Keyword.get_lazy(opts, :seed, &System.system_time/0)
     {weights, opts} = Keyword.pop(opts, :weights, nil)
-    weights = validate_weights(weights, num_samples)
-
+    x_float_type = to_float_type(x)
+    weights = validate_weights(weights, num_samples, x_type: x_float_type)
     fit_n(x, weights, seed, opts)
   end
 
   defnp fit_n(%Nx.Tensor{shape: {num_samples, num_features}} = x, weights, seed, opts) do
+    x = to_float(x)
     num_clusters = opts[:num_clusters]
     num_runs = opts[:num_runs]
 
     broadcast_weights =
       weights
-      |> to_float()
       |> Nx.broadcast({num_runs, num_clusters, num_samples})
 
     broadcast_x = Nx.broadcast(x, {num_runs, num_samples, num_features})
@@ -212,7 +210,6 @@ defmodule Scholar.Cluster.KMeans do
   defnp initialize_centroids(x, seed, opts) do
     num_clusters = opts[:num_clusters]
     {num_samples, _num_features} = Nx.shape(x)
-    x = to_float(x)
     num_runs = opts[:num_runs]
 
     case opts[:init] do
@@ -264,10 +261,10 @@ defmodule Scholar.Cluster.KMeans do
   end
 
   defnp k_means_plus_plus(x, num_clusters, num_runs, seed) do
-    inf = Nx.Constants.infinity(Nx.type(x) |> Nx.Type.to_floating())
+    inf = Nx.Constants.infinity(to_float_type(x))
     {num_samples, num_features} = Nx.shape(x)
     centroids = Nx.broadcast(inf, {num_runs, num_clusters, num_features})
-    inertia = Nx.broadcast(0.0, {num_runs, num_samples})
+    inertia = Nx.broadcast(Nx.tensor(0.0, type: to_float_type(x)), {num_runs, num_samples})
 
     key = Nx.Random.key(seed)
 
@@ -298,11 +295,8 @@ defmodule Scholar.Cluster.KMeans do
   ## Examples
 
       iex> seed = 42
-      iex> model =
-      ...>  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
-      ...>    num_clusters: 2,
-      ...>    seed: seed
-      ...>  )
+      iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
+      iex> model = Scholar.Cluster.KMeans.fit(x, num_clusters: 2, seed: seed)
       iex> Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       Nx.tensor(
         [1, 0]
@@ -364,16 +358,18 @@ defmodule Scholar.Cluster.KMeans do
     )
   end
 
-  deftransformp validate_weights(weights, num_samples) do
+  deftransformp validate_weights(weights, num_samples, opts \\ []) do
+    x_type = opts[:x_type]
+
     cond do
       is_nil(weights) ->
-        1.0
+        Nx.tensor(1.0, type: x_type)
 
       Nx.is_tensor(weights) and Nx.shape(weights) == {num_samples} ->
-        weights
+        Nx.as_type(weights, x_type)
 
       is_list(weights) and length(weights) == num_samples ->
-        Nx.tensor(weights, type: :f32)
+        Nx.tensor(weights, type: x_type)
 
       true ->
         raise ArgumentError,

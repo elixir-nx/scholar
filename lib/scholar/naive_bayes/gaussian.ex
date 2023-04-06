@@ -12,6 +12,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
   * [1] - [Detailed explanation of algorithm used to update feature means and variance online by Chan, Golub, and LaVeque](http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf)
   """
   import Nx.Defn
+  import Scholar.Shared
 
   @derive {Nx.Container,
            containers: [:theta, :var, :class_count, :class_priors, :classes, :epsilon]}
@@ -135,12 +136,14 @@ defmodule Scholar.NaiveBayes.Gaussian do
       ] ++
         opts
 
-    sample_weights_flag = Nx.tensor(opts[:sample_weights] != nil)
-    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
-    sample_weights = Nx.tensor(sample_weights)
+    x_type = to_float_type(x)
 
-    {priors, opts} = Keyword.pop(opts, :priors, 0.0)
+    {priors, opts} = Keyword.pop(opts, :priors, Nx.tensor(0.0, type: x_type))
     class_priors = Nx.tensor(priors)
+
+    sample_weights_flag = Nx.tensor(opts[:sample_weights] != nil)
+    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, Nx.tensor(1.0, type: x_type))
+    sample_weights = Nx.tensor(sample_weights, type: x_type)
 
     fit_n(x, y, sample_weights, class_priors, sample_weights_flag, opts)
   end
@@ -241,6 +244,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
   end
 
   defnp fit_n(x, y, sample_weights, class_priors, sample_weights_flag, opts) do
+    x_type = Nx.Type.merge(to_float_type(x), {:f, 32})
     input_rank = Nx.rank(x)
     targets_rank = Nx.rank(y)
 
@@ -296,9 +300,9 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
     {_, _, _, _, _, _, final_theta, final_var, final_class_count} =
       while {i = 0, x, y, sample_weights, classes, sample_weights_flag,
-             theta = Nx.broadcast(0.0, {num_classes, num_features}),
-             var = Nx.broadcast(0.0, {num_classes, num_features}),
-             class_count = Nx.broadcast(0.0, {num_classes})},
+             theta = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_classes, num_features}),
+             var = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_classes, num_features}),
+             class_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_classes})},
             i < Nx.size(classes) do
         y_i = classes[[i]]
         mask = y == y_i

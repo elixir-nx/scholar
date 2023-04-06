@@ -4,6 +4,7 @@ defmodule Scholar.Metrics.Clustering do
   """
 
   import Nx.Defn
+  import Scholar.Shared
 
   opts = [
     num_clusters: [
@@ -94,7 +95,7 @@ defmodule Scholar.Metrics.Clustering do
   defnp inner_and_outer_dist(x, labels, opts) do
     num_clusters = opts[:num_clusters]
     {num_samples, num_features} = Nx.shape(x)
-    inf = Nx.Constants.infinity()
+    inf = Nx.Constants.infinity(to_float_type(x))
 
     x_a =
       x

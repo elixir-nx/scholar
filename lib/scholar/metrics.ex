@@ -331,7 +331,7 @@ defmodule Scholar.Metrics do
       iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: {:u, 32})
       iex> Scholar.Metrics.confusion_matrix(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
-        s64[3][3]
+        u64[3][3]
         [
           [1, 1, 0],
           [1, 0, 1],
@@ -348,9 +348,9 @@ defmodule Scholar.Metrics do
 
     num_classes = check_num_classes(opts[:num_classes])
 
-    zeros = Nx.broadcast(0, {num_classes, num_classes})
+    zeros = Nx.broadcast(Nx.tensor(0, type: {:u, 64}), {num_classes, num_classes})
     indices = Nx.stack([y_true, y_pred], axis: 1)
-    updates = Nx.broadcast(1, y_true)
+    updates = Nx.broadcast(Nx.tensor(1, type: {:u, 64}), y_true)
 
     Nx.indexed_add(zeros, indices, updates)
   end
