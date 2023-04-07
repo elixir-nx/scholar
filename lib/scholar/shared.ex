@@ -33,10 +33,17 @@ defmodule Scholar.Shared do
   end
 
   @doc """
+  Returns the floating type of `tensor`.
+  """
+  deftransform to_float_type(tensor) do
+    tensor |> Nx.type() |> Nx.Type.to_floating()
+  end
+
+  @doc """
   Converts `tensor` to the floating type.
   """
-  deftransform to_float(tensor) do
-    type = tensor |> Nx.type() |> Nx.Type.to_floating()
+  defn to_float(tensor) do
+    type = to_float_type(tensor)
     Nx.as_type(tensor, type)
   end
 end

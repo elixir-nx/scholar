@@ -3,6 +3,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
   Naive Bayes classifier for multinomial models.
   """
   import Nx.Defn
+  import Scholar.Shared
 
   @derive {Nx.Container,
            containers: [
@@ -147,13 +148,15 @@ defmodule Scholar.NaiveBayes.Multinomial do
         priors_flag: opts[:priors] != nil
       ] ++ opts
 
-    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
-    sample_weights = Nx.tensor(sample_weights)
+    x_type = to_float_type(x)
 
-    {priors, opts} = Keyword.pop(opts, :priors, 0.0)
+    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, Nx.tensor(1.0, type: x_type))
+    sample_weights = Nx.tensor(sample_weights, type: x_type)
+
+    {priors, opts} = Keyword.pop(opts, :priors, Nx.tensor(0.0, type: x_type))
     class_priors = Nx.tensor(priors)
     {alpha, opts} = Keyword.pop!(opts, :alpha)
-    alpha = Nx.tensor(alpha)
+    alpha = Nx.tensor(alpha, type: x_type)
 
     fit_n(x, y, sample_weights, class_priors, alpha, opts)
   end
@@ -254,6 +257,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
   end
 
   defnp fit_n(x, y, sample_weights, class_priors, alpha, opts) do
+    x_type = Nx.Type.merge(to_float_type(x), {:f, 32})
     input_rank = Nx.rank(x)
     targets_rank = Nx.rank(y)
 
@@ -330,8 +334,8 @@ defmodule Scholar.NaiveBayes.Multinomial do
         else: classes
 
     {_, n_classes} = Nx.shape(classes)
-    class_count = Nx.broadcast(0.0, {n_classes})
-    feature_count = Nx.broadcast(0.0, {n_classes, num_features})
+    class_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes})
+    feature_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes, num_features})
     feature_count = feature_count + Nx.dot(classes, [0], x, [0])
     class_count = class_count + Nx.sum(classes, axes: [0])
     alpha = check_alpha(alpha, opts[:force_alpha], num_features)
@@ -379,7 +383,8 @@ defmodule Scholar.NaiveBayes.Multinomial do
   end
 
   defnp check_alpha(alpha, force_alpha, num_features) do
-    alpha_lower_bound = 1.0e-10
+    type = Nx.Type.merge(Nx.type(alpha), {:f, 32})
+    alpha_lower_bound = Nx.tensor(1.0e-10, type: type)
 
     case Nx.shape(alpha) do
       {} -> nil

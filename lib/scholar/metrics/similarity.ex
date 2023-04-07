@@ -47,10 +47,12 @@ defmodule Scholar.Metrics.Similarity do
     x_size = unique_size(x)
     y_size = unique_size(y)
 
+    result_type = Nx.Type.to_floating(Nx.Type.merge(Nx.type(x), Nx.type(y)))
+
     union_size = unique_size(Nx.concatenate([x, y]))
     intersection_size = x_size + y_size - union_size
 
-    intersection_size / union_size
+    (intersection_size / union_size) |> Nx.as_type(result_type)
   end
 
   @doc ~S"""
@@ -98,7 +100,9 @@ defmodule Scholar.Metrics.Similarity do
     m10 = Nx.sum(x > y)
     m01 = Nx.sum(x < y)
 
-    m11 / (m11 + m10 + m01)
+    result_type = Nx.Type.to_floating(Nx.Type.merge(Nx.type(x), Nx.type(y)))
+
+    (m11 / (m11 + m10 + m01)) |> Nx.as_type(result_type)
   end
 
   defnp unique_size(%Nx.Tensor{shape: shape} = tensor) do

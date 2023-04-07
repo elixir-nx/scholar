@@ -3,6 +3,7 @@ defmodule Scholar.Linear.LinearRegression do
   Ordinary least squares linear regression.
   """
   import Nx.Defn
+  # import Scholar.Shared
 
   @derive {Nx.Container, containers: [:coefficients, :intercept]}
   defstruct [:coefficients, :intercept]
@@ -69,12 +70,16 @@ defmodule Scholar.Linear.LinearRegression do
         opts
 
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
+    # x_type = to_float_type(x)
+    # sample_weights = Nx.tensor(sample_weights, type: x_type)
     sample_weights = Nx.tensor(sample_weights)
 
     fit_n(x, y, sample_weights, opts)
   end
 
   defnp fit_n(a, b, sample_weights, opts) do
+    # a = to_float(a)
+    # b = to_float(b)
     {a_offset, b_offset} =
       if opts[:fit_intercept?] do
         preprocess_data(a, b, sample_weights, opts)
@@ -142,7 +147,7 @@ defmodule Scholar.Linear.LinearRegression do
     if fit_intercept? do
       y_offset - Nx.dot(coeff, x_offset)
     else
-      0.0
+      Nx.tensor(0.0, type: Nx.type(coeff))
     end
   end
 
