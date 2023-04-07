@@ -3,6 +3,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
   The K-Nearest Neighbors.
   """
   import Nx.Defn
+  import Scholar.Shared
   require Nx
 
   @derive {Nx.Container,
@@ -243,7 +244,8 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
     {num_samples, _} = Nx.shape(x)
     {neigh_distances, neigh_indices} = k_neighbors(model, x)
     pred_labels = Nx.take(labels, neigh_indices)
-    proba = Nx.broadcast(0.0, {num_samples, num_classes})
+    x_type = Nx.Type.merge(to_float_type(x), {:f, 32})
+    proba = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_samples, num_classes})
 
     weights_vals =
       case weights do

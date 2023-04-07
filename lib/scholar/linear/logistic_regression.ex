@@ -3,6 +3,7 @@ defmodule Scholar.Linear.LogisticRegression do
   Logistic regression in both binary and multinomial variants.
   """
   import Nx.Defn
+  import Scholar.Shared
 
   @derive {Nx.Container, containers: [:coefficients, :bias]}
   defstruct [:coefficients, :bias]
@@ -99,11 +100,9 @@ defmodule Scholar.Linear.LogisticRegression do
       while {iter = 0, x, learning_rate, n, iterations, y,
              coeff =
                Nx.broadcast(
-                 Nx.tensor(1.0, type: Nx.Type.to_floating(Nx.type(x))),
+                 Nx.tensor(1.0, type: to_float_type(x)),
                  {n, num_classes}
-               ),
-             bias =
-               Nx.broadcast(Nx.tensor(0, type: Nx.Type.to_floating(Nx.type(x))), {num_classes})},
+               ), bias = Nx.broadcast(Nx.tensor(0, type: to_float_type(x)), {num_classes})},
             iter < iterations do
         {coeff_grad, bias_grad} = grad_loss(coeff, bias, x, y)
         coeff = coeff - learning_rate * coeff_grad

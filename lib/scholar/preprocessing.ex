@@ -4,6 +4,7 @@ defmodule Scholar.Preprocessing do
   """
 
   import Nx.Defn
+  import Scholar.Shared
 
   general_schema = [
     axes: [
@@ -402,7 +403,8 @@ defmodule Scholar.Preprocessing do
 
   defnp normalize_n(tensor, opts) do
     shape = Nx.shape(tensor)
-    zeros = Nx.broadcast(Nx.tensor(0.0, type: Nx.Type.to_floating(Nx.type(tensor))), shape)
+    type = to_float_type(tensor)
+    zeros = Nx.broadcast(Nx.tensor(0.0, type: type), shape)
 
     norm =
       case opts[:norm] do
@@ -421,7 +423,10 @@ defmodule Scholar.Preprocessing do
       end
 
     shape_to_broadcast = unsqueezed_reduced_shape(shape, opts[:axes])
-    norm = Nx.select(norm == 0.0, 1.0, norm) |> Nx.reshape(shape_to_broadcast)
+
+    norm =
+      Nx.select(norm == 0.0, Nx.tensor(1.0, type: type), norm) |> Nx.reshape(shape_to_broadcast)
+
     tensor / norm
   end
 

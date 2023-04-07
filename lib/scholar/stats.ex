@@ -8,6 +8,7 @@ defmodule Scholar.Stats do
   """
 
   import Nx.Defn
+  import Scholar.Shared
 
   general = [
     axes: [
@@ -149,7 +150,7 @@ defmodule Scholar.Stats do
     m2 = moment(tensor, 2, axes: opts[:axes], keep_axes: opts[:keep_axes])
     m4 = moment(tensor, 4, axes: opts[:axes], keep_axes: opts[:keep_axes])
 
-    m2_mask = Nx.select(m2 == 0, Nx.Constants.nan(Nx.Type.to_floating(Nx.type(tensor))), m2)
+    m2_mask = Nx.select(m2 == 0, Nx.Constants.nan(to_float_type(tensor)), m2)
 
     vals = m4 / m2_mask ** 2
 

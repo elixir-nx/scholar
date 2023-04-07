@@ -383,10 +383,10 @@ defmodule Scholar.Metrics.Distance do
       |> Nx.sum(axes: opts[:axes], keep_axes: true)
       |> Nx.sqrt()
 
-    norm_x = Nx.select(norm_x > cutoff, norm_x, 1.0)
+    norm_x = Nx.select(norm_x > cutoff, norm_x, Nx.tensor(1.0, type: to_float_type(x)))
     normalized_x = x / norm_x
 
-    norm_y = Nx.select(norm_y > cutoff, norm_y, 1.0)
+    norm_y = Nx.select(norm_y > cutoff, norm_y, Nx.tensor(1.0, type: to_float_type(y)))
     normalized_y = y / norm_y
 
     norm_x = Nx.squeeze(norm_x, axes: opts[:axes])
@@ -399,8 +399,10 @@ defmodule Scholar.Metrics.Distance do
     one_zero? = Nx.logical_xor(x_zero?, y_zero?)
 
     res = (normalized_x * normalized_y) |> Nx.sum(axes: opts[:axes])
-    res = Nx.select(one_zero?, 0.0, res)
-    1.0 - Nx.select(both_zero?, 1.0, res)
+    merged_type = Nx.Type.merge(Nx.type(x), Nx.type(y))
+    res = Nx.select(one_zero?, Nx.tensor(0, type: merged_type), res)
+    one_merged_type = Nx.tensor(1, type: merged_type)
+    one_merged_type - Nx.select(both_zero?, one_merged_type, res)
   end
 
   @doc """
@@ -474,11 +476,14 @@ defmodule Scholar.Metrics.Distance do
 
   defnp hamming_unweighted(x, y, opts) do
     assert_same_shape!(x, y)
-    Nx.mean(x != y, axes: opts[:axes])
+    result_type = Nx.Type.to_floating(Nx.Type.merge(Nx.type(x), Nx.type(y)))
+    Nx.mean(x != y, axes: opts[:axes]) |> Nx.as_type(result_type)
   end
 
   defnp hamming_weighted(x, y, w, opts) do
     assert_same_shape!(x, y)
-    Nx.weighted_mean(x != y, w, axes: opts[:axes])
+    result_type = Nx.Type.to_floating(Nx.Type.merge(Nx.type(x), Nx.type(y)))
+    w = Nx.as_type(w, result_type)
+    Nx.weighted_mean(x != y, w, axes: opts[:axes]) |> Nx.as_type(result_type)
   end
 end
