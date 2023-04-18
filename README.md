@@ -3,7 +3,6 @@
 [![Documentation](http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat)](https://hexdocs.pm/scholar)
 [![Package](https://img.shields.io/hexpm/v/scholar.svg)](https://hex.pm/packages/scholar)
 
-
 Traditional machine learning tools built on top of Nx. Scholar implements
 several algorithms for classification, regression, clustering, dimensionality
 reduction, metrics, and preprocessing.
