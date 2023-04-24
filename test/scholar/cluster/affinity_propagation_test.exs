@@ -65,48 +65,10 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
     model = AffinityPropagation.compute_values(vals)
 
     assert model.labels ==
-             Nx.tensor([
-               5,
-               6,
-               0,
-               2,
-               1,
-               3,
-               7,
-               6,
-               2,
-               2,
-               2,
-               7,
-               6,
-               2,
-               3,
-               2,
-               4,
-               2,
-               1,
-               0,
-               7,
-               0,
-               1,
-               6,
-               7,
-               7,
-               2,
-               1,
-               5,
-               5,
-               6,
-               4,
-               3,
-               0,
-               5,
-               0,
-               6,
-               0,
-               7,
-               0
-             ])
+             Nx.tensor(
+               [5, 6, 0, 2, 1, 3, 7, 6, 2, 2, 2, 7, 6, 2, 3, 2, 4, 2, 1] ++
+                 [0, 7, 0, 1, 6, 7, 7, 2, 1, 5, 5, 6, 4, 3, 0, 5, 0, 6, 0, 7, 0]
+             )
 
     assert model.cluster_centers ==
              Nx.tensor([

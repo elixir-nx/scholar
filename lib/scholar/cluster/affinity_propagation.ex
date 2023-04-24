@@ -119,9 +119,8 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
     range = Nx.iota({n})
 
-    {_final_a, _final_r, diagonals, _, _} =
-      while {a = initial_a, r = initial_r,
-             _diagonals = Nx.broadcast(Nx.tensor(0, type: {:u, 8}), {n}), s = s, i = 0},
+    {a, r, _, _} =
+      while {a = initial_a, r = initial_r, s = s, i = 0},
             i < iterations do
         temp = a + s
 
@@ -171,11 +170,10 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
         a = a * damping_factor - temp
 
-        diagonals = Nx.take_diagonal(a) + Nx.take_diagonal(r) > 0
-
-        {a, r, diagonals, s, i + 1}
+        {a, r, s, i + 1}
       end
 
+    diagonals = Nx.take_diagonal(a) + Nx.take_diagonal(r) > 0
     {s, affinity_matrix, diagonals, data}
   end
 
@@ -197,7 +195,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
   ## Examples
 
       iex> seed = 42
-      iex> x = Nx.tensor([[12,5,78,2], [1,5,7,32], [1,3,6,1], [1,2,5,2]])
+      iex> x = Nx.tensor([[12,5,78,2], [1,-5,7,32], [-1,3,6,1], [1,-2,5,2]])
       iex> {s, affinity_matrix, diagonals, data} = Scholar.Cluster.AffinityPropagation.fit(x, seed: seed)
       iex> Scholar.Cluster.AffinityPropagation.compute_values({s, affinity_matrix, diagonals, data})
       %Scholar.Cluster.AffinityPropagation{
@@ -205,15 +203,15 @@ defmodule Scholar.Cluster.AffinityPropagation do
         cluster_centers_indices: Nx.tensor([0, 3]),
         affinity_matrix: Nx.tensor(
           [
-            [0.0, -6062.0, -5310.0, -5459.0],
-            [-6062.0, 0.0, -966.0, -913.0],
-            [-5310.0, -966.0, 0.0, -3.0],
-            [-5459.0, -913.0, -3.0, 0.0]
+            [0.0, -6162.0, -5358.0, -5499.0],
+            [-6162.0, 0.0, -1030.0, -913.0],
+            [-5358.0, -1030.0, 0.0, -31.0],
+            [-5499.0, -913.0, -31.0, 0.0]
           ]),
         cluster_centers: Nx.tensor(
           [
             [12, 5, 78, 2],
-            [1, 2, 5, 2]
+            [1, -2, 5, 2]
           ]
         )
       }
