@@ -7,8 +7,22 @@ defmodule Scholar.Cluster.AffinityPropagation do
   import Scholar.Shared
 
   @derive {Nx.Container,
-           containers: [:labels, :cluster_centers_indices, :affinity_matrix, :cluster_centers]}
-  defstruct [:labels, :cluster_centers_indices, :affinity_matrix, :cluster_centers]
+           containers: [
+             :labels,
+             :cluster_centers_indices,
+             :affinity_matrix,
+             :cluster_centers,
+             :num_clusters,
+             :similarity_matrix
+           ]}
+  defstruct [
+    :labels,
+    :cluster_centers_indices,
+    :affinity_matrix,
+    :cluster_centers,
+    :num_clusters,
+    :similarity_matrix
+  ]
 
   @opts_schema [
     iterations: [
@@ -40,58 +54,57 @@ defmodule Scholar.Cluster.AffinityPropagation do
   @doc """
   Cluster the dataset using affinity propagation.
 
-  To compute clusters and labels you need to use compute_values, so the usual usecase is
-
-  Scholar.Cluster.AffinityPropagation.fit(data, opts) |> Scholar.Cluster.AffinityPropagation.compute_values()
-
   ## Options
 
   #{NimbleOptions.docs(@opts_schema)}
 
   ## Return Values
 
-    The function returns:
-
-    * `:s` - Similarity matrix, it is an Affinity matrix with diagonal filled with `:self_preference`.
+    The function returns a struct with the following parameters:
 
     * `:affinity_matrix` - Affinity matrix. It is a negated squared euclidean distance of each pair of points.
 
-    * `:diagonals` - Indicates which data points can be treated as exemplares.
+    * `:clusters_centers` - Cluster centers from the initial data.
 
-    * `:data` - Provided data.
+    * `:cluster_centers_indices` - Indices of cluster centers.
+
+    * `:num_clusters` - Number of clusters.
+
+    * `:similarity_matrix` - Similarity matrix. It is similarity of each pair of points.
 
   ## Examples
 
       iex> seed = 42
-      iex> x = Nx.tensor([[12,5,78,2], [1,5,7,32], [1,3,6,1], [1,2,5,2]])
+      iex> x = Nx.tensor([[12,5,78,2], [1,-5,7,32], [-1,3,6,1], [1,-2,5,2]])
       iex> Scholar.Cluster.AffinityPropagation.fit(x, seed: seed)
-      {Nx.tensor(
-        [
-          [-939.5, -6062.0, -5310.0, -5459.0],
-          [-6062.0, -939.5, -966.0, -913.0],
-          [-5310.0, -966.0, -939.5, -3.0],
-          [-5459.0, -913.0, -3.0, -939.5]
-        ]
-      ),
-      Nx.tensor(
-        [
-          [0.0, -6062.0, -5310.0, -5459.0],
-          [-6062.0, 0.0, -966.0, -913.0],
-          [-5310.0, -966.0, 0.0, -3.0],
-          [-5459.0, -913.0, -3.0, 0.0]
-        ]
-      ),
-      Nx.tensor(
-        [1, 0, 0, 1], type: :u8
-      ),
-      Nx.tensor(
-        [
-          [12, 5, 78, 2],
-          [1, 5, 7, 32],
-          [1, 3, 6, 1],
-          [1, 2, 5, 2]
-        ]
-      )}
+      %Scholar.Cluster.AffinityPropagation{
+        labels: Nx.tensor([0, 3, 3, 3]),
+        cluster_centers_indices: Nx.tensor([0, -1, -1, 3]),
+        affinity_matrix: Nx.tensor(
+          [
+            [0.0, -6162.0, -5358.0, -5499.0],
+            [-6162.0, 0.0, -1030.0, -913.0],
+            [-5358.0, -1030.0, 0.0, -31.0],
+            [-5499.0, -913.0, -31.0, 0.0]
+          ]),
+        cluster_centers: Nx.tensor(
+          [
+            [12, 5, 78, 2],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [1, -2, 5, 2]
+          ]
+        ),
+        num_clusters: Nx.tensor(2, type: :u64),
+        similarity_matrix: Nx.tensor(
+          [
+            [-971.5, -6162.0, -5358.0, -5499.0],
+            [-6162.0, -971.5, -1030.0, -913.0],
+            [-5358.0, -1030.0, -971.5, -31.0],
+            [-5499.0, -913.0, -31.0, -971.5]
+          ]
+        )
+      }
   """
   deftransform fit(data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -174,7 +187,45 @@ defmodule Scholar.Cluster.AffinityPropagation do
       end
 
     diagonals = Nx.take_diagonal(a) + Nx.take_diagonal(r) > 0
-    {s, affinity_matrix, diagonals, data}
+
+    k = Nx.sum(diagonals, axes: [0])
+    {n, _} = shape = Nx.shape(data)
+
+    {cluster_centers, cluster_centers_indices, labels} =
+      if k > 0 do
+        indices =
+          Nx.select(Nx.flatten(diagonals) != 0, Nx.iota(Nx.shape(diagonals)), -1)
+          |> Nx.as_type({:s, 64})
+
+        cluster_centers =
+          Nx.select(
+            Nx.broadcast(Nx.new_axis(Nx.flatten(diagonals) != 0, -1), shape),
+            data,
+            Nx.tensor(0, type: Nx.type(data))
+          )
+
+        c =
+          Nx.select(
+            Nx.broadcast(Nx.new_axis(Nx.flatten(diagonals) != 0, -1), Nx.shape(s)),
+            s,
+            Nx.Constants.neg_infinity(Nx.type(s))
+          )
+
+        c = Nx.argmax(c, axis: 0) |> Nx.as_type({:s, 64})
+        {cluster_centers, indices, c}
+      else
+        {Nx.tensor(-1, type: Nx.type(data)), Nx.broadcast(Nx.tensor(-1, type: :s64), {n}),
+         Nx.broadcast(Nx.tensor(-1, type: :s64), {n})}
+      end
+
+    %__MODULE__{
+      affinity_matrix: affinity_matrix,
+      cluster_centers_indices: cluster_centers_indices,
+      cluster_centers: cluster_centers,
+      labels: labels,
+      num_clusters: k,
+      similarity_matrix: s
+    }
   end
 
   @doc """
@@ -192,12 +243,16 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
     * `:labels` - Labels of each point.
 
+    * `:num_clusters` - Number of clusters.
+
+    * `:similarity_matrix` - Similarity matrix. It is a similarity of each pair of points.
+
   ## Examples
 
       iex> seed = 42
       iex> x = Nx.tensor([[12,5,78,2], [1,-5,7,32], [-1,3,6,1], [1,-2,5,2]])
-      iex> {s, affinity_matrix, diagonals, data} = Scholar.Cluster.AffinityPropagation.fit(x, seed: seed)
-      iex> Scholar.Cluster.AffinityPropagation.compute_values({s, affinity_matrix, diagonals, data})
+      iex> model = Scholar.Cluster.AffinityPropagation.fit(x, seed: seed)
+      iex> Scholar.Cluster.AffinityPropagation.prune(model)
       %Scholar.Cluster.AffinityPropagation{
         labels: Nx.tensor([0, 1, 1, 1]),
         cluster_centers_indices: Nx.tensor([0, 3]),
@@ -213,37 +268,42 @@ defmodule Scholar.Cluster.AffinityPropagation do
             [12, 5, 78, 2],
             [1, -2, 5, 2]
           ]
+        ),
+        num_clusters: Nx.tensor(2, type: :u64),
+        similarity_matrix: Nx.tensor(
+          [
+            [-971.5, -6162.0, -5358.0, -5499.0],
+            [-6162.0, -971.5, -1030.0, -913.0],
+            [-5358.0, -1030.0, -971.5, -31.0],
+            [-5499.0, -913.0, -31.0, -971.5]
+          ]
         )
       }
   """
-  def compute_values({s, affinity_matrix, diagonals, data}) do
-    k = Nx.sum(diagonals, axes: [0]) |> Nx.to_number()
+  def prune(
+        %__MODULE__{
+          cluster_centers_indices: cluster_centers_indices,
+          cluster_centers: cluster_centers,
+          labels: labels,
+          num_clusters: k,
+          similarity_matrix: similarity_matrix
+        } = model
+      ) do
+    k = Nx.to_number(k)
 
-    {cluster_centers, cluster_centers_indices, labels} =
-      if k > 0 do
-        indices =
-          Nx.multiply(Nx.flatten(diagonals), Nx.add(Nx.iota(Nx.shape(diagonals)), 1))
-          |> Nx.to_flat_list()
-          |> Enum.filter(fn x -> x != 0 end)
-          |> Nx.tensor()
-          |> Nx.subtract(1)
-          |> Nx.as_type({:s, 64})
+    cluster_centers_indices =
+      Nx.to_flat_list(cluster_centers_indices) |> Enum.filter(&(&1 != -1)) |> Nx.tensor()
 
-        c = Nx.argmax(Nx.take(s, indices, axis: 1), axis: 1)
-        c = Nx.indexed_put(c, Nx.new_axis(indices, -1), Nx.iota({k}))
-        {Nx.take(data, indices), indices, c}
-      else
-        {n, _} = Nx.shape(s)
+    cluster_centers = Nx.take(cluster_centers, cluster_centers_indices)
 
-        {Nx.tensor([-1], type: Nx.type(s)), Nx.broadcast(Nx.tensor(-1, type: Nx.type(s)), {n}),
-         Nx.tensor([-1], type: Nx.type(s))}
-      end
+    labels = Nx.argmax(Nx.take(similarity_matrix, cluster_centers_indices, axis: 1), axis: 1)
+    labels = Nx.indexed_put(labels, Nx.new_axis(cluster_centers_indices, -1), Nx.iota({k}))
 
     %__MODULE__{
-      affinity_matrix: affinity_matrix,
-      cluster_centers_indices: cluster_centers_indices,
-      cluster_centers: cluster_centers,
-      labels: labels
+      model
+      | cluster_centers_indices: cluster_centers_indices,
+        cluster_centers: cluster_centers,
+        labels: labels
     }
   end
 
@@ -254,8 +314,8 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
       iex> seed = 42
       iex> x = Nx.tensor([[12,5,78,2], [1,5,7,32], [1,3,6,1], [1,2,5,2]])
-      iex> {s, affinity_matrix, diagonals, data} = Scholar.Cluster.AffinityPropagation.fit(x, seed: seed)
-      iex> model = Scholar.Cluster.AffinityPropagation.compute_values({s, affinity_matrix, diagonals, data})
+      iex> model = Scholar.Cluster.AffinityPropagation.fit(x, seed: seed)
+      iex> model = Scholar.Cluster.AffinityPropagation.prune(model)
       iex> Scholar.Cluster.AffinityPropagation.predict(model, Nx.tensor([[1,6,2,6], [8,3,8,2]]))
       #Nx.Tensor<
         s64[2]

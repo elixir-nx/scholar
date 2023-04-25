@@ -60,9 +60,9 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
           ])
 
   test "fit and compute_values" do
-    vals = AffinityPropagation.fit(@x, seed: @seed)
+    model = AffinityPropagation.fit(@x, seed: @seed)
 
-    model = AffinityPropagation.compute_values(vals)
+    model = AffinityPropagation.prune(model)
 
     assert model.labels ==
              Nx.tensor(
@@ -86,8 +86,8 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
   end
 
   test "predict" do
-    vals = AffinityPropagation.fit(@x, seed: @seed)
-    model = AffinityPropagation.compute_values(vals)
+    model = AffinityPropagation.fit(@x, seed: @seed)
+    model = AffinityPropagation.prune(model)
     preds = AffinityPropagation.predict(model, @x_test)
     assert preds == Nx.tensor([0, 2, 0, 5, 5, 5, 2, 2, 5, 2])
   end
