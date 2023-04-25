@@ -284,7 +284,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
         %__MODULE__{
           cluster_centers_indices: cluster_centers_indices,
           cluster_centers: cluster_centers,
-          labels: labels,
           num_clusters: k,
           similarity_matrix: similarity_matrix
         } = model
