@@ -3,7 +3,7 @@ defmodule Scholar.Linear.LinearRegression do
   Ordinary least squares linear regression.
   """
   import Nx.Defn
-  # import Scholar.Shared
+  import Scholar.Shared
 
   @derive {Nx.Container, containers: [:coefficients, :intercept]}
   defstruct [:coefficients, :intercept]
@@ -72,16 +72,16 @@ defmodule Scholar.Linear.LinearRegression do
         opts
 
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
-    # x_type = to_float_type(x)
-    # sample_weights = Nx.tensor(sample_weights, type: x_type)
-    sample_weights = Nx.tensor(sample_weights)
+    x_type = to_float_type(x)
+    sample_weights = Nx.tensor(sample_weights, type: x_type)
 
     fit_n(x, y, sample_weights, opts)
   end
 
   defnp fit_n(a, b, sample_weights, opts) do
-    # a = to_float(a)
-    # b = to_float(b)
+    a = to_float(a)
+    b = to_float(b)
+
     {a_offset, b_offset} =
       if opts[:fit_intercept?] do
         preprocess_data(a, b, sample_weights, opts)
@@ -89,7 +89,9 @@ defmodule Scholar.Linear.LinearRegression do
         {_, a_shape} = Nx.shape(a)
         b_reshaped = if Nx.rank(b) > 1, do: b, else: Nx.reshape(b, {:auto, 1})
         {_, b_shape} = Nx.shape(b_reshaped)
-        {Nx.broadcast(0.0, {a_shape}), Nx.broadcast(0.0, {b_shape})}
+
+        {Nx.broadcast(Nx.tensor(0.0, type: Nx.type(a)), {a_shape}),
+         Nx.broadcast(Nx.tensor(0.0, type: Nx.type(b)), {b_shape})}
       end
 
     {a, b} = {a - a_offset, b - b_offset}
