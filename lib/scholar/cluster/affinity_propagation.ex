@@ -82,17 +82,17 @@ defmodule Scholar.Cluster.AffinityPropagation do
         cluster_centers_indices: Nx.tensor([0, -1, -1, 3]),
         affinity_matrix: Nx.tensor(
           [
-            [0.0, -6162.0, -5358.0, -5499.0],
-            [-6162.0, 0.0, -1030.0, -913.0],
-            [-5358.0, -1030.0, 0.0, -31.0],
-            [-5499.0, -913.0, -31.0, 0.0]
+            [-0.0, -6162.0, -5358.0, -5499.0],
+            [-6162.0, -0.0, -1030.0, -913.0],
+            [-5358.0, -1030.0, -0.0, -31.0],
+            [-5499.0, -913.0, -31.0, -0.0]
           ]),
         cluster_centers: Nx.tensor(
           [
-            [12, 5, 78, 2],
-            [0, 0, 0, 0],
-            [0, 0, 0, 0],
-            [1, -2, 5, 2]
+            [12.0, 5.0, 78.0, 2.0],
+            [:nan, :nan, :nan, :nan],
+            [:nan, :nan, :nan, :nan],
+            [1.0, -2.0, 5.0, 2.0]
           ]
         ),
         num_clusters: Nx.tensor(2, type: :u64),
@@ -114,6 +114,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
   end
 
   defnp fit_n(data, seed, opts) do
+    data = to_float(data)
     iterations = opts[:iterations]
     damping_factor = opts[:damping_factor]
     self_preference = opts[:self_preference]
@@ -128,7 +129,8 @@ defmodule Scholar.Cluster.AffinityPropagation do
     s =
       s +
         normal *
-          (Nx.Constants.smallest_positive_normal(Nx.type(s)) * 100 + 2.220446049250313e-16 * s)
+          (Nx.Constants.smallest_positive_normal(Nx.type(s)) * 100 +
+             Nx.Constants.epsilon(Nx.type(data)) / 10 * s)
 
     range = Nx.iota({n})
 
@@ -193,20 +195,22 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
     {cluster_centers, cluster_centers_indices, labels} =
       if k > 0 do
+        mask = Nx.flatten(diagonals) != 0
+
         indices =
-          Nx.select(Nx.flatten(diagonals) != 0, Nx.iota(Nx.shape(diagonals)), -1)
+          Nx.select(mask, Nx.iota(Nx.shape(diagonals)), -1)
           |> Nx.as_type({:s, 64})
 
         cluster_centers =
           Nx.select(
-            Nx.broadcast(Nx.new_axis(Nx.flatten(diagonals) != 0, -1), shape),
+            Nx.broadcast(Nx.new_axis(mask, -1), shape),
             data,
-            Nx.tensor(0, type: Nx.type(data))
+            Nx.tensor(:nan, type: Nx.type(data))
           )
 
         c =
           Nx.select(
-            Nx.broadcast(Nx.new_axis(Nx.flatten(diagonals) != 0, -1), Nx.shape(s)),
+            Nx.broadcast(Nx.new_axis(mask, -1), Nx.shape(s)),
             s,
             Nx.Constants.neg_infinity(Nx.type(s))
           )
@@ -258,15 +262,15 @@ defmodule Scholar.Cluster.AffinityPropagation do
         cluster_centers_indices: Nx.tensor([0, 3]),
         affinity_matrix: Nx.tensor(
           [
-            [0.0, -6162.0, -5358.0, -5499.0],
-            [-6162.0, 0.0, -1030.0, -913.0],
-            [-5358.0, -1030.0, 0.0, -31.0],
-            [-5499.0, -913.0, -31.0, 0.0]
+            [-0.0, -6162.0, -5358.0, -5499.0],
+            [-6162.0, -0.0, -1030.0, -913.0],
+            [-5358.0, -1030.0, -0.0, -31.0],
+            [-5499.0, -913.0, -31.0, -0.0]
           ]),
         cluster_centers: Nx.tensor(
           [
-            [12, 5, 78, 2],
-            [1, -2, 5, 2]
+            [12.0, 5.0, 78.0, 2.0],
+            [1.0, -2.0, 5.0, 2.0]
           ]
         ),
         num_clusters: Nx.tensor(2, type: :u64),
@@ -335,15 +339,15 @@ defmodule Scholar.Cluster.AffinityPropagation do
   end
 
   defnp initialize_matrices(data, opts \\ []) do
-    %{type: type} = data
     {n, _} = Nx.shape(data)
     self_preference = opts[:self_preference]
-    zero = Nx.tensor(0, type: Nx.Type.to_floating(type))
-    availability_matrix = Nx.broadcast(zero, {n, n})
-    responsibility_matrix = Nx.broadcast(zero, {n, n})
 
     {similarity_matrix, affinity_matrix} =
       initialize_similarities(data, self_preference: self_preference)
+
+    zero = Nx.tensor(0, type: Nx.type(similarity_matrix))
+    availability_matrix = Nx.broadcast(zero, {n, n})
+    responsibility_matrix = Nx.broadcast(zero, {n, n})
 
     {availability_matrix, responsibility_matrix, similarity_matrix, affinity_matrix}
   end

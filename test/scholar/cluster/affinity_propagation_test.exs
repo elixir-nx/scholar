@@ -72,14 +72,14 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
 
     assert model.cluster_centers ==
              Nx.tensor([
-               [9, 16, 15],
-               [3, 5, 15],
-               [8, 7, 5],
-               [18, 16, 12],
-               [18, 13, 1],
-               [11, 4, 12],
-               [17, 3, 6],
-               [5, 17, 3]
+               [9.0, 16.0, 15.0],
+               [3.0, 5.0, 15.0],
+               [8.0, 7.0, 5.0],
+               [18.0, 16.0, 12.0],
+               [18.0, 13.0, 1.0],
+               [11.0, 4.0, 12.0],
+               [17.0, 3.0, 6.0],
+               [5.0, 17.0, 3.0]
              ])
 
     assert model.cluster_centers_indices == Nx.tensor([2, 4, 9, 14, 16, 34, 36, 38])
