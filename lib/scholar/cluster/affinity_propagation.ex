@@ -135,7 +135,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
     range = Nx.iota({n})
 
     {a, r, _, _, _} =
-      while {a = initial_a, r = initial_r, s = s, range = range, i = 0},
+      while {a = initial_a, r = initial_r, s, range, i = 0},
             i < iterations do
         temp = a + s
 
