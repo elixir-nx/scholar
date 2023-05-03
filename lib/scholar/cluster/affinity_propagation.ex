@@ -134,8 +134,8 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
     range = Nx.iota({n})
 
-    {a, r, _, _} =
-      while {a = initial_a, r = initial_r, s = s, i = 0},
+    {a, r, _, _, _} =
+      while {a = initial_a, r = initial_r, s = s, range = range, i = 0},
             i < iterations do
         temp = a + s
 
@@ -144,13 +144,10 @@ defmodule Scholar.Cluster.AffinityPropagation do
         y = Nx.reduce_max(temp, axes: [1])
 
         neg_inf = Nx.Constants.neg_infinity(Nx.Type.to_floating(Nx.type(a)))
-        inf = Nx.Constants.infinity(Nx.Type.to_floating(Nx.type(a)))
 
         neg_infinities = Nx.broadcast(neg_inf, {n})
 
-        max_indices =
-          Nx.stack([range, indices])
-          |> Nx.transpose()
+        max_indices = Nx.stack([range, indices], axis: 1)
 
         temp = Nx.indexed_put(temp, max_indices, neg_infinities)
 
@@ -162,7 +159,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
           Nx.indexed_put(
             temp,
             max_indices,
-            Nx.flatten(Nx.gather(s, max_indices) - y2)
+            Nx.gather(s, max_indices) - y2
           )
 
         temp = temp * (1 - damping_factor)
@@ -177,7 +174,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
         a_change = Nx.take_diagonal(temp)
 
-        temp = Nx.clip(temp, 0, inf)
+        temp = Nx.max(temp, 0)
 
         temp = Nx.put_diagonal(temp, a_change)
 
@@ -185,7 +182,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
         a = a * damping_factor - temp
 
-        {a, r, s, i + 1}
+        {a, r, s, range, i + 1}
       end
 
     diagonals = Nx.take_diagonal(a) + Nx.take_diagonal(r) > 0
@@ -195,7 +192,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
     {cluster_centers, cluster_centers_indices, labels} =
       if k > 0 do
-        mask = Nx.flatten(diagonals) != 0
+        mask = diagonals != 0
 
         indices =
           Nx.select(mask, Nx.iota(Nx.shape(diagonals)), -1)
@@ -355,22 +352,19 @@ defmodule Scholar.Cluster.AffinityPropagation do
   defn initialize_similarities(data, opts \\ []) do
     {n, dims} = Nx.shape(data)
     self_preference = opts[:self_preference]
-    t1 = Nx.reshape(data, {1, n, dims})
-    t2 = Nx.reshape(data, {n, 1, dims})
+    t1 = Nx.reshape(data, {1, n, dims}) |> Nx.broadcast({n, n, dims})
+    t2 = Nx.reshape(data, {n, 1, dims}) |> Nx.broadcast({n, n, dims})
 
     dist =
-      (t1 - t2)
-      |> Nx.pow(2)
-      |> Nx.sum(axes: [2])
-      |> Nx.multiply(-1)
+      (-1 * Scholar.Metrics.Distance.squared_euclidean(t1, t2, axes: [-1]))
       |> Nx.as_type(to_float_type(data))
 
     fill_in =
-      case self_preference do
-        false ->
+      cond do
+        self_preference == false ->
           Nx.broadcast(Nx.median(dist), {n})
 
-        _ ->
+        true ->
           if Nx.size(self_preference) == 1,
             do: Nx.broadcast(self_preference, {n}),
             else: self_preference
