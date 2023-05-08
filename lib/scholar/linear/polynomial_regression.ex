@@ -20,7 +20,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       type: :pos_integer,
       default: 2,
       doc: """
-      The degree of the feature matrix to return. Must be a >1 integer. 1
+      The degree of the feature matrix to return. Must be an integer greater than 1. 1
       returns the input matrix.
       """
     ],
@@ -89,11 +89,12 @@ defmodule Scholar.Linear.PolynomialRegression do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     a_transform = transform(a, opts |> Keyword.put(:fit_intercept?, false))
 
-    %{
-      Scholar.Linear.LinearRegression.fit(a_transform, b, Keyword.delete(opts, :degree))
-      | __struct__: Scholar.Linear.PolynomialRegression
+    linear_reg = Scholar.Linear.LinearRegression.fit(a_transform, b, Keyword.delete(opts, :degree))
+    %__MODULE__{
+      coefficients: linear_reg.coefficients,
+      intercept: linear_reg.intercept,
+      degree: opts[:degree]
     }
-    |> Map.merge(%{degree: opts[:degree]})
   end
 
   @doc """
@@ -112,7 +113,7 @@ defmodule Scholar.Linear.PolynomialRegression do
   """
   deftransform predict(model, x) do
     Scholar.Linear.LinearRegression.predict(
-      %{model | __struct__: Scholar.Linear.LinearRegression},
+      %Scholar.Linear.LinearRegression{coefficients: model.coefficients, intercept: model.intercept},
       transform_n(x, degree: model.degree, fit_intercept?: false)
     )
   end
@@ -194,8 +195,7 @@ defmodule Scholar.Linear.PolynomialRegression do
   end
 
   defnp get_column(x, n) do
-    Nx.transpose(x)[n]
-    |> Nx.reshape({:auto, 1})
+    Nx.slice_along_axis(x, n, 1, axis: 1)
   end
 
   defnp compute_column(previous, x, n) do
