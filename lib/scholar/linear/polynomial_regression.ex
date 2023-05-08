@@ -20,7 +20,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       type: :pos_integer,
       default: 2,
       doc: """
-      The degree of the feature matrix to return. Must be an integer greater than 1. 1
+      The degree of the feature matrix to return. Must be an integer equal or greater than 1. 1
       returns the input matrix.
       """
     ],
@@ -167,7 +167,7 @@ defmodule Scholar.Linear.PolynomialRegression do
     transform_n(x, NimbleOptions.validate!(opts, @transform_opts_schema))
   end
 
-  deftransform transform_n(x, opts) do
+  deftransformp transform_n(x, opts) do
     {_n_samples, n_features} = Nx.shape(x)
 
     x_split = Enum.map(0..(n_features - 1), &get_column(x, &1))
@@ -188,7 +188,6 @@ defmodule Scholar.Linear.PolynomialRegression do
     |> add_intercept(opts)
   end
 
-  @spec compute_degree(Nx.Tensor, list(Nx.Tensor)) :: list(Nx.Tensor)
   deftransform compute_degree(x, previous_degree) do
     {_n_samples, n_features} = Nx.shape(x)
 
