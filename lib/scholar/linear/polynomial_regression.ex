@@ -188,7 +188,7 @@ defmodule Scholar.Linear.PolynomialRegression do
     |> add_intercept(opts)
   end
 
-  deftransform compute_degree(x, previous_degree) do
+  deftransformp compute_degree(x, previous_degree) do
     {_n_samples, n_features} = Nx.shape(x)
 
     Enum.map(0..(n_features - 1), fn nf ->
