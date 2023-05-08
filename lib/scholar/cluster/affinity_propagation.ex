@@ -179,14 +179,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
           |> Nx.argmax(axis: 1)
           |> Nx.as_type({:s, 64})
 
-        {labels, _} =
-          while {labels, j = 0}, i <- indices do
-            if i >= 0 do
-              {Nx.put_slice(labels, [i], Nx.new_axis(j, -1)), j + 1}
-            else
-              {labels, j + 1}
-            end
-          end
+        labels = Nx.select(mask, Nx.iota(Nx.shape(labels)), labels)
 
         {cluster_centers, indices, labels}
       else
