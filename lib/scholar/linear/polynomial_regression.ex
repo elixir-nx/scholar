@@ -36,7 +36,7 @@ defmodule Scholar.Linear.PolynomialRegression do
     ]
   ]
 
-  transform_opts = Keyword.take(opts, [:degree, :fit_intercept])
+  transform_opts = Keyword.take(opts, [:degree, :fit_intercept?])
 
   @opts_schema NimbleOptions.new!(opts)
   @transform_opts_schema NimbleOptions.new!(transform_opts)
@@ -87,9 +87,11 @@ defmodule Scholar.Linear.PolynomialRegression do
   """
   deftransform fit(a, b, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    a_transform = transform(a, opts |> Keyword.put(:fit_intercept?, false))
+    a_transform = transform(a, fit_intercept?: false, degree: opts[:degree])
 
-    linear_reg = Scholar.Linear.LinearRegression.fit(a_transform, b, Keyword.delete(opts, :degree))
+    linear_reg =
+      Scholar.Linear.LinearRegression.fit(a_transform, b, Keyword.take(opts, [:fit_intercept?]))
+
     %__MODULE__{
       coefficients: linear_reg.coefficients,
       intercept: linear_reg.intercept,
@@ -113,7 +115,10 @@ defmodule Scholar.Linear.PolynomialRegression do
   """
   deftransform predict(model, x) do
     Scholar.Linear.LinearRegression.predict(
-      %Scholar.Linear.LinearRegression{coefficients: model.coefficients, intercept: model.intercept},
+      %Scholar.Linear.LinearRegression{
+        coefficients: model.coefficients,
+        intercept: model.intercept
+      },
       transform_n(x, degree: model.degree, fit_intercept?: false)
     )
   end
