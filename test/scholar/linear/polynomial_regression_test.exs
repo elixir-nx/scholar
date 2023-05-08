@@ -129,7 +129,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
         )
         |> Scholar.Linear.PolynomialRegression.predict(prediction_input)
 
-      assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-1, atol: 1.0e-1)
+      assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-2, atol: 1.0e-2)
     end
 
     test "predict when :fit_intercept? set to false, degree set to 3" do
