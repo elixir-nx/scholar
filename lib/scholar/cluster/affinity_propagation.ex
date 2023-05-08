@@ -12,16 +12,14 @@ defmodule Scholar.Cluster.AffinityPropagation do
              :cluster_centers_indices,
              :affinity_matrix,
              :cluster_centers,
-             :num_clusters,
-             :similarity_matrix
+             :num_clusters
            ]}
   defstruct [
     :labels,
     :cluster_centers_indices,
     :affinity_matrix,
     :cluster_centers,
-    :num_clusters,
-    :similarity_matrix
+    :num_clusters
   ]
 
   @opts_schema [
@@ -60,7 +58,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
   ## Return Values
 
-    The function returns a struct with the following parameters:
+  The function returns a struct with the following parameters:
 
     * `:affinity_matrix` - Affinity matrix. It is a negated squared euclidean distance of each pair of points.
 
@@ -69,8 +67,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
     * `:cluster_centers_indices` - Indices of cluster centers.
 
     * `:num_clusters` - Number of clusters.
-
-    * `:similarity_matrix` - Similarity matrix. It is similarity of each pair of points.
 
   ## Examples
 
@@ -90,20 +86,12 @@ defmodule Scholar.Cluster.AffinityPropagation do
         cluster_centers: Nx.tensor(
           [
             [12.0, 5.0, 78.0, 2.0],
-            [:nan, :nan, :nan, :nan],
-            [:nan, :nan, :nan, :nan],
+            [:infinity, :infinity, :infinity, :infinity],
+            [:infinity, :infinity, :infinity, :infinity],
             [1.0, -2.0, 5.0, 2.0]
           ]
         ),
-        num_clusters: Nx.tensor(2, type: :u64),
-        similarity_matrix: Nx.tensor(
-          [
-            [-971.5, -6162.0, -5358.0, -5499.0],
-            [-6162.0, -971.5, -1030.0, -913.0],
-            [-5358.0, -1030.0, -971.5, -31.0],
-            [-5499.0, -913.0, -31.0, -971.5]
-          ]
-        )
+        num_clusters: Nx.tensor(2, type: :u64)
       }
   """
   deftransform fit(data, opts \\ []) do
@@ -138,48 +126,28 @@ defmodule Scholar.Cluster.AffinityPropagation do
       while {a = initial_a, r = initial_r, s, range, i = 0},
             i < iterations do
         temp = a + s
-
         indices = Nx.argmax(temp, axis: 1)
-
         y = Nx.reduce_max(temp, axes: [1])
 
         neg_inf = Nx.Constants.neg_infinity(Nx.Type.to_floating(Nx.type(a)))
-
         neg_infinities = Nx.broadcast(neg_inf, {n})
-
         max_indices = Nx.stack([range, indices], axis: 1)
-
         temp = Nx.indexed_put(temp, max_indices, neg_infinities)
-
         y2 = Nx.reduce_max(temp, axes: [1])
 
         temp = s - Nx.new_axis(y, -1)
-
-        temp =
-          Nx.indexed_put(
-            temp,
-            max_indices,
-            Nx.gather(s, max_indices) - y2
-          )
-
+        temp = Nx.indexed_put(temp, max_indices, Nx.gather(s, max_indices) - y2)
         temp = temp * (1 - damping_factor)
-
         r = r * damping_factor + temp
 
         temp = Nx.max(r, 0)
-
         temp = Nx.put_diagonal(temp, Nx.take_diagonal(r))
-
         temp = temp - Nx.sum(temp, axes: [0])
-
         a_change = Nx.take_diagonal(temp)
 
         temp = Nx.max(temp, 0)
-
         temp = Nx.put_diagonal(temp, a_change)
-
         temp = temp * (1 - damping_factor)
-
         a = a * damping_factor - temp
 
         {a, r, s, range, i + 1}
@@ -202,18 +170,25 @@ defmodule Scholar.Cluster.AffinityPropagation do
           Nx.select(
             Nx.broadcast(Nx.new_axis(mask, -1), shape),
             data,
-            Nx.tensor(:nan, type: Nx.type(data))
+            Nx.Constants.infinity(Nx.Type.to_floating(Nx.type(a)))
           )
 
-        c =
-          Nx.select(
-            Nx.broadcast(Nx.new_axis(mask, -1), Nx.shape(s)),
-            s,
-            Nx.Constants.neg_infinity(Nx.type(s))
-          )
+        labels =
+          Nx.broadcast(mask, Nx.shape(s))
+          |> Nx.select(s, Nx.Constants.neg_infinity(Nx.type(s)))
+          |> Nx.argmax(axis: 1)
+          |> Nx.as_type({:s, 64})
 
-        c = Nx.argmax(c, axis: 0) |> Nx.as_type({:s, 64})
-        {cluster_centers, indices, c}
+        {labels, _} =
+          while {labels, j = 0}, i <- indices do
+            if i >= 0 do
+              {Nx.put_slice(labels, [i], Nx.new_axis(j, -1)), j + 1}
+            else
+              {labels, j + 1}
+            end
+          end
+
+        {cluster_centers, indices, labels}
       else
         {Nx.tensor(-1, type: Nx.type(data)), Nx.broadcast(Nx.tensor(-1, type: :s64), {n}),
          Nx.broadcast(Nx.tensor(-1, type: :s64), {n})}
@@ -224,29 +199,14 @@ defmodule Scholar.Cluster.AffinityPropagation do
       cluster_centers_indices: cluster_centers_indices,
       cluster_centers: cluster_centers,
       labels: labels,
-      num_clusters: k,
-      similarity_matrix: s
+      num_clusters: k
     }
   end
 
   @doc """
-  Computes labels and centers of clusterization.
+  Optionally prune clusters, indices, and labels to only valid entries.
 
-  ## Return Values
-
-    The function returns a struct with the following parameters:
-
-    * `:affinity_matrix` - Affinity matrix. It is a negated squared euclidean distance of each pair of points.
-
-    * `:clusters_centers` - Cluster centers from the initial data.
-
-    * `:cluster_centers_indices` - Indices of cluster centers.
-
-    * `:labels` - Labels of each point.
-
-    * `:num_clusters` - Number of clusters.
-
-    * `:similarity_matrix` - Similarity matrix. It is a similarity of each pair of points.
+  It returns an updated and pruned model.
 
   ## Examples
 
@@ -270,40 +230,35 @@ defmodule Scholar.Cluster.AffinityPropagation do
             [1.0, -2.0, 5.0, 2.0]
           ]
         ),
-        num_clusters: Nx.tensor(2, type: :u64),
-        similarity_matrix: Nx.tensor(
-          [
-            [-971.5, -6162.0, -5358.0, -5499.0],
-            [-6162.0, -971.5, -1030.0, -913.0],
-            [-5358.0, -1030.0, -971.5, -31.0],
-            [-5499.0, -913.0, -31.0, -971.5]
-          ]
-        )
+        num_clusters: Nx.tensor(2, type: :u64)
       }
   """
   def prune(
         %__MODULE__{
           cluster_centers_indices: cluster_centers_indices,
           cluster_centers: cluster_centers,
-          num_clusters: k,
-          similarity_matrix: similarity_matrix
+          labels: labels
         } = model
       ) do
-    k = Nx.to_number(k)
+    {indices, _, _, mapping} =
+      cluster_centers_indices
+      |> Nx.to_flat_list()
+      |> Enum.reduce({[], 0, 0, []}, fn
+        index, {indices, old_pos, new_pos, mapping} when index >= 0 ->
+          {[index | indices], old_pos + 1, new_pos + 1, [{old_pos, new_pos} | mapping]}
 
-    cluster_centers_indices =
-      Nx.to_flat_list(cluster_centers_indices) |> Enum.filter(&(&1 != -1)) |> Nx.tensor()
+        _index, {indices, old_pos, new_pos, mapping} ->
+          {indices, old_pos + 1, new_pos, mapping}
+      end)
 
-    cluster_centers = Nx.take(cluster_centers, cluster_centers_indices)
-
-    labels = Nx.argmax(Nx.take(similarity_matrix, cluster_centers_indices, axis: 1), axis: 1)
-    labels = Nx.indexed_put(labels, Nx.new_axis(cluster_centers_indices, -1), Nx.iota({k}))
+    mapping = Map.new(mapping)
+    cluster_centers_indices = Nx.tensor(Enum.reverse(indices))
 
     %__MODULE__{
       model
       | cluster_centers_indices: cluster_centers_indices,
-        cluster_centers: cluster_centers,
-        labels: labels
+        cluster_centers: Nx.take(cluster_centers, cluster_centers_indices),
+        labels: labels |> Nx.to_flat_list() |> Enum.map(&Map.fetch!(mapping, &1)) |> Nx.tensor()
     }
   end
 

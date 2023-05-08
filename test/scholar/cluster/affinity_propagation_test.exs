@@ -85,10 +85,16 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
     assert model.cluster_centers_indices == Nx.tensor([2, 4, 9, 14, 16, 34, 36, 38])
   end
 
-  test "predict" do
+  test "predict with pruning" do
     model = AffinityPropagation.fit(@x, seed: @seed)
     model = AffinityPropagation.prune(model)
     preds = AffinityPropagation.predict(model, @x_test)
     assert preds == Nx.tensor([0, 2, 0, 5, 5, 5, 2, 2, 5, 2])
+  end
+
+  test "predict without pruning" do
+    model = AffinityPropagation.fit(@x, seed: @seed)
+    preds = AffinityPropagation.predict(model, @x_test)
+    assert preds == Nx.tensor([2, 9, 2, 34, 34, 34, 9, 9, 34, 9])
   end
 end
