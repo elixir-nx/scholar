@@ -172,14 +172,15 @@ defmodule Scholar.Linear.PolynomialRegression do
 
     x_split = Enum.map(0..(n_features - 1), &get_column(x, &1))
 
-    Enum.reduce(
-      1..(opts[:degree] - 1)//1,
-      [x_split],
-      fn _, prev_degree ->
-        [
-          prev_degree,
-          compute_degree(x, List.last(prev_degree))
-        ]
+    Enum.scan(
+      0..(opts[:degree] - 1)//1,
+      nil,
+      fn
+        0, nil ->
+          x_split
+
+        _, prev_degree ->
+          compute_degree(x, prev_degree)
       end
     )
     |> List.flatten()
