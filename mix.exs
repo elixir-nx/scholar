@@ -30,7 +30,7 @@ defmodule Scholar.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.29", only: :docs},
-      {:nx, "~> 0.5.1"},
+      {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, ">= 0.0.0", only: [:test, :dev]},
       {:explorer, "~> 0.5.1", only: [:test, :dev]}
