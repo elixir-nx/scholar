@@ -59,6 +59,7 @@ defmodule Scholar.MixProject do
       ],
       groups_for_modules: [
         Models: [
+          Scholar.Cluster.AffinityPropagation,
           Scholar.Cluster.KMeans,
           Scholar.Decomposition.PCA,
           Scholar.Interpolation.BezierSpline,

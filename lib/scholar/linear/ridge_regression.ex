@@ -17,6 +17,7 @@ defmodule Scholar.Linear.RidgeRegression do
   * $\alpha$ is the parameter that controls level of regularization
   """
   import Nx.Defn
+  import Scholar.Shared
 
   @derive {Nx.Container, containers: [:coefficients, :intercept]}
   defstruct [:coefficients, :intercept]
@@ -122,10 +123,11 @@ defmodule Scholar.Linear.RidgeRegression do
         opts
 
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
-    sample_weights = Nx.tensor(sample_weights)
+    x_type = to_float_type(a)
+    sample_weights = Nx.tensor(sample_weights, type: x_type)
 
     {alpha, opts} = Keyword.pop!(opts, :alpha)
-    alpha = Nx.tensor(alpha) |> Nx.flatten()
+    alpha = Nx.tensor(alpha, type: x_type) |> Nx.flatten()
     num_targets = if Nx.rank(b) == 1, do: 1, else: Nx.axis_size(b, 1)
 
     if Nx.size(alpha) not in [0, 1, num_targets] do
@@ -137,6 +139,9 @@ defmodule Scholar.Linear.RidgeRegression do
   end
 
   defnp fit_n(a, b, sample_weights, alpha, opts) do
+    a = to_float(a)
+    b = to_float(b)
+
     flatten? = Nx.rank(b) == 1
     num_targets = if Nx.rank(b) == 1, do: 1, else: Nx.axis_size(b, 1)
 
@@ -152,7 +157,9 @@ defmodule Scholar.Linear.RidgeRegression do
         {_, a_shape} = Nx.shape(a)
         b_reshaped = if Nx.rank(b) > 1, do: b, else: Nx.reshape(b, {:auto, 1})
         {_, b_shape} = Nx.shape(b_reshaped)
-        {Nx.broadcast(0.0, {a_shape}), Nx.broadcast(0.0, {b_shape})}
+
+        {Nx.broadcast(Nx.tensor(0.0, type: Nx.type(a)), {a_shape}),
+         Nx.broadcast(Nx.tensor(0.0, type: Nx.type(b)), {b_shape})}
       end
 
     {a, b} = {a - a_offset, b - b_offset}
@@ -303,7 +310,7 @@ defmodule Scholar.Linear.RidgeRegression do
     idx = (s > 1.0e-15) |> Nx.new_axis(1) |> Nx.broadcast(broadcast_size)
     s = Nx.new_axis(s, 1) |> Nx.broadcast(broadcast_size)
     alpha = Nx.new_axis(alpha, 0) |> Nx.broadcast(broadcast_size)
-    d = Nx.broadcast(0.0, broadcast_size)
+    d = Nx.broadcast(Nx.tensor(0.0, type: Nx.type(a)), broadcast_size)
     d = Nx.select(idx, s / (s ** 2 + alpha), d)
     uty = Nx.dot(u, [0], b, [0])
     d_uty = d * uty
@@ -314,7 +321,7 @@ defmodule Scholar.Linear.RidgeRegression do
     if fit_intercept? do
       y_offset - Nx.dot(coeff, x_offset)
     else
-      0.0
+      Nx.tensor(0.0, type: Nx.type(coeff))
     end
   end
 
