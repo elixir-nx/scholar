@@ -10,7 +10,6 @@ defmodule Scholar.Manifold.TSNE do
   import Scholar.Shared
   alias Scholar.Metrics.Distance
 
-
   opts_schema = [
     num_components: [
       type: :pos_integer,
@@ -111,24 +110,28 @@ defmodule Scholar.Manifold.TSNE do
     fit_n(x, seed, opts)
   end
 
-
   defnp fit_n(x, seed, opts \\ []) do
-
     {perplexity, learning_rate, num_iters, num_components, exaggeration, init, metric} =
-      {opts[:perplexity], opts[:learning_rate], opts[:num_iters],
-       opts[:num_components], opts[:exaggeration], opts[:init], opts[:metric]}
+      {opts[:perplexity], opts[:learning_rate], opts[:num_iters], opts[:num_components],
+       opts[:exaggeration], opts[:init], opts[:metric]}
 
     x = to_float(x)
     {n, _dims} = Nx.shape(x)
 
-    y = case init do
-      :random ->
-        key = Nx.Random.key(seed)
-        {y, _new_key} = Nx.Random.normal(key, 0.0, 1.0e-4, shape: {n, num_components}, type: Nx.type(x))
-        y
-      :pca ->
-        Scholar.Decomposition.PCA.fit_transform(x, num_components: num_components)
-    end
+    y =
+      case init do
+        :random ->
+          key = Nx.Random.key(seed)
+
+          {y, _new_key} =
+            Nx.Random.normal(key, 0.0, 1.0e-4, shape: {n, num_components}, type: Nx.type(x))
+
+          y
+
+        :pca ->
+          Scholar.Decomposition.PCA.fit_transform(x, num_components: num_components)
+      end
+
     ys = Nx.broadcast(0.0, {num_iters, n, num_components})
 
     ys = Nx.put_slice(ys, [0, 0, 0], Nx.new_axis(y, 0))
@@ -139,10 +142,10 @@ defmodule Scholar.Manifold.TSNE do
     {y, _, _, _, _} =
       while {_y = y, ys, learning_rate, p, i = 2}, i < num_iters do
         q = q_joint(Nx.take(ys, i - 1), metric)
-        grad = gradient(p*exaggeration(i, exaggeration), q, Nx.take(ys, i - 1), metric)
+        grad = gradient(p * exaggeration(i, exaggeration), q, Nx.take(ys, i - 1), metric)
 
         temp =
-          Nx.take(ys, i - 1) - learning_rate * grad+
+          Nx.take(ys, i - 1) - learning_rate * grad +
             +momentum(i) * (Nx.take(ys, i - 1) - Nx.take(ys, i - 2))
 
         ys = Nx.put_slice(ys, [i, 0, 0], Nx.new_axis(temp, 0))
@@ -161,12 +164,16 @@ defmodule Scholar.Manifold.TSNE do
     case metric do
       :squared_euclidean ->
         Distance.squared_euclidean(t1, t2, axes: [2])
+
       :euclidean ->
         Distance.euclidean(t1, t2, axes: [2])
+
       :manhattan ->
         Distance.manhattan(t1, t2, axes: [2])
+
       :cosine ->
         Distance.cosine(t1, t2, axes: [2])
+
       :chebyshev ->
         Distance.chebyshev(t1, t2, axes: [2])
     end
