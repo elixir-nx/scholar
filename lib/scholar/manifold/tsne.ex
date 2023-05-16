@@ -140,7 +140,7 @@ defmodule Scholar.Manifold.TSNE do
     p = p_joint(x, perplexity, metric)
 
     {y, _, _, _, _} =
-      while {_y = y, ys, learning_rate, p, i = 2}, i < num_iters do
+      while {y, ys, learning_rate, p, i = 2}, i < num_iters do
         q = q_joint(Nx.take(ys, i - 1), metric)
         grad = gradient(p * exaggeration(i, exaggeration), q, Nx.take(ys, i - 1), metric)
 
