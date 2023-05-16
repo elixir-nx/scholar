@@ -146,7 +146,7 @@ defmodule Scholar.Manifold.TSNE do
 
         temp =
           Nx.take(ys, i - 1) - learning_rate * grad +
-            +momentum(i) * (Nx.take(ys, i - 1) - Nx.take(ys, i - 2))
+            momentum(i) * (Nx.take(ys, i - 1) - Nx.take(ys, i - 2))
 
         ys = Nx.put_slice(ys, [i, 0, 0], Nx.new_axis(temp, 0))
         {temp, ys, learning_rate, p, i + 1}
