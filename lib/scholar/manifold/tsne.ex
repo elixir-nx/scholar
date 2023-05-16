@@ -79,7 +79,7 @@ defmodule Scholar.Manifold.TSNE do
   @opts_schema NimbleOptions.new!(opts_schema)
 
   @doc """
-  Fits a PCA for sample inputs `x`.
+  Fits tSNE for sample inputs `x`.
 
   ## Options
 
