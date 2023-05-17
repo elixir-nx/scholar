@@ -260,8 +260,8 @@ defmodule Scholar.Manifold.TSNE do
     distances = pairwise_dist(y, metric)
     n = Nx.axis_size(distances, 0)
     inv_distances = 1 / (1 + distances)
-    inv_distances = Nx.put_diagonal(inv_distances, Nx.broadcast(0, {n}))
-    inv_distances / Nx.sum(inv_distances)
+    inv_distances = inv_distances / Nx.sum(inv_distances)
+    Nx.put_diagonal(inv_distances, Nx.broadcast(0, {n}))
   end
 
   defnp gradient(p, q, y, metric) do
