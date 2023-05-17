@@ -182,9 +182,13 @@ defmodule Scholar.Manifold.TSNE do
   defnp p_conditional(distances, sigmas) do
     p = Nx.exp(-distances / (2 * Nx.reshape(sigmas, {:auto, 1})) ** 2)
     {n, _} = Nx.shape(p)
-    p = Nx.put_diagonal(p, Nx.broadcast(0, {n}))
-    p = p + Nx.Constants.epsilon(:f32)
-    p / Nx.sum(p, axes: [1], keep_axes: true)
+    # exp(x - C) / sum_i(exp(x_i - C)) is equal to exp(x) / sum_i(exp(x_i)),
+    # and subtracting the max value here provides both numerical stability
+    # and a guarantee that the denominator will never be zero because of the
+    # forced exp(0) term
+    p = p - Nx.reduce_max(p, axes: [1], keep_axes: true)
+    p_ii = p / Nx.sum(p, axes: [1], keep_axes: true)
+    Nx.put_diagonal(p_ii, Nx.broadcast(0, {n}))
   end
 
   defnp perplexity(condition_matrix) do
