@@ -265,14 +265,14 @@ defmodule Scholar.Manifold.TSNE do
   end
 
   defnp gradient(p, q, y, metric) do
-    pq_diff = p - q
+    pq_diff = Nx.new_axis(p - q, 2)
     y_diff = Nx.new_axis(y, 1) - Nx.new_axis(y, 0)
     distances = pairwise_dist(y, metric)
 
-    inv_distances = 1 / (1 + distances)
+    inv_distances = Nx.new_axis(1 / (1 + distances), 2)
 
-    ((4 * (Nx.new_axis(pq_diff, 2) * y_diff * Nx.new_axis(inv_distances, 2)))
-     |> Nx.sum(axes: [1])) * 2
+    grads = 4 * (pq_diff * y_diff * inv_distances
+    Nx.sum(grads, axes: [1])
   end
 
   defnp momentum(t) do
