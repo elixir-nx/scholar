@@ -97,10 +97,10 @@ defmodule Scholar.Manifold.TSNE do
       #Nx.Tensor<
         f32[4][2]
         [
-          [1428.49609375, 0.0],
-          [-1499.8349609375, 0.0],
-          [-418.6555480957031, 0.0],
-          [490.010009765625, 0.0]
+          [287.8900146484375, 0.0],
+          [-207.60089111328125, 0.0],
+          [-948.1324462890625, 0.0],
+          [867.8435668945312, 0.0]
         ]
       >
   """
@@ -118,7 +118,7 @@ defmodule Scholar.Manifold.TSNE do
     x = to_float(x)
     {n, _dims} = Nx.shape(x)
 
-    y =
+    y1 =
       case init do
         :random ->
           key = Nx.Random.key(seed)
@@ -132,24 +132,21 @@ defmodule Scholar.Manifold.TSNE do
           Scholar.Decomposition.PCA.fit_transform(x, num_components: num_components)
       end
 
-    ys = Nx.broadcast(0.0, {num_iters, n, num_components})
-
-    ys = Nx.put_slice(ys, [0, 0, 0], Nx.new_axis(y, 0))
-    ys = Nx.put_slice(ys, [1, 0, 0], Nx.new_axis(y, 0))
+    y2 = y1
 
     p = p_joint(x, perplexity, metric)
 
     {y, _, _, _, _} =
-      while {y, ys, learning_rate, p, i = 2}, i < num_iters do
-        q = q_joint(Nx.take(ys, i - 1), metric)
-        grad = gradient(p * exaggeration(i, exaggeration), q, Nx.take(ys, i - 1), metric)
+      while {y1, _y2 = y2, learning_rate, p, i = 2}, i < num_iters do
+        q = q_joint(y1, metric)
+        grad = gradient(p * exaggeration(i, exaggeration), q, y1, metric)
+        y2 = y1
 
-        temp =
-          Nx.take(ys, i - 1) - learning_rate * grad +
-            momentum(i) * (Nx.take(ys, i - 1) - Nx.take(ys, i - 2))
+        y1 =
+          y1 - learning_rate * grad +
+            momentum(i) * (y1 - y2)
 
-        ys = Nx.put_slice(ys, [i, 0, 0], Nx.new_axis(temp, 0))
-        {temp, ys, learning_rate, p, i + 1}
+        {y1, y2, learning_rate, p, i + 1}
       end
 
     y
@@ -158,8 +155,15 @@ defmodule Scholar.Manifold.TSNE do
   defnp pairwise_dist(x, metric) do
     {num_samples, num_features} = Nx.shape(x)
 
-    t1 = x |> Nx.reshape({1, num_samples, num_features) |> Nx.broadcast({num_samples, num_samples, num_features})
-    t2 = x |> Nx.reshape({num_samples, 1, num_features) |> Nx.broadcast({num_samples, num_samples, num_features})
+    t1 =
+      x
+      |> Nx.reshape({1, num_samples, num_features})
+      |> Nx.broadcast({num_samples, num_samples, num_features})
+
+    t2 =
+      x
+      |> Nx.reshape({num_samples, 1, num_features})
+      |> Nx.broadcast({num_samples, num_samples, num_features})
 
     case metric do
       :squared_euclidean ->
@@ -182,13 +186,9 @@ defmodule Scholar.Manifold.TSNE do
   defnp p_conditional(distances, sigmas) do
     p = Nx.exp(-distances / (2 * Nx.reshape(sigmas, {:auto, 1})) ** 2)
     {n, _} = Nx.shape(p)
-    # exp(x - C) / sum_i(exp(x_i - C)) is equal to exp(x) / sum_i(exp(x_i)),
-    # and subtracting the max value here provides both numerical stability
-    # and a guarantee that the denominator will never be zero because of the
-    # forced exp(0) term
-    p = p - Nx.reduce_max(p, axes: [1], keep_axes: true)
-    p_ii = p / Nx.sum(p, axes: [1], keep_axes: true)
-    Nx.put_diagonal(p_ii, Nx.broadcast(0, {n}))
+    p = Nx.put_diagonal(p, Nx.broadcast(0, {n}))
+    p = p + Nx.Constants.epsilon(:f32)
+    p / Nx.sum(p, axes: [1], keep_axes: true)
   end
 
   defnp perplexity(condition_matrix) do
@@ -271,7 +271,7 @@ defmodule Scholar.Manifold.TSNE do
 
     inv_distances = Nx.new_axis(1 / (1 + distances), 2)
 
-    grads = 4 * (pq_diff * y_diff * inv_distances
+    grads = 4 * (pq_diff * y_diff * inv_distances)
     Nx.sum(grads, axes: [1])
   end
 
