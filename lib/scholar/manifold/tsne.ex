@@ -283,6 +283,7 @@ defmodule Scholar.Manifold.TSNE do
     end
   end
 
+  # for early exaggeration we decided to use 250 iterations
   defnp exaggeration(t, exaggeration) do
     if t < 250 do
       exaggeration
