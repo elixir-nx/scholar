@@ -135,7 +135,7 @@ defmodule Scholar.Manifold.TSNE do
     p = p_joint(x, perplexity, metric)
 
     {y, _, _, _, _} =
-      while {y1, _y2 = y2, learning_rate, p, i = 2}, i < num_iters do
+      while {y1, y2 = y1, learning_rate, p, i = 2}, i < num_iters do
         q = q_joint(y1, metric)
         grad = gradient(p * exaggeration(i, exaggeration), q, y1, metric)
         y_next = y1 - learning_rate * grad + momentum(i) * (y1 - y2)
@@ -177,10 +177,17 @@ defmodule Scholar.Manifold.TSNE do
   end
 
   defnp p_conditional(distances, sigmas) do
-    p = Nx.exp(-distances / (2 * Nx.reshape(sigmas, {:auto, 1})) ** 2)
-    {n, _} = Nx.shape(p)
-    p = Nx.put_diagonal(p, Nx.broadcast(0, {n}))
-    p = p + Nx.Constants.epsilon(:f32)
+    arg = -distances / (2 * Nx.reshape(sigmas, {:auto, 1})) ** 2
+    {n, _} = Nx.shape(arg)
+
+    # Set diagonal to a large negative number so it becomes 0 after applying exp()
+    min_value = Nx.Constants.min_finite(Nx.type(arg))
+    arg_with_min_diag = Nx.put_diagonal(arg, Nx.broadcast(min_value, {n}))
+
+    stabilization_constant = Nx.reduce_max(arg_with_min_diag, axes: [1], keep_axes: true)
+    arg = arg - stabilization_constant
+
+    p = Nx.exp(arg)
     p / Nx.sum(p, axes: [1], keep_axes: true)
   end
 
