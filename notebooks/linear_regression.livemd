@@ -5,12 +5,13 @@ Mix.install(
   [
     {:scholar, github: "elixir-nx/scholar"},
     {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
-    {:explorer, "~> 0.5.0", override: true},
-    {:exla, "~> 0.4.2"},
-    {:req, "~> 0.3.3"},
-    {:vega_lite, "~> 0.1.6"},
-    {:kino_vega_lite, "~> 0.1.7"},
-    {:kino, "~> 0.8.0"}
+    {:explorer, "~> 0.5.7", override: true},
+    {:exla, "~> 0.5.3"},
+    {:req, "~> 0.3.6"},
+    {:vega_lite, "~> 0.1.7"},
+    {:kino_vega_lite, "~> 0.1.8"},
+    {:kino, "~> 0.9.4"},
+    {:kino_explorer, "~> 0.1.6"}
   ],
   config: [
     nx: [default_defn_options: [compiler: EXLA]]
@@ -186,7 +187,224 @@ x_b = Nx.concatenate([Nx.broadcast(1.0, {size, 1}), x], axis: 1)
 x_b |> Nx.LinAlg.pinv() |> Nx.dot(y)
 ```
 
-We are ready to dive into a more complex example!
+<!-- livebook:{"branch_parent_index":0} -->
+
+## Polynomial Regression on Synthetic Data
+
+Before moving on to a more complex example, this section will briefly show how to use another regression method. While not strictly linear, the approach and calculations that go into it is similar enough that it makes sense for it to be explained alongside linear regression.
+
+Instead of the `Scholar.Linear.LinearRegression` module, the following example uses `Scholar.Linear.PolynomialRegression`. Polynomial and linear regression differ in one key way. Linear regression optimizes a function in the form of $f(x) = ax + b$, whereas polynomial regression 
+uses the function $f(x) = b + a_1x^1 + a_2x^2 + … + a_nx^n$, where $n$ represents the degree. Notice how if the degree is $1$, the function represents linear regression.
+
+<!-- livebook:{"break_markdown":true} -->
+
+For this example we will start by generating data simulating the function $f(x) = 2x^2 + 3x + 5$ of degree 2 with some added noise.
+
+```elixir
+defmodule PolynomialData do
+  import Nx.Defn
+
+  defn data do
+    key = Nx.Random.key(42)
+    size = 100
+    {x, new_key} = Nx.Random.uniform(key, -2, 2, shape: {size, 1}, type: :f32)
+    {noise, _} = Nx.Random.uniform(new_key, -0.5, 0.5, shape: {size, 1}, type: :f32)
+    y = 2 * x ** 2 + 3 * x + 5 + noise
+    {x, y}
+  end
+end
+```
+
+Now let's plot the generated data:
+
+```elixir
+{x, y} = PolynomialData.data()
+df = Explorer.DataFrame.new(x: Nx.to_flat_list(x), y: Nx.to_flat_list(y))
+
+# Graph scales
+x_scale = [domain: [-2.05, 2.05]]
+y_scale = [domain: [2.5, 20]]
+
+Vl.new(
+  title: [
+    text: "Scatterplot of Generated Data",
+    offset: 20
+  ],
+  width: 630,
+  height: 630
+)
+|> Vl.data_from_values(df)
+|> Vl.mark(:circle)
+|> Vl.encode_field(:x, "x",
+  type: :quantitative,
+  scale: x_scale,
+  axis: [grid: false]
+)
+|> Vl.encode_field(:y, "y",
+  type: :quantitative,
+  scale: y_scale,
+  axis: [grid: false]
+)
+```
+
+As is clear in the picture, the plotted data would most likely not be accurately estimated by a straight line like the ones linear regression estimates, so polynomial regression will better fit the data in this case. We do this with the `Scholar.Linear.PolynomialRegression` module. If you're familiar with the `Scholar.Linear.LinearRegression` module, the next steps will feel familiar.
+
+To more clearly show the results, we will plot both methods.
+
+```elixir
+x_start = -2
+x_end = 2
+precision = 1000
+x_values = Enum.map((x_start * precision)..(x_end * precision), fn r -> r / precision end)
+
+# Linear model
+linear_model = Scholar.Linear.LinearRegression.fit(x, y)
+
+y_linear_values =
+  Scholar.Linear.LinearRegression.predict(
+    linear_model,
+    Nx.tensor(x_values) |> Nx.reshape({:auto, 1})
+  )
+
+df_linear_results =
+  Explorer.DataFrame.new(
+    x: x_values,
+    y: y_linear_values |> Nx.to_flat_list()
+  )
+
+# Polynomial model
+model = Scholar.Linear.PolynomialRegression.fit(x, y)
+
+y_values =
+  Scholar.Linear.PolynomialRegression.predict(
+    model,
+    Nx.tensor(x_values) |> Nx.reshape({:auto, 1})
+  )
+
+df_results =
+  Explorer.DataFrame.new(
+    x: x_values,
+    y: y_values |> Nx.to_flat_list()
+  )
+
+# Plot the predicted values
+Vl.new(
+  title: [
+    text: "Scatterplot of Predictions",
+    offset: 20
+  ],
+  width: 630,
+  height: 630
+)
+|> Vl.layers([
+  Vl.new()
+  |> Vl.data_from_values(df)
+  |> Vl.mark(:circle)
+  |> Vl.encode_field(:x, "x",
+    type: :quantitative,
+    scale: x_scale,
+    axis: [grid: false]
+  )
+  |> Vl.encode_field(:y, "y",
+    type: :quantitative,
+    scale: y_scale,
+    axis: [grid: false]
+  ),
+  Vl.new()
+  |> Vl.data_from_values(df_results)
+  |> Vl.mark(:line, color: :green)
+  |> Vl.encode_field(:x, "x",
+    type: :quantitative,
+    scale: x_scale
+  )
+  |> Vl.encode_field(:y, "y",
+    type: :quantitative,
+    scale: y_scale
+  ),
+  Vl.new()
+  |> Vl.data_from_values(df_linear_results)
+  |> Vl.mark(:line, color: :red)
+  |> Vl.encode_field(:x, "x",
+    type: :quantitative,
+    scale: x_scale
+  )
+  |> Vl.encode_field(:y, "y",
+    type: :quantitative,
+    scale: y_scale
+  )
+])
+```
+
+Notice how the process is mostly the same for fitting a model and making a prediction. The one key difference comes in the coefficients, and how the input data is handled. The polynomial model returns a number of coefficients depending on the number of variables and the degree. This is why there are two coefficients but only one variable. In this example, with one variable and degree 2, we get two coefficients:
+
+```elixir
+model.coefficients
+```
+
+These coefficients will be used to optimize the function and correspond to the size of the transformed input data.
+
+Feel free, in the cell bellow, to play around with the number of variables and the degree of the transformation.
+
+```elixir
+n_variables = 1
+n_samples = 5
+
+Nx.iota({n_samples, n_variables})
+|> IO.inspect()
+|> Scholar.Linear.PolynomialRegression.transform(degree: 3, fit_intercept?: false)
+```
+
+We can make simple predictions, just like in `Scholar.Linear.LinearRegression`.
+
+```elixir
+x_prediction = Nx.tensor([[-0.83], [0.83]])
+
+y_predictions =
+  Scholar.Linear.PolynomialRegression.predict(model, x_prediction)
+  |> Nx.to_flat_list()
+
+x_predictions = x_prediction |> Nx.to_flat_list()
+
+{x_predictions, y_predictions}
+```
+
+And plot these predictions with the training data.
+
+```elixir
+df_prediction =
+  Explorer.DataFrame.new(
+    x: x_predictions,
+    y: y_predictions
+  )
+
+Vl.new(
+  title: [
+    text: "Plot of Generated Data and Predictions",
+    offset: 20
+  ],
+  width: 630,
+  height: 630
+)
+|> Vl.layers([
+  Vl.new()
+  |> Vl.data_from_values(df)
+  |> Vl.mark(:circle)
+  |> Vl.encode_field(:x, "x", type: :quantitative, scale: x_scale, axis: [grid: false])
+  |> Vl.encode_field(:y, "y", type: :quantitative, scale: y_scale, axis: [grid: false]),
+  Vl.new()
+  |> Vl.data_from_values(df_results)
+  |> Vl.mark(:line, color: :green)
+  |> Vl.encode_field(:x, "x", type: :quantitative, scale: x_scale)
+  |> Vl.encode_field(:y, "y", type: :quantitative, scale: y_scale),
+  Vl.new()
+  |> Vl.data_from_values(df_prediction)
+  |> Vl.mark(:circle, color: :red, size: 80)
+  |> Vl.encode_field(:x, "x", type: :quantitative, scale: x_scale)
+  |> Vl.encode_field(:y, "y", type: :quantitative, scale: y_scale)
+])
+```
+
+Now we are ready to go into a more complex example!
 
 <!-- livebook:{"branch_parent_index":0} -->
 
