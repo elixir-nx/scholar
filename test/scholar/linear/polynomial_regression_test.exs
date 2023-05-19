@@ -184,8 +184,11 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
         0.29747673869132996
       ]
 
-      prediction_input = Nx.tensor([[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]])
-      expected_prediction = Nx.tensor([37.31348465])
+      prediction_input = Nx.tensor([
+        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+      ])
+      expected_prediction = Nx.tensor([37.31348465, 37.31348465])
 
       actual_prediction =
         Scholar.Linear.PolynomialRegression.fit(a, b,

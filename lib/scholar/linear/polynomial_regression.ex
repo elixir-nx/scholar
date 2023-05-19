@@ -116,7 +116,7 @@ defmodule Scholar.Linear.PolynomialRegression do
   deftransform predict(model, x) do
     Scholar.Linear.LinearRegression.predict(
       %Scholar.Linear.LinearRegression{
-        coefficients: model.coefficients,
+        coefficients: model.coefficients |> Nx.reshape({:auto}),
         intercept: model.intercept
       },
       transform_n(x, degree: model.degree, fit_intercept?: false)

@@ -273,7 +273,7 @@ df_linear_results =
   )
 
 # Polynomial model
-model = Scholar.Linear.PolynomialRegression.fit(x, y)
+model = Scholar.Linear.PolynomialRegression.fit(x, y, degree: 2)
 
 y_values =
   Scholar.Linear.PolynomialRegression.predict(
@@ -350,8 +350,8 @@ n_variables = 1
 n_samples = 5
 
 Nx.iota({n_samples, n_variables})
-|> IO.inspect()
 |> Scholar.Linear.PolynomialRegression.transform(degree: 3, fit_intercept?: false)
+|> dbg()
 ```
 
 We can make simple predictions, just like in `Scholar.Linear.LinearRegression`.
