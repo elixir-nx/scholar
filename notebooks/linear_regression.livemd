@@ -367,7 +367,7 @@ df_linear_results =
   )
 
 # Polynomial model
-model = Scholar.Linear.PolynomialRegression.fit(x, y)
+model = Scholar.Linear.PolynomialRegression.fit(x, y, degree: 2)
 
 y_values =
   Scholar.Linear.PolynomialRegression.predict(
