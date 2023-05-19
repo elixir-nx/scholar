@@ -97,10 +97,10 @@ defmodule Scholar.Manifold.TSNE do
       #Nx.Tensor<
         f32[4][2]
         [
-          [11.721418380737305, 0.0],
-          [74.18099975585938, 0.0],
-          [-24.942012786865234, 0.0],
-          [-60.960227966308594, 0.0]
+          [-2197.154296875, 0.0],
+          [-1055.148681640625, 0.0],
+          [1055.148681640625, 0.0],
+          [2197.154296875, 0.0]
         ]
       >
   """
@@ -129,7 +129,8 @@ defmodule Scholar.Manifold.TSNE do
           y
 
         :pca ->
-          Scholar.Decomposition.PCA.fit_transform(x, num_components: num_components)
+          x_embedded = Scholar.Decomposition.PCA.fit_transform(x, num_components: num_components)
+          x_embedded / Nx.standard_deviation(x_embedded[[.., 0]]) * 1.0e-4
       end
 
     p = p_joint(x, perplexity, metric)
@@ -191,9 +192,13 @@ defmodule Scholar.Manifold.TSNE do
     p / Nx.sum(p, axes: [1], keep_axes: true)
   end
 
-  defnp perplexity(condition_matrix) do
-    exponent = -Nx.sum(condition_matrix * Nx.log2(condition_matrix), axes: [1])
-    2 ** exponent
+  defnp perplexity(p_matrix) do
+    # Nx.select is used below so that if the entry is eps or less, we treat it as 0,
+    # and this makes it so we can avoid 0 * -inf == nan issues
+    eps = Nx.Constants.epsilon(Nx.type(p_matrix))
+    shannon_entropy_partials = Nx.select(p_matrix <= eps, 0, p_matrix * Nx.log2(p_matrix))
+    shannon_entropy = -Nx.sum(shannon_entropy_partials, axes: [1])
+    2 ** shannon_entropy
   end
 
   defnp find_sigmas(distances, target_perplexity) do
@@ -227,7 +232,7 @@ defmodule Scholar.Manifold.TSNE do
               high = high,
               max_iters,
               tol,
-              perplexity_val = Nx.Constants.infinity(:f32),
+              perplexity_val = Nx.Constants.infinity(to_float_type(target_perplexity)),
               distances,
               target_perplexity,
               i = 0
@@ -238,17 +243,12 @@ defmodule Scholar.Manifold.TSNE do
         condition_matrix = p_conditional(distances, Nx.new_axis(mid, 0))
         perplexity_val = perplexity(condition_matrix) |> Nx.reshape({})
 
-        high_to_mid? =
-          cond do
-            perplexity_val > target_perplexity ->
-              1
-
-            true ->
-              0
+        {low, high} =
+          if perplexity_val > target_perplexity do
+            {low, mid}
+          else
+            {mid, high}
           end
-
-        low = if high_to_mid?, do: low, else: mid
-        high = if high_to_mid?, do: mid, else: high
 
         {low, high, max_iters, tol, perplexity_val, distances, target_perplexity, i + 1}
       end
