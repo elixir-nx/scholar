@@ -65,24 +65,28 @@ defmodule Scholar.Linear.PolynomialRegression do
       %Scholar.Linear.PolynomialRegression{
         coefficients: #Nx.Tensor<
           f32[2]
-          [-0.4972473084926605, -0.70103919506073]
-        >, intercept: #Nx.Tensor<
+          [-0.49724727869033813, -0.7010392546653748]
+        >,
+        intercept: #Nx.Tensor<
           f32
           5.896470069885254
-        >
+        >,
+        degree: 1
       }
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
-      iex> model = Scholar.Linear.PolynomialRegression.fit(x, y, degree: 2)
+      iex> Scholar.Linear.PolynomialRegression.fit(x, y, degree: 2)
       %Scholar.Linear.PolynomialRegression{
         coefficients: #Nx.Tensor<
           f32[5]
-          [-0.021396497264504433, -0.004854593891650438, -0.08849877119064331, -0.062211357057094574, -0.04369127377867699]
-        >, intercept: #Nx.Tensor<
+          [-0.021396497264504433, -0.004854594357311726, -0.0884987860918045, -0.062211357057094574, -0.04369127005338669]
+        >,
+        intercept: #Nx.Tensor<
           f32
           4.418517112731934
-        >
+        >,
+        degree: 2
       }
   """
   deftransform fit(a, b, opts \\ []) do
@@ -110,13 +114,13 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> Scholar.Linear.PolynomialRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
       #Nx.Tensor<
         f32[1]
-        [3.84888117]
+        [3.8487603664398193]
       >
   """
   deftransform predict(model, x) do
     Scholar.Linear.LinearRegression.predict(
       %Scholar.Linear.LinearRegression{
-        coefficients: model.coefficients |> Nx.reshape({:auto}),
+        coefficients: model.coefficients |> Nx.flatten(),
         intercept: model.intercept
       },
       transform_n(x, degree: model.degree, fit_intercept?: false)

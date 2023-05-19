@@ -1,6 +1,5 @@
 defmodule Scholar.Linear.PolynomialRegressionTest do
   use Scholar.Case, async: true
-  # doctest Scholar.Linear.PolynomialRegression
 
   describe "fit" do
     test "matches sklearn for shapes {4, 6}, {4}; degree 2 and type {:f, 32}" do
@@ -184,10 +183,12 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
         0.29747673869132996
       ]
 
-      prediction_input = Nx.tensor([
-        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
-      ])
+      prediction_input =
+        Nx.tensor([
+          [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+          [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+        ])
+
       expected_prediction = Nx.tensor([37.31348465, 37.31348465])
 
       actual_prediction =
