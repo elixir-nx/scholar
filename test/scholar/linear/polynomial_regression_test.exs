@@ -1,6 +1,7 @@
 defmodule Scholar.Linear.PolynomialRegressionTest do
   use Scholar.Case, async: true
-  doctest Scholar.Linear.PolynomialRegression
+  alias Scholar.Linear.PolynomialRegression
+  doctest PolynomialRegression
 
   describe "fit" do
     test "matches sklearn for shapes {4, 6}, {4}; degree 2 and type {:f, 32}" do
@@ -55,10 +56,10 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
 
       expected_intercept = Nx.tensor(0.8032849746598018)
 
-      %Scholar.Linear.PolynomialRegression{
+      %PolynomialRegression{
         coefficients: actual_coeff,
         intercept: actual_intercept
-      } = Scholar.Linear.PolynomialRegression.fit(a, b, degree: 2)
+      } = PolynomialRegression.fit(a, b, degree: 2)
 
       assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-2, atol: 1.0e-2)
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-2, atol: 1.0e-2)
@@ -122,12 +123,12 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
       expected_prediction = Nx.tensor([-3.61666677])
 
       actual_prediction =
-        Scholar.Linear.PolynomialRegression.fit(a, b,
+        PolynomialRegression.fit(a, b,
           degree: 2,
           sample_weights: sample_weights,
           fit_intercept?: true
         )
-        |> Scholar.Linear.PolynomialRegression.predict(prediction_input)
+        |> PolynomialRegression.predict(prediction_input)
 
       assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-2, atol: 1.0e-2)
     end
@@ -193,12 +194,12 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
       expected_prediction = Nx.tensor([37.31348465, 37.31348465])
 
       actual_prediction =
-        Scholar.Linear.PolynomialRegression.fit(a, b,
+        PolynomialRegression.fit(a, b,
           degree: 3,
           sample_weights: sample_weights,
           fit_intercept?: false
         )
-        |> Scholar.Linear.PolynomialRegression.predict(prediction_input)
+        |> PolynomialRegression.predict(prediction_input)
 
       assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-2, atol: 1.0e-2)
     end
@@ -208,7 +209,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
     test "transform/1 degree=2 fit_intercept?=false returns the input" do
       data = Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]])
 
-      assert Scholar.Linear.PolynomialRegression.transform(data, degree: 1, fit_intercept?: false) ==
+      assert PolynomialRegression.transform(data, degree: 1, fit_intercept?: false) ==
                data
     end
 
@@ -216,7 +217,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
       data = Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]])
       expected = Nx.tensor([[1, 1, -1, 2], [1, 2, 0, 0], [1, 0, 1, -1]])
 
-      assert Scholar.Linear.PolynomialRegression.transform(data, degree: 1) == expected
+      assert PolynomialRegression.transform(data, degree: 1) == expected
     end
 
     test "transform/1 degree=2" do
@@ -229,7 +230,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
           [1, 4, 5, 16, 20, 25]
         ])
 
-      assert Scholar.Linear.PolynomialRegression.transform(data) == expected
+      assert PolynomialRegression.transform(data) == expected
     end
 
     test "transform/1 degree=4 fit_intercept?=false" do
@@ -242,7 +243,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
           [4, 5, 16, 20, 25, 64, 80, 100, 125, 256, 320, 400, 500, 625]
         ])
 
-      assert Scholar.Linear.PolynomialRegression.transform(data, degree: 4, fit_intercept?: false) ==
+      assert PolynomialRegression.transform(data, degree: 4, fit_intercept?: false) ==
                expected
     end
 
@@ -256,7 +257,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
             [4, 4, 6, 8, 9, 12, 16, 8, 12, 16, 18, 24, 32, 27, 36, 48, 64]
         ])
 
-      assert Scholar.Linear.PolynomialRegression.transform(data, degree: 3) == expected
+      assert PolynomialRegression.transform(data, degree: 3) == expected
     end
 
     test "transform/1 degree=3 multiple samples (multiple features)" do
@@ -268,7 +269,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
           [1, 0, 1, 2, 0, 0, 0, 1, 2, 4, 0, 0, 0, 0, 0, 0, 1, 2, 4, 8]
         ])
 
-      assert Scholar.Linear.PolynomialRegression.transform(data, degree: 3) == expected
+      assert PolynomialRegression.transform(data, degree: 3) == expected
     end
 
     test "transform/1 degree=3 fit_intercept?=false (high number of samples)" do
@@ -280,7 +281,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
             [30, 42, 50, 70, 98, 27, 45, 63, 75, 105, 147, 125, 175, 245, 343]
         ])
 
-      assert Scholar.Linear.PolynomialRegression.transform(data, degree: 3, fit_intercept?: false) ==
+      assert PolynomialRegression.transform(data, degree: 3, fit_intercept?: false) ==
                expected
     end
 
@@ -293,7 +294,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
             [48, 72, 108, 162, 243, 64, 96, 144, 216, 324, 486, 729]
         ])
 
-      assert Scholar.Linear.PolynomialRegression.transform(data, degree: 6, fit_intercept?: false) ==
+      assert PolynomialRegression.transform(data, degree: 6, fit_intercept?: false) ==
                expected
     end
   end

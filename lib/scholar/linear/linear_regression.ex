@@ -54,7 +54,7 @@ defmodule Scholar.Linear.LinearRegression do
       iex> model.coefficients
       #Nx.Tensor<
         f32[2]
-        [-0.4972473084926605, -0.70103919506073]
+        [-0.49724727869033813, -0.7010392546653748]
       >
       iex> model.intercept
       #Nx.Tensor<
