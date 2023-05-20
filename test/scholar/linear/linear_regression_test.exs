@@ -1,5 +1,6 @@
 defmodule Scholar.Linear.LinearRegressionTest do
   use Scholar.Case, async: true
+  doctest Scholar.Linear.LinearRegression
 
   describe "fit" do
     test "matches sklearn for shapes {1, 1}, {1, 1} and type {:f, 32}" do

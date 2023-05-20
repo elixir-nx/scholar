@@ -1,5 +1,6 @@
 defmodule Scholar.Linear.PolynomialRegressionTest do
   use Scholar.Case, async: true
+  doctest Scholar.Linear.PolynomialRegression
 
   describe "fit" do
     test "matches sklearn for shapes {4, 6}, {4}; degree 2 and type {:f, 32}" do

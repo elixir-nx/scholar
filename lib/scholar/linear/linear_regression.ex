@@ -49,17 +49,17 @@ defmodule Scholar.Linear.LinearRegression do
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
       iex> y = Nx.tensor([4.0, 3.0, -1.0])
-      iex> Scholar.Linear.LinearRegression.fit(x, y)
-      %Scholar.Linear.LinearRegression{
-        coefficients: #Nx.Tensor<
-          f32[2]
-          [-0.4972473084926605, -0.70103919506073]
-        >,
-        intercept: #Nx.Tensor<
-          f32
-          5.896470069885254
-        >
-      }
+      iex> model = Scholar.Linear.LinearRegression.fit(x, y)
+      iex> model.coefficients
+      #Nx.Tensor<
+        f32[2]
+        [-0.4972473084926605, -0.70103919506073]
+      >
+      iex> model.intercept
+      #Nx.Tensor<
+        f32
+        5.896470069885254
+      >
   """
   deftransform fit(a, b, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
