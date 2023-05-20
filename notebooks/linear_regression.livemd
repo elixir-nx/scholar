@@ -97,7 +97,7 @@ Vl.new(
 
 ```
 
-13:27:08.368 [info] TfrtCpuClient created.
+01:41:12.800 [info] TfrtCpuClient created.
 
 ```
 
@@ -113,14 +113,14 @@ model = Scholar.Linear.LinearRegression.fit(x, y)
 %Scholar.Linear.LinearRegression{
   coefficients: #Nx.Tensor<
     f64[1][1]
-    EXLA.Backend<host:0, 0.4264603509.4231659536.92284>
+    EXLA.Backend<host:0, 0.4179879677.2404253708.129671>
     [
       [2.9578183089017]
     ]
   >,
   intercept: #Nx.Tensor<
     f64[1]
-    EXLA.Backend<host:0, 0.4264603509.4231659536.92288>
+    EXLA.Backend<host:0, 0.4179879677.2404253708.129675>
     [4.023067929858136]
   >
 }
@@ -248,10 +248,10 @@ x_b |> Nx.LinAlg.pinv() |> Nx.dot(y)
 ```
 #Nx.Tensor<
   f64[2][1]
-  EXLA.Backend<host:0, 0.4264603509.4231659536.92806>
+  EXLA.Backend<host:0, 0.4179879677.2404253708.130193>
   [
     [4.023067929858136],
-    [2.9578183089016994]
+    [2.957818308901698]
   ]
 >
 ```
@@ -509,10 +509,38 @@ data =
 df = DF.load_csv!(data)
 ```
 
+<!-- livebook:{"output":true} -->
+
+```
+#Explorer.DataFrame<
+  Polars[20640 x 10]
+  longitude float [-122.23, -122.22, -122.24, -122.25, -122.25, ...]
+  latitude float [37.88, 37.86, 37.85, 37.85, 37.85, ...]
+  housing_median_age float [41.0, 21.0, 52.0, 52.0, 52.0, ...]
+  total_rooms float [880.0, 7099.0, 1467.0, 1274.0, 1627.0, ...]
+  total_bedrooms float [129.0, 1106.0, 190.0, 235.0, 280.0, ...]
+  population float [322.0, 2401.0, 496.0, 558.0, 565.0, ...]
+  households float [126.0, 1138.0, 177.0, 219.0, 259.0, ...]
+  median_income float [8.3252, 8.3014, 7.2574, 5.6431, 3.8462, ...]
+  median_house_value float [4.526e5, 3.585e5, 3.521e5, 3.413e5, 3.422e5, ...]
+  ocean_proximity string ["NEAR BAY", "NEAR BAY", "NEAR BAY", "NEAR BAY", "NEAR BAY", ...]
+>
+```
+
 Firstly, let's look at the distribution of houses based on the distance to the ocean.
 
 ```elixir
 S.frequencies(df["ocean_proximity"])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Explorer.DataFrame<
+  Polars[5 x 2]
+  values string ["<1H OCEAN", "INLAND", "NEAR OCEAN", "NEAR BAY", "ISLAND"]
+  counts integer [9136, 6551, 2658, 2290, 5]
+>
 ```
 
 Now, we will plot univariate histograms for each feature of the data set.
@@ -736,7 +764,7 @@ x =
  >,
  #Nx.Tensor<
    f64[20640]
-   EXLA.Backend<host:0, 0.2391304370.1547567118.227491>
+   EXLA.Backend<host:0, 0.4179879677.2404253708.131349>
    [1.542e5, 3.5e5, 2.667e5, 2.728e5, 1.163e5, 2.941e5, 4.178e5, 1.851e5, 5.68e4, 500001.0, 500001.0, 1.152e5, 2.343e5, 8.75e4, 8.37e4, 500001.0, 1.669e5, 3.003e5, 1.546e5, 6.69e4, 2.325e5, 1.367e5, 1.375e5, 1.27e5, 1.683e5, 1.441e5, 9.53e4, 1.834e5, 1.435e5, 6.85e4, 1.625e5, 1.661e5, 1.908e5, 2.431e5, 1.488e5, 3.036e5, 1.479e5, 1.5e5, 3.288e5, 7.08e4, 2.25e5, 1.375e5, 3.5e5, 3.742e5, 1.549e5, 4.5e5, 3.063e5, 2.051e5, ...]
  >}
 ```
