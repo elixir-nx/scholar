@@ -40,11 +40,11 @@ defmodule Scholar.Cluster.AffinityPropagation do
       type: {:or, [:float, :boolean, :integer]},
       doc: "Self preference."
     ],
-    seed: [
-      type: {:custom, Scholar.Options, :seed, []},
+    key: [
+      type: {:custom, Scholar.Options, :key, []},
       doc: """
       Determines random number generation for centroid initialization.
-      If the seed is not provided, it is set to `System.system_time()`.
+      If the key is not provided, it is set to `System.system_time()`.
       """
     ]
   ]
@@ -70,9 +70,9 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
   ## Examples
 
-      iex> seed = 42
+      iex> key = Nx.Random.key(42)
       iex> x = Nx.tensor([[12,5,78,2], [1,-5,7,32], [-1,3,6,1], [1,-2,5,2]])
-      iex> Scholar.Cluster.AffinityPropagation.fit(x, seed: seed)
+      iex> Scholar.Cluster.AffinityPropagation.fit(x, key: key)
       %Scholar.Cluster.AffinityPropagation{
         labels: Nx.tensor([0, 3, 3, 3]),
         cluster_centers_indices: Nx.tensor([0, -1, -1, 3]),
@@ -97,11 +97,13 @@ defmodule Scholar.Cluster.AffinityPropagation do
   deftransform fit(data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     opts = Keyword.update(opts, :self_preference, false, fn x -> x end)
-    seed = Keyword.get_lazy(opts, :seed, &System.system_time/0)
-    fit_n(data, seed, NimbleOptions.validate!(opts, @opts_schema))
+    key = Keyword.get_lazy(opts, :key, &System.system_time/0)
+    key_size = Nx.size(key)
+    key = if key_size == 2, do: key, else: Nx.Random.key(Nx.as_type(key, :s64))
+    fit_n(data, key, NimbleOptions.validate!(opts, @opts_schema))
   end
 
-  defnp fit_n(data, seed, opts) do
+  defnp fit_n(data, key, opts) do
     data = to_float(data)
     iterations = opts[:iterations]
     damping_factor = opts[:damping_factor]
@@ -111,8 +113,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
       initialize_matrices(data, self_preference: self_preference)
 
     {n, _} = Nx.shape(initial_a)
-    seed_size = Nx.size(seed)
-    key = if seed_size == 2, do: seed, else: Nx.Random.key(seed)
     {normal, _new_key} = Nx.Random.normal(key, 0, 1, shape: {n, n}, type: Nx.type(s))
 
     s =
@@ -204,9 +204,9 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
   ## Examples
 
-      iex> seed = 42
+      iex> key = Nx.Random.key(42)
       iex> x = Nx.tensor([[12,5,78,2], [1,-5,7,32], [-1,3,6,1], [1,-2,5,2]])
-      iex> model = Scholar.Cluster.AffinityPropagation.fit(x, seed: seed)
+      iex> model = Scholar.Cluster.AffinityPropagation.fit(x, key: key)
       iex> Scholar.Cluster.AffinityPropagation.prune(model)
       %Scholar.Cluster.AffinityPropagation{
         labels: Nx.tensor([0, 1, 1, 1]),
@@ -261,9 +261,9 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
   ## Examples
 
-      iex> seed = 42
+      iex> key = Nx.Random.key(42)
       iex> x = Nx.tensor([[12,5,78,2], [1,5,7,32], [1,3,6,1], [1,2,5,2]])
-      iex> model = Scholar.Cluster.AffinityPropagation.fit(x, seed: seed)
+      iex> model = Scholar.Cluster.AffinityPropagation.fit(x, key: key)
       iex> model = Scholar.Cluster.AffinityPropagation.prune(model)
       iex> Scholar.Cluster.AffinityPropagation.predict(model, Nx.tensor([[1,6,2,6], [8,3,8,2]]))
       #Nx.Tensor<

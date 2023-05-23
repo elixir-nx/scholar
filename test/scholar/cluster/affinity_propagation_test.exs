@@ -3,8 +3,7 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
   alias Scholar.Cluster.AffinityPropagation
   doctest AffinityPropagation
 
-  @seed 42
-  @key Nx.Random.key(@seed)
+  @key Nx.Random.key(42)
   @x Nx.tensor([
        [16, 2, 17],
        [17, 3, 9],
@@ -61,33 +60,7 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
           ])
 
   test "fit and compute_values" do
-    model = AffinityPropagation.fit(@x, seed: @seed)
-
-    model = AffinityPropagation.prune(model)
-
-    assert model.labels ==
-             Nx.tensor(
-               [5, 6, 0, 2, 1, 3, 7, 6, 2, 2, 2, 7, 6, 2, 3, 2, 4, 2, 1] ++
-                 [0, 7, 0, 1, 6, 7, 7, 2, 1, 5, 5, 6, 4, 3, 0, 5, 0, 6, 0, 7, 0]
-             )
-
-    assert model.cluster_centers ==
-             Nx.tensor([
-               [9.0, 16.0, 15.0],
-               [3.0, 5.0, 15.0],
-               [8.0, 7.0, 5.0],
-               [18.0, 16.0, 12.0],
-               [18.0, 13.0, 1.0],
-               [11.0, 4.0, 12.0],
-               [17.0, 3.0, 6.0],
-               [5.0, 17.0, 3.0]
-             ])
-
-    assert model.cluster_centers_indices == Nx.tensor([2, 4, 9, 14, 16, 34, 36, 38])
-  end
-
-  test "fit and compute_values using key" do
-    model = AffinityPropagation.fit(@x, seed: @key)
+    model = AffinityPropagation.fit(@x, key: @key)
 
     model = AffinityPropagation.prune(model)
 
@@ -113,14 +86,14 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
   end
 
   test "predict with pruning" do
-    model = AffinityPropagation.fit(@x, seed: @seed)
+    model = AffinityPropagation.fit(@x, key: @key)
     model = AffinityPropagation.prune(model)
     preds = AffinityPropagation.predict(model, @x_test)
     assert preds == Nx.tensor([0, 2, 0, 5, 5, 5, 2, 2, 5, 2])
   end
 
   test "predict without pruning" do
-    model = AffinityPropagation.fit(@x, seed: @seed)
+    model = AffinityPropagation.fit(@x, key: @key)
     preds = AffinityPropagation.predict(model, @x_test)
     assert preds == Nx.tensor([2, 9, 2, 34, 34, 34, 9, 9, 34, 9])
   end

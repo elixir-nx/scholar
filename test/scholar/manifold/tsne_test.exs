@@ -3,7 +3,7 @@ defmodule Scholar.Manifold.TSNETest do
   alias Scholar.Manifold.TSNE
   doctest TSNE
 
-  @seed 42
+  @key Nx.Random.key(42)
   @x Nx.tensor([
        [
          -8.73180761,
@@ -90,7 +90,7 @@ defmodule Scholar.Manifold.TSNETest do
   @x_wide Nx.tensor([[1, 2, 3, 1], [2, 56, 2, 4]])
 
   test "all default params" do
-    embedding = TSNE.fit(@x, seed: @seed)
+    embedding = TSNE.fit(@x, key: @key)
 
     expected =
       Nx.tensor([
@@ -110,7 +110,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "test for wide matrix" do
-    embedding = TSNE.fit(@x_wide, seed: @seed)
+    embedding = TSNE.fit(@x_wide, key: @key)
 
     expected =
       Nx.tensor([
@@ -122,7 +122,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default num_components" do
-    embedding = TSNE.fit(@x, num_components: 3, seed: @seed)
+    embedding = TSNE.fit(@x, num_components: 3, key: @key)
 
     expected =
       Nx.tensor([
@@ -142,7 +142,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default perplexity" do
-    embedding = TSNE.fit(@x, perplexity: 5, seed: @seed)
+    embedding = TSNE.fit(@x, perplexity: 5, key: @key)
 
     expected =
       Nx.tensor([
@@ -162,7 +162,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default learning_rate" do
-    embedding = TSNE.fit(@x, learning_rate: 100, seed: @seed)
+    embedding = TSNE.fit(@x, learning_rate: 100, key: @key)
 
     expected =
       Nx.tensor([
@@ -182,7 +182,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default max_iter" do
-    embedding = TSNE.fit(@x, num_iters: 333, seed: @seed)
+    embedding = TSNE.fit(@x, num_iters: 333, key: @key)
 
     expected =
       Nx.tensor([
@@ -202,7 +202,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default init" do
-    embedding = TSNE.fit(@x, init: :random, seed: @seed)
+    embedding = TSNE.fit(@x, init: :random, key: @key)
 
     expected =
       Nx.tensor([
@@ -222,7 +222,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default metric" do
-    embedding = TSNE.fit(@x, seed: @seed, metric: :chebyshev)
+    embedding = TSNE.fit(@x, key: @key, metric: :chebyshev)
 
     expected =
       Nx.tensor([
@@ -242,7 +242,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default exaggeration" do
-    embedding = TSNE.fit(@x, seed: 42, exaggeration: 4.5)
+    embedding = TSNE.fit(@x, key: @key, exaggeration: 4.5)
 
     expected =
       Nx.tensor([

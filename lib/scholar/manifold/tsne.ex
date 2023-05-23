@@ -44,11 +44,11 @@ defmodule Scholar.Manifold.TSNE do
       Maximum number of iterations for the optimization.
       """
     ],
-    seed: [
-      type: {:custom, Scholar.Options, :seed, []},
+    key: [
+      type: {:custom, Scholar.Options, :key, []},
       doc: """
       Determines random number generation for centroid initialization.
-      If the seed is not provided, it is set to `System.system_time()`.
+      If the key is not provided, it is set to `System.system_time()`.
       """
     ],
     init: [
@@ -92,8 +92,8 @@ defmodule Scholar.Manifold.TSNE do
   ## Examples
 
       iex> x = Nx.iota({4,5})
-      iex> seed = 42
-      iex> Scholar.Manifold.TSNE.fit(x, num_components: 2, seed: seed)
+      iex> key = Nx.Random.key(42)
+      iex> Scholar.Manifold.TSNE.fit(x, num_components: 2, key: key)
       #Nx.Tensor<
         f32[4][2]
         [
@@ -106,11 +106,13 @@ defmodule Scholar.Manifold.TSNE do
   """
   deftransform fit(x, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    seed = Keyword.get_lazy(opts, :seed, &System.system_time/0)
-    fit_n(x, seed, opts)
+    key = Keyword.get_lazy(opts, :key, &System.system_time/0)
+    key_size = Nx.size(key)
+    key = if key_size == 2, do: key, else: Nx.Random.key(Nx.as_type(key, :s64))
+    fit_n(x, key, opts)
   end
 
-  defnp fit_n(x, seed, opts \\ []) do
+  defnp fit_n(x, key, opts \\ []) do
     {perplexity, learning_rate, num_iters, num_components, exaggeration, init, metric} =
       {opts[:perplexity], opts[:learning_rate], opts[:num_iters], opts[:num_components],
        opts[:exaggeration], opts[:init], opts[:metric]}
@@ -121,9 +123,6 @@ defmodule Scholar.Manifold.TSNE do
     y1 =
       case init do
         :random ->
-          seed_size = Nx.size(seed)
-          key = if seed_size == 2, do: seed, else: Nx.Random.key(seed)
-
           {y, _new_key} =
             Nx.Random.normal(key, 0.0, 1.0e-4, shape: {n, num_components}, type: Nx.type(x))
 
