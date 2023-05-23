@@ -44,7 +44,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
       type: {:custom, Scholar.Options, :key, []},
       doc: """
       Determines random number generation for centroid initialization.
-      If the key is not provided, it is set to `System.system_time()`.
+      If the key is not provided, it is set to `Nx.Random.key(System.system_time())`.
       """
     ]
   ]
