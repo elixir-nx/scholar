@@ -97,9 +97,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
   deftransform fit(data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     opts = Keyword.update(opts, :self_preference, false, fn x -> x end)
-    key = Keyword.get_lazy(opts, :key, &System.system_time/0)
-    key_size = Nx.size(key)
-    key = if key_size == 2, do: key, else: Nx.Random.key(Nx.as_type(key, :s64))
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     fit_n(data, key, NimbleOptions.validate!(opts, @opts_schema))
   end
 

@@ -139,9 +139,7 @@ defmodule Scholar.Cluster.KMeans do
             "invalid value for :num_clusters option: expected positive integer between 1 and #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
     end
 
-    key = Keyword.get_lazy(opts, :key, &System.system_time/0)
-    key_size = Nx.size(key)
-    key = if key_size == 2, do: key, else: Nx.Random.key(Nx.as_type(key, :s64))
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     {weights, opts} = Keyword.pop(opts, :weights, nil)
     x_float_type = to_float_type(x)
     weights = validate_weights(weights, num_samples, x_type: x_float_type)

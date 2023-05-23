@@ -106,9 +106,7 @@ defmodule Scholar.Manifold.TSNE do
   """
   deftransform fit(x, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    key = Keyword.get_lazy(opts, :key, &System.system_time/0)
-    key_size = Nx.size(key)
-    key = if key_size == 2, do: key, else: Nx.Random.key(Nx.as_type(key, :s64))
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     fit_n(x, key, opts)
   end
 
