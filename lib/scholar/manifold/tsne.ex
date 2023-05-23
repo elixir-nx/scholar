@@ -45,7 +45,7 @@ defmodule Scholar.Manifold.TSNE do
       """
     ],
     seed: [
-      type: :integer,
+      type: {:custom, Scholar.Options, :seed, []},
       doc: """
       Determines random number generation for centroid initialization.
       If the seed is not provided, it is set to `System.system_time()`.
@@ -121,7 +121,8 @@ defmodule Scholar.Manifold.TSNE do
     y1 =
       case init do
         :random ->
-          key = Nx.Random.key(seed)
+          seed_size = Nx.size(seed)
+          key = if seed_size == 2, do: seed, else: Nx.Random.key(seed)
 
           {y, _new_key} =
             Nx.Random.normal(key, 0.0, 1.0e-4, shape: {n, num_components}, type: Nx.type(x))

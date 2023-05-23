@@ -42,6 +42,14 @@ defmodule Scholar.Options do
     end
   end
 
+  def seed(seed) do
+    if is_integer(seed) or (Nx.is_tensor(seed) and Nx.type(seed) == {:u, 32} and Nx.shape(seed) == {2}) do
+      {:ok, seed}
+    else
+      {:error, "expected seed to be an integer or key (use Nx.Random.key/1), got: #{inspect(seed)}"}
+    end
+  end
+
   def metric(:cosine), do: {:ok, :cosine}
 
   def metric({:minkowski, p}) when p == :infinity or (is_number(p) and p > 0),

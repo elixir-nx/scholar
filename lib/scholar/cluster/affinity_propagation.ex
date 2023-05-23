@@ -41,7 +41,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
       doc: "Self preference."
     ],
     seed: [
-      type: :integer,
+      type: {:custom, Scholar.Options, :seed, []},
       doc: """
       Determines random number generation for centroid initialization.
       If the seed is not provided, it is set to `System.system_time()`.
@@ -111,7 +111,8 @@ defmodule Scholar.Cluster.AffinityPropagation do
       initialize_matrices(data, self_preference: self_preference)
 
     {n, _} = Nx.shape(initial_a)
-    key = Nx.Random.key(seed)
+    seed_size = Nx.size(seed)
+    key = if seed_size == 2, do: seed, else: Nx.Random.key(seed)
     {normal, _new_key} = Nx.Random.normal(key, 0, 1, shape: {n, n}, type: Nx.type(s))
 
     s =

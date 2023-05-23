@@ -73,7 +73,7 @@ defmodule Scholar.Cluster.KMeans do
       """
     ],
     seed: [
-      type: :integer,
+      type: {:custom, Scholar.Options, :seed, []},
       doc: """
       Determines random number generation for centroid initialization.
       If the seed is not provided, it is set to `System.system_time()`.
@@ -214,7 +214,8 @@ defmodule Scholar.Cluster.KMeans do
 
     case opts[:init] do
       :random ->
-        key = Nx.Random.key(seed)
+        seed_size = Nx.size(seed)
+        key = if seed_size == 2, do: seed, else: Nx.Random.key(seed)
         nums = Nx.iota({num_runs, num_samples}, axis: 1)
         {temp, _} = Nx.Random.shuffle(key, nums, axis: 1)
 
@@ -266,7 +267,8 @@ defmodule Scholar.Cluster.KMeans do
     centroids = Nx.broadcast(inf, {num_runs, num_clusters, num_features})
     inertia = Nx.broadcast(Nx.tensor(0.0, type: to_float_type(x)), {num_runs, num_samples})
 
-    key = Nx.Random.key(seed)
+    seed_size = Nx.size(seed)
+    key = if seed_size == 2, do: seed, else: Nx.Random.key(seed)
 
     {first_centroid_idx, new_key} = Nx.Random.randint(key, 0, num_samples - 1, shape: {num_runs})
     first_centroid = Nx.take(x, first_centroid_idx)
