@@ -3,14 +3,14 @@ defmodule Scholar.Cluster.KMeansTest do
   alias Scholar.Cluster.KMeans
   doctest KMeans
 
-  @seed 42
+  @key Nx.Random.key(42)
 
   describe "fit, predict, and transform" do
     test "fit and predict without weights" do
       model =
         KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
           num_clusters: 2,
-          seed: @seed
+          key: @key
         )
 
       assert model.clusters == Nx.tensor([[1.0, 2.5], [2.0, 4.5]])
@@ -26,7 +26,7 @@ defmodule Scholar.Cluster.KMeansTest do
       model =
         KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
           num_clusters: 2,
-          seed: @seed,
+          key: @key,
           init: :random
         )
 
@@ -43,7 +43,7 @@ defmodule Scholar.Cluster.KMeansTest do
       model =
         KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
           num_clusters: 2,
-          seed: @seed,
+          key: @key,
           weights: [1, 2, 3, 4]
         )
 
@@ -60,7 +60,7 @@ defmodule Scholar.Cluster.KMeansTest do
       model =
         KMeans.fit(Nx.tensor([[1, 2], [2, 4.25], [1, 3], [2, 5]]),
           num_clusters: 2,
-          seed: 42,
+          key: @key,
           weights: Nx.tensor([1, 2, 3, 4], type: {:f, 32})
         )
 

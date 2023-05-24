@@ -72,11 +72,11 @@ defmodule Scholar.Cluster.KMeans do
         the initial centroids.
       """
     ],
-    seed: [
-      type: :integer,
+    key: [
+      type: {:custom, Scholar.Options, :key, []},
       doc: """
       Determines random number generation for centroid initialization.
-      If the seed is not provided, it is set to `System.system_time()`.
+      If the key is not provided, it is set to `Nx.Random.key(System.system_time())`.
       """
     ]
   ]
@@ -104,9 +104,9 @@ defmodule Scholar.Cluster.KMeans do
 
   ## Examples
 
-      iex> seed = 42
+      iex> key = Nx.Random.key(42)
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
-      iex> Scholar.Cluster.KMeans.fit(x, num_clusters: 2, seed: seed)
+      iex> Scholar.Cluster.KMeans.fit(x, num_clusters: 2, key: key)
       %Scholar.Cluster.KMeans{
         num_iterations: Nx.tensor(
           2
@@ -139,14 +139,14 @@ defmodule Scholar.Cluster.KMeans do
             "invalid value for :num_clusters option: expected positive integer between 1 and #{inspect(num_samples)}, got: #{inspect(opts[:num_clusters])}"
     end
 
-    seed = Keyword.get_lazy(opts, :seed, &System.system_time/0)
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     {weights, opts} = Keyword.pop(opts, :weights, nil)
     x_float_type = to_float_type(x)
     weights = validate_weights(weights, num_samples, x_type: x_float_type)
-    fit_n(x, weights, seed, opts)
+    fit_n(x, weights, key, opts)
   end
 
-  defnp fit_n(%Nx.Tensor{shape: {num_samples, num_features}} = x, weights, seed, opts) do
+  defnp fit_n(%Nx.Tensor{shape: {num_samples, num_features}} = x, weights, key, opts) do
     x = to_float(x)
     num_clusters = opts[:num_clusters]
     num_runs = opts[:num_runs]
@@ -157,7 +157,7 @@ defmodule Scholar.Cluster.KMeans do
 
     broadcast_x = Nx.broadcast(x, {num_runs, num_samples, num_features})
 
-    centroids = initialize_centroids(x, seed, opts)
+    centroids = initialize_centroids(x, key, opts)
     inf = Nx.Constants.infinity(Nx.type(centroids))
     distance = Nx.broadcast(inf, {num_runs})
     tol = Nx.mean(Nx.variance(x, axes: [0])) * opts[:tol]
@@ -207,14 +207,13 @@ defmodule Scholar.Cluster.KMeans do
     }
   end
 
-  defnp initialize_centroids(x, seed, opts) do
+  defnp initialize_centroids(x, key, opts) do
     num_clusters = opts[:num_clusters]
     {num_samples, _num_features} = Nx.shape(x)
     num_runs = opts[:num_runs]
 
     case opts[:init] do
       :random ->
-        key = Nx.Random.key(seed)
         nums = Nx.iota({num_runs, num_samples}, axis: 1)
         {temp, _} = Nx.Random.shuffle(key, nums, axis: 1)
 
@@ -223,7 +222,7 @@ defmodule Scholar.Cluster.KMeans do
         |> then(&Nx.take(x, &1))
 
       :k_means_plus_plus ->
-        k_means_plus_plus(x, num_clusters, num_runs, seed)
+        k_means_plus_plus(x, num_clusters, num_runs, key)
     end
   end
 
@@ -260,13 +259,11 @@ defmodule Scholar.Cluster.KMeans do
     {Nx.take(x, idx), new_key}
   end
 
-  defnp k_means_plus_plus(x, num_clusters, num_runs, seed) do
+  defnp k_means_plus_plus(x, num_clusters, num_runs, key) do
     inf = Nx.Constants.infinity(to_float_type(x))
     {num_samples, num_features} = Nx.shape(x)
     centroids = Nx.broadcast(inf, {num_runs, num_clusters, num_features})
     inertia = Nx.broadcast(Nx.tensor(0.0, type: to_float_type(x)), {num_runs, num_samples})
-
-    key = Nx.Random.key(seed)
 
     {first_centroid_idx, new_key} = Nx.Random.randint(key, 0, num_samples - 1, shape: {num_runs})
     first_centroid = Nx.take(x, first_centroid_idx)
@@ -294,9 +291,9 @@ defmodule Scholar.Cluster.KMeans do
 
   ## Examples
 
-      iex> seed = 42
+      iex> key = Nx.Random.key(42)
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
-      iex> model = Scholar.Cluster.KMeans.fit(x, num_clusters: 2, seed: seed)
+      iex> model = Scholar.Cluster.KMeans.fit(x, num_clusters: 2, key: key)
       iex> Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       Nx.tensor(
         [1, 0]
@@ -333,11 +330,11 @@ defmodule Scholar.Cluster.KMeans do
 
   ## Examples
 
-      iex> seed = 40
+      iex> key = Nx.Random.key(40)
       iex> model =
       ...>  Scholar.Cluster.KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]),
       ...>    num_clusters: 2,
-      ...>    seed: seed
+      ...>    key: key
       ...>  )
       iex> Scholar.Cluster.KMeans.transform(model, Nx.tensor([[1.0, 2.5]]))
       Nx.tensor(

@@ -42,6 +42,14 @@ defmodule Scholar.Options do
     end
   end
 
+  def key(key) do
+    if Nx.is_tensor(key) and Nx.type(key) == {:u, 32} and Nx.shape(key) == {2} do
+      {:ok, key}
+    else
+      {:error, "expected key to be a key (use Nx.Random.key/1), got: #{inspect(key)}"}
+    end
+  end
+
   def metric(:cosine), do: {:ok, :cosine}
 
   def metric({:minkowski, p}) when p == :infinity or (is_number(p) and p > 0),

@@ -3,7 +3,7 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
   alias Scholar.Cluster.AffinityPropagation
   doctest AffinityPropagation
 
-  @seed 42
+  @key Nx.Random.key(42)
   @x Nx.tensor([
        [16, 2, 17],
        [17, 3, 9],
@@ -60,7 +60,7 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
           ])
 
   test "fit and compute_values" do
-    model = AffinityPropagation.fit(@x, seed: @seed)
+    model = AffinityPropagation.fit(@x, key: @key)
 
     model = AffinityPropagation.prune(model)
 
@@ -86,14 +86,14 @@ defmodule Scholar.Cluster.AffinityPropagationTest do
   end
 
   test "predict with pruning" do
-    model = AffinityPropagation.fit(@x, seed: @seed)
+    model = AffinityPropagation.fit(@x, key: @key)
     model = AffinityPropagation.prune(model)
     preds = AffinityPropagation.predict(model, @x_test)
     assert preds == Nx.tensor([0, 2, 0, 5, 5, 5, 2, 2, 5, 2])
   end
 
   test "predict without pruning" do
-    model = AffinityPropagation.fit(@x, seed: @seed)
+    model = AffinityPropagation.fit(@x, key: @key)
     preds = AffinityPropagation.predict(model, @x_test)
     assert preds == Nx.tensor([2, 9, 2, 34, 34, 34, 9, 9, 34, 9])
   end
