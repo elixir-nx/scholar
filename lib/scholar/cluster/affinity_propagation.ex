@@ -46,6 +46,13 @@ defmodule Scholar.Cluster.AffinityPropagation do
       Determines random number generation for centroid initialization.
       If the key is not provided, it is set to `Nx.Random.key(System.system_time())`.
       """
+    ],
+    learning_loop_unroll: [
+      type: :boolean,
+      default: false,
+      doc: ~S"""
+      If `true`, the learning loop is unrolled.
+      """
     ]
   ]
 
@@ -121,9 +128,10 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
     range = Nx.iota({n})
 
-    {a, r, _, _, _} =
-      while {a = initial_a, r = initial_r, s, range, i = 0},
-            i < iterations do
+    {a, r, _, _} =
+      while {a = initial_a, r = initial_r, s, range},
+            _i <- 0..(iterations - 1),
+            unroll: opts[:learning_loop_unroll] do
         temp = a + s
         indices = Nx.argmax(temp, axis: 1)
         y = Nx.reduce_max(temp, axes: [1])
@@ -149,7 +157,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
         temp = temp * (1 - damping_factor)
         a = a * damping_factor - temp
 
-        {a, r, s, range, i + 1}
+        {a, r, s, range}
       end
 
     diagonals = Nx.take_diagonal(a) + Nx.take_diagonal(r) > 0

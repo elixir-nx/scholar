@@ -73,6 +73,13 @@ defmodule Scholar.Manifold.TSNE do
       Controls how tight natural clusters in the original space are in the embedded space and
       how much space will be between them. For larger values, the space between natural clusters will be larger in the embedded space.
       """
+    ],
+    learning_loop_unroll: [
+      type: :boolean,
+      default: false,
+      doc: ~S"""
+      If `true`, the learning loop is unrolled.
+      """
     ]
   ]
 
@@ -133,12 +140,14 @@ defmodule Scholar.Manifold.TSNE do
 
     p = p_joint(x, perplexity, metric)
 
-    {y, _, _, _, _} =
-      while {y1, y2 = y1, learning_rate, p, i = 2}, i < num_iters do
+    {y, _, _, _} =
+      while {y1, y2 = y1, learning_rate, p},
+            i <- 2..(num_iters-1),
+            unroll: opts[:learning_loop_unroll] do
         q = q_joint(y1, metric)
         grad = gradient(p * exaggeration(i, exaggeration), q, y1, metric)
         y_next = y1 - learning_rate * grad + momentum(i) * (y1 - y2)
-        {y_next, y1, learning_rate, p, i + 1}
+        {y_next, y1, learning_rate, p}
       end
 
     y

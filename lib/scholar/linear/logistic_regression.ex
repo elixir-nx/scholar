@@ -28,6 +28,13 @@ defmodule Scholar.Linear.LogisticRegression do
       number of iterations of gradient descent performed inside logistic
       regression.
       """
+    ],
+    learning_loop_unroll: [
+      type: :boolean,
+      default: false,
+      doc: ~S"""
+      If `true`, the learning loop is unrolled.
+      """
     ]
   ]
 
@@ -96,18 +103,19 @@ defmodule Scholar.Linear.LogisticRegression do
     num_classes = opts[:num_classes]
     y = Scholar.Preprocessing.one_hot_encode(y, num_classes: num_classes)
 
-    {_, _, _, _, _, _, final_coeff, final_bias} =
-      while {iter = 0, x, learning_rate, n, iterations, y,
+    {_, _, _, _, _, final_coeff, final_bias} =
+      while {x, learning_rate, n, iterations, y,
              coeff =
                Nx.broadcast(
                  Nx.tensor(1.0, type: to_float_type(x)),
                  {n, num_classes}
                ), bias = Nx.broadcast(Nx.tensor(0, type: to_float_type(x)), {num_classes})},
-            iter < iterations do
+            _iter <- 0..(iterations - 1),
+            unroll: opts[:learning_loop_unroll] do
         {coeff_grad, bias_grad} = grad_loss(coeff, bias, x, y)
         coeff = coeff - learning_rate * coeff_grad
         bias = bias - learning_rate * bias_grad
-        {iter + 1, x, learning_rate, n, iterations, y, coeff, bias}
+        {x, learning_rate, n, iterations, y, coeff, bias}
       end
 
     %__MODULE__{
