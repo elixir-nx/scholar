@@ -142,7 +142,7 @@ defmodule Scholar.Manifold.TSNE do
 
     {y, _, _, _} =
       while {y1, y2 = y1, learning_rate, p},
-            i <- 2..(num_iters-1),
+            i <- 2..(num_iters - 1),
             unroll: opts[:learning_loop_unroll] do
         q = q_joint(y1, metric)
         grad = gradient(p * exaggeration(i, exaggeration), q, y1, metric)
