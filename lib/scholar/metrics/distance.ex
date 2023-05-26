@@ -365,7 +365,7 @@ defmodule Scholar.Metrics.Distance do
     # Detect very small values that could lead to surprising
     # results and numerical stability issues. Every value smaller
     # than `cutoff` is considered small
-    cutoff = 10 * 2.220446049250313e-16
+    cutoff = 10 * Nx.Constants.epsilon(:f64)
     assert_same_shape!(x, y)
 
     opts = keyword!(opts, [:axes])
