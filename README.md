@@ -8,6 +8,7 @@ several algorithms for classification, regression, clustering, dimensionality
 reduction, metrics, and preprocessing.
 
 For deep learning, see [Axon](https://github.com/elixir-nx/axon).
+For decision trees/forests, see [EXGBoost](https://github.com/acalejos/exgboost).
 
 ## Installation
 
