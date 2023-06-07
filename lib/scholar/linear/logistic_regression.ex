@@ -216,7 +216,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
       iex> y = Nx.tensor([1, 0, 1])
-      iex> model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2, optimizer: :sgd)
+      iex> model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
       iex> Scholar.Linear.LogisticRegression.predict_probability(model, Nx.tensor([[-3.0, 5.0]]))
       #Nx.Tensor<
         f32[1][2]
