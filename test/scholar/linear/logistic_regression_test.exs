@@ -11,8 +11,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
     model =
       LogisticRegression.fit(x_train, y_train,
         num_classes: 2,
-        iterations: 1000,
-        learning_rate: 0.1
+        iterations: 1000
       )
 
     res = Scholar.Linear.LogisticRegression.predict(model, x_test)
@@ -56,16 +55,16 @@ defmodule Scholar.Linear.LogisticRegressionTest do
                    fn -> LogisticRegression.fit(x, y) end
     end
 
-    test "when :learning_rate is not a positive number" do
+    test "when :optimizer is invalid" do
       x = Nx.tensor([[1, 2], [3, 4]])
       y = Nx.tensor([1, 2])
 
       assert_raise NimbleOptions.ValidationError,
-                   "invalid value for :learning_rate option: expected positive number, got: -0.001",
+                   "invalid value for :optimizer option: expected :optimizer to be either a valid 0-arity function in Optimus.Optimizers or a valid {init_fn, update_fn} tuple",
                    fn ->
                      LogisticRegression.fit(x, y,
                        num_classes: 2,
-                       learning_rate: -0.001
+                       optimizer: :invalid_optimizer
                      )
                    end
     end

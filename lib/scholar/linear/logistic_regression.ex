@@ -14,13 +14,6 @@ defmodule Scholar.Linear.LogisticRegression do
       type: :pos_integer,
       doc: "number of classes contained in the input tensors."
     ],
-    learning_rate: [
-      type: {:custom, Scholar.Options, :positive_number, []},
-      default: 0.01,
-      doc: """
-      learning rate used by gradient descent.
-      """
-    ],
     iterations: [
       type: :pos_integer,
       default: 1000,
@@ -34,6 +27,13 @@ defmodule Scholar.Linear.LogisticRegression do
       default: false,
       doc: ~S"""
       If `true`, the learning loop is unrolled.
+      """
+    ],
+    optimizer: [
+      type: {:custom, Scholar.Options, :optimizer, []},
+      default: :sgd,
+      doc: """
+      The optimizer name or {init, update} pair of functions (see `Optimus.Optimizers` for more details).
       """
     ]
   ]
@@ -91,40 +91,81 @@ defmodule Scholar.Linear.LogisticRegression do
             "expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
     end
 
-    fit_n(x, y, NimbleOptions.validate!(opts, @opts_schema))
+    opts = NimbleOptions.validate!(opts, @opts_schema)
+
+    {optimizer, opts} = Keyword.pop!(opts, :optimizer)
+
+    {optimizer_init_fn, optimizer_update_fn} =
+      case optimizer do
+        atom when is_atom(atom) -> apply(Optimus.Optimizers, atom, [])
+        {f1, f2} -> {f1, f2}
+      end
+
+    n = Nx.axis_size(x, -1)
+    num_classes = opts[:num_classes]
+
+    coef =
+      Nx.broadcast(
+        Nx.tensor(1.0, type: to_float_type(x)),
+        {n, num_classes}
+      )
+
+    bias = Nx.broadcast(Nx.tensor(0, type: to_float_type(x)), {num_classes})
+
+    coef_optimizer_state = optimizer_init_fn.(coef) |> as_type(to_float_type(x))
+    bias_optimizer_state = optimizer_init_fn.(bias) |> as_type(to_float_type(x))
+
+    opts = Keyword.put(opts, :optimizer_update_fn, optimizer_update_fn)
+
+    fit_n(x, y, coef, bias, coef_optimizer_state, bias_optimizer_state, opts)
+  end
+
+  deftransformp as_type(container, target_type) do
+    Nx.Defn.Composite.traverse(container, fn t ->
+      type = Nx.type(t)
+
+      if Nx.Type.float?(type) and not Nx.Type.complex?(type) do
+        Nx.as_type(t, target_type)
+      else
+        t
+      end
+    end)
   end
 
   # Logistic Regression training loop
 
-  defnp fit_n(x, y, opts) do
-    {_m, n} = x.shape
+  defnp fit_n(x, y, coef, bias, coef_optimizer_state, bias_optimizer_state, opts) do
     iterations = opts[:iterations]
-    learning_rate = opts[:learning_rate]
     num_classes = opts[:num_classes]
+    optimizer_update_fn = opts[:optimizer_update_fn]
     y = Scholar.Preprocessing.one_hot_encode(y, num_classes: num_classes)
 
-    {_, _, _, _, _, final_coeff, final_bias} =
-      while {x, learning_rate, n, iterations, y,
-             coeff =
-               Nx.broadcast(
-                 Nx.tensor(1.0, type: to_float_type(x)),
-                 {n, num_classes}
-               ), bias = Nx.broadcast(Nx.tensor(0, type: to_float_type(x)), {num_classes})},
+    {{final_coef, final_bias}, _} =
+      while {{coef, bias}, {x, iterations, y, coef_optimizer_state, bias_optimizer_state}},
             _iter <- 0..(iterations - 1),
             unroll: opts[:learning_loop_unroll] do
-        {coeff_grad, bias_grad} = grad_loss(coeff, bias, x, y)
-        coeff = coeff - learning_rate * coeff_grad
-        bias = bias - learning_rate * bias_grad
-        {x, learning_rate, n, iterations, y, coeff, bias}
+        {coef_grad, bias_grad} = grad(coef, bias, x, y)
+
+        {coef_updates, coef_optimizer_state} =
+          optimizer_update_fn.(coef_grad, coef_optimizer_state, coef)
+
+        coef = Optimus.Updates.apply_updates(coef, coef_updates)
+
+        {bias_updates, bias_optimizer_state} =
+          optimizer_update_fn.(bias_grad, bias_optimizer_state, bias)
+
+        bias = Optimus.Updates.apply_updates(bias, bias_updates)
+
+        {{coef, bias}, {x, iterations, y, coef_optimizer_state, bias_optimizer_state}}
       end
 
     %__MODULE__{
-      coefficients: Nx.transpose(final_coeff),
+      coefficients: Nx.transpose(final_coef),
       bias: final_bias
     }
   end
 
-  defnp grad_loss(coeff, bias, xs, ys) do
+  defnp grad(coeff, bias, xs, ys) do
     grad({coeff, bias}, fn {coeff, bias} ->
       -Nx.sum(ys * log_softmax(Nx.dot(xs, coeff) + bias), axes: [-1])
     end)
