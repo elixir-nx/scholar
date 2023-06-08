@@ -221,9 +221,9 @@ defmodule Scholar.Interpolation.BezierSpline do
     eps = opts[:eps]
     max_iter = opts[:max_iter]
 
-    {_upd_mask, t_min, t_max, t, value, _x_poly, _eps, _coef_poly, _i} =
-      while {update_mask = Nx.broadcast(1, t), t_min, t_max, t, _value = x_poly, x_poly, eps,
-             coef_poly, i = 0},
+    {{t_min, t_max, t, value}, _} =
+      while {{t_min, t_max, t, _value = x_poly},
+             {update_mask = Nx.broadcast(1, t), x_poly, eps, coef_poly, i = 0}},
             i < max_iter and Nx.any(update_mask) do
         # if update_mask[i] = 1, we update the entry, otherwise, we keep it
         value = polynomial_at_t(t, coef_poly)[[.., 0]]
@@ -244,12 +244,13 @@ defmodule Scholar.Interpolation.BezierSpline do
             t
           )
 
-        {update_mask, t_min, t_max, t, value, x_poly, eps, coef_poly, i + 1}
+        {{t_min, t_max, t, value}, {update_mask, x_poly, eps, coef_poly, i + 1}}
       end
 
-    {_t_min, _t_max, t, _value, _x_poly, _coef_poly, _eps, _update_mask, _i} =
-      while {t_min, t_max, t, value, x_poly, coef_poly, eps, update_mask = Nx.broadcast(1, t),
-             i = 0},
+    {t, _} =
+      while {t,
+             {t_min, t_max, value, x_poly, coef_poly, eps, update_mask = Nx.broadcast(1, t),
+              i = 0}},
             i < max_iter and Nx.any(update_mask) do
         upd_selector = value < x_poly and update_mask
         t_min = Nx.select(upd_selector, t, t_min)
@@ -258,10 +259,8 @@ defmodule Scholar.Interpolation.BezierSpline do
         value = polynomial_at_t(t, coef_poly)[[.., 0]]
 
         update_mask = Nx.select(Nx.abs(value - x_poly) > eps, update_mask, 0)
-
-        {t_min, t_max, t, value, x_poly, coef_poly, eps, update_mask, i + 1}
+        {t, {t_min, t_max, value, x_poly, coef_poly, eps, update_mask, i + 1}}
       end
-
     t
   end
 
