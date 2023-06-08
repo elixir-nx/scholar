@@ -261,6 +261,7 @@ defmodule Scholar.Interpolation.BezierSpline do
         update_mask = Nx.select(Nx.abs(value - x_poly) > eps, update_mask, 0)
         {t, {t_min, t_max, value, x_poly, coef_poly, eps, update_mask, i + 1}}
       end
+
     t
   end
 
