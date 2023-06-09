@@ -33,7 +33,7 @@ defmodule Scholar.Linear.LogisticRegression do
       type: {:custom, Scholar.Options, :optimizer, []},
       default: :sgd,
       doc: """
-      The optimizer name or {init, update} pair of functions (see `Optimus.Optimizers` for more details).
+      The optimizer name or {init, update} pair of functions (see `Polaris.Optimizers` for more details).
       """
     ]
   ]
@@ -97,7 +97,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
     {optimizer_init_fn, optimizer_update_fn} =
       case optimizer do
-        atom when is_atom(atom) -> apply(Optimus.Optimizers, atom, [])
+        atom when is_atom(atom) -> apply(Polaris.Optimizers, atom, [])
         {f1, f2} -> {f1, f2}
       end
 
@@ -149,12 +149,12 @@ defmodule Scholar.Linear.LogisticRegression do
         {coef_updates, coef_optimizer_state} =
           optimizer_update_fn.(coef_grad, coef_optimizer_state, coef)
 
-        coef = Optimus.Updates.apply_updates(coef, coef_updates)
+        coef = Polaris.Updates.apply_updates(coef, coef_updates)
 
         {bias_updates, bias_optimizer_state} =
           optimizer_update_fn.(bias_grad, bias_optimizer_state, bias)
 
-        bias = Optimus.Updates.apply_updates(bias, bias_updates)
+        bias = Polaris.Updates.apply_updates(bias, bias_updates)
 
         {{coef, bias}, {x, iterations, y, coef_optimizer_state, bias_optimizer_state}}
       end

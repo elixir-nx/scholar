@@ -60,7 +60,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise NimbleOptions.ValidationError,
-                   "invalid value for :optimizer option: expected :optimizer to be either a valid 0-arity function in Optimus.Optimizers or a valid {init_fn, update_fn} tuple",
+                   "invalid value for :optimizer option: expected :optimizer to be either a valid 0-arity function in Polaris.Optimizers or a valid {init_fn, update_fn} tuple",
                    fn ->
                      LogisticRegression.fit(x, y,
                        num_classes: 2,

@@ -7,14 +7,14 @@ defmodule Scholar.Options do
   def optimizer(value) do
     error =
       {:error,
-       "expected :optimizer to be either a valid 0-arity function in Optimus.Optimizers or a valid {init_fn, update_fn} tuple"}
+       "expected :optimizer to be either a valid 0-arity function in Polaris.Optimizers or a valid {init_fn, update_fn} tuple"}
 
     case value do
       {init_fn, update_fn} when is_function(init_fn, 1) and is_function(update_fn, 3) ->
         {:ok, value}
 
       atom when is_atom(atom) ->
-        mod = Optimus.Optimizers
+        mod = Polaris.Optimizers
 
         if Code.ensure_loaded(mod) == {:module, mod} and function_exported?(mod, atom, 0) do
           {:ok, atom}
