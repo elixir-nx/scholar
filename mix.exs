@@ -34,7 +34,7 @@ defmodule Scholar.MixProject do
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, github: "elixir-nx/exla", sparse: "exla", only: [:test, :dev]},
       {:explorer, "~> 0.5.1", only: [:test, :dev]},
-      {:optimus, github: "elixir-nx/optimus"}
+      {:polaris, "~> 0.1"}
     ]
   end
 
