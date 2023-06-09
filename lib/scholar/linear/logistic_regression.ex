@@ -35,6 +35,12 @@ defmodule Scholar.Linear.LogisticRegression do
       doc: """
       The optimizer name or {init, update} pair of functions (see `Polaris.Optimizers` for more details).
       """
+    ],
+    eps: [
+      type: :float,
+      default: 1.0e-8,
+      doc:
+        "The convergence tolerance. If the `abs(loss) < size(x) * :eps`, the algorithm is considered to have converged."
     ]
   ]
 
@@ -71,8 +77,8 @@ defmodule Scholar.Linear.LogisticRegression do
       %Scholar.Linear.LogisticRegression{
         coefficients: Nx.tensor(
           [
-            [2.5531527996063232, -0.35652396082878113],
-            [-0.5531544089317322, 2.3565237522125244]
+            [2.5531527996063232, -0.5531544089317322],
+            [-0.35652396082878113, 2.3565237522125244]
           ]
         ),
         bias: Nx.tensor(
@@ -141,10 +147,11 @@ defmodule Scholar.Linear.LogisticRegression do
     y = Scholar.Preprocessing.one_hot_encode(y, num_classes: num_classes)
 
     {{final_coef, final_bias}, _} =
-      while {{coef, bias}, {x, iterations, y, coef_optimizer_state, bias_optimizer_state}},
-            _iter <- 0..(iterations - 1),
-            unroll: opts[:learning_loop_unroll] do
-        {coef_grad, bias_grad} = grad(coef, bias, x, y)
+      while {{coef, bias},
+             {x, iterations, y, coef_optimizer_state, bias_optimizer_state,
+              has_converged = Nx.u8(0), iter = 0}},
+            iter < iterations and not has_converged do
+        {loss, {coef_grad, bias_grad}} = loss_and_grad(coef, bias, x, y)
 
         {coef_updates, coef_optimizer_state} =
           optimizer_update_fn.(coef_grad, coef_optimizer_state, coef)
@@ -156,17 +163,20 @@ defmodule Scholar.Linear.LogisticRegression do
 
         bias = Polaris.Updates.apply_updates(bias, bias_updates)
 
-        {{coef, bias}, {x, iterations, y, coef_optimizer_state, bias_optimizer_state}}
+        has_converged = Nx.sum(Nx.abs(loss)) < Nx.size(x) * opts[:eps]
+
+        {{coef, bias},
+         {x, iterations, y, coef_optimizer_state, bias_optimizer_state, has_converged, iter + 1}}
       end
 
     %__MODULE__{
-      coefficients: Nx.transpose(final_coef),
+      coefficients: final_coef,
       bias: final_bias
     }
   end
 
-  defnp grad(coeff, bias, xs, ys) do
-    grad({coeff, bias}, fn {coeff, bias} ->
+  defnp loss_and_grad(coeff, bias, xs, ys) do
+    value_and_grad({coeff, bias}, fn {coeff, bias} ->
       -Nx.sum(ys * log_softmax(Nx.dot(xs, coeff) + bias), axes: [-1])
     end)
   end
@@ -205,7 +215,7 @@ defmodule Scholar.Linear.LogisticRegression do
       >
   """
   defn predict(%__MODULE__{coefficients: coeff, bias: bias}, x) do
-    inter = Nx.dot(x, [1], coeff, [1]) + bias
+    inter = Nx.dot(x, [1], coeff, [0]) + bias
     Nx.argmax(inter, axis: 1)
   end
 
@@ -226,6 +236,6 @@ defmodule Scholar.Linear.LogisticRegression do
       >
   """
   defn predict_probability(%__MODULE__{coefficients: coeff, bias: bias}, x) do
-    softmax(Nx.dot(x, [1], coeff, [1]) + bias)
+    softmax(Nx.dot(x, [1], coeff, [0]) + bias)
   end
 end
