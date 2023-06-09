@@ -128,10 +128,9 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
     range = Nx.iota({n})
 
-    {a, r, _, _} =
-      while {a = initial_a, r = initial_r, s, range},
-            _i <- 0..(iterations - 1),
-            unroll: opts[:learning_loop_unroll] do
+    {{a, r}, _} =
+      while {{a = initial_a, r = initial_r}, {s, range, i = 0}},
+            i < iterations do
         temp = a + s
         indices = Nx.argmax(temp, axis: 1)
         y = Nx.reduce_max(temp, axes: [1])
@@ -157,7 +156,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
         temp = temp * (1 - damping_factor)
         a = a * damping_factor - temp
 
-        {a, r, s, range}
+        {{a, r}, {s, range, i + 1}}
       end
 
     diagonals = Nx.take_diagonal(a) + Nx.take_diagonal(r) > 0

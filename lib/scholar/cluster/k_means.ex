@@ -162,9 +162,9 @@ defmodule Scholar.Cluster.KMeans do
     distance = Nx.broadcast(inf, {num_runs})
     tol = Nx.mean(Nx.variance(x, axes: [0])) * opts[:tol]
 
-    {i, _, _, _, _, _, _, final_centroids, nearest_centroids} =
-      while {i = 0, tol, x, distance, weights, broadcast_weights, broadcast_x, centroids,
-             _nearest_centroids = Nx.broadcast(-1, {num_runs, num_samples})},
+    {{i, final_centroids, nearest_centroids}, _} =
+      while {{i = 0, centroids, _nearest_centroids = Nx.broadcast(-1, {num_runs, num_samples})},
+             {tol, x, distance, weights, broadcast_weights, broadcast_x}},
             i < opts[:max_iterations] and
               Nx.all(distance > tol) do
         previous_iteration_centroids = centroids
@@ -189,8 +189,8 @@ defmodule Scholar.Cluster.KMeans do
             axes: [1, 2]
           )
 
-        {i + 1, tol, x, distance, weights, broadcast_weights, broadcast_x, centroids,
-         nearest_centroids}
+        {{i + 1, centroids, nearest_centroids},
+         {tol, x, distance, weights, broadcast_weights, broadcast_x}}
       end
 
     {_inertia_for_centroids, min_inertia} =
@@ -269,14 +269,14 @@ defmodule Scholar.Cluster.KMeans do
     first_centroid = Nx.take(x, first_centroid_idx)
     centroids = Nx.put_slice(centroids, [0, 0, 0], Nx.new_axis(first_centroid, 1))
 
-    {_, _, _, _, final_centroids} =
-      while {idx = 1, x, inertia, random_key = new_key, centroids}, idx < num_clusters do
+    {final_centroids, _} =
+      while {centroids, {idx = 1, x, inertia, random_key = new_key}}, idx < num_clusters do
         {_inertia_for_centroids, min_inertia} =
           calculate_inertia(x, centroids, num_clusters, num_runs)
 
         {new_centroid, new_key} = find_new_centroid(min_inertia, x, num_runs, random_key)
         centroids = Nx.put_slice(centroids, [0, idx, 0], Nx.new_axis(new_centroid, 1))
-        {idx + 1, x, inertia, new_key, centroids}
+        {centroids, {idx + 1, x, inertia, new_key}}
       end
 
     final_centroids

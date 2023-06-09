@@ -298,11 +298,11 @@ defmodule Scholar.NaiveBayes.Gaussian do
                 "number of weights must match number of samples. Number of weights: #{Nx.size(sample_weights)} does not match number of samples: #{num_samples}"
       end
 
-    {_, _, _, _, _, _, final_theta, final_var, final_class_count} =
-      while {i = 0, x, y, sample_weights, classes, sample_weights_flag,
-             theta = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_classes, num_features}),
-             var = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_classes, num_features}),
-             class_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_classes})},
+    {{final_theta, final_var, final_class_count}, _} =
+      while {{theta = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_classes, num_features}),
+              var = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_classes, num_features}),
+              class_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {num_classes})},
+             {i = 0, x, y, sample_weights, classes, sample_weights_flag}},
             i < Nx.size(classes) do
         y_i = classes[[i]]
         mask = y == y_i
@@ -336,8 +336,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
         new_var = Nx.put_slice(var, [i, 0], Nx.broadcast(new_var, {1, num_features}))
         class_count = Nx.indexed_add(class_count, Nx.reshape(i, {1, 1}), Nx.reshape(n_i, {1}))
 
-        {i + 1, x, y, sample_weights, classes, sample_weights_flag, new_theta, new_var,
-         class_count}
+        {{new_theta, new_var, class_count},
+         {i + 1, x, y, sample_weights, classes, sample_weights_flag}}
       end
 
     final_var = final_var + eps
