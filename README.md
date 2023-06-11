@@ -41,6 +41,8 @@ And then in your `config/config.exs` file:
 ```elixir
 import Config
 config :nx, :default_backend, EXLA.Backend
+# Client can also be set to :cuda / :romc
+config :nx, :default_defn_options, [compiler: EXLA, client: :host]
 ```
 
 ### Notebooks
@@ -54,6 +56,8 @@ Mix.install([
 ])
 
 Nx.global_default_backend(EXLA.Backend)
+# Client can also be set to :cuda / :romc
+Nx.Defn.global_default_options(compiler: EXLA, client: :host)
 ```
 
 ## License
