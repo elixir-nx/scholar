@@ -651,8 +651,8 @@ defmodule Scholar.Metrics do
         0.75
       >
   """
-  defn roc_auc_score(y_true, y_score, distinct_value_indices) do
-    {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices)
+  defn roc_auc_score(y_true, y_score, distinct_value_indices, weights) do
+    {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
     auc(fpr, tpr)
   end
 
@@ -661,8 +661,8 @@ defmodule Scholar.Metrics do
 
   This is equivalent to calling `Nx.roc_auc_score/4` with weights set to ones.
   """
-  defn roc_auc_score(y_true, y_score, distinct_value_indices, weights) do
-    {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
+  defn roc_auc_score(y_true, y_score, distinct_value_indices) do
+    {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices)
     auc(fpr, tpr)
   end
 
