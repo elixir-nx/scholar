@@ -530,8 +530,8 @@ defmodule Scholar.Metrics do
   It's a helper function for `Scholar.Metrics.roc_curve` and `Scholar.Metrics.roc_auc_score` functions.
   You should call it and use as follows:
 
-    `iex> distinct_value_indices = Scholar.Metrics.calculate_distinct_value_indices(scores)`
-    `iex> {fpr, tpr, thresholds} = Scholar.Metrics.roc_curve(y_true, scores, distinct_value_indices, weights)`
+      distinct_value_indices = Scholar.Metrics.calculate_distinct_value_indices(scores)
+      {fpr, tpr, thresholds} = Scholar.Metrics.roc_curve(y_true, scores, distinct_value_indices, weights)
   """
   def calculate_distinct_value_indices(y_score) do
     desc_score_indices = Nx.argsort(y_score, direction: :desc)
