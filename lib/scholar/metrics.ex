@@ -539,7 +539,7 @@ defmodule Scholar.Metrics do
     y_score = Nx.take_along_axis(y_score, desc_score_indices)
 
     distinct_value_indices_mask =
-      Nx.subtract(y_score[[1..-1//1]], y_score[[0..-2//1]]) |> Nx.not_equal(0)
+      Nx.not_equal(y_score[[1..-1//1]], y_score[[0..-2//1]])
 
     Nx.iota({Nx.size(y_score) - 1})
     |> Nx.add(1)
