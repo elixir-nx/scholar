@@ -500,15 +500,14 @@ defmodule Scholar.Metrics do
   """
   defn auc(x, y) do
     check_shape(x, y)
-    dx = x[[1..-1//1]] - x[[0..-2//1]]
-    # direction = compute_direction(dx)
+    dx = Nx.diff(x)
 
     # 0 means x is neither increasing nor decreasing -> error
     direction =
       cond do
         Nx.all(dx <= 0) -> -1
         Nx.all(dx >= 0) -> 1
-        true -> 0
+        true -> Nx.tensor(:nan, type: to_float_type(y))
       end
 
     direction * trapz1d(y, x, use_x?: true)
