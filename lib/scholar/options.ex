@@ -36,6 +36,15 @@ defmodule Scholar.Options do
     end
   end
 
+  def axis(axis) do
+    # Axis is further validated by Nx, including against the tensor.
+    if axis == nil or is_integer(axis) or is_atom(axis) do
+      {:ok, axis}
+    else
+      {:error, "expected :axis to be an integers, atom or nil"}
+    end
+  end
+
   def type(type) do
     {:ok, Nx.Type.normalize!(type)}
   end

@@ -15,7 +15,7 @@ defmodule Scholar.Stats do
       type: {:custom, Scholar.Options, :axes, []},
       default: [0],
       doc: """
-      Axis to calculate the operation. If set to `nil` then
+      Axes to calculate the operation. If set to `nil` then
       the operation is performed on the whole tensor.
       """
     ],
