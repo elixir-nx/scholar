@@ -15,7 +15,7 @@ defmodule Scholar.Integrate.Trapezoidal do
     keep_axis: [
       type: :boolean,
       default: false,
-      doc: "If set to true, the axes which are reduced are left."
+      doc: "If set to true, the axes which are reduced are kept."
     ]
   ]
 
