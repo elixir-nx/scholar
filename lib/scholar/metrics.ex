@@ -555,7 +555,7 @@ defmodule Scholar.Metrics do
     {fps, tps, Nx.take(y_score, threshold_idxs)}
   end
 
-  # TODO implement :drop_intermediate option when function Nx.diff is implemented
+  # TODO implement :drop_intermediate option when dynamic shapes will be available
   @doc ~S"""
   Compute Receiver operating characteristic (ROC).
 
