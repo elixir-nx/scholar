@@ -13,6 +13,7 @@ defmodule Scholar.Metrics do
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
+  alias Scholar.Integrate.Trapezoidal
 
   general_schema = [
     num_classes: [
@@ -510,20 +511,7 @@ defmodule Scholar.Metrics do
         true -> Nx.tensor(:nan, type: to_float_type(y))
       end
 
-    direction * trapz1d(y, x, use_x?: true)
-  end
-
-  # TODO add support for multi-dimensional x and y and move to Nx
-  defnp trapz1d(y, x, opts \\ []) do
-    opts = keyword!(opts, use_x?: false, dx: 1.0, axis: -1)
-
-    d =
-      cond do
-        opts[:use_x?] == false -> opts[:dx]
-        opts[:use_x?] == true -> x[[1..-1//1]] - x[[0..-2//1]]
-      end
-
-    Nx.sum(d * (y[[0..-2//1]] + y[[1..-1//1]]) / 2.0)
+    direction * Trapezoidal.trapezoidal(y, x)
   end
 
   @doc ~S"""
