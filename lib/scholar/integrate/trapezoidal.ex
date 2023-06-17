@@ -1,6 +1,6 @@
 defmodule Scholar.Integrate.Trapezoidal do
   @moduledoc """
-  Univariate imputer for completing missing values with simple strategies.
+  Integrate along the given axis using the composite trapezoidal rule.
   """
   import Nx.Defn
 
