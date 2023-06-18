@@ -530,10 +530,10 @@ defmodule Scholar.Metrics do
     Nx.iota({Nx.size(y_score) - 1})
     |> Nx.add(1)
     |> Nx.multiply(distinct_value_indices_mask)
-    |> Nx.to_flat_list()
-    |> Enum.filter(fn x -> x != 0 end)
-    |> Nx.tensor()
     |> Nx.subtract(1)
+    |> Nx.to_flat_list()
+    |> Enum.filter(fn x -> x != -1 end)
+    |> Nx.tensor()
   end
 
   defnp binary_clf_curve(y_true, y_score, distinct_value_indices, sample_weights) do
@@ -555,7 +555,7 @@ defmodule Scholar.Metrics do
     {fps, tps, Nx.take(y_score, threshold_idxs)}
   end
 
-  # TODO implement :drop_intermediate option when function Nx.diff is implemented
+  # TODO implement :drop_intermediate option when dynamic shapes will be available
   @doc ~S"""
   Compute Receiver operating characteristic (ROC).
 
