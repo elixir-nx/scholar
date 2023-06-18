@@ -1,6 +1,6 @@
 defmodule Scholar.Integrate.Trapezoidal do
   @moduledoc false
-  
+
   import Nx.Defn
 
   general = [
