@@ -1,7 +1,6 @@
 defmodule Scholar.Integrate.Trapezoidal do
-  @moduledoc """
-  Integrate along the given axis using the composite trapezoidal rule.
-  """
+  @moduledoc false
+  
   import Nx.Defn
 
   general = [
