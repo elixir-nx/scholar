@@ -353,7 +353,6 @@ defmodule Scholar.Integrate.Simpson do
                  strides: 2
                )
 
-        {diff_0, diff_1}
         diff_sum = diff_0 + diff_1
         diff_prod = diff_0 * diff_1
         diff_div = diff_0 / Nx.select(diff_1 == 0, 1, diff_1)
