@@ -1,7 +1,6 @@
 defmodule Scholar.Integrate.Simpson do
-  @moduledoc """
-  Integrate `y(x)` using samples along the given axis and the composite Simpson’s rule.
-  """
+  @moduledoc false
+  
   import Nx.Defn
   import Scholar.Shared
 
