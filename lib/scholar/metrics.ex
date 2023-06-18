@@ -491,7 +491,7 @@ defmodule Scholar.Metrics do
 
       iex> y = Nx.tensor([0, 0, 1, 1])
       iex> pred = Nx.tensor([0.1, 0.4, 0.35, 0.8])
-      iex> distinct_value_indices = Scholar.Metrics.calculate_distinct_value_indices(pred)
+      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(pred)
       iex> {fpr, tpr, _thresholds} = Scholar.Metrics.roc_curve(y, pred, distinct_value_indices)
       iex> Scholar.Metrics.auc(fpr, tpr)
       #Nx.Tensor<
@@ -518,10 +518,10 @@ defmodule Scholar.Metrics do
   It's a helper function for `Scholar.Metrics.roc_curve` and `Scholar.Metrics.roc_auc_score` functions.
   You should call it and use as follows:
 
-      distinct_value_indices = Scholar.Metrics.calculate_distinct_value_indices(scores)
+      distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
       {fpr, tpr, thresholds} = Scholar.Metrics.roc_curve(y_true, scores, distinct_value_indices, weights)
   """
-  def calculate_distinct_value_indices(y_score) do
+  def distinct_value_indices(y_score) do
     desc_score_indices = Nx.argsort(y_score, direction: :desc)
     y_score = Nx.take_along_axis(y_score, desc_score_indices)
 
@@ -565,7 +565,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 0, 1, 1])
       iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
-      iex> distinct_value_indices = Scholar.Metrics.calculate_distinct_value_indices(scores)
+      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
       iex> weights = Nx.tensor([1, 1, 2, 2])
       iex> {fpr, tpr, thresholds} = Scholar.Metrics.roc_curve(y_true, scores, distinct_value_indices, weights)
       iex> fpr
@@ -629,7 +629,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 0, 1, 1])
       iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
-      iex> distinct_value_indices = Scholar.Metrics.calculate_distinct_value_indices(scores)
+      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
       iex> weights = Nx.tensor([1, 1, 2, 2])
       iex> Scholar.Metrics.roc_auc_score(y_true, scores, distinct_value_indices, weights)
       #Nx.Tensor<
