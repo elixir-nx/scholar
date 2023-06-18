@@ -1,6 +1,6 @@
 defmodule Scholar.Integrate.Simpson do
   @moduledoc false
-  
+
   import Nx.Defn
   import Scholar.Shared
 

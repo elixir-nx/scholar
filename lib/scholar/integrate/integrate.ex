@@ -5,13 +5,13 @@ defmodule Scholar.Integrate do
 
   import Nx.Defn
 
-
   @doc """
   Integrate `y` along the given axis using the chosen rule.
 
   ## Options
 
-  
+  Options are the same as for the chosen rule. See the documentation for
+  specific implementations for more information.
 
   ## Examples
 
