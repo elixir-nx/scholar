@@ -63,6 +63,7 @@ defmodule Scholar.MixProject do
           Scholar.Cluster.AffinityPropagation,
           Scholar.Cluster.KMeans,
           Scholar.Decomposition.PCA,
+          Scholar.Integrate,
           Scholar.Interpolation.BezierSpline,
           Scholar.Interpolation.CubicSpline,
           Scholar.Interpolation.Linear,
