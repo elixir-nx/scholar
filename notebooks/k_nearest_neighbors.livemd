@@ -4,15 +4,175 @@
 
 ```elixir
 Mix.install([
-  {:scholar, "~> 0.1"},
-  {:explorer, "~> 0.5.6"},
-  {:exla, "~> 0.5.2"},
-  {:req, "~> 0.3.6"},
-  {:kino_vega_lite, "~> 0.1.8"},
-  {:kino, "~> 0.9.0"},
-  {:scidata, "~> 0.1.9"},
-  {:kino_explorer, "~> 0.1.2"}
+  {:scholar, github: "elixir-nx/scholar", override: true},
+  {:explorer, "~> 0.5.7"},
+  {:exla, "~> 0.5.3"},
+  {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
+  {:req, "~> 0.3.9"},
+  {:kino_vega_lite, "~> 0.1.9"},
+  {:kino, "~> 0.9.4"},
+  {:scidata, "~> 0.1.10"},
+  {:kino_explorer, "~> 0.1.7"}
 ])
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+* Getting scholar (https://github.com/elixir-nx/scholar.git)
+remote: Enumerating objects: 1284, done.        
+remote: Counting objects: 100% (373/373), done.        
+remote: Compressing objects: 100% (185/185), done.        
+remote: Total 1284 (delta 255), reused 241 (delta 178), pack-reused 911        
+Receiving objects: 100% (1284/1284), 970.20 KiB | 2.08 MiB/s, done.
+Resolving deltas: 100% (664/664), done.
+origin/HEAD set to main
+* Getting nx (https://github.com/elixir-nx/nx.git)
+remote: Enumerating objects: 18102, done.        
+remote: Counting objects: 100% (2012/2012), done.        
+remote: Compressing objects: 100% (230/230), done.        
+remote: Total 18102 (delta 1879), reused 1847 (delta 1779), pack-reused 16090        
+Receiving objects: 100% (18102/18102), 5.36 MiB | 4.94 MiB/s, done.
+Resolving deltas: 100% (12230/12230), done.
+origin/HEAD set to main
+Resolving Hex dependencies...
+Resolution completed in 0.608s
+New:
+  castore 0.1.22
+  complex 0.5.0
+  elixir_make 0.7.7
+  exla 0.5.3
+  explorer 0.5.7
+  finch 0.16.0
+  hpax 0.1.2
+  jason 1.4.0
+  kino 0.9.4
+  kino_explorer 0.1.7
+  kino_vega_lite 0.1.9
+  mime 2.0.5
+  mint 1.5.1
+  nimble_csv 1.2.0
+  nimble_options 1.0.2
+  nimble_pool 1.0.0
+  polaris 0.1.0
+  req 0.3.9
+  rustler_precompiled 0.6.1
+  scidata 0.1.10
+  table 0.1.2
+  table_rex 3.1.1
+  telemetry 1.2.1
+  vega_lite 0.1.7
+  xla 0.4.4
+* Getting explorer (Hex package)
+* Getting exla (Hex package)
+* Getting req (Hex package)
+* Getting kino_vega_lite (Hex package)
+* Getting kino (Hex package)
+* Getting scidata (Hex package)
+* Getting kino_explorer (Hex package)
+* Getting castore (Hex package)
+* Getting jason (Hex package)
+* Getting nimble_csv (Hex package)
+* Getting table (Hex package)
+* Getting vega_lite (Hex package)
+* Getting finch (Hex package)
+* Getting mime (Hex package)
+* Getting mint (Hex package)
+* Getting nimble_options (Hex package)
+* Getting nimble_pool (Hex package)
+* Getting telemetry (Hex package)
+* Getting hpax (Hex package)
+* Getting complex (Hex package)
+* Getting elixir_make (Hex package)
+* Getting xla (Hex package)
+* Getting rustler_precompiled (Hex package)
+* Getting table_rex (Hex package)
+* Getting polaris (Hex package)
+==> table
+Compiling 5 files (.ex)
+Generated table app
+==> vega_lite
+Compiling 5 files (.ex)
+Generated vega_lite app
+==> mime
+Compiling 1 file (.ex)
+Generated mime app
+==> nimble_options
+Compiling 3 files (.ex)
+Generated nimble_options app
+===> Analyzing applications...
+===> Compiling telemetry
+==> jason
+Compiling 10 files (.ex)
+Generated jason app
+==> hpax
+Compiling 4 files (.ex)
+Generated hpax app
+==> nimble_csv
+Compiling 1 file (.ex)
+Generated nimble_csv app
+==> complex
+Compiling 2 files (.ex)
+Generated complex app
+==> nx
+Compiling 32 files (.ex)
+Generated nx app
+==> kino
+Compiling 39 files (.ex)
+Generated kino app
+==> kino_vega_lite
+Compiling 4 files (.ex)
+Generated kino_vega_lite app
+==> polaris
+Compiling 5 files (.ex)
+Generated polaris app
+==> table_rex
+Compiling 7 files (.ex)
+Generated table_rex app
+==> nimble_pool
+Compiling 2 files (.ex)
+Generated nimble_pool app
+==> castore
+Compiling 1 file (.ex)
+Generated castore app
+==> scidata
+Compiling 13 files (.ex)
+Generated scidata app
+==> mint
+Compiling 1 file (.erl)
+Compiling 19 files (.ex)
+Generated mint app
+==> finch
+Compiling 13 files (.ex)
+Generated finch app
+==> req
+Compiling 5 files (.ex)
+Generated req app
+==> rustler_precompiled
+Compiling 4 files (.ex)
+Generated rustler_precompiled app
+==> explorer
+Compiling 19 files (.ex)
+
+01:35:01.099 [debug] Copying NIF from cache and extracting to /home/mateusz/.cache/mix/installs/elixir-1.14.2-erts-13.1.4/802aa300c470af20927c3e83278d363d/_build/dev/lib/explorer/priv/native/libexplorer-v0.5.7-nif-2.16-x86_64-unknown-linux-gnu.so
+Generated explorer app
+==> kino_explorer
+Compiling 4 files (.ex)
+Generated kino_explorer app
+==> elixir_make
+Compiling 6 files (.ex)
+Generated elixir_make app
+==> xla
+Compiling 2 files (.ex)
+Generated xla app
+==> exla
+Unpacking /home/mateusz/.cache/xla/0.4.4/cache/download/xla_extension-x86_64-linux-gnu-cpu.tar.gz into /home/mateusz/.cache/mix/installs/elixir-1.14.2-erts-13.1.4/802aa300c470af20927c3e83278d363d/deps/exla/cache
+Using libexla.so from /home/mateusz/.cache/xla/exla/elixir-1.14.2-erts-13.1.4-xla-0.4.4-exla-0.5.3-ukrr3tvvrelj5kk57j5pmion2u/libexla.so
+Compiling 21 files (.ex)
+Generated exla app
+==> scholar
+Compiling 27 files (.ex)
+Generated scholar app
 ```
 
 <!-- livebook:{"output":true} -->
@@ -30,13 +190,14 @@ alias VegaLite, as: Vl
 require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 require Explorer.Query, as: Q
-alias Scholar.Neighbors.KNearestNeighbors
+alias Scholar.Neighbors.KNearestNeighbors, as: KNN
+alias Scholar.Metrics
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-Scholar.Neighbors.KNearestNeighbors
+Scholar.Metrics
 ```
 
 And let's configure `EXLA.Backend` as our default across the notebook and all branched sections:
@@ -44,12 +205,25 @@ And let's configure `EXLA.Backend` as our default across the notebook and all br
 ```elixir
 Nx.global_default_backend(EXLA.Backend)
 seed = 42
+key = Nx.Random.key(42)
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-42
+
+01:38:19.476 [info] TfrtCpuClient created.
+
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Nx.Tensor<
+  u32[2]
+  EXLA.Backend<host:0, 0.1609734021.1912995850.186912>
+  [0, 42]
+>
 ```
 
 ## Introduction
@@ -64,11 +238,10 @@ how it works later on. So feel free to skip the implementation below for now and
 defmodule KFold do
   import Nx.Defn
 
-  defnp split_data(data, labels, seed, opts) do
+  defnp split_data(data, labels, key, opts) do
     train_size = opts[:train_size]
     num_splits = opts[:num_splits]
     split_size = opts[:split_size]
-    key = Nx.Random.key(seed)
     {indices, _new_key} = Nx.Random.shuffle(key, Nx.iota(Nx.shape(labels)))
     data = Nx.take(data, indices)
     labels = Nx.take(labels, indices)
@@ -143,21 +316,21 @@ defmodule KFold do
     val_labels = Nx.take(splits_labels, indices_val)
 
     model =
-      KNearestNeighbors.fit(train_data, train_labels,
+      KNN.fit(train_data, train_labels,
         num_classes: num_classes,
         num_neighbors: div(i, num_splits) + min_num_neighbors,
         task: task
       )
 
-    prediction = KNearestNeighbors.predict(model, val_data)
+    prediction = KNN.predict(model, val_data)
 
     case task do
       :classification ->
-        Scholar.Metrics.accuracy(val_labels, prediction)
+        Metrics.accuracy(val_labels, prediction)
 
       # RMSE
       :regression ->
-        Scholar.Metrics.mean_absolute_error(val_labels, prediction) |> Nx.sqrt()
+        Metrics.mean_absolute_error(val_labels, prediction) |> Nx.sqrt()
     end
   end
 
@@ -174,7 +347,7 @@ defmodule KFold do
 
     num_splits = opts[:num_splits]
     train_size = opts[:train_size]
-    seed = opts[:seed]
+    key = Nx.Random.key(opts[:seed])
     param_space_size = opts[:param_space_size]
     task = opts[:task]
     num_classes = opts[:num_classes]
@@ -182,7 +355,7 @@ defmodule KFold do
     split_size = div(num_samples, num_splits)
 
     {splits_data, splits_labels, {test_data, test_labels}} =
-      split_data(data, labels, seed,
+      split_data(data, labels, key,
         train_size: train_size,
         num_splits: num_splits,
         split_size: split_size
@@ -321,17 +494,9 @@ x_pred = Nx.stack(point_to_predict, axis: 1)
 <!-- livebook:{"output":true} -->
 
 ```
-
-00:20:16.018 [info] TfrtCpuClient created.
-
-```
-
-<!-- livebook:{"output":true} -->
-
-```
 #Nx.Tensor<
   f64[1][2]
-  EXLA.Backend<host:0, 0.2502080459.2660106252.186456>
+  EXLA.Backend<host:0, 0.1609734021.1912995850.186957>
   [
     [0.0, 0.0]
   ]
@@ -341,8 +506,8 @@ x_pred = Nx.stack(point_to_predict, axis: 1)
 Let's now try with $k = 3$.
 
 ```elixir
-model = KNearestNeighbors.fit(x, labels, num_classes: 2, num_neighbors: 3)
-KNearestNeighbors.predict(model, x_pred)
+model = KNN.fit(x, labels, num_classes: 2, num_neighbors: 3)
+KNN.predict(model, x_pred)
 ```
 
 <!-- livebook:{"output":true} -->
@@ -350,7 +515,7 @@ KNearestNeighbors.predict(model, x_pred)
 ```
 #Nx.Tensor<
   s64[1]
-  EXLA.Backend<host:0, 0.2502080459.2660106252.186533>
+  EXLA.Backend<host:0, 0.1609734021.1912995850.187034>
   [1]
 >
 ```
@@ -358,8 +523,8 @@ KNearestNeighbors.predict(model, x_pred)
 And $k = 5$.
 
 ```elixir
-model = KNearestNeighbors.fit(x, labels, num_classes: 2, num_neighbors: 5)
-KNearestNeighbors.predict(model, x_pred)
+model = KNN.fit(x, labels, num_classes: 2, num_neighbors: 5)
+KNN.predict(model, x_pred)
 ```
 
 <!-- livebook:{"output":true} -->
@@ -367,7 +532,7 @@ KNearestNeighbors.predict(model, x_pred)
 ```
 #Nx.Tensor<
   s64[1]
-  EXLA.Backend<host:0, 0.2502080459.2660106252.186606>
+  EXLA.Backend<host:0, 0.1609734021.1912995850.187107>
   [0]
 >
 ```
@@ -425,7 +590,7 @@ Scholar.Stats.skew(tensor_data)
 ```
 #Nx.Tensor<
   f64[12]
-  EXLA.Backend<host:0, 0.2502080459.2660106252.186710>
+  EXLA.Backend<host:0, 0.1609734021.1912995850.187211>
   [0.6475530855160632, 1.5764965159574844, 1.2815277799152376, 1.0767638711454446, 5.0217921696710315, 1.4063140718346212, 0.3905901775815236, 0.9774735389046988, 0.45764233925379794, 0.9768943947733456, 0.4871927332763434, 0.15574868141362447]
 >
 ```
@@ -447,7 +612,7 @@ Scholar.Stats.kurtosis(tensor_data)
 ```
 #Nx.Tensor<
   f64[12]
-  EXLA.Backend<host:0, 0.2502080459.2660106252.186737>
+  EXLA.Backend<host:0, 0.1609734021.1912995850.187238>
   [2.168736944824719, 5.08520490451785, 6.167374226819426, 3.4650542966046363, 37.52503905008619, 11.453415905047144, 0.5700448984658735, 9.78258726703508, 0.5290085383907339, 1.5880812942840778, -0.6989373013774784, 0.21508011570192975]
 >
 ```
@@ -513,7 +678,7 @@ correlation = Scholar.Covariance.correlation_matrix(tensor_data, biased: true)
 ```
 #Nx.Tensor<
   f64[12][12]
-  EXLA.Backend<host:0, 0.2502080459.2660106252.186775>
+  EXLA.Backend<host:0, 0.1609734021.1912995850.187276>
   [
     [1.0, -0.022697290146647113, 0.2891806976936754, 0.08902070136217163, 0.023085643656347757, -0.049395859081173187, 0.09106975615864087, 0.2653310138391866, -0.42585829099138195, -0.017142985021137338, -0.12088112319453302, -0.11366283071301796],
     [-0.022697290146647113, 1.0000000000000007, -0.14947181064857518, 0.06428606009099526, 0.07051157147938472, -0.09701193927796008, 0.0892605035517784, 0.02711384546243434, -0.03191536827348892, -0.03572814690581474, 0.06771794277504414, -0.19472296892113428],
@@ -593,7 +758,7 @@ tensor_data =
 ```
 #Nx.Tensor<
   f64[4898][9]
-  EXLA.Backend<host:0, 0.2502080459.2660106252.186801>
+  EXLA.Backend<host:0, 0.1609734021.1912995850.187302>
   [
     [7.0, 0.27, 20.7, 0.045, 170.0, 1.001, 3.0, 8.8, 6.0],
     [6.3, 0.3, 1.6, 0.049, 132.0, 0.994, 3.3, 9.5, 6.0],
@@ -628,7 +793,7 @@ x = Scholar.Preprocessing.standard_scale(x)
 ```
 {#Nx.Tensor<
    f64[4898][8]
-   EXLA.Backend<host:0, 0.2502080459.2660106252.186837>
+   EXLA.Backend<host:0, 0.1609734021.1912995850.187338>
    [
      [-0.29385297541380284, -0.4368649169854585, -0.0027291121847267076, -0.44164614831586296, 3.1698834995014824, -0.4213312276408997, -0.37885264350988346, -0.2556031247705665],
      [-0.30872791733061694, -0.43622741947473787, -0.40860252734351166, -0.4415611486477669, 2.3623866525887167, -0.4214799770600679, -0.3724776684026774, -0.24072818285375244],
@@ -642,7 +807,7 @@ x = Scholar.Preprocessing.standard_scale(x)
  >,
  #Nx.Tensor<
    s64[4898]
-   EXLA.Backend<host:0, 0.2502080459.2660106252.186814>
+   EXLA.Backend<host:0, 0.1609734021.1912995850.187315>
    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 1, ...]
  >}
 ```
@@ -707,11 +872,10 @@ best_neighbors = Nx.add(Nx.argmax(res), min_num_neighbors) |> Nx.to_number()
 Ok, let's test our best model on test data.
 
 ```elixir
-best_model =
-  KNearestNeighbors.fit(train_data, train_labels, num_neighbors: best_neighbors, num_classes: 3)
+best_model = KNN.fit(train_data, train_labels, num_neighbors: best_neighbors, num_classes: 3)
 
-final_prediction = KNearestNeighbors.predict(best_model, test_data)
-Scholar.Metrics.accuracy(test_labels, final_prediction)
+final_prediction = KNN.predict(best_model, test_data)
+Metrics.accuracy(test_labels, final_prediction)
 ```
 
 <!-- livebook:{"output":true} -->
@@ -719,7 +883,7 @@ Scholar.Metrics.accuracy(test_labels, final_prediction)
 ```
 #Nx.Tensor<
   f32
-  EXLA.Backend<host:0, 0.2502080459.2660106252.211454>
+  EXLA.Backend<host:0, 0.1609734021.1912995852.204233>
   0.7494432330131531
 >
 ```
@@ -898,7 +1062,7 @@ y = Nx.stack(labels, axis: 1) |> Nx.squeeze(axes: [1])
 ```
 {#Nx.Tensor<
    f64[1503][5]
-   EXLA.Backend<host:0, 0.2502080459.2660106252.211548>
+   EXLA.Backend<host:0, 0.1609734021.1912995849.186917>
    [
      [-0.5630552019680845, -0.5487622533323925, 2.780406864058286, -0.24959453243691035, -0.8410438169469526],
      [-0.5630552019680845, -0.5487622533323925, 2.780406864058286, -0.2391306895323175, -0.8410438169469526],
@@ -915,7 +1079,7 @@ y = Nx.stack(labels, axis: 1) |> Nx.squeeze(axes: [1])
  >,
  #Nx.Tensor<
    f64[1503]
-   EXLA.Backend<host:0, 0.2502080459.2660106252.211552>
+   EXLA.Backend<host:0, 0.1609734021.1912995849.186921>
    [126.201, 125.201, 125.951, 127.591, 127.461, 125.571, 125.201, 123.061, 121.301, 119.541, 117.151, 115.391, 112.241, 108.721, 126.416, 127.696, 128.086, 126.966, 126.086, 126.986, 126.616, 124.106, 123.236, 121.106, 119.606, 117.976, 116.476, 113.076, 111.076, 118.129, 119.319, 122.779, 124.809, 126.959, 128.629, 129.099, 127.899, 125.499, 124.049, 123.689, 121.399, 120.319, 119.229, 117.789, 116.229, 114.779, 112.139, 109.619, ...]
  >}
 ```
@@ -975,14 +1139,14 @@ The best value is 2. Now try this value to a final prediction.
 
 ```elixir
 best_model =
-  KNearestNeighbors.fit(train_data, train_labels,
+  KNN.fit(train_data, train_labels,
     num_neighbors: best_neighbors,
     num_classes: 3,
     task: :regression
   )
 
-final_prediction = KNearestNeighbors.predict(best_model, test_data)
-Scholar.Metrics.mean_absolute_error(test_labels, final_prediction) |> Nx.sqrt()
+final_prediction = KNN.predict(best_model, test_data)
+Metrics.mean_absolute_error(test_labels, final_prediction) |> Nx.sqrt()
 ```
 
 <!-- livebook:{"output":true} -->
@@ -990,7 +1154,7 @@ Scholar.Metrics.mean_absolute_error(test_labels, final_prediction) |> Nx.sqrt()
 ```
 #Nx.Tensor<
   f64
-  EXLA.Backend<host:0, 0.2502080459.2660106251.194011>
+  EXLA.Backend<host:0, 0.1609734021.1912995852.189716>
   1.383973762283746
 >
 ```
@@ -1002,9 +1166,9 @@ Scholar.Metrics.mean_absolute_error(test_labels, final_prediction) |> Nx.sqrt()
 KNNs can be used for outlier detection. In this task, we will also use the Airfoil Self-Noise dataset. We will calculate for each sample a mean value of distances to the three closest points from dataset.
 
 ```elixir
-model = KNearestNeighbors.fit(x, y, num_neighbors: 3, task: :regression)
+model = KNN.fit(x, y, num_neighbors: 3, task: :regression)
 {num_samples, _} = Nx.shape(x)
-{distances, indices} = KNearestNeighbors.k_neighbors(model, x)
+{distances, indices} = KNN.k_neighbors(model, x)
 
 mean_distances = Nx.mean(distances, axes: [1], keep_axes: true)
 
