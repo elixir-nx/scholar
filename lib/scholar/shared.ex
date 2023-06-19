@@ -6,6 +6,7 @@ defmodule Scholar.Shared do
   # and doing shape calculations.
 
   import Nx.Defn
+  require Nx
 
   @doc """
   Asserts `left` has same shape as `right`.
@@ -45,5 +46,24 @@ defmodule Scholar.Shared do
   defn to_float(tensor) do
     type = to_float_type(tensor)
     Nx.as_type(tensor, type)
+  end
+
+  deftransform validate_weights(weights, num_samples, opts \\ []) do
+    type = opts[:type]
+
+    cond do
+      is_nil(weights) ->
+        Nx.tensor(1.0, type: type)
+
+      Nx.is_tensor(weights) and Nx.shape(weights) == {num_samples} ->
+        Nx.as_type(weights, type)
+
+      is_list(weights) and length(weights) == num_samples ->
+        Nx.tensor(weights, type: type)
+
+      true ->
+        raise ArgumentError,
+              "invalid value for :weights option: expected list or tensor of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
+    end
   end
 end

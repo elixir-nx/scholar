@@ -13,6 +13,7 @@ defmodule Scholar.Metrics do
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
+  alias Scholar.Integrate.Trapezoidal
 
   general_schema = [
     num_classes: [
@@ -479,6 +480,176 @@ defmodule Scholar.Metrics do
   defn mean_square_error(y_true, y_pred) do
     diff = y_true - y_pred
     (diff * diff) |> Nx.mean()
+  end
+
+  @doc ~S"""
+  Computes area under the curve (AUC) using the trapezoidal rule.
+
+  This is a general function, given points on a curve.
+
+  ## Examples
+
+      iex> y = Nx.tensor([0, 0, 1, 1])
+      iex> pred = Nx.tensor([0.1, 0.4, 0.35, 0.8])
+      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(pred)
+      iex> {fpr, tpr, _thresholds} = Scholar.Metrics.roc_curve(y, pred, distinct_value_indices)
+      iex> Scholar.Metrics.auc(fpr, tpr)
+      #Nx.Tensor<
+        f32
+        0.75
+      >
+  """
+  defn auc(x, y) do
+    check_shape(x, y)
+    dx = Nx.diff(x)
+
+    # 0 means x is neither increasing nor decreasing -> error
+    direction =
+      cond do
+        Nx.all(dx <= 0) -> -1
+        Nx.all(dx >= 0) -> 1
+        true -> Nx.tensor(:nan, type: to_float_type(y))
+      end
+
+    direction * Trapezoidal.trapezoidal(y, x)
+  end
+
+  @doc ~S"""
+  It's a helper function for `Scholar.Metrics.roc_curve` and `Scholar.Metrics.roc_auc_score` functions.
+  You should call it and use as follows:
+
+      distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
+      {fpr, tpr, thresholds} = Scholar.Metrics.roc_curve(y_true, scores, distinct_value_indices, weights)
+  """
+  def distinct_value_indices(y_score) do
+    desc_score_indices = Nx.argsort(y_score, direction: :desc)
+    y_score = Nx.take_along_axis(y_score, desc_score_indices)
+
+    distinct_value_indices_mask = Nx.not_equal(y_score[[1..-1//1]], y_score[[0..-2//1]])
+
+    Nx.iota({Nx.size(y_score) - 1})
+    |> Nx.add(1)
+    |> Nx.multiply(distinct_value_indices_mask)
+    |> Nx.subtract(1)
+    |> Nx.to_flat_list()
+    |> Enum.filter(fn x -> x != -1 end)
+    |> Nx.tensor()
+  end
+
+  defnp binary_clf_curve(y_true, y_score, distinct_value_indices, sample_weights) do
+    check_shape(y_true, y_score)
+
+    desc_score_indices = Nx.argsort(y_score, direction: :desc)
+    y_score = Nx.take_along_axis(y_score, desc_score_indices)
+    y_true = Nx.take_along_axis(y_true, desc_score_indices)
+
+    weight = Nx.take_along_axis(sample_weights, desc_score_indices)
+
+    threshold_idxs =
+      Nx.concatenate([distinct_value_indices, Nx.new_axis(Nx.size(y_true) - 1, -1)], axis: 0)
+
+    tps = Nx.take(Nx.cumulative_sum(y_true * weight, axis: 0), threshold_idxs)
+
+    fps = Nx.take(Nx.cumulative_sum((1 - y_true) * weight, axis: 0), threshold_idxs)
+
+    {fps, tps, Nx.take(y_score, threshold_idxs)}
+  end
+
+  # TODO implement :drop_intermediate option when dynamic shapes will be available
+  @doc ~S"""
+  Compute Receiver operating characteristic (ROC).
+
+  Note: this implementation is restricted to the binary classification task.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 0, 1, 1])
+      iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
+      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
+      iex> weights = Nx.tensor([1, 1, 2, 2])
+      iex> {fpr, tpr, thresholds} = Scholar.Metrics.roc_curve(y_true, scores, distinct_value_indices, weights)
+      iex> fpr
+      #Nx.Tensor<
+        f32[5]
+        [0.0, 0.0, 0.5, 0.5, 1.0]
+      >
+      iex> tpr
+      #Nx.Tensor<
+        f32[5]
+        [0.0, 0.5, 0.5, 1.0, 1.0]
+      >
+      iex> thresholds
+      #Nx.Tensor<
+        f32[5]
+        [1.7999999523162842, 0.800000011920929, 0.4000000059604645, 0.3499999940395355, 0.10000000149011612]
+      >
+  """
+  defn roc_curve(y_true, y_score, distinct_value_indices, weights) do
+    num_samples = Nx.axis_size(y_true, 0)
+    weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
+    roc_curve_n(y_true, y_score, distinct_value_indices, weights)
+  end
+
+  @doc ~S"""
+  Compute Receiver operating characteristic (ROC).
+
+  This is equivalent to calling `Nx.roc_curve/4` with weights set to ones.
+  """
+  defn roc_curve(y_true, y_score, distinct_value_indices) do
+    weights = Nx.broadcast(Nx.tensor(1, type: to_float_type(y_true)), y_true)
+    roc_curve_n(y_true, y_score, distinct_value_indices, weights)
+  end
+
+  defnp roc_curve_n(y_true, y_score, distinct_value_indices, weights) do
+    check_shape(y_true, y_score)
+
+    {fps, tps, thresholds_unpadded} =
+      binary_clf_curve(y_true, y_score, distinct_value_indices, weights)
+
+    tpr = Nx.broadcast(Nx.tensor(0, type: Nx.type(tps)), {Nx.size(tps) + 1})
+    fpr = Nx.broadcast(Nx.tensor(0, type: Nx.type(fps)), {Nx.size(fps) + 1})
+    thresholds = Nx.broadcast(thresholds_unpadded[[0]] + 1, {Nx.size(thresholds_unpadded) + 1})
+
+    tpr = Nx.put_slice(tpr, [1], tps)
+    fpr = Nx.put_slice(fpr, [1], fps)
+    thresholds = Nx.put_slice(thresholds, [1], thresholds_unpadded)
+
+    tpr = tpr / tpr[[-1]]
+    fpr = fpr / fpr[[-1]]
+
+    {fpr, tpr, thresholds}
+  end
+
+  @doc ~S"""
+  Compute Area Under the Receiver Operating Characteristic Curve (ROC AUC) from prediction scores.
+
+  Note: this implementation is restricted to the binary classification task.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 0, 1, 1])
+      iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
+      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
+      iex> weights = Nx.tensor([1, 1, 2, 2])
+      iex> Scholar.Metrics.roc_auc_score(y_true, scores, distinct_value_indices, weights)
+      #Nx.Tensor<
+        f32
+        0.75
+      >
+  """
+  defn roc_auc_score(y_true, y_score, distinct_value_indices, weights) do
+    {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
+    auc(fpr, tpr)
+  end
+
+  @doc ~S"""
+  Compute Area Under the Receiver Operating Characteristic Curve (ROC AUC) from prediction scores.
+
+  This is equivalent to calling `Nx.roc_auc_score/4` with weights set to ones.
+  """
+  defn roc_auc_score(y_true, y_score, distinct_value_indices) do
+    {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices)
+    auc(fpr, tpr)
   end
 
   deftransformp check_num_classes(num_classes) do

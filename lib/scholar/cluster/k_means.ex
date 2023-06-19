@@ -142,7 +142,7 @@ defmodule Scholar.Cluster.KMeans do
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     {weights, opts} = Keyword.pop(opts, :weights, nil)
     x_float_type = to_float_type(x)
-    weights = validate_weights(weights, num_samples, x_type: x_float_type)
+    weights = validate_weights(weights, num_samples, type: x_float_type)
     fit_n(x, weights, key, opts)
   end
 
@@ -353,24 +353,5 @@ defmodule Scholar.Cluster.KMeans do
       Nx.new_axis(clusters, 0) |> Nx.broadcast(broadcast_shape),
       axes: [-1]
     )
-  end
-
-  deftransformp validate_weights(weights, num_samples, opts \\ []) do
-    x_type = opts[:x_type]
-
-    cond do
-      is_nil(weights) ->
-        Nx.tensor(1.0, type: x_type)
-
-      Nx.is_tensor(weights) and Nx.shape(weights) == {num_samples} ->
-        Nx.as_type(weights, x_type)
-
-      is_list(weights) and length(weights) == num_samples ->
-        Nx.tensor(weights, type: x_type)
-
-      true ->
-        raise ArgumentError,
-              "invalid value for :weights option: expected list or tensor of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
-    end
   end
 end
