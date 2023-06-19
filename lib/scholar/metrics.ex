@@ -13,7 +13,7 @@ defmodule Scholar.Metrics do
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
-  alias Scholar.Integrate.Trapezoidal
+  alias Scholar.Integrate
 
   general_schema = [
     num_classes: [
@@ -511,7 +511,7 @@ defmodule Scholar.Metrics do
         true -> Nx.tensor(:nan, type: to_float_type(y))
       end
 
-    direction * Trapezoidal.trapezoidal(y, x)
+    direction * Integrate.trapezoidal(y, x)
   end
 
   @doc ~S"""
