@@ -52,7 +52,7 @@ defmodule Scholar.Integrate do
         Scholar.Integrate.Trapezoidal.trapezoidal_uniform(y, opts)
 
       :simpson ->
-        Scholar.Integrate.Simpson.simpson(y, opts)
+        Scholar.Integrate.Simpson.simpson_uniform(y, opts)
 
       _ ->
         raise ArgumentError, "Unknown integration method: #{inspect(method)}"
