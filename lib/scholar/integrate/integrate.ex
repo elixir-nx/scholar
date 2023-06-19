@@ -55,66 +55,6 @@ defmodule Scholar.Integrate do
   @uniform_simpson_schema NimbleOptions.new!(uniform_simpson_schema)
 
   @doc """
-  Integrate `y` along the given axis using the chosen rule.
-
-  ## Options
-
-  Options are the same as for the chosen rule. See the documentation for
-  specific implementations for more information.
-
-  ## Examples
-
-      iex> y = Nx.tensor([1, 2, 3])
-      iex> x = Nx.tensor([4, 5, 6])
-      iex> Scholar.Integrate.integrate(y, x, :simpson)
-      #Nx.Tensor<
-        f32
-        4.0
-      >
-
-      iex> y = Nx.tensor([[0, 1, 2], [3, 4, 5]])
-      iex> x = Nx.tensor([[1, 2, 3], [1, 2, 3]])
-      iex> Scholar.Integrate.integrate(y, x, :trapezoidal)
-      #Nx.Tensor<
-        f32[2]
-        [2.0, 8.0]
-      >
-
-      iex> y = Nx.tensor([[0, 1, 2], [3, 4, 5]])
-      iex> x = Nx.tensor([[1, 1, 1], [2, 2, 2]])
-      iex> Scholar.Integrate.integrate(y, x, :simpson, axis: 0)
-      #Nx.Tensor<
-        f32[3]
-        [1.5, 2.5, 3.5]
-      >
-  """
-  deftransform integrate(y, x, method, opts \\ []) do
-    case method do
-      :trapezoidal ->
-        trapezoidal(y, x, opts)
-
-      :simpson ->
-        simpson(y, x, opts)
-
-      _ ->
-        raise ArgumentError, "Unknown integration method: #{inspect(method)}"
-    end
-  end
-
-  deftransform integrate_uniform(y, method, opts \\ []) do
-    case method do
-      :trapezoidal ->
-        trapezoidal_uniform(y, opts)
-
-      :simpson ->
-        simpson_uniform(y, opts)
-
-      _ ->
-        raise ArgumentError, "Unknown integration method: #{inspect(method)}"
-    end
-  end
-
-  @doc """
   Integrate `y` along the given axis using the simpson's rule.
   The integration happens in sequence along elements of `x`.
 
