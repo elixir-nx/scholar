@@ -16,6 +16,7 @@ defmodule Scholar.Interpolation.CubicSpline do
     * [2] - [SciPy implementation](https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.CubicSpline.html)
   """
   import Nx.Defn
+  import Scholar.Shared
 
   @derive {Nx.Container, containers: [:coefficients, :x]}
   defstruct [:coefficients, :x]
@@ -85,13 +86,15 @@ defmodule Scholar.Interpolation.CubicSpline do
               "expected y to have shape #{inspect(x_shape)}, got: #{inspect(y_shape)}"
     end
 
-    dx = x[1..-1//1] - x[0..-2//1]
+    dx = Nx.diff(x)
 
     sort_idx = Nx.argsort(x)
     x = Nx.take(x, sort_idx)
     y = Nx.take(y, sort_idx)
 
-    slope = (y[1..-1//1] - y[0..-2//1]) / dx
+    dy = Nx.diff(y)
+
+    slope = dy / dx
 
     s =
       case {n, opts[:boundary_condition]} do
@@ -188,7 +191,6 @@ defmodule Scholar.Interpolation.CubicSpline do
           Nx.LinAlg.solve(a, b)
       end
 
-    slope = (y[1..-1//1] - y[0..-2//1]) / dx
     t = (s[0..-2//1] + s[1..-1//1] - 2 * slope) / dx
 
     c_3 = t / dx
@@ -281,7 +283,7 @@ defmodule Scholar.Interpolation.CubicSpline do
       else
         nan_selector = target_x < x[0] or target_x > x[-1]
 
-        nan = Nx.tensor(:nan, type: Nx.Type.to_floating(Nx.type(target_x)))
+        nan = Nx.tensor(:nan, type: to_float_type(target_x))
         Nx.select(nan_selector, nan, result)
       end
 

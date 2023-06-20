@@ -71,7 +71,7 @@ defmodule Scholar.Impute.SimpleImputer do
       }
   """
   deftransform fit(x, opts \\ []) do
-    validated_opts = NimbleOptions.validate!(opts, @opts_schema)
+    opts = NimbleOptions.validate!(opts, @opts_schema)
 
     input_rank = Nx.rank(x)
 
@@ -79,7 +79,7 @@ defmodule Scholar.Impute.SimpleImputer do
       raise ArgumentError, "Wrong input rank. Expected: 2, got: #{inspect(input_rank)}"
     end
 
-    if validated_opts[:missing_values] != :nan and
+    if opts[:missing_values] != :nan and
          Nx.any(Nx.is_nan(x)) == Nx.tensor(1, type: :u8) do
       raise ArgumentError,
             ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array"
@@ -89,13 +89,13 @@ defmodule Scholar.Impute.SimpleImputer do
 
     x =
       cond do
-        validated_opts[:strategy] == :constant and is_float(validated_opts[:fill_value]) and
+        opts[:strategy] == :constant and is_float(opts[:fill_value]) and
             type in [:s, :u] ->
           to_float(x)
 
-        validated_opts[:strategy] == :constant and is_integer(validated_opts[:fill_value]) and
+        opts[:strategy] == :constant and is_integer(opts[:fill_value]) and
             type in [:f, :bf] ->
-          {fill_value_type, _} = Nx.type(validated_opts[:fill_value])
+          {fill_value_type, _} = Nx.type(opts[:fill_value])
 
           raise ArgumentError,
                 "Wrong type of `:fill_value` for the given data. Expected: :f or :bf, got: #{inspect(fill_value_type)}"
@@ -105,8 +105,8 @@ defmodule Scholar.Impute.SimpleImputer do
       end
 
     x =
-      if validated_opts[:missing_values] != :nan,
-        do: Nx.select(Nx.equal(x, validated_opts[:missing_values]), Nx.Constants.nan(), x),
+      if opts[:missing_values] != :nan,
+        do: Nx.select(Nx.equal(x, opts[:missing_values]), Nx.Constants.nan(), x),
         else: x
 
     {_num_rows, num_cols} = Nx.shape(x)
@@ -123,10 +123,10 @@ defmodule Scholar.Impute.SimpleImputer do
           mode_op(x, type: x_type)
 
         true ->
-          Nx.broadcast(validated_opts[:fill_value], {num_cols})
+          Nx.broadcast(opts[:fill_value], {num_cols})
       end
 
-    missing_values = validated_opts[:missing_values]
+    missing_values = opts[:missing_values]
     %__MODULE__{statistics: statistics, missing_values: missing_values}
   end
 

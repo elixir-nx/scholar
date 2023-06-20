@@ -349,9 +349,9 @@ defmodule Scholar.Metrics do
 
     num_classes = check_num_classes(opts[:num_classes])
 
-    zeros = Nx.broadcast(Nx.tensor(0, type: {:u, 64}), {num_classes, num_classes})
+    zeros = Nx.broadcast(Nx.u64(0), {num_classes, num_classes})
     indices = Nx.stack([y_true, y_pred], axis: 1)
-    updates = Nx.broadcast(Nx.tensor(1, type: {:u, 64}), y_true)
+    updates = Nx.broadcast(Nx.u64(1), y_true)
 
     Nx.indexed_add(zeros, indices, updates)
   end

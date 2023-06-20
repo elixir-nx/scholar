@@ -155,16 +155,17 @@ defmodule Scholar.Manifold.TSNE do
 
   defnp pairwise_dist(x, metric) do
     {num_samples, num_features} = Nx.shape(x)
+    broadcast_shape = {num_samples, num_samples, num_features}
 
     t1 =
       x
       |> Nx.reshape({1, num_samples, num_features})
-      |> Nx.broadcast({num_samples, num_samples, num_features})
+      |> Nx.broadcast(broadcast_shape)
 
     t2 =
       x
       |> Nx.reshape({num_samples, 1, num_features})
-      |> Nx.broadcast({num_samples, num_samples, num_features})
+      |> Nx.broadcast(broadcast_shape)
 
     case metric do
       :squared_euclidean ->

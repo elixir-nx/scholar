@@ -96,16 +96,17 @@ defmodule Scholar.Metrics.Clustering do
     num_clusters = opts[:num_clusters]
     {num_samples, num_features} = Nx.shape(x)
     inf = Nx.Constants.infinity(to_float_type(x))
+    broadcast_shape = {num_samples, num_samples, num_features}
 
     x_a =
       x
       |> Nx.new_axis(0)
-      |> Nx.broadcast({num_samples, num_samples, num_features})
+      |> Nx.broadcast(broadcast_shape)
 
     x_b =
       x
       |> Nx.new_axis(1)
-      |> Nx.broadcast({num_samples, num_samples, num_features})
+      |> Nx.broadcast(broadcast_shape)
 
     pairwise_dist = Scholar.Metrics.Distance.euclidean(x_a, x_b, axes: [2])
     membership_mask = Nx.reshape(labels, {num_samples, 1}) == Nx.iota({1, num_clusters})

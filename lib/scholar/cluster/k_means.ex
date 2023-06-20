@@ -131,7 +131,7 @@ defmodule Scholar.Cluster.KMeans do
             "expected input tensor to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
-    {num_samples, _num_features} = Nx.shape(x)
+    num_samples = Nx.axis_size(x, 0)
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     unless opts[:num_clusters] <= num_samples do
@@ -141,8 +141,7 @@ defmodule Scholar.Cluster.KMeans do
 
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     {weights, opts} = Keyword.pop(opts, :weights, nil)
-    x_float_type = to_float_type(x)
-    weights = validate_weights(weights, num_samples, type: x_float_type)
+    weights = validate_weights(weights, num_samples, type: to_float_type(x))
     fit_n(x, weights, key, opts)
   end
 
