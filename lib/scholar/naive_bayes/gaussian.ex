@@ -435,8 +435,8 @@ defmodule Scholar.NaiveBayes.Gaussian do
   end
 
   defnp check_input(%__MODULE__{theta: theta}, x) do
-    {_, num_features} = Nx.shape(theta)
-    {_, x_num_features} = Nx.shape(x)
+    num_features = Nx.axis_size(theta, 1)
+    x_num_features = Nx.axis_size(x, 1)
 
     if num_features != x_num_features do
       raise ArgumentError,

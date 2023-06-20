@@ -135,7 +135,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
         indices = Nx.argmax(temp, axis: 1)
         y = Nx.reduce_max(temp, axes: [1])
 
-        neg_inf = Nx.Constants.neg_infinity(Nx.Type.to_floating(Nx.type(a)))
+        neg_inf = Nx.Constants.neg_infinity(to_float_type(a))
         neg_infinities = Nx.broadcast(neg_inf, {n})
         max_indices = Nx.stack([range, indices], axis: 1)
         temp = Nx.indexed_put(temp, max_indices, neg_infinities)
@@ -176,7 +176,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
           Nx.select(
             Nx.broadcast(Nx.new_axis(mask, -1), shape),
             data,
-            Nx.Constants.infinity(Nx.Type.to_floating(Nx.type(a)))
+            Nx.Constants.infinity(to_float_type(a))
           )
 
         labels =

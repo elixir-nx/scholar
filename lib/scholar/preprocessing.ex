@@ -434,7 +434,7 @@ defmodule Scholar.Preprocessing do
     if axes != nil do
       Enum.reduce(axes, shape, &put_elem(&2, &1, 1))
     else
-      Tuple.duplicate(1, length(Tuple.to_list(shape)))
+      Tuple.duplicate(1, Nx.rank(shape))
     end
   end
 end

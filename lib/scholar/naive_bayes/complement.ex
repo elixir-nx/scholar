@@ -440,8 +440,8 @@ defmodule Scholar.NaiveBayes.Complement do
   end
 
   defnp check_input(%__MODULE__{feature_count: feature_count}, x) do
-    {_, num_features} = Nx.shape(feature_count)
-    {_, x_num_features} = Nx.shape(x)
+    num_features = Nx.axis_size(feature_count, 1)
+    x_num_features = Nx.axis_size(x, 1)
 
     if num_features != x_num_features do
       raise ArgumentError,

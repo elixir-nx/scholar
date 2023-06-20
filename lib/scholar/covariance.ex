@@ -98,7 +98,7 @@ defmodule Scholar.Covariance do
       raise ArgumentError, "expected data to have rank equal 2, got: #{inspect(Nx.rank(x))}"
     end
 
-    {num_samples, _num_features} = Nx.shape(x)
+    num_samples = Nx.axis_size(x, 0)
     x = if opts[:center], do: x - Nx.mean(x, axes: [0]), else: x
     matrix = Nx.dot(x, [0], x, [0])
 

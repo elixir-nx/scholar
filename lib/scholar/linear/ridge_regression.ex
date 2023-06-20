@@ -143,7 +143,7 @@ defmodule Scholar.Linear.RidgeRegression do
     b = to_float(b)
 
     flatten? = Nx.rank(b) == 1
-    num_targets = if Nx.rank(b) == 1, do: 1, else: Nx.axis_size(b, 1)
+    num_targets = if flatten?, do: 1, else: Nx.axis_size(b, 1)
 
     alpha =
       if Nx.size(alpha) == 1 and num_targets > 1,
@@ -154,12 +154,12 @@ defmodule Scholar.Linear.RidgeRegression do
       if opts[:fit_intercept?] do
         preprocess_data(a, b, sample_weights, opts)
       else
-        {_, a_shape} = Nx.shape(a)
+        a_offset_shape = Nx.axis_size(a, 1)
         b_reshaped = if Nx.rank(b) > 1, do: b, else: Nx.reshape(b, {:auto, 1})
-        {_, b_shape} = Nx.shape(b_reshaped)
+        b_offset_shape = Nx.axis_size(b_reshaped, 1)
 
-        {Nx.broadcast(Nx.tensor(0.0, type: Nx.type(a)), {a_shape}),
-         Nx.broadcast(Nx.tensor(0.0, type: Nx.type(b)), {b_shape})}
+        {Nx.broadcast(Nx.tensor(0.0, type: Nx.type(a)), {a_offset_shape}),
+         Nx.broadcast(Nx.tensor(0.0, type: Nx.type(b)), {b_offset_shape})}
       end
 
     {a, b} = {a - a_offset, b - b_offset}
