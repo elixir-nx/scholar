@@ -3,19 +3,19 @@ defmodule Scholar.Decomposition.PCATest do
   alias Scholar.Decomposition.PCA
   doctest PCA
 
-  defp x() do
+  defp x do
     Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
   end
 
-  defp x2() do
+  defp x2 do
     Nx.tensor([[1, 4], [54, 6], [26, 7]])
   end
 
-  defp x3() do
+  defp x3 do
     Nx.tensor([[-1, -1, 3], [-2, -1, 2], [-3, -2, 1], [3, 1, 1], [21, 2, 1], [5, 3, 2]])
   end
 
-  defp x_wide() do
+  defp x_wide do
     Nx.tensor([[1, 2, 3], [56, 2, 4]])
   end
 

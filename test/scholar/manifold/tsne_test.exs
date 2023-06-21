@@ -3,94 +3,101 @@ defmodule Scholar.Manifold.TSNETest do
   alias Scholar.Manifold.TSNE
   doctest TSNE
 
-  @key Nx.Random.key(42)
-  @x Nx.tensor([
-       [
-         -8.73180761,
-         -17.31599354,
-         -10.76061306,
-         44.89164949,
-         3.12358324,
-         -12.12349236
-       ],
-       [
-         7.64626495,
-         18.55374334,
-         3.87725984,
-         -6.99299854,
-         -9.36734843,
-         4.55923917
-       ],
-       [
-         20.09781323,
-         8.68550196,
-         8.43256455,
-         -19.15829538,
-         31.40440792,
-         6.06427556
-       ],
-       [
-         10.63844377,
-         12.75106034,
-         1.43716746,
-         22.80253916,
-         -30.5268915,
-         9.39948666
-       ],
-       [
-         4.86846911,
-         -28.12055241,
-         -6.08674611,
-         17.03477114,
-         6.65227597,
-         -32.9099819
-       ],
-       [
-         -6.85085101,
-         -16.87612764,
-         -11.54632153,
-         -51.06982144,
-         -6.74068325,
-         8.01699475
-       ],
-       [
-         5.54656739,
-         38.3957026,
-         24.36609113,
-         6.97242576,
-         30.16740117,
-         -28.33044809
-       ],
-       [
-         -9.46902188,
-         -28.02162129,
-         37.34167044,
-         -5.5330473,
-         2.98759518,
-         -19.68337166
-       ],
-       [
-         8.7946142,
-         0.15558464,
-         0.47478064,
-         26.20112788,
-         47.17380434,
-         19.2504862
-       ],
-       [
-         -9.549788,
-         7.08735882,
-         30.68402683,
-         31.23933105,
-         4.33932039,
-         11.94982724
-       ]
-     ])
+  defp key do
+    Nx.Random.key(42)
+  end
 
-  @x_wide Nx.tensor([[1, 2, 3, 1], [2, 56, 2, 4]])
+  defp x do
+    Nx.tensor([
+      [
+        -8.73180761,
+        -17.31599354,
+        -10.76061306,
+        44.89164949,
+        3.12358324,
+        -12.12349236
+      ],
+      [
+        7.64626495,
+        18.55374334,
+        3.87725984,
+        -6.99299854,
+        -9.36734843,
+        4.55923917
+      ],
+      [
+        20.09781323,
+        8.68550196,
+        8.43256455,
+        -19.15829538,
+        31.40440792,
+        6.06427556
+      ],
+      [
+        10.63844377,
+        12.75106034,
+        1.43716746,
+        22.80253916,
+        -30.5268915,
+        9.39948666
+      ],
+      [
+        4.86846911,
+        -28.12055241,
+        -6.08674611,
+        17.03477114,
+        6.65227597,
+        -32.9099819
+      ],
+      [
+        -6.85085101,
+        -16.87612764,
+        -11.54632153,
+        -51.06982144,
+        -6.74068325,
+        8.01699475
+      ],
+      [
+        5.54656739,
+        38.3957026,
+        24.36609113,
+        6.97242576,
+        30.16740117,
+        -28.33044809
+      ],
+      [
+        -9.46902188,
+        -28.02162129,
+        37.34167044,
+        -5.5330473,
+        2.98759518,
+        -19.68337166
+      ],
+      [
+        8.7946142,
+        0.15558464,
+        0.47478064,
+        26.20112788,
+        47.17380434,
+        19.2504862
+      ],
+      [
+        -9.549788,
+        7.08735882,
+        30.68402683,
+        31.23933105,
+        4.33932039,
+        11.94982724
+      ]
+    ])
+  end
+
+  defp x_wide do
+    Nx.tensor([[1, 2, 3, 1], [2, 56, 2, 4]])
+  end
 
   test "all default params" do
-    embedding = TSNE.fit(@x, key: @key)
+    embedding = TSNE.fit(x(), key: key())
 
     expected =
       Nx.tensor([
@@ -110,7 +117,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "test for wide matrix" do
-    embedding = TSNE.fit(@x_wide, key: @key)
+    embedding = TSNE.fit(x_wide(), key: key())
 
     expected =
       Nx.tensor([
@@ -122,7 +129,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default num_components" do
-    embedding = TSNE.fit(@x, num_components: 3, key: @key)
+    embedding = TSNE.fit(x(), num_components: 3, key: key())
 
     expected =
       Nx.tensor([
@@ -142,7 +149,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default perplexity" do
-    embedding = TSNE.fit(@x, perplexity: 5, key: @key)
+    embedding = TSNE.fit(x(), perplexity: 5, key: key())
 
     expected =
       Nx.tensor([
@@ -162,7 +169,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default learning_rate" do
-    embedding = TSNE.fit(@x, learning_rate: 100, key: @key)
+    embedding = TSNE.fit(x(), learning_rate: 100, key: key())
 
     expected =
       Nx.tensor([
@@ -182,7 +189,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default max_iter" do
-    embedding = TSNE.fit(@x, num_iters: 333, key: @key)
+    embedding = TSNE.fit(x(), num_iters: 333, key: key())
 
     expected =
       Nx.tensor([
@@ -202,7 +209,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default init" do
-    embedding = TSNE.fit(@x, init: :random, key: @key)
+    embedding = TSNE.fit(x(), init: :random, key: key())
 
     expected =
       Nx.tensor([
@@ -222,7 +229,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default metric" do
-    embedding = TSNE.fit(@x, key: @key, metric: :chebyshev)
+    embedding = TSNE.fit(x(), key: key(), metric: :chebyshev)
 
     expected =
       Nx.tensor([
@@ -242,7 +249,7 @@ defmodule Scholar.Manifold.TSNETest do
   end
 
   test "non-default exaggeration" do
-    embedding = TSNE.fit(@x, key: @key, exaggeration: 4.5)
+    embedding = TSNE.fit(x(), key: key(), exaggeration: 4.5)
 
     expected =
       Nx.tensor([

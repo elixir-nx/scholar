@@ -57,17 +57,19 @@ defmodule SimpleImputerTest do
         %SimpleImputer{statistics: statistics, missing_values: missing_values} =
         SimpleImputer.fit(x, missing_values: :nan, strategy: :mean)
 
-      assert statistics == Nx.tensor([7.0, 8.0, 4.666666507720947, 11.0])
+      assert_all_close(statistics, Nx.tensor([7.0, 8.0, 4.666666507720947, 11.0]))
       assert missing_values == :nan
 
-      assert SimpleImputer.transform(simple_imputer_mean, x) ==
-               Nx.tensor([
-                 [0.0, 1.0, 2.0, 3.0],
-                 [4.0, 5.0, 6.0, 7.0],
-                 [8.0, 9.0, 4.666666507720947, 11.0],
-                 [7.0, 8.0, 4.666666507720947, 15.0],
-                 [16.0, 17.0, 6.0, 19.0]
-               ])
+      assert_all_close(
+        SimpleImputer.transform(simple_imputer_mean, x),
+        Nx.tensor([
+          [0.0, 1.0, 2.0, 3.0],
+          [4.0, 5.0, 6.0, 7.0],
+          [8.0, 9.0, 4.666666507720947, 11.0],
+          [7.0, 8.0, 4.666666507720947, 15.0],
+          [16.0, 17.0, 6.0, 19.0]
+        ])
+      )
     end
 
     test "general test constant value" do

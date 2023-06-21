@@ -3,7 +3,7 @@ defmodule Scholar.Metrics.DistanceTest do
   alias Scholar.Metrics.Distance
   doctest Distance
 
-  defp x() do
+  defp x do
     Nx.tensor([
       -0.165435329079628,
       -1.0515050888061523,
@@ -18,7 +18,7 @@ defmodule Scholar.Metrics.DistanceTest do
     ])
   end
 
-  defp y() do
+  defp y do
     Nx.tensor([
       0.5898482203483582,
       -0.5769372582435608,

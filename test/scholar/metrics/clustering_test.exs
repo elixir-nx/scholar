@@ -28,11 +28,11 @@ defmodule Scholar.Metrics.ClusteringTest do
     ])
   end
 
-  def y do
+  defp y do
     Nx.tensor([2, 2, 2, 2, 0, 2, 1, 1, 2, 2, 2, 2, 2, 1, 1, 0, 1, 2, 1, 2])
   end
 
-  def y_one do
+  defp y_one do
     Nx.tensor([2, 2, 2, 2, 0, 2, 1, 3, 2, 2, 2, 2, 2, 1, 4, 0, 1, 2, 1, 2])
   end
 
