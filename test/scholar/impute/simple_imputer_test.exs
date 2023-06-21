@@ -57,7 +57,7 @@ defmodule SimpleImputerTest do
         %SimpleImputer{statistics: statistics, missing_values: missing_values} =
         SimpleImputer.fit(x, missing_values: :nan, strategy: :mean)
 
-      assert_all_close(statistics , Nx.tensor([7.0, 8.0, 4.666666507720947, 11.0]))
+      assert_all_close(statistics, Nx.tensor([7.0, 8.0, 4.666666507720947, 11.0]))
       assert missing_values == :nan
 
       assert_all_close(
