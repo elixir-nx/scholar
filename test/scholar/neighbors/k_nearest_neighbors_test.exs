@@ -3,7 +3,7 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
   alias Scholar.Neighbors.KNearestNeighbors
   doctest KNearestNeighbors
 
-  defp x() do
+  defp x do
     Nx.tensor([
       [3, 6, 7, 5],
       [9, 8, 5, 4],
@@ -18,11 +18,11 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
     ])
   end
 
-  defp y() do
+  defp y do
     Nx.tensor([0, 1, 1, 1, 1, 1, 1, 1, 0, 0])
   end
 
-  defp x_pred() do
+  defp x_pred do
     Nx.tensor([[4, 3, 8, 4], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
   end
 

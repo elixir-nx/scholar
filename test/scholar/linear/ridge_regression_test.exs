@@ -1,7 +1,7 @@
 defmodule Scholar.Linear.RidgeRegressionTest do
   use Scholar.Case, async: true
   alias Scholar.Linear.RidgeRegression
-  doctest Scholar.Linear.RidgeRegression
+  doctest RidgeRegression
 
   describe "fit" do
     test "solver - :svd, options set to default, and x with shape num_samples >= num_features" do
