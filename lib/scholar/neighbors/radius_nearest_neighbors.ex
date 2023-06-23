@@ -254,7 +254,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
 
   ## Return Values
 
-    Returns indices of and distances to the neighbors of each point.
+    Returns indices of the selected neighbor points as a mask  (1 if a point is a neighbor, 0 otherwise) and their respective distances.
 
   ## Examples
 
