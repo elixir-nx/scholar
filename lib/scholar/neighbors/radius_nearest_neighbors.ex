@@ -63,7 +63,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
   @doc """
   Fit the K-nearest neighbors classifier from the training data set.
 
-  For classification, provided labels needs to be consecutive natural numbers. If your labels does
+  For classification, provided labels need to be consecutive non-negative integers. If your labels does
   not meet this condition please use `Scholar.Preprocessing.ordinal_encode`
 
   Currently 2D labels are only supported for regression tasks.
