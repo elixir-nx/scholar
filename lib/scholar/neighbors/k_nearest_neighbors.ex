@@ -87,7 +87,9 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
     * `:num_classes` - Number of classes in provided labels.
 
-    * `:task` - Task that will be performed using K Nearest Neighbors.
+    * `:task` - Task that will be performed using K-Nearest Neighbors.
+    For `:classification` task, model will be a classifier implementing the K-Nearest Neighbors vote.
+    For `:regression` task, model is a regressor based on K-Nearest Neighbors.
 
     * `:metric` - Name of the metric.
 

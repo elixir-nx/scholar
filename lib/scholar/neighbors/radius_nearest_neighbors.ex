@@ -85,6 +85,8 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
     * `:num_classes` - Number of classes in provided labels.
 
     * `:task` - Task that will be performed using Radius Nearest Neighbors.
+    For `:classification` task, model will be a classifier implementing the Radius Nearest Neighbors vote.
+    For `:regression` task, model is a regressor based on Radius Nearest Neighbors.
 
     * `:metric` - Name of the metric.
 
