@@ -66,7 +66,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
   For classification, provided labels needs to be consecutive natural numbers. If your labels does
   not meet this condition please use `Scholar.Preprocessing.ordinal_encode`
 
-  Currently 2D labels only supported for regression task.
+  Currently 2D labels are only supported for regression tasks.
 
   ## Options
 
