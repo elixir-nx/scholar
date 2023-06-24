@@ -13,7 +13,7 @@ defmodule Scholar.Impute.SimpleImputer do
       type: {:or, [:float, :integer, {:in, [:nan]}]},
       default: :nan,
       doc: ~S"""
-      The placeholder for the missing values. All occurrences of missing_values will be imputed.
+      The placeholder for the missing values. All occurrences of `:missing_values` will be imputed.
       """
     ],
     strategy: [

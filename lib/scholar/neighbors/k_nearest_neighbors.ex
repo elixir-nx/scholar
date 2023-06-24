@@ -7,9 +7,9 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
   require Nx
 
   @derive {Nx.Container,
-           keep: [:default_num_neighbors, :weights, :num_classes, :p, :task, :metric],
+           keep: [:default_num_neighbors, :weights, :num_classes, :task, :metric],
            containers: [:data, :labels]}
-  defstruct [:data, :labels, :default_num_neighbors, :weights, :num_classes, :p, :task, :metric]
+  defstruct [:data, :labels, :default_num_neighbors, :weights, :num_classes, :task, :metric]
 
   opts = [
     num_neighbors: [
@@ -87,12 +87,17 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
     * `:num_classes` - Number of classes in provided labels.
 
+    * `:task` - Task that will be performed using K-Nearest Neighbors.
+      For `:classification` task, model will be a classifier implementing the K-Nearest Neighbors vote.
+      For `:regression` task, model is a regressor based on K-Nearest Neighbors.
+
+    * `:metric` - Name of the metric.
+
   ## Examples
 
-      iex>  x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
-      iex>  Scholar.Neighbors.KNearestNeighbors.fit(x, Nx.tensor([1, 0, 1, 1]),
-      ...>    num_classes: 2
-      ...>  )
+      iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
+      iex> y = Nx.tensor([1, 0, 1, 1])
+      iex> Scholar.Neighbors.KNearestNeighbors.fit(x, y, num_classes: 2)
       %Scholar.Neighbors.KNearestNeighbors{
         data: Nx.tensor(
           [
@@ -162,19 +167,16 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
   ## Examples
 
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
-      iex> model =
-      iex>  Scholar.Neighbors.KNearestNeighbors.fit(x, Nx.tensor([1, 0, 1, 1]),
-      ...>    num_classes: 2
-      ...>  )
+      iex> y = Nx.tensor([1, 0, 1, 1])
+      iex> model = Scholar.Neighbors.KNearestNeighbors.fit(x, y, num_classes: 2)
       iex> Scholar.Neighbors.KNearestNeighbors.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       Nx.tensor(
-        [1, 1]
+        [1, 1], type: :s64
       )
   """
   defn predict(%__MODULE__{labels: labels, weights: weights, task: task} = model, x) do
     {neigh_distances, neigh_indices} = k_neighbors(model, x)
     pred_labels = Nx.take(labels, neigh_indices)
-    check_weights(neigh_distances)
 
     case task do
       :classification ->
@@ -212,10 +214,9 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
   ## Examples
 
-      iex> model =
-      iex>  Scholar.Neighbors.KNearestNeighbors.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]), Nx.tensor([1, 0, 1, 1]),
-      ...>    num_classes: 2
-      ...>  )
+      iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
+      iex> y = Nx.tensor([1, 0, 1, 1])
+      iex> model = Scholar.Neighbors.KNearestNeighbors.fit(x, y, num_classes: 2)
       iex> Scholar.Neighbors.KNearestNeighbors.predict_proba(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       Nx.tensor(
         [
@@ -261,7 +262,9 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       |> Nx.flatten(axes: [0, 1])
 
     proba = Nx.indexed_add(proba, indices, Nx.flatten(weights_vals))
-    proba / (Nx.sum(proba, axes: [1]) |> Nx.new_axis(-1))
+    normalizer = Nx.sum(proba, axes: [1])
+    normalizer = Nx.select(normalizer == 0, 1, normalizer)
+    proba / Nx.new_axis(normalizer, -1)
   end
 
   @doc """
@@ -273,10 +276,9 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
   ## Examples
 
-      iex> model =
-      iex>  Scholar.Neighbors.KNearestNeighbors.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]), Nx.tensor([1, 0, 1, 1]),
-      ...>    num_classes: 2
-      ...>  )
+      iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
+      iex> y = Nx.tensor([1, 0, 1, 1])
+      iex> model = Scholar.Neighbors.KNearestNeighbors.fit(x, y, num_classes: 2)
       iex> Scholar.Neighbors.KNearestNeighbors.k_neighbors(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       {Nx.tensor(
         [
