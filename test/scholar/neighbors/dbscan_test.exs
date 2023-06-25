@@ -40,7 +40,7 @@ defmodule Scholar.Cluster.DBSCANTest do
       assert model.core_sample_indices == Nx.tensor([0, 1, 0, 1, 0, 1, 0, 1, 0, 0], type: :u8)
     end
 
-    test "3 blobs" do
+    test "test with artifically created 3 blobs" do
       x =
         Nx.tensor([
           [0.21944999, 1.43491283],
@@ -168,9 +168,12 @@ defmodule Scholar.Cluster.DBSCANTest do
           type: :u8
         )
 
+      num_clusters = Nx.tensor(3)
       model = DBSCAN.fit(x, eps: 0.4, min_samples: 4)
       assert model.labels == expected_labels
       assert model.core_sample_indices == expected_core_samples
+      # Check if algorithm predicted the correct number of clusters
+      assert Nx.add(Nx.reduce_max(model.labels), 1) == num_clusters
     end
   end
 end
