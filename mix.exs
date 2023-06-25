@@ -77,7 +77,7 @@ defmodule Scholar.MixProject do
           Scholar.NaiveBayes.Gaussian,
           Scholar.NaiveBayes.Multinomial,
           Scholar.Neighbors.KNearestNeighbors,
-          Scholar.Neighbors.RadiusNearestNeighbors,
+          Scholar.Neighbors.RadiusNearestNeighbors
         ],
         Utilities: [
           Scholar.Covariance,
