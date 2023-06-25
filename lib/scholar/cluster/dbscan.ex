@@ -62,7 +62,9 @@ defmodule Scholar.Cluster.DBSCAN do
 
   The function returns a struct with the following parameters:
 
-  * `:core_sample_indices` - Indices of core samples.
+  * `:core_sample_indices` - Indices of core samples represented as a mask.
+    The mask is a boolean array of shape {num_samples} where `1` indicates
+    that the corresponding sample is a core sample and `0` otherwise.
 
   * `:labels` - Cluster labels for each point in the dataset given to fit().
     Noisy samples are given the label -1.
