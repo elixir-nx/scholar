@@ -1,6 +1,6 @@
 defmodule Scholar.Neighbors.RadiusNearestNeighbors do
   @moduledoc """
-  The K-Nearest Neighbors.
+  The Radius Nearest Neighbors.
   """
   import Nx.Defn
   import Scholar.Shared
