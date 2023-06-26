@@ -71,16 +71,16 @@ defmodule Scholar.Cluster.DBSCAN do
 
   ## Examples
 
-  iex> x = Nx.tensor([[1, 2], [2, 2], [2, 3], [8, 7], [8, 8], [25, 80]])
-  iex> Scholar.Cluster.DBSCAN.fit(x, eps: 3, min_samples: 2)
-  %Scholar.Cluster.DBSCAN{
-    core_sample_indices: Nx.tensor(
-      [1, 1, 1, 1, 1, 0], type: :u8
-    ),
-    labels: Nx.tensor(
-      [0, 0, 0, 1, 1, -1]
-    )
-  }
+      iex> x = Nx.tensor([[1, 2], [2, 2], [2, 3], [8, 7], [8, 8], [25, 80]])
+      iex> Scholar.Cluster.DBSCAN.fit(x, eps: 3, min_samples: 2)
+      %Scholar.Cluster.DBSCAN{
+        core_sample_indices: Nx.tensor(
+          [1, 1, 1, 1, 1, 0], type: :u8
+        ),
+        labels: Nx.tensor(
+          [0, 0, 0, 1, 1, -1]
+        )
+      }
   """
   deftransform fit(x, opts \\ []) do
     fit_n(x, NimbleOptions.validate!(opts, @opts_schema))
