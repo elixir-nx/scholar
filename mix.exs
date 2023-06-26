@@ -61,6 +61,7 @@ defmodule Scholar.MixProject do
       groups_for_modules: [
         Models: [
           Scholar.Cluster.AffinityPropagation,
+          Scholar.Cluster.DBSCAN,
           Scholar.Cluster.KMeans,
           Scholar.Decomposition.PCA,
           Scholar.Integrate,
@@ -75,7 +76,8 @@ defmodule Scholar.MixProject do
           Scholar.NaiveBayes.Complement,
           Scholar.NaiveBayes.Gaussian,
           Scholar.NaiveBayes.Multinomial,
-          Scholar.Neighbors.KNearestNeighbors
+          Scholar.Neighbors.KNearestNeighbors,
+          Scholar.Neighbors.RadiusNearestNeighbors
         ],
         Utilities: [
           Scholar.Covariance,
