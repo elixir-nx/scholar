@@ -650,7 +650,7 @@ defmodule Scholar.Metrics do
   @doc ~S"""
   Compute Receiver operating characteristic (ROC).
 
-  This is equivalent to calling `Nx.roc_curve/4` with weights set to ones.
+  This is equivalent to calling `Scholar.Metrics.roc_curve/4` with weights set to ones.
   """
   defn roc_curve(y_true, y_score, distinct_value_indices) do
     weights = Nx.broadcast(Nx.tensor(1, type: to_float_type(y_true)), y_true)
