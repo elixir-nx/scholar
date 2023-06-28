@@ -543,6 +543,11 @@ defmodule Scholar.Metrics do
     y_score = Nx.take_along_axis(y_score, desc_score_indices)
     y_true = Nx.take_along_axis(y_true, desc_score_indices)
 
+    sample_weights =
+      if Nx.rank(sample_weights) == 0,
+        do: Nx.broadcast(Nx.tensor(1, type: Nx.type(sample_weights)), y_true),
+        else: sample_weights
+
     weight = Nx.take_along_axis(sample_weights, desc_score_indices)
 
     threshold_idxs =
@@ -583,25 +588,15 @@ defmodule Scholar.Metrics do
         [0.10000000149011612, 0.3499999940395355, 0.4000000059604645, 0.800000011920929]
       >
   """
-  defn precision_recall_curve(y_true, probabilities_predicted, distinct_value_indices, weights) do
+  defn precision_recall_curve(
+         y_true,
+         probabilities_predicted,
+         distinct_value_indices,
+         weights \\ 1
+       ) do
     num_samples = Nx.axis_size(y_true, 0)
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
 
-    precision_recall_curve_n(y_true, probabilities_predicted, distinct_value_indices, weights)
-  end
-
-  @doc ~S"""
-  Compute precision-recall pairs for different probability thresholds.
-
-  This is equivalent to calling `Scholar.Metrics.precision_recall_curve/4` with weights set to ones.
-  """
-  defn precision_recall_curve(y_true, probabilities_predicted, distinct_value_indices) do
-    weights = Nx.broadcast(Nx.tensor(1, type: to_float_type(y_true)), y_true)
-
-    precision_recall_curve_n(y_true, probabilities_predicted, distinct_value_indices, weights)
-  end
-
-  defnp precision_recall_curve_n(y_true, probabilities_predicted, distinct_value_indices, weights) do
     {fps, tps, thresholds} =
       binary_clf_curve(y_true, probabilities_predicted, distinct_value_indices, weights)
 
@@ -643,31 +638,11 @@ defmodule Scholar.Metrics do
          y_true,
          probabilities_predicted,
          distinct_value_indices,
-         sample_weights
+         weights \\ 1
        ) do
     num_samples = Nx.axis_size(y_true, 0)
-    weights = validate_weights(sample_weights, num_samples, type: to_float_type(y_true))
+    weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
 
-    average_precision_score_n(y_true, probabilities_predicted, distinct_value_indices, weights)
-  end
-
-  @doc ~S"""
-  Compute average precision (AP) from prediction scores.
-
-  This is equivalent to calling `Scholar.Metrics.average_precision_score/4` with weights set to ones.
-  """
-  defn average_precision_score(y_true, probabilities_predicted, distinct_value_indices) do
-    weights = Nx.broadcast(Nx.tensor(1, type: to_float_type(y_true)), y_true)
-
-    average_precision_score_n(y_true, probabilities_predicted, distinct_value_indices, weights)
-  end
-
-  defnp average_precision_score_n(
-          y_true,
-          probabilities_predicted,
-          distinct_value_indices,
-          weights
-        ) do
     {precision, recall, _thresholds} =
       precision_recall_curve(y_true, probabilities_predicted, distinct_value_indices, weights)
 
@@ -703,23 +678,10 @@ defmodule Scholar.Metrics do
         [1.7999999523162842, 0.800000011920929, 0.4000000059604645, 0.3499999940395355, 0.10000000149011612]
       >
   """
-  defn roc_curve(y_true, y_score, distinct_value_indices, weights) do
+  defn roc_curve(y_true, y_score, distinct_value_indices, weights \\ 1) do
     num_samples = Nx.axis_size(y_true, 0)
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
-    roc_curve_n(y_true, y_score, distinct_value_indices, weights)
-  end
 
-  @doc ~S"""
-  Compute Receiver operating characteristic (ROC).
-
-  This is equivalent to calling `Scholar.Metrics.roc_curve/4` with weights set to ones.
-  """
-  defn roc_curve(y_true, y_score, distinct_value_indices) do
-    weights = Nx.broadcast(Nx.tensor(1, type: to_float_type(y_true)), y_true)
-    roc_curve_n(y_true, y_score, distinct_value_indices, weights)
-  end
-
-  defnp roc_curve_n(y_true, y_score, distinct_value_indices, weights) do
     check_shape(y_true, y_score)
 
     {fps, tps, thresholds_unpadded} =
@@ -756,18 +718,10 @@ defmodule Scholar.Metrics do
         0.75
       >
   """
-  defn roc_auc_score(y_true, y_score, distinct_value_indices, weights) do
+  defn roc_auc_score(y_true, y_score, distinct_value_indices, weights \\ 1) do
+    num_samples = Nx.axis_size(y_true, 0)
+    weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
     {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
-    auc(fpr, tpr)
-  end
-
-  @doc ~S"""
-  Compute Area Under the Receiver Operating Characteristic Curve (ROC AUC) from prediction scores.
-
-  This is equivalent to calling `Nx.roc_auc_score/4` with weights set to ones.
-  """
-  defn roc_auc_score(y_true, y_score, distinct_value_indices) do
-    {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices)
     auc(fpr, tpr)
   end
 
