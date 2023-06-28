@@ -593,7 +593,7 @@ defmodule Scholar.Metrics do
   @doc ~S"""
   Compute precision-recall pairs for different probability thresholds.
 
-  This is equivalent to calling `Nx.precision_recall_curve/4` with weights set to ones.
+  This is equivalent to calling `Scholar.Metrics.precision_recall_curve/4` with weights set to ones.
   """
   defn precision_recall_curve(y_true, probabilities_predicted, distinct_value_indices) do
     weights = Nx.broadcast(Nx.tensor(1, type: to_float_type(y_true)), y_true)
