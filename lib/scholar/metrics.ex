@@ -617,6 +617,54 @@ defmodule Scholar.Metrics do
      Nx.concatenate([Nx.reverse(recall), Nx.tensor([0])], axis: 0), Nx.reverse(thresholds)}
   end
 
+
+  @doc ~S"""
+  Compute average precision (AP) from prediction scores.
+
+  AP summarizes a precision-recall curve as the weighted mean of precisions achieved at
+  each threshold, with the increase in recall from the previous threshold used as the weight:
+  $$ AP = sum_n (R_n - R_{n-1}) P_n $$
+
+  where $ P_n $ and $ R_n $ are the precision and recall at the nth threshold.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 0, 1, 1])
+      iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
+      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
+      iex> weights = Nx.tensor([1, 1, 2, 2])
+      iex> ap = Scholar.Metrics.average_precision_score(y_true, scores, distinct_value_indices, weights)
+      iex> ap
+      #Nx.Tensor<
+        f32
+        0.8999999761581421
+      >
+  """
+  defn average_precision_score(y_true, probabilities_predicted, distinct_value_indices, sample_weights) do
+    num_samples = Nx.axis_size(y_true, 0)
+    weights = validate_weights(sample_weights, num_samples, type: to_float_type(y_true))
+
+    average_precision_score_n(y_true, probabilities_predicted, distinct_value_indices, weights)
+  end
+
+
+  @doc ~S"""
+  Compute average precision (AP) from prediction scores.
+
+  This is equivalent to calling `Scholar.Metrics.average_precision_score/4` with weights set to ones.
+  """
+  defn average_precision_score(y_true, probabilities_predicted, distinct_value_indices) do
+    weights = Nx.broadcast(Nx.tensor(1, type: to_float_type(y_true)), y_true)
+
+    average_precision_score_n(y_true, probabilities_predicted, distinct_value_indices, weights)
+  end
+
+  defnp average_precision_score_n(y_true, probabilities_predicted, distinct_value_indices, weights) do
+    {precision, recall, _thresholds} =
+      precision_recall_curve(y_true, probabilities_predicted, distinct_value_indices, weights)
+    -Nx.sum(Nx.diff(recall) * precision[0..-2//1])
+  end
+
   # TODO implement :drop_intermediate option when dynamic shapes will be available
   @doc ~S"""
   Compute Receiver operating characteristic (ROC).
