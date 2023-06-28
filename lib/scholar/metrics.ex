@@ -605,8 +605,13 @@ defmodule Scholar.Metrics do
     {fps, tps, thresholds} =
       binary_clf_curve(y_true, probabilities_predicted, distinct_value_indices, weights)
 
-    precision = safe_division(tps, tps + fps)
-    recall = safe_division(tps, tps[[-1]])
+    precision_denominator = Nx.select(tps + fps == 0, 1, tps + fps)
+    precision = Nx.select(tps + fps == 0, 1, tps / precision_denominator)
+
+    recall =
+      if tps[[-1]] == 0.0,
+        do: Nx.broadcast(Nx.tensor(1.0, type: Nx.type(tps)), tps),
+        else: tps / tps[[-1]]
 
     {Nx.concatenate([Nx.reverse(precision), Nx.tensor([1])], axis: 0),
      Nx.concatenate([Nx.reverse(recall), Nx.tensor([0])], axis: 0), Nx.reverse(thresholds)}
