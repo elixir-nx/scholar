@@ -199,7 +199,7 @@ defmodule Scholar.Linear.PolynomialRegression do
 
     Enum.map(0..(n_features - 1), fn nf ->
       previous_degree
-      |> Enum.slice(nf..-1)
+      |> Enum.slice(nf..-1//1)
       |> Nx.concatenate(axis: 1)
       |> compute_column(x, nf)
     end)
