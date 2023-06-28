@@ -542,12 +542,6 @@ defmodule Scholar.Metrics do
     desc_score_indices = Nx.argsort(y_score, direction: :desc)
     y_score = Nx.take_along_axis(y_score, desc_score_indices)
     y_true = Nx.take_along_axis(y_true, desc_score_indices)
-
-    sample_weights =
-      if Nx.rank(sample_weights) == 0,
-        do: Nx.broadcast(Nx.tensor(1, type: Nx.type(sample_weights)), y_true),
-        else: sample_weights
-
     weight = Nx.take_along_axis(sample_weights, desc_score_indices)
 
     threshold_idxs =
@@ -592,7 +586,7 @@ defmodule Scholar.Metrics do
          y_true,
          probabilities_predicted,
          distinct_value_indices,
-         weights \\ 1
+         weights \\ 1.0
        ) do
     num_samples = Nx.axis_size(y_true, 0)
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
@@ -638,7 +632,7 @@ defmodule Scholar.Metrics do
          y_true,
          probabilities_predicted,
          distinct_value_indices,
-         weights \\ 1
+         weights \\ 1.0
        ) do
     num_samples = Nx.axis_size(y_true, 0)
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
@@ -678,7 +672,7 @@ defmodule Scholar.Metrics do
         [1.7999999523162842, 0.800000011920929, 0.4000000059604645, 0.3499999940395355, 0.10000000149011612]
       >
   """
-  defn roc_curve(y_true, y_score, distinct_value_indices, weights \\ 1) do
+  defn roc_curve(y_true, y_score, distinct_value_indices, weights \\ 1.0) do
     num_samples = Nx.axis_size(y_true, 0)
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
 
@@ -718,7 +712,7 @@ defmodule Scholar.Metrics do
         0.75
       >
   """
-  defn roc_auc_score(y_true, y_score, distinct_value_indices, weights \\ 1) do
+  defn roc_auc_score(y_true, y_score, distinct_value_indices, weights \\ 1.0) do
     num_samples = Nx.axis_size(y_true, 0)
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
     {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
