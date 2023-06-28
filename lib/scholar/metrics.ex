@@ -617,7 +617,6 @@ defmodule Scholar.Metrics do
      Nx.concatenate([Nx.reverse(recall), Nx.tensor([0])], axis: 0), Nx.reverse(thresholds)}
   end
 
-
   @doc ~S"""
   Compute average precision (AP) from prediction scores.
 
@@ -640,13 +639,17 @@ defmodule Scholar.Metrics do
         0.8999999761581421
       >
   """
-  defn average_precision_score(y_true, probabilities_predicted, distinct_value_indices, sample_weights) do
+  defn average_precision_score(
+         y_true,
+         probabilities_predicted,
+         distinct_value_indices,
+         sample_weights
+       ) do
     num_samples = Nx.axis_size(y_true, 0)
     weights = validate_weights(sample_weights, num_samples, type: to_float_type(y_true))
 
     average_precision_score_n(y_true, probabilities_predicted, distinct_value_indices, weights)
   end
-
 
   @doc ~S"""
   Compute average precision (AP) from prediction scores.
@@ -659,9 +662,15 @@ defmodule Scholar.Metrics do
     average_precision_score_n(y_true, probabilities_predicted, distinct_value_indices, weights)
   end
 
-  defnp average_precision_score_n(y_true, probabilities_predicted, distinct_value_indices, weights) do
+  defnp average_precision_score_n(
+          y_true,
+          probabilities_predicted,
+          distinct_value_indices,
+          weights
+        ) do
     {precision, recall, _thresholds} =
       precision_recall_curve(y_true, probabilities_predicted, distinct_value_indices, weights)
+
     -Nx.sum(Nx.diff(recall) * precision[0..-2//1])
   end
 
