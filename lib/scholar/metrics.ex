@@ -555,6 +555,63 @@ defmodule Scholar.Metrics do
     {fps, tps, Nx.take(y_score, threshold_idxs)}
   end
 
+  @doc ~S"""
+  Compute precision-recall pairs for different probability thresholds.
+
+  Note: this implementation is restricted to the binary classification task.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 0, 1, 1])
+      iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
+      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
+      iex> weights = Nx.tensor([1, 1, 2, 2])
+      iex> {precision, recall, thresholds} = Scholar.Metrics.precision_recall_curve(y_true, scores, distinct_value_indices, weights)
+      iex> precision
+      #Nx.Tensor<
+        f32[5]
+        [0.6666666865348816, 0.800000011920929, 0.6666666865348816, 1.0, 1.0]
+      >
+      iex> recall
+      #Nx.Tensor<
+        f32[5]
+        [1.0, 1.0, 0.5, 0.5, 0.0]
+      >
+      iex> thresholds
+      #Nx.Tensor<
+        f32[4]
+        [0.10000000149011612, 0.3499999940395355, 0.4000000059604645, 0.800000011920929]
+      >
+  """
+  defn precision_recall_curve(y_true, probabilities_predicted, distinct_value_indices, weights) do
+    num_samples = Nx.axis_size(y_true, 0)
+    weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
+
+    precision_recall_curve_n(y_true, probabilities_predicted, distinct_value_indices, weights)
+  end
+
+  @doc ~S"""
+  Compute precision-recall pairs for different probability thresholds.
+
+  This is equivalent to calling `Nx.precision_recall_curve/4` with weights set to ones.
+  """
+  defn precision_recall_curve(y_true, probabilities_predicted, distinct_value_indices) do
+    weights = Nx.broadcast(Nx.tensor(1, type: to_float_type(y_true)), y_true)
+
+    precision_recall_curve_n(y_true, probabilities_predicted, distinct_value_indices, weights)
+  end
+
+  defnp precision_recall_curve_n(y_true, probabilities_predicted, distinct_value_indices, weights) do
+    {fps, tps, thresholds} =
+      binary_clf_curve(y_true, probabilities_predicted, distinct_value_indices, weights)
+
+    precision = safe_division(tps, tps + fps)
+    recall = safe_division(tps, tps[[-1]])
+
+    {Nx.concatenate([Nx.reverse(precision), Nx.tensor([1])], axis: 0),
+     Nx.concatenate([Nx.reverse(recall), Nx.tensor([0])], axis: 0), Nx.reverse(thresholds)}
+  end
+
   # TODO implement :drop_intermediate option when dynamic shapes will be available
   @doc ~S"""
   Compute Receiver operating characteristic (ROC).
