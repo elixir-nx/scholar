@@ -46,7 +46,26 @@ defmodule Scholar.Metrics do
         ]
       ]
 
+  confusion_matrix_schema =
+    general_schema ++
+      [
+        sample_weights: [
+          type: {:custom, Scholar.Options, :weights, []},
+          doc: """
+          Sample weights of the observations.
+          """
+        ],
+        normalize: [
+          type: {:in, [true, :predicted, :all]},
+          doc: """
+          Normalizes confusion matrix over the `:true` (rows), `:predicted` (columns)
+          conditions or `:all` the population. If `nil`, confusion matrix will not be normalized.
+          """
+        ]
+      ]
+
   @general_schema NimbleOptions.new!(general_schema)
+  @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
 
   # Standard Metrics
@@ -332,28 +351,59 @@ defmodule Scholar.Metrics do
       iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: {:u, 32})
       iex> Scholar.Metrics.confusion_matrix(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
-        u64[3][3]
+        f32[3][3]
         [
-          [1, 1, 0],
-          [1, 0, 1],
-          [0, 0, 2]
+          [1.0, 1.0, 0.0],
+          [1.0, 0.0, 1.0],
+          [0.0, 0.0, 2.0]
+        ]
+      >
+
+      iex> y_true = Nx.tensor([0, 0, 1, 1, 2, 2], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: {:u, 32})
+      iex> sample_weights = [2, 5, 1, 1.5, 2, 8]
+      iex> Scholar.Metrics.confusion_matrix(y_true, y_pred, num_classes: 3, sample_weights: sample_weights, normalize: :predicted)
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [0.6666666865348816, 1.0, 0.0],
+          [0.3333333432674408, 0.0, 0.1304347813129425],
+          [0.0, 0.0, 0.8695651888847351]
         ]
       >
   """
   deftransform confusion_matrix(y_true, y_pred, opts \\ []) do
-    confusion_matrix_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
+    confusion_matrix_n(y_true, y_pred, NimbleOptions.validate!(opts, @confusion_matrix_schema))
   end
 
   defnp confusion_matrix_n(y_true, y_pred, opts) do
     check_shape(y_pred, y_true)
+    weights = validate_weights(opts[:sample_weights], Nx.axis_size(y_true, 0))
+    weights = if Nx.rank(weights) == 0, do: Nx.broadcast(weights, y_true), else: weights
+    non_uniform_weights = Nx.any(Nx.diff(weights) != 0.0)
 
     num_classes = check_num_classes(opts[:num_classes])
 
     zeros = Nx.broadcast(Nx.u64(0), {num_classes, num_classes})
     indices = Nx.stack([y_true, y_pred], axis: 1)
     updates = Nx.broadcast(Nx.u64(1), y_true)
+    updates = if non_uniform_weights, do: updates * weights, else: Nx.as_type(updates, :u64)
 
-    Nx.indexed_add(zeros, indices, updates)
+    cm = Nx.indexed_add(zeros, indices, updates)
+
+    case opts[:normalize] do
+      true ->
+        cm / Nx.sum(cm, axes: [1], keep_axes: true)
+
+      :predicted ->
+        cm / Nx.sum(cm, axes: [0], keep_axes: true)
+
+      :all ->
+        cm / Nx.sum(cm)
+
+      _ ->
+        cm
+    end
   end
 
   @doc """
