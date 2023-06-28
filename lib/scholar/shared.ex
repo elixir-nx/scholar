@@ -55,7 +55,7 @@ defmodule Scholar.Shared do
       is_nil(weights) ->
         Nx.tensor(1.0, type: type)
 
-      Nx.is_tensor(weights) and Nx.shape(weights) == {num_samples} ->
+      Nx.is_tensor(weights) and (Nx.shape(weights) == {num_samples} or Nx.rank(weights) == 0) ->
         Nx.as_type(weights, type)
 
       is_list(weights) and length(weights) == num_samples ->
