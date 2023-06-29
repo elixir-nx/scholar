@@ -64,8 +64,28 @@ defmodule Scholar.Metrics do
         ]
       ]
 
+  balanced_accuracy_schema =
+    general_schema ++
+      [
+        sample_weights: [
+          type: {:custom, Scholar.Options, :weights, []},
+          doc: """
+          Sample weights of the observations.
+          """
+        ],
+        adjusted: [
+          type: :boolean,
+          default: false,
+          doc: """
+          If `true`, the balanced accuracy is adjusted for chance
+          (depends on the number of classes).
+          """
+        ]
+      ]
+
   @general_schema NimbleOptions.new!(general_schema)
   @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
+  @balanced_accuracy_schema NimbleOptions.new!(balanced_accuracy_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
 
   # Standard Metrics
@@ -406,6 +426,65 @@ defmodule Scholar.Metrics do
 
       _ ->
         cm
+    end
+  end
+
+  @doc """
+  Computes the balanced accuracy score for multi-class classification
+
+  ## Options
+
+  #{NimbleOptions.docs(@balanced_accuracy_schema)}
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 2, 0, 1, 2], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 0, 0, 1], type: {:u, 32})
+      iex> Scholar.Metrics.balanced_accuracy_score(y_true, y_pred, num_classes: 3)
+      #Nx.Tensor<
+        f32
+        0.3333333432674408
+      >
+      iex> y_true = Nx.tensor([0, 1, 2, 0, 1, 2], type: {:u, 32})
+      iex> y_pred = Nx.tensor([0, 2, 1, 0, 0, 1], type: {:u, 32})
+      iex> sample_weights = [1, 1, 1, 2, 2, 2]
+      iex> Scholar.Metrics.balanced_accuracy_score(y_true, y_pred, num_classes: 3, sample_weights: sample_weights, adjusted: true)
+      #Nx.Tensor<
+        f32
+        0.0
+      >
+  """
+  deftransform balanced_accuracy_score(y_true, y_pred, opts \\ []) do
+    opts = NimbleOptions.validate!(opts, @balanced_accuracy_schema)
+
+    balanced_accuracy_score_n(
+      y_true,
+      y_pred,
+      NimbleOptions.validate!(opts, @balanced_accuracy_schema)
+    )
+  end
+
+  defnp balanced_accuracy_score_n(y_true, y_pred, opts) do
+    check_shape(y_pred, y_true)
+
+    cm =
+      confusion_matrix(y_true, y_pred,
+        sample_weights: opts[:sample_weights],
+        num_classes: opts[:num_classes]
+      )
+
+    per_class = Nx.take_diagonal(cm)
+    sums = Nx.sum(cm, axes: [1])
+    num_zeros = Nx.sum(sums == 0)
+    per_class = per_class / Nx.select(sums == 0, Nx.f32(1), sums)
+    score = Nx.sum(per_class) / (opts[:num_classes] - num_zeros)
+
+    if opts[:adjusted] do
+      num_classes = opts[:num_classes] - num_zeros
+      chance = 1 / num_classes
+      (score - chance) / (1 - chance)
+    else
+      score
     end
   end
 
