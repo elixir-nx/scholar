@@ -351,11 +351,11 @@ defmodule Scholar.Metrics do
       iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: {:u, 32})
       iex> Scholar.Metrics.confusion_matrix(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
-        f32[3][3]
+        u64[3][3]
         [
-          [1.0, 1.0, 0.0],
-          [1.0, 0.0, 1.0],
-          [0.0, 0.0, 2.0]
+          [1, 1, 0],
+          [1, 0, 1],
+          [0, 0, 2]
         ]
       >
 
@@ -373,21 +373,24 @@ defmodule Scholar.Metrics do
       >
   """
   deftransform confusion_matrix(y_true, y_pred, opts \\ []) do
-    confusion_matrix_n(y_true, y_pred, NimbleOptions.validate!(opts, @confusion_matrix_schema))
+    opts = NimbleOptions.validate!(opts, @confusion_matrix_schema)
+
+    weights =
+      if opts[:sample_weights] == nil,
+        do: Nx.u64(1),
+        else: validate_weights(opts[:sample_weights], Nx.axis_size(y_true, 0))
+
+    confusion_matrix_n(y_true, y_pred, weights, opts)
   end
 
-  defnp confusion_matrix_n(y_true, y_pred, opts) do
+  defnp confusion_matrix_n(y_true, y_pred, weights, opts) do
     check_shape(y_pred, y_true)
-    weights = validate_weights(opts[:sample_weights], Nx.axis_size(y_true, 0))
-    weights = if Nx.rank(weights) == 0, do: Nx.broadcast(weights, y_true), else: weights
-    non_uniform_weights = Nx.any(Nx.diff(weights) != 0.0)
 
     num_classes = check_num_classes(opts[:num_classes])
 
     zeros = Nx.broadcast(Nx.u64(0), {num_classes, num_classes})
     indices = Nx.stack([y_true, y_pred], axis: 1)
-    updates = Nx.broadcast(Nx.u64(1), y_true)
-    updates = if non_uniform_weights, do: updates * weights, else: Nx.as_type(updates, :u64)
+    updates = Nx.broadcast(Nx.u64(1), y_true) * weights
 
     cm = Nx.indexed_add(zeros, indices, updates)
 
