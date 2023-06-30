@@ -457,11 +457,7 @@ defmodule Scholar.Metrics do
   deftransform balanced_accuracy_score(y_true, y_pred, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @balanced_accuracy_schema)
 
-    balanced_accuracy_score_n(
-      y_true,
-      y_pred,
-      NimbleOptions.validate!(opts, @balanced_accuracy_schema)
-    )
+    balanced_accuracy_score_n(y_true, y_pred, opts)
   end
 
   defnp balanced_accuracy_score_n(y_true, y_pred, opts) do
