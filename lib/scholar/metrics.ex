@@ -64,9 +64,27 @@ defmodule Scholar.Metrics do
         ]
       ]
 
+  brier_score_loss_schema = [
+    sample_weights: [
+      type: {:custom, Scholar.Options, :weights, []},
+      default: Nx.tensor(1.0),
+      doc: """
+      Sample weights of the observations.
+      """
+    ],
+    pos_label: [
+      type: :integer,
+      default: 1,
+      doc: """
+      Label of the positive class.
+      """
+    ]
+  ]
+
   @general_schema NimbleOptions.new!(general_schema)
   @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
+  @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
 
   # Standard Metrics
 
@@ -770,6 +788,48 @@ defmodule Scholar.Metrics do
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
     {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
     auc(fpr, tpr)
+  end
+
+  @doc """
+  Compute the Brier score loss.
+
+  The smaller the Brier score loss, the better, hence the naming with "loss".
+  The Brier score measures the mean squared difference between the predicted
+  probability and the actual outcome. The Brier score always
+  takes on a value between zero and one, since this is the largest
+  possible difference between a predicted probability (which must be
+  between zero and one) and the actual outcome (which can take on values
+  of only 0 and 1). It can be decomposed as the sum of refinement loss and
+  calibration loss.
+
+  The Brier score is appropriate only for binary outcomes.
+
+  ## Options
+
+  #{NimbleOptions.docs(@brier_score_loss_schema)}
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 0])
+      iex> y_prob = Nx.tensor([0.1, 0.9, 0.8, 0.3])
+      iex> Scholar.Metrics.brier_score_loss(y_true, y_prob)
+      #Nx.Tensor<
+        f32
+        0.03750000149011612
+      >
+  """
+  deftransform brier_score_loss(y_true, y_prob, opts \\ []) do
+    if Nx.reduce_max(y_prob) > 1.0 == Nx.u8(1) or Nx.reduce_min(y_prob) < 0.0 == Nx.u8(1) do
+      raise ArgumentError, "y_prob must be in [0, 1] range"
+    end
+
+    brier_score_loss_n(y_true, y_prob, NimbleOptions.validate!(opts, @brier_score_loss_schema))
+  end
+
+  defnp brier_score_loss_n(y_true, y_prob, opts) do
+    weights = validate_weights(opts[:sample_weights], Nx.axis_size(y_true, 0), type: :f32)
+    y_true = y_true == opts[:pos_label]
+    Nx.weighted_mean((y_true - y_prob) ** 2, weights)
   end
 
   deftransformp check_num_classes(num_classes) do
