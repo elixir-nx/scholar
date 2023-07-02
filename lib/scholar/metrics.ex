@@ -900,7 +900,7 @@ defmodule Scholar.Metrics do
 
   defnp brier_score_loss_n(y_true, y_prob, opts) do
     y_prob = Nx.clip(y_prob, 0.0, 1.0)
-    weights = validate_weights(opts[:sample_weights], Nx.axis_size(y_true, 0), type: :f32)
+    weights = validate_weights(opts[:sample_weights], Nx.axis_size(y_true, 0), type: to_float_type(y_true))
     y_true = y_true == opts[:pos_label]
     Nx.weighted_mean((y_true - y_prob) ** 2, weights)
   end
