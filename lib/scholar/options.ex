@@ -67,7 +67,7 @@ defmodule Scholar.Options do
 
   def weights(weights) do
     if is_nil(weights) or
-         (Nx.is_tensor(weights) and (Nx.rank(weights) == 1 or Nx.rank(weights) == 0)) or
+         (Nx.is_tensor(weights) and Nx.rank(weights) in 0..1) or
          (is_list(weights) and Enum.all?(weights, &is_number/1)) do
       {:ok, weights}
     else

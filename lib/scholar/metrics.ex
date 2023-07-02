@@ -64,6 +64,23 @@ defmodule Scholar.Metrics do
         ]
       ]
 
+  brier_score_loss_schema = [
+    sample_weights: [
+      type: {:custom, Scholar.Options, :weights, []},
+      default: Nx.tensor(1.0),
+      doc: """
+      Sample weights of the observations.
+      """
+    ],
+    pos_label: [
+      type: :integer,
+      default: 1,
+      doc: """
+      Label of the positive class.
+      """
+    ]
+  ]
+
   balanced_accuracy_schema =
     general_schema ++
       [
@@ -105,6 +122,7 @@ defmodule Scholar.Metrics do
   @balanced_accuracy_schema NimbleOptions.new!(balanced_accuracy_schema)
   @cohen_kappa_schema NimbleOptions.new!(cohen_kappa_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
+  @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
 
   # Standard Metrics
 
@@ -863,6 +881,49 @@ defmodule Scholar.Metrics do
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
     {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
     auc(fpr, tpr)
+  end
+
+  @doc """
+  Compute the Brier score loss.
+
+  The smaller the Brier score loss, the better, hence the naming with "loss".
+  The Brier score measures the mean squared difference between the predicted
+  probability and the actual outcome. The Brier score always
+  takes on a value between zero and one, since this is the largest
+  possible difference between a predicted probability (which must be
+  between zero and one) and the actual outcome (which can take on values
+  of only 0 and 1). It can be decomposed as the sum of refinement loss and
+  calibration loss. If predicted probabilities are not in the interval
+  [0, 1], they will be clipped.
+
+  The Brier score is appropriate only for binary outcomes.
+
+  ## Options
+
+  #{NimbleOptions.docs(@brier_score_loss_schema)}
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 0])
+      iex> y_prob = Nx.tensor([0.1, 0.9, 0.8, 0.3])
+      iex> Scholar.Metrics.brier_score_loss(y_true, y_prob)
+      #Nx.Tensor<
+        f32
+        0.03750000149011612
+      >
+  """
+  deftransform brier_score_loss(y_true, y_prob, opts \\ []) do
+    opts = NimbleOptions.validate!(opts, @brier_score_loss_schema)
+    {pos_label, opts} = Keyword.pop!(opts, :pos_label)
+    brier_score_loss_n(y_true, y_prob, pos_label, opts)
+  end
+
+  defnp brier_score_loss_n(y_true, y_prob, pos_label, opts) do
+    y_prob = Nx.clip(y_prob, 0.0, 1.0)
+    size = Nx.axis_size(y_true, 0)
+    weights = validate_weights(opts[:sample_weights], size, type: to_float_type(y_true))
+    y_true = y_true == pos_label
+    Nx.weighted_mean((y_true - y_prob) ** 2, weights)
   end
 
   @doc """
