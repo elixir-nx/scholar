@@ -64,7 +64,6 @@ defmodule Scholar.Metrics do
         ]
       ]
 
-
   brier_score_loss_schema = [
     sample_weights: [
       type: {:custom, Scholar.Options, :weights, []},
