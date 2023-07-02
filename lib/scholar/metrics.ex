@@ -914,7 +914,7 @@ defmodule Scholar.Metrics do
   """
   deftransform brier_score_loss(y_true, y_prob, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @brier_score_loss_schema)
-    pos_label = Keyword.pop!(opts, :pos_label)
+    {pos_label, opts} = Keyword.pop!(opts, :pos_label)
     brier_score_loss_n(y_true, y_prob, pos_label, opts)
   end
 
