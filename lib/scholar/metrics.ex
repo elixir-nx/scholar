@@ -83,9 +83,27 @@ defmodule Scholar.Metrics do
         ]
       ]
 
+  cohen_kappa_schema =
+    general_schema ++
+      [
+        weights: [
+          type: {:custom, Scholar.Options, :weights, []},
+          doc: """
+          Weighting to calculate the score.
+          """
+        ],
+        weighting_type: [
+          type: {:in, [:linear, :quadratic]},
+          doc: """
+          Weighting type to calculate the score.
+          """
+        ]
+      ]
+
   @general_schema NimbleOptions.new!(general_schema)
   @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
   @balanced_accuracy_schema NimbleOptions.new!(balanced_accuracy_schema)
+  @cohen_kappa_schema NimbleOptions.new!(cohen_kappa_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
 
   # Standard Metrics
@@ -845,6 +863,60 @@ defmodule Scholar.Metrics do
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
     {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
     auc(fpr, tpr)
+  end
+
+  @doc """
+  Compute Cohen's kappa: a statistic that measures inter-annotator agreement.
+
+  ## Options
+
+  #{NimbleOptions.docs(@cohen_kappa_schema)}
+
+  ## Examples
+
+      iex> y1 = Nx.tensor([0, 1, 1, 0, 1, 2])
+      iex> y2 = Nx.tensor([0, 2, 1, 0, 0, 1])
+      iex> Scholar.Metrics.cohen_kappa_score(y1, y2, num_classes: 3)
+      #Nx.Tensor<
+        f32
+        0.21739131212234497
+      >
+
+      iex> y1 = Nx.tensor([0, 1, 1, 0, 1, 2])
+      iex> y2 = Nx.tensor([0, 2, 1, 0, 0, 1])
+      iex> Scholar.Metrics.cohen_kappa_score(y1, y2, num_classes: 3, weighting_type: :linear)
+      #Nx.Tensor<
+        f32
+        0.3571428060531616
+      >
+  """
+  deftransform cohen_kappa_score(y1, y2, opts \\ []) do
+    cohen_kappa_score_n(y1, y2, NimbleOptions.validate!(opts, @cohen_kappa_schema))
+  end
+
+  defnp cohen_kappa_score_n(y1, y2, opts) do
+    num_classes = opts[:num_classes]
+    cm = confusion_matrix(y1, y2, sample_weights: opts[:sample_weights], num_classes: num_classes)
+    sum0 = Nx.sum(cm, axes: [0])
+    sum1 = Nx.sum(cm, axes: [1])
+    expected = Nx.outer(sum0, sum1) / Nx.sum(sum0)
+
+    weights_matrix =
+      case opts[:weighting_type] do
+        nil ->
+          wm = Nx.broadcast(1, cm)
+          wm - Nx.eye(Nx.shape(wm))
+
+        :linear ->
+          wm = Nx.tile(Nx.iota({num_classes}), [num_classes, 1])
+          Nx.abs(wm - Nx.transpose(wm))
+
+        :quadratic ->
+          wm = Nx.tile(Nx.iota({num_classes}), [num_classes, 1])
+          (wm - Nx.transpose(wm)) ** 2
+      end
+
+    1 - Nx.sum(weights_matrix * cm) / Nx.sum(weights_matrix * expected)
   end
 
   deftransformp check_num_classes(num_classes) do
