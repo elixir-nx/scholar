@@ -800,7 +800,8 @@ defmodule Scholar.Metrics do
   possible difference between a predicted probability (which must be
   between zero and one) and the actual outcome (which can take on values
   of only 0 and 1). It can be decomposed as the sum of refinement loss and
-  calibration loss.
+  calibration loss. If predicted probabilities are not in the interval
+  [0, 1], they will be clipped.
 
   The Brier score is appropriate only for binary outcomes.
 
@@ -819,14 +820,11 @@ defmodule Scholar.Metrics do
       >
   """
   deftransform brier_score_loss(y_true, y_prob, opts \\ []) do
-    if Nx.reduce_max(y_prob) > 1.0 == Nx.u8(1) or Nx.reduce_min(y_prob) < 0.0 == Nx.u8(1) do
-      raise ArgumentError, "y_prob must be in [0, 1] range"
-    end
-
     brier_score_loss_n(y_true, y_prob, NimbleOptions.validate!(opts, @brier_score_loss_schema))
   end
 
   defnp brier_score_loss_n(y_true, y_prob, opts) do
+    y_prob = Nx.clip(y_prob, 0.0, 1.0)
     weights = validate_weights(opts[:sample_weights], Nx.axis_size(y_true, 0), type: :f32)
     y_true = y_true == opts[:pos_label]
     Nx.weighted_mean((y_true - y_prob) ** 2, weights)
