@@ -895,14 +895,16 @@ defmodule Scholar.Metrics do
       >
   """
   deftransform brier_score_loss(y_true, y_prob, opts \\ []) do
-    brier_score_loss_n(y_true, y_prob, NimbleOptions.validate!(opts, @brier_score_loss_schema))
+    opts = NimbleOptions.validate!(opts, @brier_score_loss_schema)
+    pos_label = Keyword.pop!(opts, :pos_label)
+    brier_score_loss_n(y_true, y_prob, pos_label, opts)
   end
 
-  defnp brier_score_loss_n(y_true, y_prob, opts) do
+  defnp brier_score_loss_n(y_true, y_prob, pos_label, opts) do
     y_prob = Nx.clip(y_prob, 0.0, 1.0)
     size = Nx.axis_size(y_true, 0)
     weights = validate_weights(opts[:sample_weights], size, type: to_float_type(y_true))
-    y_true = y_true == opts[:pos_label]
+    y_true = y_true == pos_label
     Nx.weighted_mean((y_true - y_prob) ** 2, weights)
   end
 
