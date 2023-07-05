@@ -68,7 +68,7 @@ defmodule Scholar.Shared do
   end
 
   deftransform valid_broadcast?(n_dims, old_shape, new_shape) do
-    valid_broadcast(Enum.to_list(0..n_dims-1), old_shape, new_shape)
+    valid_broadcast(Enum.to_list(0..(n_dims - 1)), old_shape, new_shape)
   end
 
   deftransform valid_broadcast([head | tail], old_shape, new_shape) do
