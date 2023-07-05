@@ -66,4 +66,18 @@ defmodule Scholar.Shared do
               "invalid value for :weights option: expected list or tensor of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
     end
   end
+
+  deftransform valid_broadcast?(n_dims, old_shape, new_shape) do
+    valid_broadcast(Enum.to_list(0..n_dims-1), old_shape, new_shape)
+  end
+
+  deftransform valid_broadcast([head | tail], old_shape, new_shape) do
+    old_dim = elem(old_shape, head)
+    new_dim = elem(new_shape, head)
+
+    (old_dim == 1 or old_dim == new_dim) and
+      valid_broadcast(tail, old_shape, new_shape)
+  end
+
+  deftransform valid_broadcast([], _old_shape, _new_shape), do: true
 end
