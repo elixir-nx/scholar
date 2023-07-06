@@ -67,17 +67,26 @@ defmodule Scholar.Shared do
     end
   end
 
-  deftransform valid_broadcast?(n_dims, old_shape, new_shape) do
-    valid_broadcast(Enum.to_list(0..(n_dims - 1)), old_shape, new_shape)
+  deftransform valid_broadcast?(n_dims, shape1, shape2) do
+    if tuple_size(shape1) != tuple_size(shape2) do
+      raise ArgumentError,
+            "expected shapes to have same rank, got #{inspect(tuple_size(shape1))} and #{inspect(tuple_size(shape2))}"
+    end
+
+    valid_broadcast(Enum.to_list(0..(n_dims - 1)), shape1, shape2)
   end
 
-  deftransform valid_broadcast([head | tail], old_shape, new_shape) do
-    old_dim = elem(old_shape, head)
-    new_dim = elem(new_shape, head)
+  deftransform valid_broadcast([head | tail], shape1, shape2) do
+    dim1 = elem(shape1, head)
+    dim2 = elem(shape2, head)
 
-    (old_dim == 1 or old_dim == new_dim) and
-      valid_broadcast(tail, old_shape, new_shape)
+    if not (dim1 == 1 or dim2 == 1 or dim2 == dim1) do
+      raise ArgumentError,
+            "Tensors must be broadcast compatible, got tensors with shapes #{inspect(shape1)} and #{inspect(shape2)}"
+    end
+
+    valid_broadcast(tail, shape1, shape2)
   end
 
-  deftransform valid_broadcast([], _old_shape, _new_shape), do: true
+  deftransform valid_broadcast([], _shape1, _shape2), do: true
 end

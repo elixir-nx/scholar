@@ -544,13 +544,10 @@ defmodule Scholar.Integrate do
         x_axis_size != y_axis_size ->
           raise ArgumentError, "x and y must have the same size along the given axis"
 
-        not valid_broadcast?(x_rank, x_shape, y_shape) ->
-          raise ArgumentError,
-                "x and y must be broadcast compatible with dimension #{inspect(axis)} of same size"
-
         true ->
           nil
       end
+      valid_broadcast?(x_rank, x_shape, y_shape)
     end
   end
 

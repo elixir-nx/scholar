@@ -63,7 +63,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.euclidean(x, y)
-      ** (ArgumentError) cannot broadcast tensor of dimensions {2} to {3}
+      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -126,7 +126,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
-      ** (ArgumentError) cannot broadcast tensor of dimensions {2} to {3}
+      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -189,7 +189,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.manhattan(x, y)
-      ** (ArgumentError) cannot broadcast tensor of dimensions {2} to {3}
+      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -252,7 +252,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.chebyshev(x, y)
-      ** (ArgumentError) cannot broadcast tensor of dimensions {2} to {3}
+      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -315,7 +315,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.minkowski(x, y)
-      ** (ArgumentError) cannot broadcast tensor of dimensions {2} to {3}
+      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -384,7 +384,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.cosine(x, y)
-      ** (ArgumentError) cannot broadcast tensor of dimensions {2} to {3}
+      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 3], [0, 0, 0], [5, 2, 4]])
       iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
@@ -477,7 +477,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.hamming(x, y)
-      ** (ArgumentError) cannot broadcast tensor of dimensions {2} to {3}
+      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 3], [0, 0, 0], [5, 2, 4]])
       iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
