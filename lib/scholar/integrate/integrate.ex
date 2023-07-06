@@ -547,6 +547,7 @@ defmodule Scholar.Integrate do
         true ->
           nil
       end
+
       valid_broadcast?(x_rank, x_shape, y_shape)
     end
   end
