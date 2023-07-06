@@ -63,7 +63,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.euclidean(x, y)
-      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -86,7 +86,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   defnp euclidean_n(x, y, opts) do
-    valid_broadcast?(Nx.rank(x), Nx.shape(x), Nx.shape(y))
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     diff = x - y
 
     (diff * diff)
@@ -126,7 +126,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
-      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -149,7 +149,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   defnp squared_euclidean_n(x, y, opts) do
-    valid_broadcast?(Nx.rank(x), Nx.shape(x), Nx.shape(y))
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     diff = x - y
 
     (diff * diff)
@@ -189,7 +189,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.manhattan(x, y)
-      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -212,7 +212,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   defnp manhattan_n(x, y, opts) do
-    valid_broadcast?(Nx.rank(x), Nx.shape(x), Nx.shape(y))
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
 
     (x - y)
     |> Nx.abs()
@@ -252,7 +252,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.chebyshev(x, y)
-      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -275,7 +275,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   defnp chebyshev_n(x, y, opts) do
-    valid_broadcast?(Nx.rank(x), Nx.shape(x), Nx.shape(y))
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
 
     (x - y)
     |> Nx.abs()
@@ -315,7 +315,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.minkowski(x, y)
-      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -338,7 +338,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   defnp minkowski_n(x, y, opts) do
-    valid_broadcast?(Nx.rank(x), Nx.shape(x), Nx.shape(y))
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     p = opts[:p]
 
     cond do
@@ -384,7 +384,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.cosine(x, y)
-      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 3], [0, 0, 0], [5, 2, 4]])
       iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
@@ -407,7 +407,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   defnp cosine_n(x, y, opts) do
-    valid_broadcast?(Nx.rank(x), Nx.shape(x), Nx.shape(y))
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     # Detect very small values that could lead to surprising
     # results and numerical stability issues. Every value smaller
     # than `cutoff` is considered small
@@ -477,7 +477,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.hamming(x, y)
-      ** (ArgumentError) Tensors must be broadcast compatible, got tensors with shapes {2} and {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 3], [0, 0, 0], [5, 2, 4]])
       iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
@@ -537,13 +537,13 @@ defmodule Scholar.Metrics.Distance do
   end
 
   defnp hamming_unweighted(x, y, opts) do
-    valid_broadcast?(Nx.rank(x), Nx.shape(x), Nx.shape(y))
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     result_type = Nx.Type.to_floating(Nx.Type.merge(Nx.type(x), Nx.type(y)))
     Nx.mean(x != y, axes: opts[:axes]) |> Nx.as_type(result_type)
   end
 
   defnp hamming_weighted(x, y, w, opts) do
-    valid_broadcast?(Nx.rank(x), Nx.shape(x), Nx.shape(y))
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     result_type = Nx.Type.to_floating(Nx.Type.merge(Nx.type(x), Nx.type(y)))
     w = Nx.as_type(w, result_type)
     Nx.weighted_mean(x != y, w, axes: opts[:axes]) |> Nx.as_type(result_type)
