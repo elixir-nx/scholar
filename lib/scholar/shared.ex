@@ -82,7 +82,7 @@ defmodule Scholar.Shared do
 
     if not (dim1 == 1 or dim2 == 1 or dim2 == dim1) do
       raise ArgumentError,
-            "Tensors must be broadcast compatible, got tensors with shapes #{inspect(shape1)} and #{inspect(shape2)}"
+            "tensors must be broadcast compatible, got tensors with shapes #{inspect(shape1)} and #{inspect(shape2)}"
     end
 
     valid_broadcast(tail, shape1, shape2)
