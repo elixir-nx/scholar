@@ -66,4 +66,27 @@ defmodule Scholar.Shared do
               "invalid value for :weights option: expected list or tensor of positive numbers of size #{num_samples}, got: #{inspect(weights)}"
     end
   end
+
+  deftransform valid_broadcast!(n_dims, shape1, shape2) do
+    if tuple_size(shape1) != tuple_size(shape2) do
+      raise ArgumentError,
+            "expected shapes to have same rank, got #{inspect(tuple_size(shape1))} and #{inspect(tuple_size(shape2))}"
+    end
+
+    valid_broadcast(n_dims, n_dims, shape1, shape2)
+  end
+
+  deftransformp valid_broadcast(0, _n_dims, _shape1, _shape2), do: true
+
+  deftransformp valid_broadcast(to_parse, n_dims, shape1, shape2) do
+    dim1 = elem(shape1, n_dims - to_parse)
+    dim2 = elem(shape2, n_dims - to_parse)
+
+    if not (dim1 == 1 or dim2 == 1 or dim2 == dim1) do
+      raise ArgumentError,
+            "tensors must be broadcast compatible, got tensors with shapes #{inspect(shape1)} and #{inspect(shape2)}"
+    end
+
+    valid_broadcast(to_parse - 1, n_dims, shape1, shape2)
+  end
 end
