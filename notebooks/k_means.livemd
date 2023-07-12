@@ -576,19 +576,6 @@ models =
 ```elixir
 image_boxes =
   for {model, num_clusters} <- Enum.zip(models, clusterings) do
-@@ -658,14 +483,6 @@ num_images = num_classes * samples_per_class
-
-<!-- livebook:{"output":true} -->
-
-```
-19:39:29.646 [info] TfrtCpuClient created.
-```
-
-<!-- livebook:{"output":true} -->
-
-```elixir
-image_boxes =
-  for {model, num_clusters} <- Enum.zip(models, clusterings) do
     repainted_x = Nx.take(model.clusters, model.labels)
 
     image_kino = tensor_to_image.(repainted_x)
