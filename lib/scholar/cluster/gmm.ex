@@ -74,37 +74,26 @@ defmodule Scholar.Cluster.GaussianMixture do
 
     The function returns a struct with the following parameters:
 
-    * `:weights` - ..
+    * `:weights` - The fractions of data sampled from each Gaussian, respectively.
 
     * `:means` - Means of the Gaussian components.
 
     * `:covariances` - Covariance matrices of the Gaussian components.
 
     * `:precisions_cholesky` - Cholesky decomposition of the precision matrices
-  	(inverse of covariance). This is useful for the inference.
+  	(inverses of covariances). This is useful for the model inference.
 
   ## Examples
 
       iex> key = Nx.Random.key(12)
-      iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
-      iex> Scholar.Cluster.KMeans.fit(x, num_clusters: 2, key: key)
-      %Scholar.Cluster.KMeans{
-        num_iterations: Nx.tensor(
-          2
-        ),
-        clusters: Nx.tensor(
-          [
-            [1.0, 2.5],
-            [2.0, 4.5]
-          ]
-        ),
-        inertia: Nx.tensor(
-          1.0
-        ),
-        labels: Nx.tensor(
-          [0, 1, 0, 1]
-        )
-      }
+      iex> x = Nx.tensor([[1, 2], [1, 4], [1, 0], [10, 2], [10, 4], [10, 0]])
+      iex> Scholar.Cluster.GaussianMixture.fit(x, num_gaussians: 2, key: key).means
+      Nx.tensor(
+        [
+					[1.0, 2.0],
+					[10.0, 2.0]
+				]
+      )
   """
   deftransform fit(x, opts \\ []) do
     if Nx.rank(x) != 2 do
@@ -198,14 +187,14 @@ defmodule Scholar.Cluster.GaussianMixture do
         }
       end
 
-    # %__MODULE__{
-    #   weights: weights,
-    #   means: means,
-    #   covariances: covariances,
-    #   precisions_cholesky: precisions_cholesky
-    # }
+    {weights, means, covariances, precisions_cholesky} = best_params
 
-    best_params
+    %__MODULE__{
+      weights: weights,
+      means: means,
+      covariances: covariances,
+      precisions_cholesky: precisions_cholesky
+    }
   end
 
   defnp init_params(key, x, opts) do
@@ -214,7 +203,6 @@ defmodule Scholar.Cluster.GaussianMixture do
     num_gaussians = opts[:num_gaussians]
     reg_covar = opts[:reg_covar]
 
-    # k_means_model = Scholar.Cluster.KMeans.fit(x, num_clusters: num_gaussians, num_runs: 1, key: key)
     # add key here
     k_means_model = Scholar.Cluster.KMeans.fit(x, num_clusters: num_gaussians, num_runs: 1)
     labels = k_means_model.labels
@@ -241,7 +229,6 @@ defmodule Scholar.Cluster.GaussianMixture do
   end
 
   defnp estimate_gaussian_parameters(x, resp, reg_covar) do
-    # consider adding a small number here as in scikit_learn
     nk = Nx.sum(resp, axes: [0])
     means = Nx.dot(Nx.transpose(resp), x) / nk
     covariances = estimate_gaussian_covariances(x, resp, nk, means, reg_covar)
@@ -304,13 +291,7 @@ defmodule Scholar.Cluster.GaussianMixture do
 
   defnp estimate_log_prob_resp(x, weights, means, precisions_cholesky) do
     weighted_log_prob = estimate_weighted_log_prob(x, weights, means, precisions_cholesky)
-
-    log_prob_norm =
-      weighted_log_prob
-      |> Nx.exp()
-      |> Nx.sum(axes: [1])
-      |> Nx.log()
-
+    log_prob_norm = logsumexp(weighted_log_prob)
     log_resp = weighted_log_prob - Nx.new_axis(log_prob_norm, 1)
     {log_prob_norm, log_resp}
   end
@@ -336,7 +317,7 @@ defmodule Scholar.Cluster.GaussianMixture do
         mean = means[k]
         precision_cholesky = precisions_cholesky[k]
         y = Nx.dot(x, precision_cholesky) - Nx.dot(mean, precision_cholesky)
-        slice = Nx.new_axis(Nx.sum(Nx.multiply(y, y), axes: [1]), 0)
+        slice = Nx.new_axis(Nx.sum(y * y, axes: [1]), 0)
 
         {
           Nx.put_slice(log_prob, [k, 0], slice),
@@ -345,11 +326,16 @@ defmodule Scholar.Cluster.GaussianMixture do
       end
 
     -0.5 * (num_features * Nx.log(2 * Nx.Constants.pi()) + Nx.transpose(log_prob)) + log_det
-    # log_prob
-    # 	|> Nx.transpose
-    # 	|> Nx.add(num_features * Nx.log(2 * Nx.Constants.pi))
-    # 	|> Nx.multiply(-0.5)
-    # 	|> Nx.add(log_det)
+  end
+
+  defnp logsumexp(weighted_log_prob) do
+    max = Nx.reduce_max(weighted_log_prob, axes: [1])
+    weighted_log_prob
+    |> Nx.subtract(Nx.new_axis(max, 1))
+    |> Nx.exp
+    |> Nx.sum(axes: [1])
+    |> Nx.log
+    |> Nx.add(max)
   end
 
   defnp compute_log_det_cholesky(precisions_cholesky) do
@@ -364,14 +350,14 @@ defmodule Scholar.Cluster.GaussianMixture do
 
   ## Return Values
 
-    It returns a tensor with clusters corresponding to the input.
+    It returns a tensor with Gaussian assignments for every input point.
 
   ## Examples
 
-      iex> key = Nx.Random.key(42)
-      iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
-      iex> model = Scholar.Cluster.KMeans.fit(x, num_clusters: 2, key: key)
-      iex> Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      iex> key = Nx.Random.key(12)
+      iex> x = Nx.tensor([[1, 2], [1, 4], [1, 0], [10, 2], [10, 4], [10, 0]])
+      iex> model = Scholar.Cluster.GaussianMixture.fit(x, num_gaussians: 2, key: key)
+      iex> Scholar.Cluster.GaussianMixture.predict(model, Nx.tensor([[8, 1], [2, 3]]))
       Nx.tensor(
         [1, 0]
       )
@@ -381,17 +367,35 @@ defmodule Scholar.Cluster.GaussianMixture do
          x
        ) do
     assert_same_shape!(x[0], means[0])
-    estimate_weighted_log_prob(x, weights, means, precisions_cholesky) |> Nx.argmax(axis: 1)
+    estimate_weighted_log_prob(to_float(x), weights, means, precisions_cholesky) |> Nx.argmax(axis: 1)
   end
 
   @doc """
+  Makes predictions with the given `model` on inputs `x`.
+
+  ## Return Values
+
+    It returns a tensor probabilities of Gaussian assignments for every input point.
+
+  ## Examples
+
+      iex> key = Nx.Random.key(12)
+      iex> x = Nx.tensor([[1, 2], [1, 4], [1, 0], [10, 2], [10, 4], [10, 0]])
+      iex> model = Scholar.Cluster.GaussianMixture.fit(x, num_gaussians: 2, key: key)
+      iex> Scholar.Cluster.GaussianMixture.predict_prob(model, Nx.tensor([[8, 1], [2, 3]]))
+      Nx.tensor(
+        [
+          [0.0, 1.0],
+          [1.0, 0.0]
+        ]
+      )
   """
   defn predict_prob(
          %__MODULE__{weights: weights, means: means, precisions_cholesky: precisions_cholesky},
          x
        ) do
     assert_same_shape!(x[0], means[0])
-    {_, log_resp} = estimate_log_prob_resp(x, weights, means, precisions_cholesky)
+    {_, log_resp} = estimate_log_prob_resp(to_float(x), weights, means, precisions_cholesky)
     Nx.exp(log_resp)
   end
 end
