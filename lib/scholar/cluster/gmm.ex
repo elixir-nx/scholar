@@ -13,7 +13,7 @@ defmodule Scholar.Cluster.GaussianMixture do
 
   References:
 
-  * [1] - https://cs229.stanford.edu/notes2020spring/cs229-notes7b.pdf
+  * [1] - Mixtures of Gaussians and the EM algorithm https://cs229.stanford.edu/notes2020spring/cs229-notes7b.pdf
   """
 
   import Nx.Defn
@@ -55,7 +55,7 @@ defmodule Scholar.Cluster.GaussianMixture do
     key: [
       type: {:custom, Scholar.Options, :key, []},
       doc: """
-      Determines random number generation for parameter initialization.
+      Used for random number generation in parameter initialization.
       If the key is not provided, it is set to `Nx.Random.key(System.system_time())`.
       """
     ]
@@ -90,9 +90,9 @@ defmodule Scholar.Cluster.GaussianMixture do
       iex> Scholar.Cluster.GaussianMixture.fit(x, num_gaussians: 2, key: key).means
       Nx.tensor(
         [
-					[1.0, 2.0],
-					[10.0, 2.0]
-				]
+          [1.0, 2.0],
+          [10.0, 2.0]
+        ]
       )
   """
   deftransform fit(x, opts \\ []) do
@@ -137,6 +137,7 @@ defmodule Scholar.Cluster.GaussianMixture do
                 run = 1,
                 max_lower_bound = Nx.Constants.neg_infinity(),
                 x,
+                key,
                 max_iter,
                 tol,
                 reg_covar
@@ -154,6 +155,7 @@ defmodule Scholar.Cluster.GaussianMixture do
                     iter = 1,
                     converged = Nx.tensor(false),
                     x,
+                    key,
                     max_iter,
                     tol,
                     reg_covar
@@ -170,7 +172,7 @@ defmodule Scholar.Cluster.GaussianMixture do
 
             {
               {lower_bound, params},
-              {iter + 1, converged, x, max_iter, tol, reg_covar}
+              {iter + 1, converged, x, key, max_iter, tol, reg_covar}
             }
           end
 
@@ -183,7 +185,7 @@ defmodule Scholar.Cluster.GaussianMixture do
 
         {
           best_params,
-          {run + 1, max_lower_bound, x, max_iter, tol, reg_covar}
+          {run + 1, max_lower_bound, x, key, max_iter, tol, reg_covar}
         }
       end
 
@@ -203,8 +205,9 @@ defmodule Scholar.Cluster.GaussianMixture do
     num_gaussians = opts[:num_gaussians]
     reg_covar = opts[:reg_covar]
 
-    # add key here
-    k_means_model = Scholar.Cluster.KMeans.fit(x, num_clusters: num_gaussians, num_runs: 1)
+    k_means_model =
+      Scholar.Cluster.KMeans.fit(x, num_clusters: num_gaussians, num_runs: 1, key: key)
+
     labels = k_means_model.labels
     resp = Nx.take(Nx.eye(num_gaussians, type: type), labels)
 
@@ -330,11 +333,12 @@ defmodule Scholar.Cluster.GaussianMixture do
 
   defnp logsumexp(weighted_log_prob) do
     max = Nx.reduce_max(weighted_log_prob, axes: [1])
+
     weighted_log_prob
     |> Nx.subtract(Nx.new_axis(max, 1))
-    |> Nx.exp
+    |> Nx.exp()
     |> Nx.sum(axes: [1])
-    |> Nx.log
+    |> Nx.log()
     |> Nx.add(max)
   end
 
@@ -367,7 +371,9 @@ defmodule Scholar.Cluster.GaussianMixture do
          x
        ) do
     assert_same_shape!(x[0], means[0])
-    estimate_weighted_log_prob(to_float(x), weights, means, precisions_cholesky) |> Nx.argmax(axis: 1)
+
+    estimate_weighted_log_prob(to_float(x), weights, means, precisions_cholesky)
+    |> Nx.argmax(axis: 1)
   end
 
   @doc """
