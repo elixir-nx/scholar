@@ -234,16 +234,13 @@ defmodule Scholar.Manifold.TSNE do
     opts = keyword!(opts, tol: 1.0e-5, max_iters: 100, low: 1.0e-20, high: 1.0e4)
     {low, high, max_iters, tol} = {opts[:low], opts[:high], opts[:max_iters], opts[:tol]}
 
-    {low, high, _, _, _, _, _, _} =
+    {low, high, _} =
       while {
               low = low,
               high = high,
-              max_iters,
-              tol,
-              perplexity_val = Nx.Constants.infinity(to_float_type(target_perplexity)),
-              distances,
-              target_perplexity,
-              i = 0
+              {max_iters, tol,
+               perplexity_val = Nx.Constants.infinity(to_float_type(target_perplexity)),
+               distances, target_perplexity, i = 0}
             },
             i < max_iters and Nx.abs(perplexity_val - target_perplexity) > tol do
         mid = (low + high) / 2
@@ -258,7 +255,7 @@ defmodule Scholar.Manifold.TSNE do
             {mid, high}
           end
 
-        {low, high, max_iters, tol, perplexity_val, distances, target_perplexity, i + 1}
+        {low, high, {max_iters, tol, perplexity_val, distances, target_perplexity, i + 1}}
       end
 
     (high + low) / 2

@@ -544,13 +544,11 @@ defmodule Scholar.Integrate do
         x_axis_size != y_axis_size ->
           raise ArgumentError, "x and y must have the same size along the given axis"
 
-        not valid_broadcast?(Enum.to_list(0..(x_rank - 1)), x_shape, y_shape) ->
-          raise ArgumentError,
-                "x and y must be broadcast compatible with dimension #{inspect(axis)} of same size"
-
         true ->
           nil
       end
+
+      valid_broadcast!(x_rank, x_shape, y_shape)
     end
   end
 
@@ -559,14 +557,4 @@ defmodule Scholar.Integrate do
     |> List.replace_at(axis, x_size)
     |> List.to_tuple()
   end
-
-  defp valid_broadcast?([head | tail], old_shape, new_shape) do
-    old_dim = elem(old_shape, head)
-    new_dim = elem(new_shape, head)
-
-    (old_dim == 1 or old_dim == new_dim) and
-      valid_broadcast?(tail, old_shape, new_shape)
-  end
-
-  defp valid_broadcast?([], _old_shape, _new_shape), do: true
 end

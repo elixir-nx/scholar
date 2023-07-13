@@ -63,7 +63,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.euclidean(x, y)
-      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -72,14 +72,21 @@ defmodule Scholar.Metrics.Distance do
         f32[3]
         [7.071067810058594, 1.4142135381698608, 4.123105525970459]
       >
+
+      iex> x = Nx.tensor([[6, 2, 9], [2, 5, 3]])
+      iex> y = Nx.tensor([[8, 3, 1]])
+      iex> Scholar.Metrics.Distance.euclidean(x, y)
+      #Nx.Tensor<
+        f32
+        10.630146026611328
+      >
   """
   deftransform euclidean(x, y, opts \\ []) do
     euclidean_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
   defnp euclidean_n(x, y, opts) do
-    assert_same_shape!(x, y)
-
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     diff = x - y
 
     (diff * diff)
@@ -119,7 +126,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
-      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -128,14 +135,21 @@ defmodule Scholar.Metrics.Distance do
         f32[3]
         [50.0, 2.0, 17.0]
       >
+
+      iex> x = Nx.tensor([[6, 2, 9], [2, 5, 3]])
+      iex> y = Nx.tensor([[8, 3, 1]])
+      iex> Scholar.Metrics.Distance.squared_euclidean(x, y)
+      #Nx.Tensor<
+        f32
+        113.0
+      >
   """
   deftransform squared_euclidean(x, y, opts \\ []) do
     squared_euclidean_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
   defnp squared_euclidean_n(x, y, opts) do
-    assert_same_shape!(x, y)
-
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     diff = x - y
 
     (diff * diff)
@@ -175,7 +189,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.manhattan(x, y)
-      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -184,13 +198,21 @@ defmodule Scholar.Metrics.Distance do
         f32[3]
         [8.0, 2.0, 5.0]
       >
+
+      iex> x = Nx.tensor([[6, 2, 9], [2, 5, 3]])
+      iex> y = Nx.tensor([[8, 3, 1]])
+      iex> Scholar.Metrics.Distance.manhattan(x, y)
+      #Nx.Tensor<
+        f32
+        21.0
+      >
   """
   deftransform manhattan(x, y, opts \\ []) do
     manhattan_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
   defnp manhattan_n(x, y, opts) do
-    assert_same_shape!(x, y)
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
 
     (x - y)
     |> Nx.abs()
@@ -230,7 +252,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.chebyshev(x, y)
-      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -239,13 +261,21 @@ defmodule Scholar.Metrics.Distance do
         f32[2]
         [7.0, 1.0]
       >
+
+      iex> x = Nx.tensor([[6, 2, 9], [2, 5, 3]])
+      iex> y = Nx.tensor([[8, 3, 1]])
+      iex> Scholar.Metrics.Distance.chebyshev(x, y)
+      #Nx.Tensor<
+        f32
+        8.0
+      >
   """
   deftransform chebyshev(x, y, opts \\ []) do
     chebyshev_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
   defnp chebyshev_n(x, y, opts) do
-    assert_same_shape!(x, y)
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
 
     (x - y)
     |> Nx.abs()
@@ -285,7 +315,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.minkowski(x, y)
-      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
       iex> y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
@@ -294,14 +324,21 @@ defmodule Scholar.Metrics.Distance do
         f32[3]
         [7.021548271179199, 1.3195079565048218, 4.049539089202881]
       >
+
+      iex> x = Nx.tensor([[6, 2, 9], [2, 5, 3]])
+      iex> y = Nx.tensor([[8, 3, 1]])
+      iex> Scholar.Metrics.Distance.minkowski(x, y, p: 2.5)
+      #Nx.Tensor<
+        f32
+        9.621805191040039
+      >
   """
   deftransform minkowski(x, y, opts \\ []) do
     minkowski_n(x, y, NimbleOptions.validate!(opts, @minkowski_schema))
   end
 
   defnp minkowski_n(x, y, opts) do
-    assert_same_shape!(x, y)
-
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     p = opts[:p]
 
     cond do
@@ -347,7 +384,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.cosine(x, y)
-      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 3], [0, 0, 0], [5, 2, 4]])
       iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
@@ -356,17 +393,25 @@ defmodule Scholar.Metrics.Distance do
         f32[3]
         [0.1704850196838379, 1.0, 1.0]
       >
+
+      iex> x = Nx.tensor([[6, 2, 9], [2, 5, 3]])
+      iex> y = Nx.tensor([[8, 3, 1]])
+      iex> Scholar.Metrics.Distance.cosine(x, y)
+      #Nx.Tensor<
+        f32
+        0.10575336217880249
+      >
   """
   deftransform cosine(x, y, opts \\ []) do
     cosine_n(x, y, NimbleOptions.validate!(opts, @general_schema))
   end
 
   defnp cosine_n(x, y, opts) do
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     # Detect very small values that could lead to surprising
     # results and numerical stability issues. Every value smaller
     # than `cutoff` is considered small
     cutoff = 10 * Nx.Constants.epsilon(:f64)
-    assert_same_shape!(x, y)
 
     opts = keyword!(opts, [:axes])
 
@@ -432,7 +477,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.tensor([1, 2])
       iex> y = Nx.tensor([1, 2, 3])
       iex> Scholar.Metrics.Distance.hamming(x, y)
-      ** (ArgumentError) expected tensor to have shape {2}, got tensor with shape {3}
+      ** (ArgumentError) tensors must be broadcast compatible, got tensors with shapes {2} and {3}
 
       iex> x = Nx.tensor([[1, 2, 3], [0, 0, 0], [5, 2, 4]])
       iex> y = Nx.tensor([[1, 5, 2], [2, 4, 1], [0, 0, 0]])
@@ -440,6 +485,14 @@ defmodule Scholar.Metrics.Distance do
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 1.0, 1.0]
+      >
+
+      iex> x = Nx.tensor([[6, 2, 9], [2, 5, 3]])
+      iex> y = Nx.tensor([[8, 3, 1]])
+      iex> Scholar.Metrics.Distance.hamming(x, y)
+      #Nx.Tensor<
+        f32
+        1.0
       >
   """
   deftransform hamming(x, y, opts \\ [])
@@ -468,6 +521,15 @@ defmodule Scholar.Metrics.Distance do
         f32
         0.75
       >
+
+      iex> x = Nx.tensor([[6, 2, 9], [2, 5, 3]])
+      iex> y = Nx.tensor([[8, 3, 1]])
+      iex> weights = Nx.tensor([1, 0.5, 0.5])
+      iex> Scholar.Metrics.Distance.hamming(x, y, weights, axes: [1])
+      #Nx.Tensor<
+        f32[2]
+        [1.0, 1.0]
+      >
   """
   deftransform hamming(x, y, w, opts) when is_list(opts) do
     NimbleOptions.validate!(opts, @general_schema)
@@ -475,13 +537,13 @@ defmodule Scholar.Metrics.Distance do
   end
 
   defnp hamming_unweighted(x, y, opts) do
-    assert_same_shape!(x, y)
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     result_type = Nx.Type.to_floating(Nx.Type.merge(Nx.type(x), Nx.type(y)))
     Nx.mean(x != y, axes: opts[:axes]) |> Nx.as_type(result_type)
   end
 
   defnp hamming_weighted(x, y, w, opts) do
-    assert_same_shape!(x, y)
+    valid_broadcast!(Nx.rank(x), Nx.shape(x), Nx.shape(y))
     result_type = Nx.Type.to_floating(Nx.Type.merge(Nx.type(x), Nx.type(y)))
     w = Nx.as_type(w, result_type)
     Nx.weighted_mean(x != y, w, axes: opts[:axes]) |> Nx.as_type(result_type)
