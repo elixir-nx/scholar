@@ -49,7 +49,7 @@ defmodule Scholar.Cluster.GaussianMixture do
       default: 1.0e-6,
       doc: """
       The non-negative number that is added to each element of the diagonal
-      of the covariance matrix to ensure it is positive.
+      of the covariance matrix to ensure it is positive. Usually a small number.
       """
     ],
     key: [
