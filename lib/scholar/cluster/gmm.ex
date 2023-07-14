@@ -2,7 +2,7 @@ defmodule Scholar.Cluster.GaussianMixture do
   @moduledoc """
   Gaussian Mixture Model.
 
-  Gaussian Mixture model is a probabilistic model that assumes every data point is generated
+  Gaussian Mixture Model is a probabilistic model that assumes every data point is generated
   by randomly choosing one of the several fixed Gaussian distributions and then sampling from it.
   Its parameters are estimated using the Expectation-Maximization (EM) algorithm, which is an
   iterative algorithm alternating between the two steps: the E-step which computes the
