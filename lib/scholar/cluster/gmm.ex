@@ -27,7 +27,7 @@ defmodule Scholar.Cluster.GaussianMixture do
     num_gaussians: [
       required: true,
       type: :pos_integer,
-      doc: "The number of Gaussian components in the mixture."
+      doc: "The number of Gaussian distributions in the mixture."
     ],
     num_runs: [
       type: :pos_integer,
