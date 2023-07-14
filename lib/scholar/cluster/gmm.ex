@@ -168,7 +168,7 @@ defmodule Scholar.Cluster.GaussianMixture do
             params = m_step(x, log_resp, reg_covar)
             lower_bound = log_prob_norm
             change = lower_bound - prev_lower_bound
-            converged = Nx.abs(change) < tol
+            converged = iter > 1 and Nx.abs(change) < tol
 
             {
               {lower_bound, params},
