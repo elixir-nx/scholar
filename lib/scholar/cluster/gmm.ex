@@ -3,7 +3,7 @@ defmodule Scholar.Cluster.GaussianMixture do
   Gaussian Mixture Model.
 
   Gaussian Mixture Model is a probabilistic model that assumes every data point is generated
-  by randomly choosing one of the several fixed Gaussian distributions and then sampling from it.
+  by choosing one of several fixed Gaussian distributions and then sampling from it.
   Its parameters are estimated using the Expectation-Maximization (EM) algorithm, which is an
   iterative algorithm alternating between the two steps: the E-step which computes the
   expectation of the Gaussian assignment for each data point x and the M-step which updates the
@@ -32,7 +32,7 @@ defmodule Scholar.Cluster.GaussianMixture do
     num_runs: [
       type: :pos_integer,
       default: 1,
-      doc: "The number of initializations to perform."
+      doc: "The number of times to initialize parameters and run the entire EM algorithm."
     ],
     max_iter: [
       type: :pos_integer,
@@ -44,7 +44,7 @@ defmodule Scholar.Cluster.GaussianMixture do
       default: 1.0e-3,
       doc: "The convergence threshold."
     ],
-    reg_covar: [
+    covariance_regularization_eps: [
       type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0e-6,
       doc: """
@@ -127,12 +127,15 @@ defmodule Scholar.Cluster.GaussianMixture do
     num_runs = opts[:num_runs]
     max_iter = opts[:max_iter]
     tol = opts[:tol]
-    reg_covar = opts[:reg_covar]
+    covariance_regularization_eps = opts[:covariance_regularization_eps]
 
     {best_params, _} =
       while {
               best_params =
-                init_params(key, x, num_gaussians: num_gaussians, reg_covar: reg_covar),
+                init_params(key, x,
+                  num_gaussians: num_gaussians,
+                  covariance_regularization_eps: covariance_regularization_eps
+                ),
               {
                 run = 1,
                 max_lower_bound = Nx.Constants.neg_infinity(),
@@ -140,7 +143,7 @@ defmodule Scholar.Cluster.GaussianMixture do
                 key,
                 max_iter,
                 tol,
-                reg_covar
+                covariance_regularization_eps
               }
             },
             run <= num_runs do
@@ -149,7 +152,10 @@ defmodule Scholar.Cluster.GaussianMixture do
                   {
                     lower_bound = Nx.Constants.neg_infinity(),
                     params =
-                      init_params(key, x, num_gaussians: num_gaussians, reg_covar: reg_covar)
+                      init_params(key, x,
+                        num_gaussians: num_gaussians,
+                        covariance_regularization_eps: covariance_regularization_eps
+                      )
                   },
                   {
                     iter = 1,
@@ -158,21 +164,21 @@ defmodule Scholar.Cluster.GaussianMixture do
                     key,
                     max_iter,
                     tol,
-                    reg_covar
+                    covariance_regularization_eps
                   }
                 },
                 iter <= max_iter and not converged do
             prev_lower_bound = lower_bound
             {weights, means, _, precisions_cholesky} = params
             {log_prob_norm, log_resp} = e_step(x, weights, means, precisions_cholesky)
-            params = m_step(x, log_resp, reg_covar)
+            params = m_step(x, log_resp, covariance_regularization_eps)
             lower_bound = log_prob_norm
             change = lower_bound - prev_lower_bound
             converged = iter > 1 and Nx.abs(change) < tol
 
             {
               {lower_bound, params},
-              {iter + 1, converged, x, key, max_iter, tol, reg_covar}
+              {iter + 1, converged, x, key, max_iter, tol, covariance_regularization_eps}
             }
           end
 
@@ -185,7 +191,7 @@ defmodule Scholar.Cluster.GaussianMixture do
 
         {
           best_params,
-          {run + 1, max_lower_bound, x, key, max_iter, tol, reg_covar}
+          {run + 1, max_lower_bound, x, key, max_iter, tol, covariance_regularization_eps}
         }
       end
 
@@ -203,7 +209,7 @@ defmodule Scholar.Cluster.GaussianMixture do
     type = Nx.type(x)
     {num_samples, _} = Nx.shape(x)
     num_gaussians = opts[:num_gaussians]
-    reg_covar = opts[:reg_covar]
+    covariance_regularization_eps = opts[:covariance_regularization_eps]
 
     k_means_model =
       Scholar.Cluster.KMeans.fit(x, num_clusters: num_gaussians, num_runs: 1, key: key)
@@ -212,7 +218,7 @@ defmodule Scholar.Cluster.GaussianMixture do
     resp = Nx.take(Nx.eye(num_gaussians, type: type), labels)
 
     {weights, means, covariances, precisions_cholesky} =
-      estimate_gaussian_parameters(x, resp, reg_covar)
+      estimate_gaussian_parameters(x, resp, covariance_regularization_eps)
 
     weights = weights / num_samples
     {weights, means, covariances, precisions_cholesky}
@@ -223,23 +229,23 @@ defmodule Scholar.Cluster.GaussianMixture do
     {Nx.mean(log_prob_norm), log_resp}
   end
 
-  defnp m_step(x, log_resp, reg_covar) do
+  defnp m_step(x, log_resp, covariance_regularization_eps) do
     {weights, means, covariances, precisions_cholesky} =
-      estimate_gaussian_parameters(x, Nx.exp(log_resp), reg_covar)
+      estimate_gaussian_parameters(x, Nx.exp(log_resp), covariance_regularization_eps)
 
     weights = weights / Nx.sum(weights)
     {weights, means, covariances, precisions_cholesky}
   end
 
-  defnp estimate_gaussian_parameters(x, resp, reg_covar) do
+  defnp estimate_gaussian_parameters(x, resp, covariance_regularization_eps) do
     nk = Nx.sum(resp, axes: [0])
-    means = Nx.dot(Nx.transpose(resp), x) / nk
-    covariances = estimate_gaussian_covariances(x, resp, nk, means, reg_covar)
+    means = Nx.dot(Nx.transpose(resp), x / nk)
+    covariances = estimate_gaussian_covariances(x, resp, nk, means, covariance_regularization_eps)
     precisions_cholesky = compute_precisions_cholesky(covariances)
     {nk, means, covariances, precisions_cholesky}
   end
 
-  defnp estimate_gaussian_covariances(x, resp, nk, means, reg_covar) do
+  defnp estimate_gaussian_covariances(x, resp, nk, means, covariance_regularization_eps) do
     type = Nx.type(x)
     {num_gaussians, num_features} = Nx.shape(means)
 
@@ -248,16 +254,21 @@ defmodule Scholar.Cluster.GaussianMixture do
               covariances =
                 Nx.tensor(0.0, type: type)
                 |> Nx.broadcast({num_gaussians, num_features, num_features}),
-              {k = 0, x, resp, nk, means, reg_covar}
+              {k = 0, x, resp, nk, means, covariance_regularization_eps}
             },
             k < num_gaussians do
         diff = x - means[k]
         covariance = Nx.dot(resp[[.., k]] * Nx.transpose(diff), diff) / nk[k]
-        covariance = Nx.put_diagonal(covariance, Nx.take_diagonal(covariance) + reg_covar)
+
+        covariance =
+          Nx.put_diagonal(
+            covariance,
+            Nx.take_diagonal(covariance) + covariance_regularization_eps
+          )
 
         {
           Nx.put_slice(covariances, [k, 0, 0], Nx.new_axis(covariance, 0)),
-          {k + 1, x, resp, nk, means, reg_covar}
+          {k + 1, x, resp, nk, means, covariance_regularization_eps}
         }
       end
 

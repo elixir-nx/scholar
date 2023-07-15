@@ -85,6 +85,5 @@ defmodule Scholar.Cluster.GaussianMixtureTest do
                      GaussianMixture.fit(x, num_gaussians: 2, tol: -0.1)
                    end
     end
-
   end
 end
