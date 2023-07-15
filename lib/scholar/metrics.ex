@@ -683,7 +683,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([3, -0.5, 2, 7])
       iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8])
-      iex> Scholar.Metrics.mean_percentage_error(y_true, y_pred)
+      iex> Scholar.Metrics.mean_absolute_percentage_error(y_true, y_pred)
       #Nx.Tensor<
         f32
         0.3273809552192688
@@ -691,7 +691,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([1.0, 0.0, 2.4, 7.0])
       iex> y_pred = Nx.tensor([1.2, 0.1, 2.4, 8.0])
-      iex> Scholar.Metrics.mean_percentage_error(y_true, y_pred)
+      iex> Scholar.Metrics.mean_absolute_percentage_error(y_true, y_pred)
       #Nx.Tensor<
         f32
         2.5e8
