@@ -654,8 +654,8 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([[0.0, 1.0], [0.0, 0.0]], type: {:f, 32})
-      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]], type: {:f, 32})
+      iex> y_true = Nx.tensor([[0.0, 1.0], [0.0, 0.0]])
+      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]])
       iex> Scholar.Metrics.mean_square_log_error(y_true, y_pred)
       #Nx.Tensor<
         f32
