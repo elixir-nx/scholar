@@ -663,11 +663,7 @@ defmodule Scholar.Metrics do
       >
   """
   defn mean_square_log_error(y_true, y_pred) do
-    assert_same_shape!(y_true, y_pred)
-
-    (Nx.log(y_true + 1) - Nx.log(y_pred + 1))
-    |> Nx.pow(2)
-    |> Nx.mean()
+    mean_square_error(Nx.log(y_true + 1), Nx.log(y_pred + 1))
   end
 
   @doc ~S"""
@@ -693,13 +689,13 @@ defmodule Scholar.Metrics do
       iex> y_pred = Nx.tensor([1.2, 0.1, 2.4, 8.0])
       iex> Scholar.Metrics.mean_absolute_percentage_error(y_true, y_pred)
       #Nx.Tensor<
-        f32
-        2.5e8
+        f64
+        112589992361984.08
       >
   """
   defn mean_absolute_percentage_error(y_true, y_pred) do
     assert_same_shape!(y_true, y_pred)
-    eps = Nx.tensor(1.0e-10)
+    eps = Nx.Constants.epsilon({:f, 64})
 
     (Nx.abs(y_true - y_pred) / Nx.max(eps, Nx.abs(y_true)))
     |> Nx.mean()
