@@ -4,7 +4,6 @@ defmodule Scholar.ModelSelection.KFold do
   """
 
   import Nx.Defn
-  import Scholar.Shared
 
   @derive {Nx.Container, containers: [:data, :train_indices, :validation_indices]}
   defstruct [:data, :train_indices, :validation_indices]
