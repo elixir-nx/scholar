@@ -14,6 +14,7 @@ defmodule Scholar.Cluster.GaussianMixture do
   References:
 
   * [1] - Mixtures of Gaussians and the EM algorithm https://cs229.stanford.edu/notes2020spring/cs229-notes7b.pdf
+  * [2] - Density Estimation with Gaussian Mixture Models https://mml-book.github.io/book/mml-book.pdf Chapter 11
   """
 
   import Nx.Defn
