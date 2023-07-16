@@ -673,8 +673,6 @@ defmodule Scholar.Metrics do
 
   $$MAPE = \frac{\sum_{i=1}^{n} \frac{|\hat{y_i} - y_i|}{max(\epsilon, \hat{y_i})}}{n}$$
 
-  By default $\epsilon = 1^{-10}$.
-
   ## Examples
 
       iex> y_true = Nx.tensor([3, -0.5, 2, 7])
