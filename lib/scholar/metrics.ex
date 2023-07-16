@@ -699,8 +699,8 @@ defmodule Scholar.Metrics do
   """
   defn mean_absolute_percentage_error(y_true, y_pred) do
     assert_same_shape!(y_true, y_pred)
-
     eps = Nx.tensor(1.0e-10)
+
     (Nx.abs(y_true - y_pred) / Nx.max(eps, Nx.abs(y_true)))
     |> Nx.mean()
   end
