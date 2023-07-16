@@ -137,8 +137,8 @@ defmodule Scholar.Metrics do
         f32
         0.6666666865348816
       >
-      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.accuracy(y_true, y_pred)
       #Nx.Tensor<
         f32
@@ -187,8 +187,8 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.precision(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
@@ -246,8 +246,8 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.recall(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
@@ -315,8 +315,8 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.sensitivity(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
@@ -369,8 +369,8 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.specificity(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
@@ -403,8 +403,8 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([0, 0, 1, 1, 2, 2], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 0, 1, 1, 2, 2], type: :u32)
+      iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: :u32)
       iex> Scholar.Metrics.confusion_matrix(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         u64[3][3]
@@ -533,8 +533,8 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
@@ -609,8 +609,8 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([[0.0, 1.0], [0.0, 0.0]], type: {:f, 32})
-      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]], type: {:f, 32})
+      iex> y_true = Nx.tensor([[0.0, 1.0], [0.0, 0.0]])
+      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]])
       iex> Scholar.Metrics.mean_absolute_error(y_true, y_pred)
       #Nx.Tensor<
         f32
@@ -633,8 +633,8 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([[0.0, 2.0], [0.5, 0.0]], type: {:f, 32})
-      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]], type: {:f, 32})
+      iex> y_true = Nx.tensor([[0.0, 2.0], [0.5, 0.0]])
+      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]])
       iex> Scholar.Metrics.mean_square_error(y_true, y_pred)
       #Nx.Tensor<
         f32
