@@ -56,6 +56,7 @@ defmodule Scholar.ModelSelection.KFold do
     train_indices = Nx.iota({(k - 1) * div(Nx.axis_size(data, 0), k)}) |> Nx.tile([k, 1])
     train_indices = Nx.select(mask, train_indices + div(Nx.axis_size(data, 0), k), train_indices)
     validation_indices = Nx.iota({k, div(Nx.axis_size(data, 0), k)})
+
     case opts[:shuffle] do
       true ->
         shuffle = Nx.iota({div(Nx.axis_size(data, 0), k) * k})
@@ -63,6 +64,7 @@ defmodule Scholar.ModelSelection.KFold do
         train_indices = Nx.take(shuffle, train_indices)
         validation_indices = Nx.take(shuffle, validation_indices)
         {train_indices, validation_indices}
+
       false ->
         {train_indices, validation_indices}
     end
