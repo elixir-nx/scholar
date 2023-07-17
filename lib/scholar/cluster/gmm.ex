@@ -171,8 +171,8 @@ defmodule Scholar.Cluster.GaussianMixture do
                 iter <= max_iter and not converged do
             prev_lower_bound = lower_bound
             {weights, means, _, precisions_cholesky} = params
-            {log_prob_norm, log_resp} = e_step(x, weights, means, precisions_cholesky)
-            params = m_step(x, log_resp, covariance_regularization_eps)
+            {log_prob_norm, log_responsibilities} = e_step(x, weights, means, precisions_cholesky)
+            params = m_step(x, log_responsibilities, covariance_regularization_eps)
             lower_bound = log_prob_norm
             change = lower_bound - prev_lower_bound
             converged = iter > 1 and Nx.abs(change) < tol
@@ -216,37 +216,48 @@ defmodule Scholar.Cluster.GaussianMixture do
       Scholar.Cluster.KMeans.fit(x, num_clusters: num_gaussians, num_runs: 1, key: key)
 
     labels = k_means_model.labels
-    resp = Nx.take(Nx.eye(num_gaussians, type: type), labels)
+    responsibilities = Nx.take(Nx.eye(num_gaussians, type: type), labels)
 
     {weights, means, covariances, precisions_cholesky} =
-      estimate_gaussian_parameters(x, resp, covariance_regularization_eps)
+      estimate_gaussian_parameters(x, responsibilities, covariance_regularization_eps)
 
     weights = weights / num_samples
     {weights, means, covariances, precisions_cholesky}
   end
 
   defnp e_step(x, weights, means, precisions_cholesky) do
-    {log_prob_norm, log_resp} = estimate_log_prob_resp(x, weights, means, precisions_cholesky)
-    {Nx.mean(log_prob_norm), log_resp}
+    {log_prob_norm, log_responsibilities} =
+      estimate_log_prob_responsibilities(x, weights, means, precisions_cholesky)
+
+    {Nx.mean(log_prob_norm), log_responsibilities}
   end
 
-  defnp m_step(x, log_resp, covariance_regularization_eps) do
+  defnp m_step(x, log_responsibilities, covariance_regularization_eps) do
     {weights, means, covariances, precisions_cholesky} =
-      estimate_gaussian_parameters(x, Nx.exp(log_resp), covariance_regularization_eps)
+      estimate_gaussian_parameters(x, Nx.exp(log_responsibilities), covariance_regularization_eps)
 
     weights = weights / Nx.sum(weights)
     {weights, means, covariances, precisions_cholesky}
   end
 
-  defnp estimate_gaussian_parameters(x, resp, covariance_regularization_eps) do
-    nk = Nx.sum(resp, axes: [0])
-    means = Nx.dot(Nx.transpose(resp), x / nk)
-    covariances = estimate_gaussian_covariances(x, resp, nk, means, covariance_regularization_eps)
+  defnp estimate_gaussian_parameters(x, responsibilities, covariance_regularization_eps) do
+    nk = Nx.sum(responsibilities, axes: [0])
+    means = Nx.dot(Nx.transpose(responsibilities), x / nk)
+
+    covariances =
+      estimate_gaussian_covariances(x, responsibilities, nk, means, covariance_regularization_eps)
+
     precisions_cholesky = compute_precisions_cholesky(covariances)
     {nk, means, covariances, precisions_cholesky}
   end
 
-  defnp estimate_gaussian_covariances(x, resp, nk, means, covariance_regularization_eps) do
+  defnp estimate_gaussian_covariances(
+          x,
+          responsibilities,
+          nk,
+          means,
+          covariance_regularization_eps
+        ) do
     type = Nx.type(x)
     {num_gaussians, num_features} = Nx.shape(means)
 
@@ -255,11 +266,11 @@ defmodule Scholar.Cluster.GaussianMixture do
               covariances =
                 Nx.tensor(0.0, type: type)
                 |> Nx.broadcast({num_gaussians, num_features, num_features}),
-              {k = 0, x, resp, nk, means, covariance_regularization_eps}
+              {k = 0, x, responsibilities, nk, means, covariance_regularization_eps}
             },
             k < num_gaussians do
         diff = x - means[k]
-        covariance = Nx.dot(resp[[.., k]] * Nx.transpose(diff), diff) / nk[k]
+        covariance = Nx.dot(responsibilities[[.., k]] * Nx.transpose(diff), diff) / nk[k]
 
         covariance =
           Nx.put_diagonal(
@@ -269,7 +280,7 @@ defmodule Scholar.Cluster.GaussianMixture do
 
         {
           Nx.put_slice(covariances, [k, 0, 0], Nx.new_axis(covariance, 0)),
-          {k + 1, x, resp, nk, means, covariance_regularization_eps}
+          {k + 1, x, responsibilities, nk, means, covariance_regularization_eps}
         }
       end
 
@@ -304,11 +315,11 @@ defmodule Scholar.Cluster.GaussianMixture do
     precisions_cholesky
   end
 
-  defnp estimate_log_prob_resp(x, weights, means, precisions_cholesky) do
+  defnp estimate_log_prob_responsibilities(x, weights, means, precisions_cholesky) do
     weighted_log_prob = estimate_weighted_log_prob(x, weights, means, precisions_cholesky)
     log_prob_norm = logsumexp(weighted_log_prob)
-    log_resp = weighted_log_prob - Nx.new_axis(log_prob_norm, 1)
-    {log_prob_norm, log_resp}
+    log_responsibilities = weighted_log_prob - Nx.new_axis(log_prob_norm, 1)
+    {log_prob_norm, log_responsibilities}
   end
 
   defnp estimate_weighted_log_prob(x, weights, means, precisions_cholesky) do
@@ -413,7 +424,10 @@ defmodule Scholar.Cluster.GaussianMixture do
          x
        ) do
     assert_same_shape!(x[0], means[0])
-    {_, log_resp} = estimate_log_prob_resp(to_float(x), weights, means, precisions_cholesky)
-    Nx.exp(log_resp)
+
+    {_, log_responsibilities} =
+      estimate_log_prob_responsibilities(to_float(x), weights, means, precisions_cholesky)
+
+    Nx.exp(log_responsibilities)
   end
 end
