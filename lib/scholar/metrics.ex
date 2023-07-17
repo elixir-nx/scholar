@@ -647,6 +647,59 @@ defmodule Scholar.Metrics do
   end
 
   @doc ~S"""
+  Calculates the mean square logarithmic error of predictions
+  with respect to targets.
+
+  $$MSLE = \frac{\sum_{i=1}^{n} (\log(\hat{y_i} + 1) - \log(y_i + 1))^2}{n}$$
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([[0.0, 1.0], [0.0, 0.0]])
+      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]])
+      iex> Scholar.Metrics.mean_square_log_error(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.24022650718688965
+      >
+  """
+  defn mean_square_log_error(y_true, y_pred) do
+    mean_square_error(Nx.log(y_true + 1), Nx.log(y_pred + 1))
+  end
+
+  @doc ~S"""
+  Calculates the mean absolute percentage error of predictions
+  with respect to targets. If `y_true` values are equal or close
+  to zero, it returns an arbitrarily large value.
+
+  $$MAPE = \frac{\sum_{i=1}^{n} \frac{|\hat{y_i} - y_i|}{max(\epsilon, \hat{y_i})}}{n}$$
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([3, -0.5, 2, 7])
+      iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8])
+      iex> Scholar.Metrics.mean_absolute_percentage_error(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.3273809552192688
+      >
+
+      iex> y_true = Nx.tensor([1.0, 0.0, 2.4, 7.0])
+      iex> y_pred = Nx.tensor([1.2, 0.1, 2.4, 8.0])
+      iex> Scholar.Metrics.mean_absolute_percentage_error(y_true, y_pred)
+      #Nx.Tensor<
+        f64
+        112589992361984.08
+      >
+  """
+  defn mean_absolute_percentage_error(y_true, y_pred) do
+    assert_same_shape!(y_true, y_pred)
+    eps = Nx.Constants.epsilon({:f, 64})
+
+    (Nx.abs(y_true - y_pred) / Nx.max(eps, Nx.abs(y_true)))
+    |> Nx.mean()
+  end
+
+  @doc ~S"""
   Computes area under the curve (AUC) using the trapezoidal rule.
 
   This is a general function, given points on a curve.
