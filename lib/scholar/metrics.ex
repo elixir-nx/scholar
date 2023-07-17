@@ -687,13 +687,18 @@ defmodule Scholar.Metrics do
       iex> y_pred = Nx.tensor([1.2, 0.1, 2.4, 8.0])
       iex> Scholar.Metrics.mean_absolute_percentage_error(y_true, y_pred)
       #Nx.Tensor<
-        f64
-        112589992361984.08
+        f32
+        209715.28125
       >
   """
   defn mean_absolute_percentage_error(y_true, y_pred) do
     assert_same_shape!(y_true, y_pred)
-    eps = Nx.Constants.epsilon({:f, 64})
+
+    eps =
+      Nx.type(y_true)
+      |> Nx.Type.merge(Nx.type(y_pred))
+      |> Nx.Type.to_floating()
+      |> Nx.Constants.epsilon()
 
     (Nx.abs(y_true - y_pred) / Nx.max(eps, Nx.abs(y_true)))
     |> Nx.mean()
