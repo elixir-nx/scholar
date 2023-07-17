@@ -45,21 +45,22 @@ defmodule Scholar.ModelSelection.KFold do
   end
 
   defnp k_fold_n(data, key, opts \\ []) do
-    k = opts[:k]
+    num_folds = opts[:k]
+    chunk_size = div(Nx.axis_size(data, 0), num_folds)
 
     mask =
-      Nx.transpose(Nx.tri(k - 1, k))
+      Nx.transpose(Nx.tri(num_folds - 1, num_folds))
       |> Nx.new_axis(-1)
-      |> Nx.broadcast({k, k - 1, div(Nx.axis_size(data, 0), k)})
-      |> Nx.reshape({k, :auto})
+      |> Nx.broadcast({num_folds, num_folds - 1, chunk_size})
+      |> Nx.reshape({num_folds, :auto})
 
-    train_indices = Nx.iota({(k - 1) * div(Nx.axis_size(data, 0), k)}) |> Nx.tile([k, 1])
-    train_indices = Nx.select(mask, train_indices + div(Nx.axis_size(data, 0), k), train_indices)
-    validation_indices = Nx.iota({k, div(Nx.axis_size(data, 0), k)})
+    train_indices = Nx.iota({(num_folds - 1) * chunk_size}) |> Nx.tile([num_folds, 1])
+    train_indices = Nx.select(mask, train_indices + chunk_size, train_indices)
+    validation_indices = Nx.iota({num_folds, chunk_size})
 
     case opts[:shuffle] do
       true ->
-        shuffle = Nx.iota({div(Nx.axis_size(data, 0), k) * k})
+        shuffle = Nx.iota({chunk_size * num_folds})
         {shuffle, _} = Nx.Random.shuffle(key, shuffle)
         train_indices = Nx.take(shuffle, train_indices)
         validation_indices = Nx.take(shuffle, validation_indices)
