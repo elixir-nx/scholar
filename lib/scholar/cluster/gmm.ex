@@ -9,7 +9,8 @@ defmodule Scholar.Cluster.GaussianMixture do
   expectation of the Gaussian assignment for each data point x and the M-step which updates the
   parameters to maximize the expectations found in E-step. While every iteration of the algorithm
   is guaranteed to improve the log-likelihood, the final result depends on the initial values of
-  the parameters and the entire procedure should be repeated several times.
+  the parameters. Thus the procedure consists of repeating the algorithm several times
+  and taking the best obtained result.
 
   References:
 
