@@ -242,7 +242,7 @@ defmodule Scholar.Cluster.GaussianMixture do
 
   defnp estimate_gaussian_parameters(x, responsibilities, covariance_regularization_eps) do
     nk = Nx.sum(responsibilities, axes: [0])
-    means = Nx.dot(Nx.transpose(responsibilities), x / nk)
+    means = Nx.dot(responsibilities, [0], x / nk, [0])
 
     covariances =
       estimate_gaussian_covariances(x, responsibilities, nk, means, covariance_regularization_eps)
@@ -270,7 +270,7 @@ defmodule Scholar.Cluster.GaussianMixture do
             },
             k < num_gaussians do
         diff = x - means[k]
-        covariance = Nx.dot(responsibilities[[.., k]] * Nx.transpose(diff), diff) / nk[k]
+        covariance = Nx.dot(diff * Nx.new_axis(responsibilities[[.., k]], 1), [0], diff / nk[k], [0])
 
         covariance =
           Nx.put_diagonal(
