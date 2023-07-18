@@ -271,7 +271,9 @@ defmodule Scholar.Cluster.GaussianMixture do
             },
             k < num_gaussians do
         diff = x - means[k]
-        covariance = Nx.dot(diff * Nx.new_axis(responsibilities[[.., k]], 1), [0], diff / nk[k], [0])
+
+        covariance =
+          Nx.dot(diff * Nx.new_axis(responsibilities[[.., k]], 1), [0], diff / nk[k], [0])
 
         covariance =
           Nx.put_diagonal(
