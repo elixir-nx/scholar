@@ -11,24 +11,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - pair:
-              elixir: "1.14.5"
-              otp: "25.3"
+          - elixir: "1.14.5"
+            otp: "24.3"
+          - elixir: "1.15.4"
+            otp: "25.3"
             lint: true
     steps:
       - uses: actions/checkout@v2
 
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{matrix.pair.otp}}
-          elixir-version: ${{matrix.pair.elixir}}
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
 
       - uses: actions/cache@v2
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-mix-${{matrix.pair.elixir}}-${{matrix.pair.otp}}-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-mix-${{matrix.elixir}}-${{matrix.otp}}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-mix-
 
