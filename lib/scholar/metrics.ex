@@ -981,13 +981,13 @@ defmodule Scholar.Metrics do
         -Inf
       >
 
-      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8]), force_finite: false)
+      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0]), force_finite: false)
       #Nx.Tensor<
         f32
         NaN
       >
 
-      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8]), force_finite: true)
+      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0]), force_finite: true)
       #Nx.Tensor<
         f32
         1.0
