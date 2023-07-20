@@ -118,12 +118,24 @@ defmodule Scholar.Metrics do
         ]
       ]
 
+  r2_schema = [
+    force_finite: [
+      type: :boolean,
+      default: true,
+      doc: """
+      Flag indicating if NaN and -Inf scores resulting from constant data should be replaced with real numbers
+      (1.0 if prediction is perfect, 0.0 otherwise)
+      """
+    ]
+  ]
+
   @general_schema NimbleOptions.new!(general_schema)
   @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
   @balanced_accuracy_schema NimbleOptions.new!(balanced_accuracy_schema)
   @cohen_kappa_schema NimbleOptions.new!(cohen_kappa_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
   @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
+  @r2_schema NimbleOptions.new!(r2_schema)
 
   # Standard Metrics
 
@@ -956,15 +968,61 @@ defmodule Scholar.Metrics do
         f32
         0.9486081600189209
       >
+
+      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0], type: :f64), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64), force_finite: true)
+      #Nx.Tensor<
+        f64
+        0.0
+      >
+
+      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0], type: :f64), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64), force_finite: false)
+      #Nx.Tensor<
+        f64
+        -Inf
+      >
+
+      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8]), force_finite: false)
+      #Nx.Tensor<
+        f32
+        NaN
+      >
+
+      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8]), force_finite: true)
+      #Nx.Tensor<
+        f32
+        1.0
+      >
   """
-  defn r2_score(y_true, y_pred) do
+  deftransform r2_score(y_true, y_pred, opts \\ []) do
+    r2_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @r2_schema))
+  end
+
+  defnp r2_score_n(y_true, y_pred, opts) do
     check_shape(y_true, y_pred)
     ssr = squared_euclidean(y_true, y_pred)
 
     y_mean = Nx.broadcast(Nx.mean(y_true), Nx.shape(y_true))
     sst = squared_euclidean(y_true, y_mean)
 
-    1 - ssr / sst
+    case opts[:force_finite] do
+      false ->
+        infinity_mask = ssr != 0 and sst == 0
+        nan_mask = ssr == 0 and sst == 0
+        sst = Nx.select(sst == 0, 1, sst)
+        res = Nx.select(infinity_mask, Nx.tensor(:neg_infinity), 1 - ssr / sst)
+        Nx.select(nan_mask, Nx.tensor(:nan), res)
+
+      true ->
+        sst_mask = sst != 0
+        ssr_mask = ssr != 0
+
+        valid_score = ssr_mask and sst_mask
+
+        result = Nx.broadcast(Nx.tensor(1, type: Nx.type(ssr)), ssr)
+        result = Nx.select(ssr_mask and not sst_mask, 0, result)
+        sst = Nx.select(not sst_mask, 1, sst)
+        Nx.select(valid_score, 1 - ssr / sst, result)
+    end
   end
 
   @doc """
