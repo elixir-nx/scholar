@@ -942,7 +942,7 @@ defmodule Scholar.Metrics do
     auc(fpr, tpr)
   end
 
-   @doc ~S"""
+  @doc ~S"""
   Calculates the $R^2$ score of predictions with respect to targets.
 
   $$R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}$$
@@ -964,7 +964,7 @@ defmodule Scholar.Metrics do
     y_mean = Nx.broadcast(Nx.mean(y_true), Nx.shape(y_true))
     sst = squared_euclidean(y_true, y_mean)
 
-    1 - ssr/sst
+    1 - ssr / sst
   end
 
   @doc """
