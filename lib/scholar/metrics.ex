@@ -13,6 +13,7 @@ defmodule Scholar.Metrics do
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
+  import Scholar.Metrics.Distance
   alias Scholar.Integrate
 
   general_schema = [
@@ -939,6 +940,31 @@ defmodule Scholar.Metrics do
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
     {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
     auc(fpr, tpr)
+  end
+
+   @doc ~S"""
+  Calculates the $R^2$ score of predictions with respect to targets.
+
+  $$R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}$$
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([3, -0.5, 2, 7], type: {:f, 32})
+      iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8], type: {:f, 32})
+      iex> Scholar.Metrics.r2_score(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.9486081600189209
+      >
+  """
+  defn r2_score(y_true, y_pred) do
+    check_shape(y_true, y_pred)
+    ssr = squared_euclidean(y_true, y_pred)
+
+    y_mean = Nx.broadcast(Nx.mean(y_true), Nx.shape(y_true))
+    sst = squared_euclidean(y_true, y_mean)
+
+    1 - ssr/sst
   end
 
   @doc """
