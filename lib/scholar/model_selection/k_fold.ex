@@ -3,71 +3,121 @@ defmodule Scholar.ModelSelection.KFold do
   K-Fold Cross Validation
   """
 
-  import Nx.Defn
-
-  @derive {Nx.Container, containers: [:data, :train_indices, :validation_indices]}
-  defstruct [:data, :train_indices, :validation_indices]
-
-  opts = [
-    k: [
-      type: :integer,
-      default: 5,
-      doc: "Number of folds"
-    ],
-    shuffle: [
-      type: :boolean,
-      default: true,
-      doc: "Determines if data is shuffled before splitting"
-    ],
-    key: [
-      type: {:custom, Scholar.Options, :key, []},
-      doc: """
-      Used in shuffling data.
-      If the key is not provided, it is set to `Nx.Random.key(System.system_time())`.
-      """
-    ]
-  ]
-
-  @opts_schema NimbleOptions.new!(opts)
-
   @doc """
-  Perform K-Fold Cross Validation
+  Perform K-Fold split on the given data.
 
-  ## Options
+  ## Examples
 
-  #{NimbleOptions.docs(@opts_schema)}
+      iex> x = Nx.iota({7, 2})
+      iex> y = Nx.iota({7})
+      iex> Scholar.ModelSelection.KFold.cross_fold(x, y, 2) |> Enum.to_list()
+      [
+        {{[
+            Nx.tensor(
+              [
+                [6, 7],
+                [8, 9],
+                [10, 11]
+              ]
+            )
+          ],
+          Nx.tensor(
+            [
+              [0, 1],
+              [2, 3],
+              [4, 5]
+            ]
+          )},
+        {[
+            Nx.tensor(
+              [3, 4, 5]
+            )
+          ],
+          Nx.tensor(
+            [0, 1, 2]
+          )}},
+        {{[
+            Nx.tensor(
+              [
+                [0, 1],
+                [2, 3],
+                [4, 5]
+              ]
+            )
+          ],
+          Nx.tensor(
+            [
+              [6, 7],
+              [8, 9],
+              [10, 11]
+            ]
+          )},
+        {[
+            Nx.tensor(
+              [0, 1, 2]
+            )
+          ],
+          Nx.tensor(
+            [3, 4, 5]
+          )}}
+      ]
   """
-
-  deftransform k_fold(data, opts \\ []) do
-    opts = NimbleOptions.validate!(opts, @opts_schema)
-    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
-    k_fold_n(data, key, opts)
+  def cross_fold(x, y, k) do
+    Stream.zip([k_fold_split(x, k), k_fold_split(y, k)])
   end
 
-  defnp k_fold_n(data, key, opts \\ []) do
-    num_folds = opts[:k]
-    chunk_size = div(Nx.axis_size(data, 0), num_folds)
+  defp k_fold_split(x, k) do
+    Stream.resource(
+      fn ->
+        fold_size = floor(Nx.axis_size(x, 0) / k)
+        {x |> Nx.to_batched(fold_size, leftover: :discard) |> Enum.to_list(), 0, k}
+      end,
+      fn
+        {list, k, k} ->
+          {:halt, {list, k, k}}
 
-    mask =
-      Nx.transpose(Nx.tri(num_folds - 1, num_folds))
-      |> Nx.new_axis(-1)
-      |> Nx.broadcast({num_folds, num_folds - 1, chunk_size})
-      |> Nx.reshape({num_folds, :auto})
+        {list, current, k} ->
+          {left, [test | right]} = Enum.split(list, current)
+          {[{left ++ right, test}], {list, current + 1, k}}
+      end,
+      fn _ -> :ok end
+    )
+  end
 
-    train_indices = Nx.iota({(num_folds - 1) * chunk_size}) |> Nx.tile([num_folds, 1])
-    train_indices = Nx.select(mask, train_indices + chunk_size, train_indices)
-    validation_indices = Nx.iota({num_folds, chunk_size})
+  @doc """
+  Perform K-Fold cross validation on the given data.
 
-    case opts[:shuffle] do
-      true ->
-        shuffle = Nx.iota({chunk_size * num_folds})
-        {shuffle, _} = Nx.Random.shuffle(key, shuffle)
-        train_indices = Nx.take(shuffle, train_indices)
-        validation_indices = Nx.take(shuffle, validation_indices)
-        {train_indices, validation_indices}
+  Except data, labels, and number of folds, the function also takes a function
+  that takes a tuple of training and testing data, calculates model and predictions
+  and returns a list of metrics based on predictions.
 
-      false ->
-        {train_indices, validation_indices}
-    end
+
+  ## Examples
+
+      iex> inner_loop = fn {{x_train, x_test}, {y_train, y_test}} ->
+      ...>   x_train = Nx.concatenate(x_train)
+      ...>   y_train = Nx.concatenate(y_train)
+      ...>   model = Scholar.Linear.LinearRegression.fit(x_train, y_train)
+      ...>   y_pred = Scholar.Linear.LinearRegression.predict(model, x_test)
+      ...>   mse = Scholar.Metrics.mean_square_error(y_test, y_pred)
+      ...>   mae = Scholar.Metrics.mean_absolute_error(y_test, y_pred)
+      ...>   [mse, mae]
+      ...> end
+      iex> x = Nx.iota({7, 2})
+      iex> y = Nx.tensor([0, 1, 2, 0, 1, 1, 0])
+      iex> Scholar.ModelSelection.KFold.cross_validation(x, y, 3, inner_loop)
+      #Nx.Tensor<
+        f32[2][3]
+        [
+          [1.5700000524520874, 1.2149654626846313, 0.004999990575015545],
+          [1.100000023841858, 1.0735294818878174, 0.04999995231628418]
+        ]
+      >
+  """
+  def cross_validation(x, y, k, fun) do
+    cross_fold(x, y, k)
+    |> Enum.map(fun)
+    |> Enum.map(&Nx.stack/1)
+    |> Nx.stack(axis: 1)
   end
 end
