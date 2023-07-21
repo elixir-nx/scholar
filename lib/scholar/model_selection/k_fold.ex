@@ -66,7 +66,7 @@ defmodule Scholar.ModelSelection.KFold do
     Stream.zip([k_fold_split(x, k), k_fold_split(y, k)])
   end
 
-  defp k_fold_split(x, k) do
+  def k_fold_split(x, k) do
     Stream.resource(
       fn ->
         fold_size = floor(Nx.axis_size(x, 0) / k)
@@ -117,6 +117,40 @@ defmodule Scholar.ModelSelection.KFold do
   def cross_validation(x, y, k, fun) do
     cross_fold(x, y, k)
     |> Enum.map(fun)
+    |> Enum.map(&Nx.stack/1)
+    |> Nx.stack(axis: 1)
+  end
+
+  @doc """
+  General interface of cross validation. It's not praticularly useful for Kfold
+  cross validation, but it's useful for other cross validation methods.
+
+  ## Examples
+
+      iex> folding_fun = folding_fun = fn x -> Scholar.ModelSelection.KFold.k_fold_split(x, 3) end
+      iex> scoring_fun = fn {{x_train, x_test}, {y_train, y_test}} ->
+      ...>   x_train = Nx.concatenate(x_train)
+      ...>   y_train = Nx.concatenate(y_train)
+      ...>   model = Scholar.Linear.LinearRegression.fit(x_train, y_train)
+      ...>   y_pred = Scholar.Linear.LinearRegression.predict(model, x_test)
+      ...>   mse = Scholar.Metrics.mean_square_error(y_test, y_pred)
+      ...>   mae = Scholar.Metrics.mean_absolute_error(y_test, y_pred)
+      ...>   [mse, mae]
+      ...> end
+      iex> x = Nx.iota({7, 2})
+      iex> y = Nx.tensor([0, 1, 2, 0, 1, 1, 0])
+      iex> Scholar.ModelSelection.KFold.cross_validation_general(x, y, folding_fun, scoring_fun)
+      #Nx.Tensor<
+        f32[2][3]
+        [
+          [1.5700000524520874, 1.2149654626846313, 0.004999990575015545],
+          [1.100000023841858, 1.0735294818878174, 0.04999995231628418]
+        ]
+      >
+  """
+  def cross_validation_general(x, y, folding_fun, scoring_fun) do
+    Stream.zip([folding_fun.(x), folding_fun.(y)])
+    |> Enum.map(scoring_fun)
     |> Enum.map(&Nx.stack/1)
     |> Nx.stack(axis: 1)
   end
