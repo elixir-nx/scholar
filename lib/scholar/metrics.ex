@@ -1095,6 +1095,10 @@ defmodule Scholar.Metrics do
   @doc ~S"""
   Calculates the maximum residual error.
 
+  The residual error is defined as $$|y - \hat{y}|$$ where $y$ is a true value and $\hat{y}$ is a predicted value.
+  This function returns the maximum residual error over all samples in the input: $max(|y_i - \hat{y_i}|)$. For perfect predictions,
+  the maximum residual error is `0.0`.
+
   ## Examples
 
       iex> y_true = Nx.tensor([3, -0.5, 2, 7])
