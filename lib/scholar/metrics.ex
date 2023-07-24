@@ -787,7 +787,7 @@ defmodule Scholar.Metrics do
       >
   """
   deftransform zero_one_loss(y_true, y_pred, opts \\ []) do
-    zero_one_loss_n(y_true, y_pred, NimbleOptions.validate!(opts, @accuracy_schema))
+    zero_one_loss_n(y_true, y_pred, NimbleOptions.validate!(opts, @zero_one_loss_schema))
   end
 
   defnp zero_one_loss_n(y_true, y_pred, opts) do
