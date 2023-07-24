@@ -140,7 +140,6 @@ defmodule Scholar.Metrics do
     ]
   ]
 
-
   top_k_accuracy_score_schema =
     general_schema ++
       [
@@ -172,7 +171,6 @@ defmodule Scholar.Metrics do
     ]
   ]
 
-
   @general_schema NimbleOptions.new!(general_schema)
   @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
   @balanced_accuracy_schema NimbleOptions.new!(balanced_accuracy_schema)
@@ -183,7 +181,6 @@ defmodule Scholar.Metrics do
   @accuracy_schema NimbleOptions.new!(accuracy_schema)
   @top_k_accuracy_score_schema NimbleOptions.new!(top_k_accuracy_score_schema)
   @zero_one_loss_schema NimbleOptions.new!(zero_one_loss_schema)
-
 
   # Standard Metrics
 
