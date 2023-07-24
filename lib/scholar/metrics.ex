@@ -140,6 +140,7 @@ defmodule Scholar.Metrics do
     ]
   ]
 
+
   top_k_accuracy_score_schema =
     general_schema ++
       [
@@ -160,6 +161,18 @@ defmodule Scholar.Metrics do
         ]
       ]
 
+  zero_one_loss_schema = [
+    normalize: [
+      type: :boolean,
+      default: true,
+      doc: """
+      If `true`, return the fraction of incorrectly classified samples.
+      Otherwise, return the number of incorrectly classified samples.
+      """
+    ]
+  ]
+
+
   @general_schema NimbleOptions.new!(general_schema)
   @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
   @balanced_accuracy_schema NimbleOptions.new!(balanced_accuracy_schema)
@@ -169,6 +182,8 @@ defmodule Scholar.Metrics do
   @r2_schema NimbleOptions.new!(r2_schema)
   @accuracy_schema NimbleOptions.new!(accuracy_schema)
   @top_k_accuracy_score_schema NimbleOptions.new!(top_k_accuracy_score_schema)
+  @zero_one_loss_schema NimbleOptions.new!(zero_one_loss_schema)
+
 
   # Standard Metrics
 
@@ -773,6 +788,10 @@ defmodule Scholar.Metrics do
   @doc """
   Zero-one classification loss.
 
+  ## Options
+
+  #{NimbleOptions.docs(@zero_one_loss_schema)}
+
   # Examples
 
       iex> y_pred = Nx.tensor([1, 2, 3, 4])
@@ -792,7 +811,7 @@ defmodule Scholar.Metrics do
       >
   """
   deftransform zero_one_loss(y_true, y_pred, opts \\ []) do
-    zero_one_loss_n(y_true, y_pred, NimbleOptions.validate!(opts, @accuracy_schema))
+    zero_one_loss_n(y_true, y_pred, NimbleOptions.validate!(opts, @zero_one_loss_schema))
   end
 
   defnp zero_one_loss_n(y_true, y_pred, opts) do
