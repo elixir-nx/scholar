@@ -1229,7 +1229,8 @@ defmodule Scholar.Metrics do
   @doc """
   Top-k Accuracy classification score.
 
-  This metric computes the number of times where the correct label is among the top k labels predicted (ranked by predicted scores).
+  This metric computes the number of times where the correct label is
+  among the top k labels predicted (ranked by predicted scores).
 
   For binary task assumed that y_score have values from 0 to 1.
 
