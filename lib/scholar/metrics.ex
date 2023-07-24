@@ -1108,6 +1108,30 @@ defmodule Scholar.Metrics do
     end
   end
 
+  @doc ~S"""
+  Calculates the maximum residual error.
+
+  The residual error is defined as $$|y - \hat{y}|$$ where $y$ is a true value
+  and $\hat{y}$ is a predicted value.
+  This function returns the maximum residual error over all samples in the
+  input: $max(|y_i - \hat{y_i}|)$. For perfect predictions, the maximum
+  residual error is `0.0`.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([3, -0.5, 2, 7])
+      iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8.5])
+      iex> Scholar.Metrics.max_residual_error(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        1.5
+      >
+  """
+  defn max_residual_error(y_true, y_pred) do
+    check_shape(y_true, y_pred)
+    Nx.reduce_max(Nx.abs(y_true - y_pred))
+  end
+
   @doc """
   Compute the Brier score loss.
 
