@@ -140,6 +140,17 @@ defmodule Scholar.Metrics do
     ]
   ]
 
+  zero_one_loss_schema = [
+    normalize: [
+      type: :boolean,
+      default: true,
+      doc: """
+      If `true`, return the fraction of incorrectly classified samples.
+      Otherwise, return the number of incorrectly classified samples.
+      """
+    ]
+  ]
+
   @general_schema NimbleOptions.new!(general_schema)
   @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
   @balanced_accuracy_schema NimbleOptions.new!(balanced_accuracy_schema)
@@ -148,6 +159,7 @@ defmodule Scholar.Metrics do
   @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
   @r2_schema NimbleOptions.new!(r2_schema)
   @accuracy_schema NimbleOptions.new!(accuracy_schema)
+  @zero_one_loss_schema NimbleOptions.new!(zero_one_loss_schema)
 
   # Standard Metrics
 
@@ -751,6 +763,10 @@ defmodule Scholar.Metrics do
 
   @doc """
   Zero-one classification loss.
+
+  ## Options
+
+  #{NimbleOptions.docs(@zero_one_loss_schema)}
 
   # Examples
 
