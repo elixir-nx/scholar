@@ -1264,7 +1264,6 @@ defmodule Scholar.Metrics do
         0.20000000298023224
       >
   """
-
   deftransform top_k_accuracy_score(y_true, y_prob, opts \\ []) do
     top_k_accuracy_score_n(
       y_true,
