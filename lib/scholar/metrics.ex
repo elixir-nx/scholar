@@ -129,6 +129,17 @@ defmodule Scholar.Metrics do
     ]
   ]
 
+  accuracy_schema = [
+    normalize: [
+      type: :boolean,
+      default: true,
+      doc: """
+      If `true`, return the fraction of correctly classified samples.
+      Otherwise, return the number of correctly classified samples.
+      """
+    ]
+  ]
+
   @general_schema NimbleOptions.new!(general_schema)
   @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
   @balanced_accuracy_schema NimbleOptions.new!(balanced_accuracy_schema)
@@ -136,6 +147,7 @@ defmodule Scholar.Metrics do
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
   @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
   @r2_schema NimbleOptions.new!(r2_schema)
+  @accuracy_schema NimbleOptions.new!(accuracy_schema)
 
   # Standard Metrics
 
@@ -150,6 +162,7 @@ defmodule Scholar.Metrics do
         f32
         0.6666666865348816
       >
+
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.accuracy(y_true, y_pred)
@@ -157,10 +170,29 @@ defmodule Scholar.Metrics do
         f32
         0.6000000238418579
       >
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
+      iex> Scholar.Metrics.accuracy(y_true, y_pred, normalize: false)
+      #Nx.Tensor<
+        u64
+        6
+      >
   """
-  defn accuracy(y_true, y_pred) do
+  deftransform accuracy(y_true, y_pred, opts \\ []) do
+    accuracy_n(y_true, y_pred, NimbleOptions.validate!(opts, @accuracy_schema))
+  end
+
+  defnp accuracy_n(y_true, y_pred, opts) do
     check_shape(y_true, y_pred)
-    Nx.mean(y_pred == y_true)
+
+    case opts[:normalize] do
+      true ->
+        Nx.mean(y_pred == y_true)
+
+      false ->
+        Nx.sum(y_pred == y_true)
+    end
   end
 
   @doc ~S"""
@@ -715,6 +747,41 @@ defmodule Scholar.Metrics do
 
     (Nx.abs(y_true - y_pred) / Nx.max(eps, Nx.abs(y_true)))
     |> Nx.mean()
+  end
+
+  @doc """
+  Zero-one classification loss.
+
+  # Examples
+
+      iex> y_pred = Nx.tensor([1, 2, 3, 4])
+      iex> y_true = Nx.tensor([2, 2, 3, 4])
+      iex> Scholar.Metrics.zero_one_loss(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.25
+      >
+
+      iex> y_pred = Nx.tensor([1, 2, 3, 4])
+      iex> y_true = Nx.tensor([2, 2, 3, 4])
+      iex> Scholar.Metrics.zero_one_loss(y_true, y_pred, normalize: false)
+      #Nx.Tensor<
+        u64
+        1
+      >
+  """
+  deftransform zero_one_loss(y_true, y_pred, opts \\ []) do
+    zero_one_loss_n(y_true, y_pred, NimbleOptions.validate!(opts, @accuracy_schema))
+  end
+
+  defnp zero_one_loss_n(y_true, y_pred, opts) do
+    case opts[:normalize] do
+      true ->
+        1 - accuracy(y_true, y_pred, opts)
+
+      false ->
+        Nx.axis_size(y_true, 0) - accuracy(y_true, y_pred, opts)
+    end
   end
 
   @doc ~S"""
