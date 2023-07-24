@@ -175,12 +175,12 @@ defmodule Scholar.Metrics do
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.accuracy(y_true, y_pred, normalize: false)
       #Nx.Tensor<
-        s64
+        u64
         6
       >
   """
   deftransform accuracy(y_true, y_pred, opts \\ []) do
-    accuracy_n(y_true, y_pred, NimbleOptions.validate(opts, @accuracy_schema))
+    accuracy_n(y_true, y_pred, NimbleOptions.validate!(opts, @accuracy_schema))
   end
 
   defnp accuracy_n(y_true, y_pred, opts) do
@@ -766,8 +766,8 @@ defmodule Scholar.Metrics do
       iex> y_true = Nx.tensor([2, 2, 3, 4])
       iex> Scholar.Metrics.zero_one_loss(y_true, y_pred, normalize: false)
       #Nx.Tensor<
-        s64
-        1.0
+        u64
+        1
       >
   """
   deftransform zero_one_loss(y_true, y_pred, opts \\ []) do
