@@ -1227,7 +1227,6 @@ defmodule Scholar.Metrics do
   end
 
   @doc """
-
   Top-k Accuracy classification score.
 
   This metric computes the number of times where the correct label is among the top k labels predicted (ranked by predicted scores).
