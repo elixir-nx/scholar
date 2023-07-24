@@ -1092,7 +1092,6 @@ defmodule Scholar.Metrics do
     end
   end
 
-
   @doc ~S"""
   Calculates the maximum residual error.
 
