@@ -93,7 +93,7 @@ defmodule Scholar.ModelSelection do
       ...> end
       iex> x = Nx.iota({7, 2})
       iex> y = Nx.tensor([0, 1, 2, 0, 1, 1, 0])
-      iex> Scholar.ModelSelection.cross_validation_general(x, y, folding_fun, scoring_fun)
+      iex> Scholar.ModelSelection.cross_validate(x, y, folding_fun, scoring_fun)
       #Nx.Tensor<
         f32[2][3]
         [
@@ -102,7 +102,7 @@ defmodule Scholar.ModelSelection do
         ]
       >
   """
-  def cross_validation_general(x, y, folding_fun, scoring_fun) do
+  def cross_validate(x, y, folding_fun, scoring_fun) do
     Stream.zip([folding_fun.(x), folding_fun.(y)])
     |> Enum.map(fn {x, y} -> scoring_fun.(x, y) |> Nx.stack() end)
     |> Nx.stack(axis: 1)
