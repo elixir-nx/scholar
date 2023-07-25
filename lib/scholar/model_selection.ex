@@ -58,16 +58,13 @@ defmodule Scholar.ModelSelection do
           tensors =
             case {left, right} do
               {[], _} ->
-                Nx.concatenate(Enum.map(right, fn range -> x[range] end), axis: 0)
+                x[concat_ranges(right)]
 
               {_, []} ->
-                Nx.concatenate(Enum.map(left, fn range -> x[range] end), axis: 0)
+                x[concat_ranges(left)]
 
               {[_ | _], [_ | _]} ->
-                Nx.concatenate([
-                  Nx.concatenate(Enum.map(left, fn range -> x[range] end), axis: 0),
-                  Nx.concatenate(Enum.map(right, fn range -> x[range] end), axis: 0)
-                ])
+                Nx.concatenate([x[concat_ranges(left)], x[concat_ranges(right)]])
             end
 
           {[{tensors, x[test]}], {list, current + 1, k}}
@@ -75,6 +72,12 @@ defmodule Scholar.ModelSelection do
       fn _ -> :ok end
     )
   end
+
+  # Receive a list of contiguous ranges and returns a range with first first and last last.
+  defp concat_ranges([first.._ | _] = list), do: first..last_last(list)
+
+  defp last_last([_..last]), do: last
+  defp last_last([_ | tail]), do: last_last(tail)
 
   @doc """
   General interface of cross validation.
