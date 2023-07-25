@@ -62,6 +62,7 @@ defmodule Scholar.MixProject do
         Models: [
           Scholar.Cluster.AffinityPropagation,
           Scholar.Cluster.DBSCAN,
+          Scholar.Cluster.GaussianMixture,
           Scholar.Cluster.KMeans,
           Scholar.Decomposition.PCA,
           Scholar.Integrate,
@@ -82,10 +83,12 @@ defmodule Scholar.MixProject do
         Utilities: [
           Scholar.Covariance,
           Scholar.Impute.SimpleImputer,
-          Scholar.Metrics,
+          Scholar.Metrics.Classification,
           Scholar.Metrics.Clustering,
           Scholar.Metrics.Distance,
+          Scholar.Metrics.Regression,
           Scholar.Metrics.Similarity,
+          Scholar.ModelSelection,
           Scholar.Preprocessing,
           Scholar.Stats
         ]

@@ -1,6 +1,6 @@
-defmodule Scholar.Metrics do
+defmodule Scholar.Metrics.Classification do
   @moduledoc """
-  Metric functions.
+  Classification Metric functions.
 
   Metrics are used to measure the performance and compare
   the performance of any kind of classifier in
@@ -13,7 +13,6 @@ defmodule Scholar.Metrics do
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
-  import Scholar.Metrics.Distance
   alias Scholar.Integrate
 
   general_schema = [
@@ -118,17 +117,6 @@ defmodule Scholar.Metrics do
         ]
       ]
 
-  r2_schema = [
-    force_finite: [
-      type: :boolean,
-      default: true,
-      doc: """
-      Flag indicating if NaN and -Inf scores resulting from constant data should be replaced with real numbers
-      (1.0 if prediction is perfect, 0.0 otherwise)
-      """
-    ]
-  ]
-
   accuracy_schema = [
     normalize: [
       type: :boolean,
@@ -177,7 +165,6 @@ defmodule Scholar.Metrics do
   @cohen_kappa_schema NimbleOptions.new!(cohen_kappa_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
   @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
-  @r2_schema NimbleOptions.new!(r2_schema)
   @accuracy_schema NimbleOptions.new!(accuracy_schema)
   @top_k_accuracy_score_schema NimbleOptions.new!(top_k_accuracy_score_schema)
   @zero_one_loss_schema NimbleOptions.new!(zero_one_loss_schema)
@@ -190,7 +177,7 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> Scholar.Metrics.accuracy(Nx.tensor([1, 0, 0]), Nx.tensor([1, 0, 1]))
+      iex> Scholar.Metrics.Classification.accuracy(Nx.tensor([1, 0, 0]), Nx.tensor([1, 0, 1]))
       #Nx.Tensor<
         f32
         0.6666666865348816
@@ -198,7 +185,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.accuracy(y_true, y_pred)
+      iex> Scholar.Metrics.Classification.accuracy(y_true, y_pred)
       #Nx.Tensor<
         f32
         0.6000000238418579
@@ -206,7 +193,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.accuracy(y_true, y_pred, normalize: false)
+      iex> Scholar.Metrics.Classification.accuracy(y_true, y_pred, normalize: false)
       #Nx.Tensor<
         u64
         6
@@ -237,7 +224,7 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> Scholar.Metrics.binary_precision(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
+      iex> Scholar.Metrics.Classification.binary_precision(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
       #Nx.Tensor<
         f32
         0.6666666865348816
@@ -267,7 +254,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.precision(y_true, y_pred, num_classes: 3)
+      iex> Scholar.Metrics.Classification.precision(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 1.0, 0.25]
@@ -296,7 +283,7 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> Scholar.Metrics.binary_recall(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
+      iex> Scholar.Metrics.Classification.binary_recall(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
       #Nx.Tensor<
         f32
         0.6666666865348816
@@ -326,7 +313,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.recall(y_true, y_pred, num_classes: 3)
+      iex> Scholar.Metrics.Classification.recall(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.5, 1.0]
@@ -372,7 +359,7 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> Scholar.Metrics.binary_sensitivity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
+      iex> Scholar.Metrics.Classification.binary_sensitivity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
       #Nx.Tensor<
         f32
         0.6666666865348816
@@ -395,7 +382,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.sensitivity(y_true, y_pred, num_classes: 3)
+      iex> Scholar.Metrics.Classification.sensitivity(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.5, 1.0]
@@ -419,7 +406,7 @@ defmodule Scholar.Metrics do
 
   ## Examples
 
-      iex> Scholar.Metrics.binary_specificity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
+      iex> Scholar.Metrics.Classification.binary_specificity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
       #Nx.Tensor<
         f32
         0.0
@@ -449,7 +436,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.specificity(y_true, y_pred, num_classes: 3)
+      iex> Scholar.Metrics.Classification.specificity(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.8571428656578064, 1.0, 0.6666666865348816]
@@ -483,7 +470,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 0, 1, 1, 2, 2], type: :u32)
       iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: :u32)
-      iex> Scholar.Metrics.confusion_matrix(y_true, y_pred, num_classes: 3)
+      iex> Scholar.Metrics.Classification.confusion_matrix(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         u64[3][3]
         [
@@ -496,7 +483,7 @@ defmodule Scholar.Metrics do
       iex> y_true = Nx.tensor([0, 0, 1, 1, 2, 2], type: {:u, 32})
       iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: {:u, 32})
       iex> sample_weights = [2, 5, 1, 1.5, 2, 8]
-      iex> Scholar.Metrics.confusion_matrix(y_true, y_pred, num_classes: 3, sample_weights: sample_weights, normalize: :predicted)
+      iex> Scholar.Metrics.Classification.confusion_matrix(y_true, y_pred, num_classes: 3, sample_weights: sample_weights, normalize: :predicted)
       #Nx.Tensor<
         f32[3][3]
         [
@@ -554,7 +541,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 2, 0, 1, 2], type: {:u, 32})
       iex> y_pred = Nx.tensor([0, 2, 1, 0, 0, 1], type: {:u, 32})
-      iex> Scholar.Metrics.balanced_accuracy_score(y_true, y_pred, num_classes: 3)
+      iex> Scholar.Metrics.Classification.balanced_accuracy_score(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32
         0.3333333432674408
@@ -562,7 +549,7 @@ defmodule Scholar.Metrics do
       iex> y_true = Nx.tensor([0, 1, 2, 0, 1, 2], type: {:u, 32})
       iex> y_pred = Nx.tensor([0, 2, 1, 0, 0, 1], type: {:u, 32})
       iex> sample_weights = [1, 1, 1, 2, 2, 2]
-      iex> Scholar.Metrics.balanced_accuracy_score(y_true, y_pred, num_classes: 3, sample_weights: sample_weights, adjusted: true)
+      iex> Scholar.Metrics.Classification.balanced_accuracy_score(y_true, y_pred, num_classes: 3, sample_weights: sample_weights, adjusted: true)
       #Nx.Tensor<
         f32
         0.0
@@ -613,27 +600,27 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3)
+      iex> Scholar.Metrics.Classification.f1_score(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
       >
-      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: :macro)
+      iex> Scholar.Metrics.Classification.f1_score(y_true, y_pred, num_classes: 3, average: :macro)
       #Nx.Tensor<
         f32
         0.5777778029441833
       >
-      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: :weighted)
+      iex> Scholar.Metrics.Classification.f1_score(y_true, y_pred, num_classes: 3, average: :weighted)
       #Nx.Tensor<
         f32
         0.6399999856948853
       >
-      iex> Scholar.Metrics.f1_score(y_true, y_pred, num_classes: 3, average: :micro)
+      iex> Scholar.Metrics.Classification.f1_score(y_true, y_pred, num_classes: 3, average: :micro)
       #Nx.Tensor<
         f32
         0.6000000238418579
       >
-      iex> Scholar.Metrics.f1_score(Nx.tensor([1,0,1,0]), Nx.tensor([0, 1, 0, 1]), num_classes: 2, average: :none)
+      iex> Scholar.Metrics.Classification.f1_score(Nx.tensor([1,0,1,0]), Nx.tensor([0, 1, 0, 1]), num_classes: 2, average: :none)
       #Nx.Tensor<
         f32[2]
         [0.0, 0.0]
@@ -679,109 +666,6 @@ defmodule Scholar.Metrics do
     end
   end
 
-  @doc ~S"""
-  Calculates the mean absolute error of predictions
-  with respect to targets.
-
-  $$MAE = \frac{\sum_{i=1}^{n} |\hat{y_i} - y_i|}{n}$$
-
-  ## Examples
-
-      iex> y_true = Nx.tensor([[0.0, 1.0], [0.0, 0.0]])
-      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]])
-      iex> Scholar.Metrics.mean_absolute_error(y_true, y_pred)
-      #Nx.Tensor<
-        f32
-        0.5
-      >
-  """
-  defn mean_absolute_error(y_true, y_pred) do
-    assert_same_shape!(y_true, y_pred)
-
-    (y_true - y_pred)
-    |> Nx.abs()
-    |> Nx.mean()
-  end
-
-  @doc ~S"""
-  Calculates the mean square error of predictions
-  with respect to targets.
-
-  $$MSE = \frac{\sum_{i=1}^{n} (\hat{y_i} - y_i)^2}{n}$$
-
-  ## Examples
-
-      iex> y_true = Nx.tensor([[0.0, 2.0], [0.5, 0.0]])
-      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]])
-      iex> Scholar.Metrics.mean_square_error(y_true, y_pred)
-      #Nx.Tensor<
-        f32
-        0.5625
-      >
-  """
-  defn mean_square_error(y_true, y_pred) do
-    diff = y_true - y_pred
-    (diff * diff) |> Nx.mean()
-  end
-
-  @doc ~S"""
-  Calculates the mean square logarithmic error of predictions
-  with respect to targets.
-
-  $$MSLE = \frac{\sum_{i=1}^{n} (\log(\hat{y_i} + 1) - \log(y_i + 1))^2}{n}$$
-
-  ## Examples
-
-      iex> y_true = Nx.tensor([[0.0, 1.0], [0.0, 0.0]])
-      iex> y_pred = Nx.tensor([[1.0, 1.0], [1.0, 0.0]])
-      iex> Scholar.Metrics.mean_square_log_error(y_true, y_pred)
-      #Nx.Tensor<
-        f32
-        0.24022650718688965
-      >
-  """
-  defn mean_square_log_error(y_true, y_pred) do
-    mean_square_error(Nx.log(y_true + 1), Nx.log(y_pred + 1))
-  end
-
-  @doc ~S"""
-  Calculates the mean absolute percentage error of predictions
-  with respect to targets. If `y_true` values are equal or close
-  to zero, it returns an arbitrarily large value.
-
-  $$MAPE = \frac{\sum_{i=1}^{n} \frac{|\hat{y_i} - y_i|}{max(\epsilon, \hat{y_i})}}{n}$$
-
-  ## Examples
-
-      iex> y_true = Nx.tensor([3, -0.5, 2, 7])
-      iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8])
-      iex> Scholar.Metrics.mean_absolute_percentage_error(y_true, y_pred)
-      #Nx.Tensor<
-        f32
-        0.3273809552192688
-      >
-
-      iex> y_true = Nx.tensor([1.0, 0.0, 2.4, 7.0])
-      iex> y_pred = Nx.tensor([1.2, 0.1, 2.4, 8.0])
-      iex> Scholar.Metrics.mean_absolute_percentage_error(y_true, y_pred)
-      #Nx.Tensor<
-        f32
-        209715.28125
-      >
-  """
-  defn mean_absolute_percentage_error(y_true, y_pred) do
-    assert_same_shape!(y_true, y_pred)
-
-    eps =
-      Nx.type(y_true)
-      |> Nx.Type.merge(Nx.type(y_pred))
-      |> Nx.Type.to_floating()
-      |> Nx.Constants.epsilon()
-
-    (Nx.abs(y_true - y_pred) / Nx.max(eps, Nx.abs(y_true)))
-    |> Nx.mean()
-  end
-
   @doc """
   Zero-one classification loss.
 
@@ -793,7 +677,7 @@ defmodule Scholar.Metrics do
 
       iex> y_pred = Nx.tensor([1, 2, 3, 4])
       iex> y_true = Nx.tensor([2, 2, 3, 4])
-      iex> Scholar.Metrics.zero_one_loss(y_true, y_pred)
+      iex> Scholar.Metrics.Classification.zero_one_loss(y_true, y_pred)
       #Nx.Tensor<
         f32
         0.25
@@ -801,7 +685,7 @@ defmodule Scholar.Metrics do
 
       iex> y_pred = Nx.tensor([1, 2, 3, 4])
       iex> y_true = Nx.tensor([2, 2, 3, 4])
-      iex> Scholar.Metrics.zero_one_loss(y_true, y_pred, normalize: false)
+      iex> Scholar.Metrics.Classification.zero_one_loss(y_true, y_pred, normalize: false)
       #Nx.Tensor<
         u64
         1
@@ -830,9 +714,9 @@ defmodule Scholar.Metrics do
 
       iex> y = Nx.tensor([0, 0, 1, 1])
       iex> pred = Nx.tensor([0.1, 0.4, 0.35, 0.8])
-      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(pred)
-      iex> {fpr, tpr, _thresholds} = Scholar.Metrics.roc_curve(y, pred, distinct_value_indices)
-      iex> Scholar.Metrics.auc(fpr, tpr)
+      iex> distinct_value_indices = Scholar.Metrics.Classification.distinct_value_indices(pred)
+      iex> {fpr, tpr, _thresholds} = Scholar.Metrics.Classification.roc_curve(y, pred, distinct_value_indices)
+      iex> Scholar.Metrics.Classification.auc(fpr, tpr)
       #Nx.Tensor<
         f32
         0.75
@@ -854,11 +738,11 @@ defmodule Scholar.Metrics do
   end
 
   @doc ~S"""
-  It's a helper function for `Scholar.Metrics.roc_curve` and `Scholar.Metrics.roc_auc_score` functions.
+  It's a helper function for `Scholar.Metrics.Classification.roc_curve` and `Scholar.Metrics.Classification.roc_auc_score` functions.
   You should call it and use as follows:
 
-      distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
-      {fpr, tpr, thresholds} = Scholar.Metrics.roc_curve(y_true, scores, distinct_value_indices, weights)
+      distinct_value_indices = Scholar.Metrics.Classification.distinct_value_indices(scores)
+      {fpr, tpr, thresholds} = Scholar.Metrics.Classification.roc_curve(y_true, scores, distinct_value_indices, weights)
   """
   def distinct_value_indices(y_score) do
     desc_score_indices = Nx.argsort(y_score, direction: :desc)
@@ -902,9 +786,9 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 0, 1, 1])
       iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
-      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
+      iex> distinct_value_indices = Scholar.Metrics.Classification.distinct_value_indices(scores)
       iex> weights = Nx.tensor([1, 1, 2, 2])
-      iex> {precision, recall, thresholds} = Scholar.Metrics.precision_recall_curve(y_true, scores, distinct_value_indices, weights)
+      iex> {precision, recall, thresholds} = Scholar.Metrics.Classification.precision_recall_curve(y_true, scores, distinct_value_indices, weights)
       iex> precision
       #Nx.Tensor<
         f32[5]
@@ -958,9 +842,9 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 0, 1, 1])
       iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
-      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
+      iex> distinct_value_indices = Scholar.Metrics.Classification.distinct_value_indices(scores)
       iex> weights = Nx.tensor([1, 1, 2, 2])
-      iex> ap = Scholar.Metrics.average_precision_score(y_true, scores, distinct_value_indices, weights)
+      iex> ap = Scholar.Metrics.Classification.average_precision_score(y_true, scores, distinct_value_indices, weights)
       iex> ap
       #Nx.Tensor<
         f32
@@ -992,9 +876,9 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 0, 1, 1])
       iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
-      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
+      iex> distinct_value_indices = Scholar.Metrics.Classification.distinct_value_indices(scores)
       iex> weights = Nx.tensor([1, 1, 2, 2])
-      iex> {fpr, tpr, thresholds} = Scholar.Metrics.roc_curve(y_true, scores, distinct_value_indices, weights)
+      iex> {fpr, tpr, thresholds} = Scholar.Metrics.Classification.roc_curve(y_true, scores, distinct_value_indices, weights)
       iex> fpr
       #Nx.Tensor<
         f32[5]
@@ -1043,9 +927,9 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 0, 1, 1])
       iex> scores = Nx.tensor([0.1, 0.4, 0.35, 0.8])
-      iex> distinct_value_indices = Scholar.Metrics.distinct_value_indices(scores)
+      iex> distinct_value_indices = Scholar.Metrics.Classification.distinct_value_indices(scores)
       iex> weights = Nx.tensor([1, 1, 2, 2])
-      iex> Scholar.Metrics.roc_auc_score(y_true, scores, distinct_value_indices, weights)
+      iex> Scholar.Metrics.Classification.roc_auc_score(y_true, scores, distinct_value_indices, weights)
       #Nx.Tensor<
         f32
         0.75
@@ -1056,101 +940,6 @@ defmodule Scholar.Metrics do
     weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
     {fpr, tpr, _} = roc_curve(y_true, y_score, distinct_value_indices, weights)
     auc(fpr, tpr)
-  end
-
-  @doc ~S"""
-  Calculates the $R^2$ score of predictions with respect to targets.
-
-  $$R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}$$
-
-  ## Examples
-
-      iex> y_true = Nx.tensor([3, -0.5, 2, 7], type: {:f, 32})
-      iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8], type: {:f, 32})
-      iex> Scholar.Metrics.r2_score(y_true, y_pred)
-      #Nx.Tensor<
-        f32
-        0.9486081600189209
-      >
-
-      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0], type: :f64), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64), force_finite: true)
-      #Nx.Tensor<
-        f64
-        0.0
-      >
-
-      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0], type: :f64), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64), force_finite: false)
-      #Nx.Tensor<
-        f64
-        -Inf
-      >
-
-      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0]), force_finite: false)
-      #Nx.Tensor<
-        f32
-        NaN
-      >
-
-      iex> Scholar.Metrics.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0]), force_finite: true)
-      #Nx.Tensor<
-        f32
-        1.0
-      >
-  """
-  deftransform r2_score(y_true, y_pred, opts \\ []) do
-    r2_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @r2_schema))
-  end
-
-  defnp r2_score_n(y_true, y_pred, opts) do
-    check_shape(y_true, y_pred)
-    ssr = squared_euclidean(y_true, y_pred)
-
-    y_mean = Nx.broadcast(Nx.mean(y_true), Nx.shape(y_true))
-    sst = squared_euclidean(y_true, y_mean)
-
-    case opts[:force_finite] do
-      false ->
-        infinity_mask = ssr != 0 and sst == 0
-        nan_mask = ssr == 0 and sst == 0
-        sst = Nx.select(sst == 0, 1, sst)
-        res = Nx.select(infinity_mask, Nx.tensor(:neg_infinity), 1 - ssr / sst)
-        Nx.select(nan_mask, Nx.tensor(:nan), res)
-
-      true ->
-        sst_mask = sst != 0
-        ssr_mask = ssr != 0
-
-        valid_score = ssr_mask and sst_mask
-
-        result = Nx.broadcast(Nx.tensor(1, type: Nx.type(ssr)), ssr)
-        result = Nx.select(ssr_mask and not sst_mask, 0, result)
-        sst = Nx.select(not sst_mask, 1, sst)
-        Nx.select(valid_score, 1 - ssr / sst, result)
-    end
-  end
-
-  @doc ~S"""
-  Calculates the maximum residual error.
-
-  The residual error is defined as $$|y - \hat{y}|$$ where $y$ is a true value
-  and $\hat{y}$ is a predicted value.
-  This function returns the maximum residual error over all samples in the
-  input: $max(|y_i - \hat{y_i}|)$. For perfect predictions, the maximum
-  residual error is `0.0`.
-
-  ## Examples
-
-      iex> y_true = Nx.tensor([3, -0.5, 2, 7])
-      iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8.5])
-      iex> Scholar.Metrics.max_residual_error(y_true, y_pred)
-      #Nx.Tensor<
-        f32
-        1.5
-      >
-  """
-  defn max_residual_error(y_true, y_pred) do
-    check_shape(y_true, y_pred)
-    Nx.reduce_max(Nx.abs(y_true - y_pred))
   end
 
   @doc """
@@ -1176,7 +965,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 1, 0])
       iex> y_prob = Nx.tensor([0.1, 0.9, 0.8, 0.3])
-      iex> Scholar.Metrics.brier_score_loss(y_true, y_prob)
+      iex> Scholar.Metrics.Classification.brier_score_loss(y_true, y_prob)
       #Nx.Tensor<
         f32
         0.03750000149011612
@@ -1207,7 +996,7 @@ defmodule Scholar.Metrics do
 
       iex> y1 = Nx.tensor([0, 1, 1, 0, 1, 2])
       iex> y2 = Nx.tensor([0, 2, 1, 0, 0, 1])
-      iex> Scholar.Metrics.cohen_kappa_score(y1, y2, num_classes: 3)
+      iex> Scholar.Metrics.Classification.cohen_kappa_score(y1, y2, num_classes: 3)
       #Nx.Tensor<
         f32
         0.21739131212234497
@@ -1215,7 +1004,7 @@ defmodule Scholar.Metrics do
 
       iex> y1 = Nx.tensor([0, 1, 1, 0, 1, 2])
       iex> y2 = Nx.tensor([0, 2, 1, 0, 0, 1])
-      iex> Scholar.Metrics.cohen_kappa_score(y1, y2, num_classes: 3, weighting_type: :linear)
+      iex> Scholar.Metrics.Classification.cohen_kappa_score(y1, y2, num_classes: 3, weighting_type: :linear)
       #Nx.Tensor<
         f32
         0.3571428060531616
@@ -1266,7 +1055,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 2, 2, 0])
       iex> y_score = Nx.tensor([[0.5, 0.2, 0.1], [0.3, 0.4, 0.5], [0.4, 0.3, 0.2], [0.1, 0.3, 0.6], [0.9, 0.1, 0.0]])
-      iex> Scholar.Metrics.top_k_accuracy_score(y_true, y_score, k: 2, num_classes: 3)
+      iex> Scholar.Metrics.Classification.top_k_accuracy_score(y_true, y_score, k: 2, num_classes: 3)
       #Nx.Tensor<
         f32
         0.800000011920929
@@ -1274,7 +1063,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 2, 2, 0])
       iex> y_score = Nx.tensor([[0.5, 0.2, 0.1], [0.3, 0.4, 0.5], [0.4, 0.3, 0.2], [0.1, 0.3, 0.6], [0.9, 0.1, 0.0]])
-      iex> Scholar.Metrics.top_k_accuracy_score(y_true, y_score, k: 2, num_classes: 3, normalize: false)
+      iex> Scholar.Metrics.Classification.top_k_accuracy_score(y_true, y_score, k: 2, num_classes: 3, normalize: false)
       #Nx.Tensor<
         u64
         4
@@ -1282,7 +1071,7 @@ defmodule Scholar.Metrics do
 
       iex> y_true = Nx.tensor([0, 1, 0, 1, 0])
       iex> y_score = Nx.tensor([0.55, 0.3, 0.1, -0.2, 0.99])
-      iex> Scholar.Metrics.top_k_accuracy_score(y_true, y_score, k: 1, num_classes: 2)
+      iex> Scholar.Metrics.Classification.top_k_accuracy_score(y_true, y_score, k: 1, num_classes: 2)
       #Nx.Tensor<
         f32
         0.20000000298023224
