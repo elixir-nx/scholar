@@ -140,6 +140,26 @@ defmodule Scholar.Metrics do
     ]
   ]
 
+  top_k_accuracy_score_schema =
+    general_schema ++
+      [
+        k: [
+          type: :integer,
+          default: 5,
+          doc: """
+          Number of top elements to look at for computing accuracy.
+          """
+        ],
+        normalize: [
+          type: :boolean,
+          default: true,
+          doc: """
+          If `true`, return the fraction of correctly classified samples.
+          Otherwise, return the number of correctly classified samples.
+          """
+        ]
+      ]
+
   zero_one_loss_schema = [
     normalize: [
       type: :boolean,
@@ -159,6 +179,7 @@ defmodule Scholar.Metrics do
   @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
   @r2_schema NimbleOptions.new!(r2_schema)
   @accuracy_schema NimbleOptions.new!(accuracy_schema)
+  @top_k_accuracy_score_schema NimbleOptions.new!(top_k_accuracy_score_schema)
   @zero_one_loss_schema NimbleOptions.new!(zero_one_loss_schema)
 
   # Standard Metrics
@@ -1227,6 +1248,99 @@ defmodule Scholar.Metrics do
       end
 
     1 - Nx.sum(weights_matrix * cm) / Nx.sum(weights_matrix * expected)
+  end
+
+  @doc """
+  Top-k Accuracy classification score.
+
+  This metric computes the number of times where the correct label is
+  among the top k labels predicted (ranked by predicted scores).
+
+  For binary task assumed that y_score have values from 0 to 1.
+
+  ## Options
+
+  #{NimbleOptions.docs(@top_k_accuracy_score_schema)}
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 2, 2, 0])
+      iex> y_score = Nx.tensor([[0.5, 0.2, 0.1], [0.3, 0.4, 0.5], [0.4, 0.3, 0.2], [0.1, 0.3, 0.6], [0.9, 0.1, 0.0]])
+      iex> Scholar.Metrics.top_k_accuracy_score(y_true, y_score, k: 2, num_classes: 3)
+      #Nx.Tensor<
+        f32
+        0.800000011920929
+      >
+
+      iex> y_true = Nx.tensor([0, 1, 2, 2, 0])
+      iex> y_score = Nx.tensor([[0.5, 0.2, 0.1], [0.3, 0.4, 0.5], [0.4, 0.3, 0.2], [0.1, 0.3, 0.6], [0.9, 0.1, 0.0]])
+      iex> Scholar.Metrics.top_k_accuracy_score(y_true, y_score, k: 2, num_classes: 3, normalize: false)
+      #Nx.Tensor<
+        u64
+        4
+      >
+
+      iex> y_true = Nx.tensor([0, 1, 0, 1, 0])
+      iex> y_score = Nx.tensor([0.55, 0.3, 0.1, -0.2, 0.99])
+      iex> Scholar.Metrics.top_k_accuracy_score(y_true, y_score, k: 1, num_classes: 2)
+      #Nx.Tensor<
+        f32
+        0.20000000298023224
+      >
+  """
+  deftransform top_k_accuracy_score(y_true, y_prob, opts \\ []) do
+    top_k_accuracy_score_n(
+      y_true,
+      y_prob,
+      NimbleOptions.validate!(opts, @top_k_accuracy_score_schema)
+    )
+  end
+
+  defnp top_k_accuracy_score_n(y_true, y_score, opts) do
+    k = opts[:k]
+    num_classes = opts[:num_classes]
+
+    hits =
+      case num_classes do
+        1 ->
+          raise ArgumentError, "num_classes must be greater than 1"
+
+        2 ->
+          if k == 1 do
+            rank_1d(Nx.rank(y_score))
+            threshold = 0.5
+            y_pred = y_score > threshold
+            y_pred == y_true
+          else
+            Nx.broadcast(Nx.u8(1), y_true)
+          end
+
+        _ ->
+          check_num_classes(num_classes, Nx.axis_size(y_score, 1))
+          sorted_pred = Nx.argsort(y_score, axis: 1, direction: :desc)
+
+          Nx.any(Nx.new_axis(y_true, 0) == Nx.transpose(sorted_pred[[.., 0..(k - 1)//1]]),
+            axes: [0]
+          )
+      end
+
+    case opts[:normalize] do
+      true -> Nx.mean(hits)
+      false -> Nx.sum(hits)
+    end
+  end
+
+  deftransformp check_num_classes(num_classes, axis_size) do
+    if num_classes != axis_size do
+      raise ArgumentError,
+            "num_classes must be equal to the second axis size, got #{num_classes} != #{axis_size}"
+    end
+  end
+
+  deftransformp rank_1d(rank) do
+    if rank != 1 do
+      raise ArgumentError, "For binary task rank of y_score must be 1, got #{rank}"
+    end
   end
 
   deftransformp check_num_classes(num_classes) do
