@@ -5,12 +5,12 @@
 ```elixir
 Mix.install([
   {:scholar, github: "elixir-nx/scholar", override: true},
-  {:explorer, "~> 0.5.7"},
+  {:explorer, "~> 0.6.1"},
   {:exla, "~> 0.5.3"},
   {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
   {:req, "~> 0.3.9"},
   {:kino_vega_lite, "~> 0.1.9"},
-  {:kino, "~> 0.9.4"},
+  {:kino, "~> 0.10.0"},
   {:scidata, "~> 0.1.10"},
   {:kino_explorer, "~> 0.1.7"}
 ])
