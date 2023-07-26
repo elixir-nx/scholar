@@ -165,7 +165,7 @@ Vl.new(
   width: 300,
   height: 300,
   title: [
-    text: "Scatterplot of data samples pojected on plane petal_width x petal_length",
+    text: "Scatterplot of data samples projected on plane petal_width x petal_length",
     offset: 25
   ]
 )
@@ -185,7 +185,7 @@ Vl.new(
 ```elixir
 Vl.new(
   title: [
-    text: "Scatterplot of data samples pojected on plane petal_width x petal_length by species",
+    text: "Scatterplot of data samples projected on plane petal_width x petal_length by species",
     offset: 25
   ]
 )
@@ -303,7 +303,7 @@ Vl.new(
   height: 300,
   title: [
     text:
-      "Scatterplot of data samples pojected on plane petal_width x petal_length with calculated centroids",
+      "Scatterplot of data samples projected on plane petal_width x petal_length with calculated centroids",
     offset: 25
   ]
 )
