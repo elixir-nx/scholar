@@ -32,13 +32,14 @@ require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 require Explorer.Query, as: Q
 alias Scholar.Neighbors.KNearestNeighbors, as: KNN
-alias Scholar.Metrics
+alias Scholar.Metrics.Classification
+alias Scholar.Metrics.Regression
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-Scholar.Metrics
+Scholar.Metrics.Regression
 ```
 
 And let's configure `EXLA.Backend` as our default across the notebook and all branched sections:
@@ -167,11 +168,11 @@ defmodule KFold do
 
     case task do
       :classification ->
-        Metrics.accuracy(val_labels, prediction)
+        Classification.accuracy(val_labels, prediction)
 
       # RMSE
       :regression ->
-        Metrics.mean_absolute_error(val_labels, prediction) |> Nx.sqrt()
+        Regression.mean_absolute_error(val_labels, prediction) |> Nx.sqrt()
     end
   end
 
@@ -716,7 +717,7 @@ Ok, let's test our best model on test data.
 best_model = KNN.fit(train_data, train_labels, num_neighbors: best_neighbors, num_classes: 3)
 
 final_prediction = KNN.predict(best_model, test_data)
-Metrics.accuracy(test_labels, final_prediction)
+Classification.accuracy(test_labels, final_prediction)
 ```
 
 <!-- livebook:{"output":true} -->
@@ -987,7 +988,7 @@ best_model =
   )
 
 final_prediction = KNN.predict(best_model, test_data)
-Metrics.mean_absolute_error(test_labels, final_prediction) |> Nx.sqrt()
+Regression.mean_absolute_error(test_labels, final_prediction) |> Nx.sqrt()
 ```
 
 <!-- livebook:{"output":true} -->
