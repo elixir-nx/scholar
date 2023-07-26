@@ -18,155 +18,6 @@ Mix.install([
 <!-- livebook:{"output":true} -->
 
 ```
-* Getting scholar (https://github.com/elixir-nx/scholar.git)
-remote: Enumerating objects: 1284, done.        
-remote: Counting objects: 100% (373/373), done.        
-remote: Compressing objects: 100% (185/185), done.        
-remote: Total 1284 (delta 255), reused 241 (delta 178), pack-reused 911        
-Receiving objects: 100% (1284/1284), 970.20 KiB | 2.59 MiB/s, done.
-Resolving deltas: 100% (664/664), done.
-origin/HEAD set to main
-* Getting nx (https://github.com/elixir-nx/nx.git)
-remote: Enumerating objects: 18102, done.        
-remote: Counting objects: 100% (2012/2012), done.        
-remote: Compressing objects: 100% (230/230), done.        
-remote: Total 18102 (delta 1879), reused 1847 (delta 1779), pack-reused 16090        
-Receiving objects: 100% (18102/18102), 5.36 MiB | 1.31 MiB/s, done.
-Resolving deltas: 100% (12230/12230), done.
-origin/HEAD set to main
-Resolving Hex dependencies...
-Resolution completed in 0.565s
-New:
-  castore 1.0.3
-  complex 0.5.0
-  elixir_make 0.7.7
-  exla 0.5.3
-  explorer 0.5.7
-  finch 0.16.0
-  hpax 0.1.2
-  jason 1.4.0
-  kino 0.9.4
-  kino_explorer 0.1.7
-  kino_vega_lite 0.1.9
-  mime 2.0.5
-  mint 1.5.1
-  nimble_options 1.0.2
-  nimble_pool 1.0.0
-  polaris 0.1.0
-  req 0.3.9
-  rustler_precompiled 0.6.1
-  table 0.1.2
-  table_rex 3.1.1
-  telemetry 1.2.1
-  vega_lite 0.1.7
-  xla 0.4.4
-* Getting explorer (Hex package)
-* Getting exla (Hex package)
-* Getting req (Hex package)
-* Getting kino_vega_lite (Hex package)
-* Getting kino (Hex package)
-* Getting kino_explorer (Hex package)
-* Getting table (Hex package)
-* Getting vega_lite (Hex package)
-* Getting finch (Hex package)
-* Getting jason (Hex package)
-* Getting mime (Hex package)
-* Getting castore (Hex package)
-* Getting mint (Hex package)
-* Getting nimble_options (Hex package)
-* Getting nimble_pool (Hex package)
-* Getting telemetry (Hex package)
-* Getting hpax (Hex package)
-* Getting complex (Hex package)
-* Getting elixir_make (Hex package)
-* Getting xla (Hex package)
-* Getting rustler_precompiled (Hex package)
-* Getting table_rex (Hex package)
-* Getting polaris (Hex package)
-==> table
-Compiling 5 files (.ex)
-Generated table app
-==> vega_lite
-Compiling 5 files (.ex)
-Generated vega_lite app
-==> mime
-Compiling 1 file (.ex)
-Generated mime app
-==> nimble_options
-Compiling 3 files (.ex)
-Generated nimble_options app
-===> Analyzing applications...
-===> Compiling telemetry
-==> jason
-Compiling 10 files (.ex)
-Generated jason app
-==> hpax
-Compiling 4 files (.ex)
-Generated hpax app
-==> complex
-Compiling 2 files (.ex)
-Generated complex app
-==> nx
-Compiling 32 files (.ex)
-Generated nx app
-==> kino
-Compiling 39 files (.ex)
-Generated kino app
-==> kino_vega_lite
-Compiling 4 files (.ex)
-Generated kino_vega_lite app
-==> polaris
-Compiling 5 files (.ex)
-Generated polaris app
-==> table_rex
-Compiling 7 files (.ex)
-Generated table_rex app
-==> nimble_pool
-Compiling 2 files (.ex)
-Generated nimble_pool app
-==> castore
-Compiling 1 file (.ex)
-Generated castore app
-==> mint
-Compiling 1 file (.erl)
-Compiling 19 files (.ex)
-Generated mint app
-==> finch
-Compiling 13 files (.ex)
-Generated finch app
-==> req
-Compiling 5 files (.ex)
-Generated req app
-==> rustler_precompiled
-Compiling 4 files (.ex)
-Generated rustler_precompiled app
-==> explorer
-Compiling 19 files (.ex)
-
-01:01:12.233 [debug] Copying NIF from cache and extracting to /home/mateusz/.cache/mix/installs/elixir-1.14.2-erts-13.1.4/29754aa7259095914a2437cde454ac9b/_build/dev/lib/explorer/priv/native/libexplorer-v0.5.7-nif-2.16-x86_64-unknown-linux-gnu.so
-Generated explorer app
-==> kino_explorer
-Compiling 4 files (.ex)
-Generated kino_explorer app
-==> elixir_make
-Compiling 6 files (.ex)
-Generated elixir_make app
-==> xla
-Compiling 2 files (.ex)
-Generated xla app
-==> exla
-Unpacking /home/mateusz/.cache/xla/0.4.4/cache/download/xla_extension-x86_64-linux-gnu-cpu.tar.gz into /home/mateusz/.cache/mix/installs/elixir-1.14.2-erts-13.1.4/29754aa7259095914a2437cde454ac9b/deps/exla/cache
-Using libexla.so from /home/mateusz/.cache/xla/exla/elixir-1.14.2-erts-13.1.4-xla-0.4.4-exla-0.5.3-ukrr3tvvrelj5kk57j5pmion2u/libexla.so
-Compiling 21 files (.ex)
-Generated exla app
-==> scholar
-Compiling 27 files (.ex)
-Generated scholar app
-```
-
-<!-- livebook:{"output":true} -->
-
-```
 :ok
 ```
 
@@ -181,7 +32,7 @@ require Explorer.Series, as: S
 alias Scholar.Linear.LinearRegression, as: LR
 alias Scholar.Linear.PolynomialRegression, as: PR
 alias Scholar.Impute.SimpleImputer
-alias Scholar.Metrics
+alias Scholar.Metrics.Regression
 Nx.global_default_backend(EXLA.Backend)
 seed = 42
 key = Nx.Random.key(42)
@@ -1146,8 +997,8 @@ Now we can predict the values for the test set and measure the error of our pred
 
 ```elixir
 predictions = LR.predict(model, x_test)
-rmse = Metrics.mean_square_error(y_test, predictions) |> Nx.sqrt()
-mae = Metrics.mean_absolute_error(y_test, predictions)
+rmse = Regression.mean_square_error(y_test, predictions) |> Nx.sqrt()
+mae = Regression.mean_absolute_error(y_test, predictions)
 {rmse, mae}
 ```
 
