@@ -90,8 +90,8 @@ defmodule Scholar.ModelSelection do
       ...>   {y_train, y_test} = y
       ...>   model = Scholar.Linear.LinearRegression.fit(x_train, y_train)
       ...>   y_pred = Scholar.Linear.LinearRegression.predict(model, x_test)
-      ...>   mse = Scholar.Metrics.mean_square_error(y_test, y_pred)
-      ...>   mae = Scholar.Metrics.mean_absolute_error(y_test, y_pred)
+      ...>   mse = Scholar.Metrics.Regression.mean_square_error(y_test, y_pred)
+      ...>   mae = Scholar.Metrics.Regression.mean_absolute_error(y_test, y_pred)
       ...>   [mse, mae]
       ...> end
       iex> x = Nx.iota({7, 2})

@@ -15,7 +15,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       )
 
     res = Scholar.Linear.LogisticRegression.predict(model, x_test)
-    assert Scholar.Metrics.accuracy(y_test, res) >= 0.6
+    assert Scholar.Metrics.Classification.accuracy(y_test, res) >= 0.6
   end
 
   test "Iris Data Set - multinomial logistic regression test for multinomial data" do
@@ -25,7 +25,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
 
     model = LogisticRegression.fit(x_train, y_train, num_classes: 3)
     res = LogisticRegression.predict(model, x_test)
-    assert Scholar.Metrics.accuracy(y_test, res) >= 0.965
+    assert Scholar.Metrics.Classification.accuracy(y_test, res) >= 0.965
   end
 
   describe "errors" do
