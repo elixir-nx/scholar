@@ -4,14 +4,15 @@
 
 ```elixir
 Mix.install([
-  {:scholar, "~> 0.1"},
-  {:exla, "~> 0.5.2"},
-  {:explorer, "~> 0.5.6"},
-  {:stb_image, "~> 0.6"},
-  {:scidata, "~> 0.1.9"},
-  {:req, "~> 0.3.6"},
-  {:kino, "~> 0.9.0"},
-  {:kino_vega_lite, "~> 0.1.8"}
+  {:scholar, github: "elixir-nx/scholar", override: true},
+  {:exla, "~> 0.5.3"},
+  {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
+  {:explorer, "~> 0.6.1"},
+  {:stb_image, "~> 0.6.1"},
+  {:scidata, "~> 0.1.10"},
+  {:req, "~> 0.3.9"},
+  {:kino, "~> 0.10.0"},
+  {:kino_vega_lite, "~> 0.1.9"}
 ])
 ```
 
@@ -23,27 +24,39 @@ Mix.install([
 
 ## Introduction
 
-The main purpose of this livebook is to introduce the KMeans clustering algorithm. We will explore KMeans in three different use cases.
+The main purpose of this livebook is to introduce the **KMeans** clustering algorithm. We will explore KMeans in three different use cases.
 
 ```elixir
 alias VegaLite, as: Vl
 alias Scholar.Cluster.KMeans
 require Explorer.DataFrame, as: DF
 Nx.global_default_backend(EXLA.Backend)
-seed = 42
+key = Nx.Random.key(42)
 ```
 
 <!-- livebook:{"output":true} -->
 
 ```
-42
+
+01:54:14.962 [info] TfrtCpuClient created.
+
+```
+
+<!-- livebook:{"output":true} -->
+
+```
+#Nx.Tensor<
+  u32[2]
+  EXLA.Backend<host:0, 0.2154564112.3514957836.118391>
+  [0, 42]
+>
 ```
 
 <!-- livebook:{"branch_parent_index":0} -->
 
 ## Iris Dataset
 
-The first example we will focus on is the **Iris Dataset**. It is one of the most renowned datasets. It consists of 150 records describing three iris species: *Iris Setosa*, *Iris Virginica*, and *Iris Versicolor*. Our task will be to predict the species of given flowers.
+In the first example, we will focus on is the **Iris Dataset**. It is one of the most renowned datasets. It consists of 150 records describing three iris species: *Iris Setosa*, *Iris Virginica*, and *Iris Versicolor*. Our task will be to predict the species of given flowers.
 
 <!-- livebook:{"break_markdown":true} -->
 
@@ -65,17 +78,9 @@ y =
 <!-- livebook:{"output":true} -->
 
 ```
-
-01:45:19.328 [info] TfrtCpuClient created.
-
-```
-
-<!-- livebook:{"output":true} -->
-
-```
 {#Nx.Tensor<
    f64[150][4]
-   EXLA.Backend<host:0, 0.697554249.257294348.143266>
+   EXLA.Backend<host:0, 0.2154564112.3514957836.118402>
    [
      [5.1, 3.5, 1.4, 0.2],
      [4.9, 3.0, 1.4, 0.2],
@@ -95,7 +100,7 @@ y =
  >,
  #Nx.Tensor<
    s64[150]
-   EXLA.Backend<host:0, 0.697554249.257294348.143280>
+   EXLA.Backend<host:0, 0.2154564112.3514957836.118416>
    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...]
  >}
 ```
@@ -160,7 +165,7 @@ Vl.new(
   width: 300,
   height: 300,
   title: [
-    text: "Scatterplot of data samples pojected on plane petal_width x petal_length",
+    text: "Scatterplot of data samples projected on plane petal_width x petal_length",
     offset: 25
   ]
 )
@@ -180,9 +185,8 @@ Vl.new(
 ```elixir
 Vl.new(
   title: [
-    text: "Scatterplot of data samples pojected on plane petal_width x petal_length by species",
-    offset: 25,
-    anchor: :middle
+    text: "Scatterplot of data samples projected on plane petal_width x petal_length by species",
+    offset: 25
   ]
 )
 |> Vl.data_from_values(df)
@@ -198,7 +202,7 @@ Vl.new(
 <!-- livebook:{"output":true} -->
 
 ```vega-lite
-{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","data":{"values":[{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.1,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":4.9,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.2,"sepal_length":4.7,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":4.6,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.6,"species":"Iris-setosa"},{"petal_length":1.7,"petal_width":0.4,"sepal_length":5.4,"sepal_width":3.9,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.3,"sepal_length":4.6,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":4.4,"sepal_width":2.9,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.1,"sepal_length":4.9,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.4,"sepal_width":3.7,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":4.8,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.1,"sepal_length":4.8,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.1,"petal_width":0.1,"sepal_length":4.3,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.2,"petal_width":0.2,"sepal_length":5.8,"sepal_width":4.0,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.4,"sepal_length":5.7,"sepal_width":4.4,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.4,"sepal_length":5.4,"sepal_width":3.9,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.3,"sepal_length":5.1,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.7,"petal_width":0.3,"sepal_length":5.7,"sepal_width":3.8,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.3,"sepal_length":5.1,"sepal_width":3.8,"species":"Iris-setosa"},{"petal_length":1.7,"petal_width":0.2,"sepal_length":5.4,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.4,"sepal_length":5.1,"sepal_width":3.7,"species":"Iris-setosa"},{"petal_length":1.0,"petal_width":0.2,"sepal_length":4.6,"sepal_width":3.6,"species":"Iris-setosa"},{"petal_length":1.7,"petal_width":0.5,"sepal_length":5.1,"sepal_width":3.3,"species":"Iris-setosa"},{"petal_length":1.9,"petal_width":0.2,"sepal_length":4.8,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.4,"sepal_length":5.0,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.2,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.2,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":4.7,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":4.8,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.4,"sepal_length":5.4,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.1,"sepal_length":5.2,"sepal_width":4.1,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.5,"sepal_width":4.2,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.1,"sepal_length":4.9,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.2,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.2,"sepal_length":5.5,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.1,"sepal_length":4.9,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.2,"sepal_length":4.4,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.1,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.3,"sepal_length":5.0,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.3,"sepal_length":4.5,"sepal_width":2.3,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.2,"sepal_length":4.4,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.6,"sepal_length":5.0,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.9,"petal_width":0.4,"sepal_length":5.1,"sepal_width":3.8,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.3,"sepal_length":4.8,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":5.1,"sepal_width":3.8,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":4.6,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.3,"sepal_width":3.7,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.3,"species":"Iris-setosa"},{"petal_length":4.7,"petal_width":1.4,"sepal_length":7.0,"sepal_width":3.2,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":6.4,"sepal_width":3.2,"species":"Iris-versicolor"},{"petal_length":4.9,"petal_width":1.5,"sepal_length":6.9,"sepal_width":3.1,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.3,"sepal_length":5.5,"sepal_width":2.3,"species":"Iris-versicolor"},{"petal_length":4.6,"petal_width":1.5,"sepal_length":6.5,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.3,"sepal_length":5.7,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":4.7,"petal_width":1.6,"sepal_length":6.3,"sepal_width":3.3,"species":"Iris-versicolor"},{"petal_length":3.3,"petal_width":1.0,"sepal_length":4.9,"sepal_width":2.4,"species":"Iris-versicolor"},{"petal_length":4.6,"petal_width":1.3,"sepal_length":6.6,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":3.9,"petal_width":1.4,"sepal_length":5.2,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":3.5,"petal_width":1.0,"sepal_length":5.0,"sepal_width":2.0,"species":"Iris-versicolor"},{"petal_length":4.2,"petal_width":1.5,"sepal_length":5.9,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.0,"sepal_length":6.0,"sepal_width":2.2,"species":"Iris-versicolor"},{"petal_length":4.7,"petal_width":1.4,"sepal_length":6.1,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":3.6,"petal_width":1.3,"sepal_length":5.6,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":4.4,"petal_width":1.4,"sepal_length":6.7,"sepal_width":3.1,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":5.6,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.1,"petal_width":1.0,"sepal_length":5.8,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":6.2,"sepal_width":2.2,"species":"Iris-versicolor"},{"petal_length":3.9,"petal_width":1.1,"sepal_length":5.6,"sepal_width":2.5,"species":"Iris-versicolor"},{"petal_length":4.8,"petal_width":1.8,"sepal_length":5.9,"sepal_width":3.2,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.3,"sepal_length":6.1,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":4.9,"petal_width":1.5,"sepal_length":6.3,"sepal_width":2.5,"species":"Iris-versicolor"},{"petal_length":4.7,"petal_width":1.2,"sepal_length":6.1,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":4.3,"petal_width":1.3,"sepal_length":6.4,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":4.4,"petal_width":1.4,"sepal_length":6.6,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.8,"petal_width":1.4,"sepal_length":6.8,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":5.0,"petal_width":1.7,"sepal_length":6.7,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":6.0,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":3.5,"petal_width":1.0,"sepal_length":5.7,"sepal_width":2.6,"species":"Iris-versicolor"},{"petal_length":3.8,"petal_width":1.1,"sepal_length":5.5,"sepal_width":2.4,"species":"Iris-versicolor"},{"petal_length":3.7,"petal_width":1.0,"sepal_length":5.5,"sepal_width":2.4,"species":"Iris-versicolor"},{"petal_length":3.9,"petal_width":1.2,"sepal_length":5.8,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":5.1,"petal_width":1.6,"sepal_length":6.0,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":5.4,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.6,"sepal_length":6.0,"sepal_width":3.4,"species":"Iris-versicolor"},{"petal_length":4.7,"petal_width":1.5,"sepal_length":6.7,"sepal_width":3.1,"species":"Iris-versicolor"},{"petal_length":4.4,"petal_width":1.3,"sepal_length":6.3,"sepal_width":2.3,"species":"Iris-versicolor"},{"petal_length":4.1,"petal_width":1.3,"sepal_length":5.6,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.3,"sepal_length":5.5,"sepal_width":2.5,"species":"Iris-versicolor"},{"petal_length":4.4,"petal_width":1.2,"sepal_length":5.5,"sepal_width":2.6,"species":"Iris-versicolor"},{"petal_length":4.6,"petal_width":1.4,"sepal_length":6.1,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.2,"sepal_length":5.8,"sepal_width":2.6,"species":"Iris-versicolor"},{"petal_length":3.3,"petal_width":1.0,"sepal_length":5.0,"sepal_width":2.3,"species":"Iris-versicolor"},{"petal_length":4.2,"petal_width":1.3,"sepal_length":5.6,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":4.2,"petal_width":1.2,"sepal_length":5.7,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.2,"petal_width":1.3,"sepal_length":5.7,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":4.3,"petal_width":1.3,"sepal_length":6.2,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":3.0,"petal_width":1.1,"sepal_length":5.1,"sepal_width":2.5,"species":"Iris-versicolor"},{"petal_length":4.1,"petal_width":1.3,"sepal_length":5.7,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":6.0,"petal_width":2.5,"sepal_length":6.3,"sepal_width":3.3,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":1.9,"sepal_length":5.8,"sepal_width":2.7,"species":"Iris-virginica"},{"petal_length":5.9,"petal_width":2.1,"sepal_length":7.1,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":1.8,"sepal_length":6.3,"sepal_width":2.9,"species":"Iris-virginica"},{"petal_length":5.8,"petal_width":2.2,"sepal_length":6.5,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":6.6,"petal_width":2.1,"sepal_length":7.6,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":4.5,"petal_width":1.7,"sepal_length":4.9,"sepal_width":2.5,"species":"Iris-virginica"},{"petal_length":6.3,"petal_width":1.8,"sepal_length":7.3,"sepal_width":2.9,"species":"Iris-virginica"},{"petal_length":5.8,"petal_width":1.8,"sepal_length":6.7,"sepal_width":2.5,"species":"Iris-virginica"},{"petal_length":6.1,"petal_width":2.5,"sepal_length":7.2,"sepal_width":3.6,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":2.0,"sepal_length":6.5,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":5.3,"petal_width":1.9,"sepal_length":6.4,"sepal_width":2.7,"species":"Iris-virginica"},{"petal_length":5.5,"petal_width":2.1,"sepal_length":6.8,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.0,"petal_width":2.0,"sepal_length":5.7,"sepal_width":2.5,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":2.4,"sepal_length":5.8,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":5.3,"petal_width":2.3,"sepal_length":6.4,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":5.5,"petal_width":1.8,"sepal_length":6.5,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":6.7,"petal_width":2.2,"sepal_length":7.7,"sepal_width":3.8,"species":"Iris-virginica"},{"petal_length":6.9,"petal_width":2.3,"sepal_length":7.7,"sepal_width":2.6,"species":"Iris-virginica"},{"petal_length":5.0,"petal_width":1.5,"sepal_length":6.0,"sepal_width":2.2,"species":"Iris-virginica"},{"petal_length":5.7,"petal_width":2.3,"sepal_length":6.9,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":4.9,"petal_width":2.0,"sepal_length":5.6,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":6.7,"petal_width":2.0,"sepal_length":7.7,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":4.9,"petal_width":1.8,"sepal_length":6.3,"sepal_width":2.7,"species":"Iris-virginica"},{"petal_length":5.7,"petal_width":2.1,"sepal_length":6.7,"sepal_width":3.3,"species":"Iris-virginica"},{"petal_length":6.0,"petal_width":1.8,"sepal_length":7.2,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":4.8,"petal_width":1.8,"sepal_length":6.2,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":4.9,"petal_width":1.8,"sepal_length":6.1,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":2.1,"sepal_length":6.4,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":5.8,"petal_width":1.6,"sepal_length":7.2,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":6.1,"petal_width":1.9,"sepal_length":7.4,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":6.4,"petal_width":2.0,"sepal_length":7.9,"sepal_width":3.8,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":2.2,"sepal_length":6.4,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":1.5,"sepal_length":6.3,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":1.4,"sepal_length":6.1,"sepal_width":2.6,"species":"Iris-virginica"},{"petal_length":6.1,"petal_width":2.3,"sepal_length":7.7,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":2.4,"sepal_length":6.3,"sepal_width":3.4,"species":"Iris-virginica"},{"petal_length":5.5,"petal_width":1.8,"sepal_length":6.4,"sepal_width":3.1,"species":"Iris-virginica"},{"petal_length":4.8,"petal_width":1.8,"sepal_length":6.0,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.4,"petal_width":2.1,"sepal_length":6.9,"sepal_width":3.1,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":2.4,"sepal_length":6.7,"sepal_width":3.1,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":2.3,"sepal_length":6.9,"sepal_width":3.1,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":1.9,"sepal_length":5.8,"sepal_width":2.7,"species":"Iris-virginica"},{"petal_length":5.9,"petal_width":2.3,"sepal_length":6.8,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":5.7,"petal_width":2.5,"sepal_length":6.7,"sepal_width":3.3,"species":"Iris-virginica"},{"petal_length":5.2,"petal_width":2.3,"sepal_length":6.7,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.0,"petal_width":1.9,"sepal_length":6.3,"sepal_width":2.5,"species":"Iris-virginica"},{"petal_length":5.2,"petal_width":2.0,"sepal_length":6.5,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.4,"petal_width":2.3,"sepal_length":6.2,"sepal_width":3.4,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":1.8,"sepal_length":5.9,"sepal_width":3.0,"species":"Iris-virginica"}]},"facet":{"field":"species"},"spec":{"encoding":{"x":{"field":"petal_length","type":"quantitative"},"y":{"field":"petal_width","type":"quantitative"}},"height":200,"mark":"point","width":200},"title":{"anchor":"middle","offset":25,"text":"Scatterplot of data samples pojected on plane petal_width x petal_length by species"}}
+{"$schema":"https://vega.github.io/schema/vega-lite/v5.json","data":{"values":[{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.1,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":4.9,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.2,"sepal_length":4.7,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":4.6,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.6,"species":"Iris-setosa"},{"petal_length":1.7,"petal_width":0.4,"sepal_length":5.4,"sepal_width":3.9,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.3,"sepal_length":4.6,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":4.4,"sepal_width":2.9,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.1,"sepal_length":4.9,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.4,"sepal_width":3.7,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":4.8,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.1,"sepal_length":4.8,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.1,"petal_width":0.1,"sepal_length":4.3,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.2,"petal_width":0.2,"sepal_length":5.8,"sepal_width":4.0,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.4,"sepal_length":5.7,"sepal_width":4.4,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.4,"sepal_length":5.4,"sepal_width":3.9,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.3,"sepal_length":5.1,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.7,"petal_width":0.3,"sepal_length":5.7,"sepal_width":3.8,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.3,"sepal_length":5.1,"sepal_width":3.8,"species":"Iris-setosa"},{"petal_length":1.7,"petal_width":0.2,"sepal_length":5.4,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.4,"sepal_length":5.1,"sepal_width":3.7,"species":"Iris-setosa"},{"petal_length":1.0,"petal_width":0.2,"sepal_length":4.6,"sepal_width":3.6,"species":"Iris-setosa"},{"petal_length":1.7,"petal_width":0.5,"sepal_length":5.1,"sepal_width":3.3,"species":"Iris-setosa"},{"petal_length":1.9,"petal_width":0.2,"sepal_length":4.8,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.4,"sepal_length":5.0,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.2,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.2,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":4.7,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":4.8,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.4,"sepal_length":5.4,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.1,"sepal_length":5.2,"sepal_width":4.1,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.5,"sepal_width":4.2,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.1,"sepal_length":4.9,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.2,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.2,"sepal_length":5.5,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.1,"sepal_length":4.9,"sepal_width":3.1,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.2,"sepal_length":4.4,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.1,"sepal_width":3.4,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.3,"sepal_length":5.0,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.3,"sepal_length":4.5,"sepal_width":2.3,"species":"Iris-setosa"},{"petal_length":1.3,"petal_width":0.2,"sepal_length":4.4,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.6,"sepal_length":5.0,"sepal_width":3.5,"species":"Iris-setosa"},{"petal_length":1.9,"petal_width":0.4,"sepal_length":5.1,"sepal_width":3.8,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.3,"sepal_length":4.8,"sepal_width":3.0,"species":"Iris-setosa"},{"petal_length":1.6,"petal_width":0.2,"sepal_length":5.1,"sepal_width":3.8,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":4.6,"sepal_width":3.2,"species":"Iris-setosa"},{"petal_length":1.5,"petal_width":0.2,"sepal_length":5.3,"sepal_width":3.7,"species":"Iris-setosa"},{"petal_length":1.4,"petal_width":0.2,"sepal_length":5.0,"sepal_width":3.3,"species":"Iris-setosa"},{"petal_length":4.7,"petal_width":1.4,"sepal_length":7.0,"sepal_width":3.2,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":6.4,"sepal_width":3.2,"species":"Iris-versicolor"},{"petal_length":4.9,"petal_width":1.5,"sepal_length":6.9,"sepal_width":3.1,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.3,"sepal_length":5.5,"sepal_width":2.3,"species":"Iris-versicolor"},{"petal_length":4.6,"petal_width":1.5,"sepal_length":6.5,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.3,"sepal_length":5.7,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":4.7,"petal_width":1.6,"sepal_length":6.3,"sepal_width":3.3,"species":"Iris-versicolor"},{"petal_length":3.3,"petal_width":1.0,"sepal_length":4.9,"sepal_width":2.4,"species":"Iris-versicolor"},{"petal_length":4.6,"petal_width":1.3,"sepal_length":6.6,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":3.9,"petal_width":1.4,"sepal_length":5.2,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":3.5,"petal_width":1.0,"sepal_length":5.0,"sepal_width":2.0,"species":"Iris-versicolor"},{"petal_length":4.2,"petal_width":1.5,"sepal_length":5.9,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.0,"sepal_length":6.0,"sepal_width":2.2,"species":"Iris-versicolor"},{"petal_length":4.7,"petal_width":1.4,"sepal_length":6.1,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":3.6,"petal_width":1.3,"sepal_length":5.6,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":4.4,"petal_width":1.4,"sepal_length":6.7,"sepal_width":3.1,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":5.6,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.1,"petal_width":1.0,"sepal_length":5.8,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":6.2,"sepal_width":2.2,"species":"Iris-versicolor"},{"petal_length":3.9,"petal_width":1.1,"sepal_length":5.6,"sepal_width":2.5,"species":"Iris-versicolor"},{"petal_length":4.8,"petal_width":1.8,"sepal_length":5.9,"sepal_width":3.2,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.3,"sepal_length":6.1,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":4.9,"petal_width":1.5,"sepal_length":6.3,"sepal_width":2.5,"species":"Iris-versicolor"},{"petal_length":4.7,"petal_width":1.2,"sepal_length":6.1,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":4.3,"petal_width":1.3,"sepal_length":6.4,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":4.4,"petal_width":1.4,"sepal_length":6.6,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.8,"petal_width":1.4,"sepal_length":6.8,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":5.0,"petal_width":1.7,"sepal_length":6.7,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":6.0,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":3.5,"petal_width":1.0,"sepal_length":5.7,"sepal_width":2.6,"species":"Iris-versicolor"},{"petal_length":3.8,"petal_width":1.1,"sepal_length":5.5,"sepal_width":2.4,"species":"Iris-versicolor"},{"petal_length":3.7,"petal_width":1.0,"sepal_length":5.5,"sepal_width":2.4,"species":"Iris-versicolor"},{"petal_length":3.9,"petal_width":1.2,"sepal_length":5.8,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":5.1,"petal_width":1.6,"sepal_length":6.0,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.5,"sepal_length":5.4,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.5,"petal_width":1.6,"sepal_length":6.0,"sepal_width":3.4,"species":"Iris-versicolor"},{"petal_length":4.7,"petal_width":1.5,"sepal_length":6.7,"sepal_width":3.1,"species":"Iris-versicolor"},{"petal_length":4.4,"petal_width":1.3,"sepal_length":6.3,"sepal_width":2.3,"species":"Iris-versicolor"},{"petal_length":4.1,"petal_width":1.3,"sepal_length":5.6,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.3,"sepal_length":5.5,"sepal_width":2.5,"species":"Iris-versicolor"},{"petal_length":4.4,"petal_width":1.2,"sepal_length":5.5,"sepal_width":2.6,"species":"Iris-versicolor"},{"petal_length":4.6,"petal_width":1.4,"sepal_length":6.1,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.0,"petal_width":1.2,"sepal_length":5.8,"sepal_width":2.6,"species":"Iris-versicolor"},{"petal_length":3.3,"petal_width":1.0,"sepal_length":5.0,"sepal_width":2.3,"species":"Iris-versicolor"},{"petal_length":4.2,"petal_width":1.3,"sepal_length":5.6,"sepal_width":2.7,"species":"Iris-versicolor"},{"petal_length":4.2,"petal_width":1.2,"sepal_length":5.7,"sepal_width":3.0,"species":"Iris-versicolor"},{"petal_length":4.2,"petal_width":1.3,"sepal_length":5.7,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":4.3,"petal_width":1.3,"sepal_length":6.2,"sepal_width":2.9,"species":"Iris-versicolor"},{"petal_length":3.0,"petal_width":1.1,"sepal_length":5.1,"sepal_width":2.5,"species":"Iris-versicolor"},{"petal_length":4.1,"petal_width":1.3,"sepal_length":5.7,"sepal_width":2.8,"species":"Iris-versicolor"},{"petal_length":6.0,"petal_width":2.5,"sepal_length":6.3,"sepal_width":3.3,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":1.9,"sepal_length":5.8,"sepal_width":2.7,"species":"Iris-virginica"},{"petal_length":5.9,"petal_width":2.1,"sepal_length":7.1,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":1.8,"sepal_length":6.3,"sepal_width":2.9,"species":"Iris-virginica"},{"petal_length":5.8,"petal_width":2.2,"sepal_length":6.5,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":6.6,"petal_width":2.1,"sepal_length":7.6,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":4.5,"petal_width":1.7,"sepal_length":4.9,"sepal_width":2.5,"species":"Iris-virginica"},{"petal_length":6.3,"petal_width":1.8,"sepal_length":7.3,"sepal_width":2.9,"species":"Iris-virginica"},{"petal_length":5.8,"petal_width":1.8,"sepal_length":6.7,"sepal_width":2.5,"species":"Iris-virginica"},{"petal_length":6.1,"petal_width":2.5,"sepal_length":7.2,"sepal_width":3.6,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":2.0,"sepal_length":6.5,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":5.3,"petal_width":1.9,"sepal_length":6.4,"sepal_width":2.7,"species":"Iris-virginica"},{"petal_length":5.5,"petal_width":2.1,"sepal_length":6.8,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.0,"petal_width":2.0,"sepal_length":5.7,"sepal_width":2.5,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":2.4,"sepal_length":5.8,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":5.3,"petal_width":2.3,"sepal_length":6.4,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":5.5,"petal_width":1.8,"sepal_length":6.5,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":6.7,"petal_width":2.2,"sepal_length":7.7,"sepal_width":3.8,"species":"Iris-virginica"},{"petal_length":6.9,"petal_width":2.3,"sepal_length":7.7,"sepal_width":2.6,"species":"Iris-virginica"},{"petal_length":5.0,"petal_width":1.5,"sepal_length":6.0,"sepal_width":2.2,"species":"Iris-virginica"},{"petal_length":5.7,"petal_width":2.3,"sepal_length":6.9,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":4.9,"petal_width":2.0,"sepal_length":5.6,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":6.7,"petal_width":2.0,"sepal_length":7.7,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":4.9,"petal_width":1.8,"sepal_length":6.3,"sepal_width":2.7,"species":"Iris-virginica"},{"petal_length":5.7,"petal_width":2.1,"sepal_length":6.7,"sepal_width":3.3,"species":"Iris-virginica"},{"petal_length":6.0,"petal_width":1.8,"sepal_length":7.2,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":4.8,"petal_width":1.8,"sepal_length":6.2,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":4.9,"petal_width":1.8,"sepal_length":6.1,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":2.1,"sepal_length":6.4,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":5.8,"petal_width":1.6,"sepal_length":7.2,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":6.1,"petal_width":1.9,"sepal_length":7.4,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":6.4,"petal_width":2.0,"sepal_length":7.9,"sepal_width":3.8,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":2.2,"sepal_length":6.4,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":1.5,"sepal_length":6.3,"sepal_width":2.8,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":1.4,"sepal_length":6.1,"sepal_width":2.6,"species":"Iris-virginica"},{"petal_length":6.1,"petal_width":2.3,"sepal_length":7.7,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":2.4,"sepal_length":6.3,"sepal_width":3.4,"species":"Iris-virginica"},{"petal_length":5.5,"petal_width":1.8,"sepal_length":6.4,"sepal_width":3.1,"species":"Iris-virginica"},{"petal_length":4.8,"petal_width":1.8,"sepal_length":6.0,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.4,"petal_width":2.1,"sepal_length":6.9,"sepal_width":3.1,"species":"Iris-virginica"},{"petal_length":5.6,"petal_width":2.4,"sepal_length":6.7,"sepal_width":3.1,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":2.3,"sepal_length":6.9,"sepal_width":3.1,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":1.9,"sepal_length":5.8,"sepal_width":2.7,"species":"Iris-virginica"},{"petal_length":5.9,"petal_width":2.3,"sepal_length":6.8,"sepal_width":3.2,"species":"Iris-virginica"},{"petal_length":5.7,"petal_width":2.5,"sepal_length":6.7,"sepal_width":3.3,"species":"Iris-virginica"},{"petal_length":5.2,"petal_width":2.3,"sepal_length":6.7,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.0,"petal_width":1.9,"sepal_length":6.3,"sepal_width":2.5,"species":"Iris-virginica"},{"petal_length":5.2,"petal_width":2.0,"sepal_length":6.5,"sepal_width":3.0,"species":"Iris-virginica"},{"petal_length":5.4,"petal_width":2.3,"sepal_length":6.2,"sepal_width":3.4,"species":"Iris-virginica"},{"petal_length":5.1,"petal_width":1.8,"sepal_length":5.9,"sepal_width":3.0,"species":"Iris-virginica"}]},"facet":{"field":"species"},"spec":{"encoding":{"x":{"field":"petal_length","type":"quantitative"},"y":{"field":"petal_width","type":"quantitative"}},"height":200,"mark":"point","width":200},"title":{"offset":25,"text":"Scatterplot of data samples pojected on plane petal_width x petal_length by species"}}
 ```
 
 Now we have a better understanding of the data. Iris species have different petal widths and petal lengths. Iris *Setosa* has the smallest petal, *Versicolor* is medium size, and *Virginica* has the largest petal. We can ascertain that our analysis is correct and plot the so-called **Elbow plot**. The Elbow plot is a plot which presents Inertia vs the number of clusters. If there is a characteristic elbow, then we have a strong suggestion that the number of clusters is correct. Let's train KMeans models for a different number of clusters from range 1 to 11.
@@ -208,7 +212,7 @@ clusterings = 1..11
 
 models =
   for num_clusters <- clusterings do
-    KMeans.fit(x, num_clusters: num_clusters, seed: seed)
+    KMeans.fit(x, num_clusters: num_clusters, key: key)
   end
 
 inertias = for model <- models, do: Nx.to_number(model.inertia)
@@ -281,7 +285,7 @@ accuracy = Scholar.Metrics.accuracy(best_model.labels, y)
 ```
 #Nx.Tensor<
   f32
-  EXLA.Backend<host:0, 0.697554249.257294348.183724>
+  EXLA.Backend<host:0, 0.2154564112.3514957836.158789>
   0.8933333158493042
 >
 ```
@@ -299,7 +303,7 @@ Vl.new(
   height: 300,
   title: [
     text:
-      "Scatterplot of data samples pojected on plane petal_width x petal_length with calculated centroids",
+      "Scatterplot of data samples projected on plane petal_width x petal_length with calculated centroids",
     offset: 25
   ]
 )
@@ -360,7 +364,7 @@ model =
     num_clusters: 10,
     num_runs: 10,
     max_iterations: 200,
-    seed: seed
+    key: key
   )
 
 repainted_x = Nx.take(model.clusters, model.labels)
@@ -385,7 +389,7 @@ clusterings = [5, 10, 15, 20, 40]
 
 models =
   for num_clusters <- clusterings do
-    KMeans.fit(x, num_clusters: num_clusters, seed: seed)
+    KMeans.fit(x, num_clusters: num_clusters, key: key)
   end
 ```
 
@@ -707,7 +711,7 @@ nums_clusters = 2..20
 
 models =
   for num_clusters <- 2..20 do
-    KMeans.fit(images, num_clusters: num_clusters, seed: seed)
+    KMeans.fit(images, num_clusters: num_clusters, key: key)
   end
 ```
 
@@ -718,12 +722,12 @@ models =
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.192928>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.160137>
       3
     >,
     clusters: #Nx.Tensor<
       f32[2][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.192975>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.160185>
       [
         [0.0, 3.501400715322234e-5, 1.4005602861288935e-4, 3.851540677715093e-4, 3.501400933600962e-4, 7.002801285125315e-4, 4.901961074210703e-4, 0.009278712794184685, 0.04635854437947273, 0.09737396240234375, 0.22310924530029297, 0.29975488781929016, 0.32121849060058594, 0.3055672347545624, 0.3146008551120758, 0.36162465810775757, 0.32324934005737305, 0.3010154068470001, 0.20304621756076813, 0.06995797902345657, 0.019502801820635796, 0.003641456598415971, 0.003641456598415971, 0.0034313725773245096, 0.0025560224894434214, 0.0010504202218726277, 3.501400715322234e-5, 0.0, 0.0, 0.0, 3.501400715322234e-5, 4.901961074210703e-4, 5.252101109363139e-4, 0.006232493091374636, 0.05105042830109596, 0.13872550427913666, 0.2501050531864166, 0.37622547149658203, 0.533753514289856, 0.6370097994804382, 0.7304272055625916, 0.7347339391708374, 0.7232843637466431, 0.7482843399047852, 0.7121148109436035, 0.6053571105003357, 0.5261555314064026, ...],
         ...
@@ -731,24 +735,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.192977>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.160189>
       10950.6201171875
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.192981>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.160193>
       [0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.194803>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.162009>
       3
     >,
     clusters: #Nx.Tensor<
       f32[3][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.194849>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.162055>
       [
         [0.0, 5.9417710872367024e-5, 1.1883542174473405e-4, 2.376708434894681e-4, 2.376708434894681e-4, 4.753416869789362e-4, 2.376708434894681e-4, 0.013071895577013493, 0.05971479415893555, 0.12269756942987442, 0.27730244398117065, 0.3171122968196869, 0.2941770851612091, 0.2795603275299072, 0.28009507060050964, 0.31200236082077026, 0.2995246648788452, 0.3170528709888458, 0.25864526629447937, 0.07664884626865387, 0.02192513458430767, 1.7825313261710107e-4, 4.1592397610656917e-4, 3.565062361303717e-4, 1.1883542174473405e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.376708434894681e-4, 5.9417710872367024e-5, 0.009566251188516617, 0.05246583744883537, 0.11509210616350174, 0.23559121787548065, 0.3770647943019867, 0.5828877091407776, 0.6433154940605164, 0.7103387117385864, 0.7102198004722595, 0.6955437064170837, 0.7320261001586914, 0.675638735294342, 0.6002377271652222, ...],
         ...
@@ -756,24 +760,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.194851>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.162057>
       9246.3125
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.194853>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.162059>
       [0, 0, 2, 0, 1, 1, 2, 1, 1, 1, 0, 0, 2, 0, 0, 1, 2, 1, 1, 2, 0, 0, 2, 0, 2, 1, 1, 1, 0, 1, 0, 0, 1, 0, 2, 1, 2, 1, 1, 1, 0, 0, 2, 0, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.197306>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.164506>
       4
     >,
     clusters: #Nx.Tensor<
       f32[4][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.197352>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.164552>
       [
         [0.0, 0.0, 1.8239855126012117e-4, 6.383949075825512e-4, 5.471956683322787e-4, 0.0010943913366645575, 7.295942050404847e-4, 0.004012768156826496, 0.02891017124056816, 0.06675787270069122, 0.19589604437351227, 0.31500229239463806, 0.3976288139820099, 0.38148659467697144, 0.3805745542049408, 0.4316461682319641, 0.3498404026031494, 0.2810761630535126, 0.13807569444179535, 0.05654355138540268, 0.008755129761993885, 5.471956101246178e-4, 8.20793560706079e-4, 0.0014591884100809693, 6.383949657902122e-4, 0.0, 9.119927563006058e-5, 0.0, 0.0, 0.0, 9.119927563006058e-5, 9.119927417486906e-4, 0.0012767899315804243, 0.0015503877075389028, 0.05243958532810211, 0.18467853963375092, 0.29092568159103394, 0.4202462434768677, 0.5493844747543335, 0.6998631954193115, 0.8229821920394897, 0.810123085975647, 0.7939808964729309, 0.8111263513565063, 0.7670770883560181, ...],
         ...
@@ -781,24 +785,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.197354>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.164554>
       8456.97265625
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.197356>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.164556>
       [3, 3, 0, 3, 1, 1, 0, 1, 2, 2, 1, 3, 0, 3, 3, 1, 0, 1, 1, 2, 3, 3, 0, 3, 0, 1, 1, 1, 3, 2, 3, 3, 1, 3, 0, 1, 0, 1, 2, 2, 3, 3, 0, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.200440>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.167634>
       5
     >,
     clusters: #Nx.Tensor<
       f32[5][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.200486>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.167680>
       [
         [0.0, 1.7825313261710107e-4, 3.5650626523420215e-4, 7.130125304684043e-4, 7.130125304684043e-4, 3.5650626523420215e-4, 3.5650626523420215e-4, 0.038324419409036636, 0.14456328749656677, 0.19857396185398102, 0.2903743088245392, 0.3590017557144165, 0.29001784324645996, 0.21212123334407806, 0.22584672272205353, 0.28324422240257263, 0.3552584946155548, 0.40320855379104614, 0.3058823347091675, 0.17005346715450287, 0.052941180765628815, 1.7825313261710107e-4, 0.001247771899215877, 8.912656921893358e-4, 5.347594269551337e-4, 0.0, 1.7825313261710107e-4, 0.0, 0.0, 0.0, 0.0, 0.0010695188539102674, 1.7825313261710107e-4, 0.029411764815449715, 0.17843139171600342, 0.3386809527873993, 0.51871657371521, 0.6306595206260681, 0.7001782655715942, 0.7304812073707581, 0.7541888952255249, 0.7663101553916931, 0.7131907343864441, 0.7664884328842163, ...],
         ...
@@ -806,24 +810,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.200488>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.167682>
       7930.39501953125
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.200490>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.167684>
       [0, 2, 3, 2, 1, 1, 3, 1, 4, 4, 2, 2, 3, 2, 2, 1, 3, 1, 1, 4, 2, 2, 3, 2, 3, 1, 1, 1, 2, 4, 0, 2, 1, 2, 3, 1, 3, 1, 4, 4, 0, 2, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.204176>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.171364>
       5
     >,
     clusters: #Nx.Tensor<
       f32[6][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.204222>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.171410>
       [
         [0.0, 1.9607844296842813e-4, 3.9215688593685627e-4, 7.843137718737125e-4, 5.882353289052844e-4, 3.9215688593685627e-4, 3.9215688593685627e-4, 0.04215686395764351, 0.1590196192264557, 0.20411762595176697, 0.3068627417087555, 0.3650980591773987, 0.2813725769519806, 0.20686273276805878, 0.2221568524837494, 0.2792156934738159, 0.34980395436286926, 0.4145098328590393, 0.3145098090171814, 0.18705882132053375, 0.058235298842191696, 1.9607844296842813e-4, 0.001372549100778997, 9.803923312574625e-4, 5.882353289052844e-4, 0.0, 1.9607844296842813e-4, 0.0, 0.0, 0.0, 0.0, 0.0011764706578105688, 1.9607844296842813e-4, 0.03235294297337532, 0.196274533867836, 0.3598039746284485, 0.5158823728561401, 0.615490198135376, 0.6762745380401611, 0.7176470160484314, 0.7488234639167786, 0.7762745022773743, 0.7133333086967468, ...],
         ...
@@ -831,24 +835,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.204224>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.171412>
       7494.529296875
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.204226>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.171414>
       [0, 4, 2, 1, 1, 1, 2, 5, 3, 3, 1, 4, 2, 4, 4, 1, 2, 5, 1, 2, 4, 4, 2, 4, 2, 5, 1, 5, 1, 3, 0, 4, 1, 1, 2, 5, 2, 5, 3, 3, 0, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.208514>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.175696>
       5
     >,
     clusters: #Nx.Tensor<
       f32[7][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.208560>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.175742>
       [
         [0.0, 1.8674138118512928e-4, 3.7348276237025857e-4, 7.469655247405171e-4, 7.469655247405171e-4, 3.7348276237025857e-4, 5.602241726592183e-4, 0.040149394422769547, 0.15144725143909454, 0.19439774751663208, 0.30999064445495605, 0.37030816078186035, 0.2868347764015198, 0.21699346601963043, 0.23155930638313293, 0.2859010100364685, 0.3518207371234894, 0.41942110657691956, 0.3163398504257202, 0.17815124988555908, 0.05546218901872635, 1.8674138118512928e-4, 0.0013071896973997355, 0.0011204483453184366, 5.602241726592183e-4, 0.0, 1.8674138118512928e-4, 0.0, 0.0, 0.0, 0.0, 0.0011204483453184366, 3.7348276237025857e-4, 0.031185809522867203, 0.18692812323570251, 0.35536885261535645, 0.5211951732635498, 0.6207282543182373, 0.6804856061935425, 0.7208216786384583, 0.7510737180709839, 0.777404248714447, ...],
         ...
@@ -856,24 +860,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.208562>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.175744>
       7131.3193359375
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.208564>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.175746>
       [0, 4, 2, 1, 1, 1, 2, 5, 3, 6, 1, 4, 2, 4, 4, 6, 2, 5, 1, 6, 4, 4, 2, 4, 2, 5, 1, 5, 1, 6, 0, 4, 1, 1, 2, 5, 2, 5, 3, 6, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.213483>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.180659>
       6
     >,
     clusters: #Nx.Tensor<
       f32[8][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.213529>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.180705>
       [
         [0.0, 2.063983556581661e-4, 4.127967113163322e-4, 8.255934226326644e-4, 6.19195110630244e-4, 4.127967113163322e-4, 4.127967113163322e-4, 0.029308566823601723, 0.13787409663200378, 0.18410733342170715, 0.28668728470802307, 0.3564499318599701, 0.28276577591896057, 0.21775025129318237, 0.23384933173656464, 0.29391124844551086, 0.36181631684303284, 0.40619194507598877, 0.2887512743473053, 0.17729617655277252, 0.05180598422884941, 2.063983556581661e-4, 0.0014447885332629085, 8.255934226326644e-4, 6.19195110630244e-4, 0.0, 2.063983556581661e-4, 0.0, 0.0, 0.0, 0.0, 0.0010319917928427458, 2.063983556581661e-4, 0.024561405181884766, 0.17667698860168457, 0.34571728110313416, 0.5162023305892944, 0.6243550181388855, 0.6893705129623413, 0.7110422849655151, 0.7525283694267273, ...],
         ...
@@ -881,24 +885,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.213531>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.180707>
       6816.73828125
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.213533>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.180709>
       [0, 4, 2, 1, 1, 1, 2, 5, 3, 6, 1, 4, 2, 4, 1, 6, 2, 5, 1, 7, 4, 4, 2, 4, 2, 5, 1, 5, 1, 6, 0, 4, 1, 1, 1, 5, 2, 5, 3, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.218996>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.186166>
       4
     >,
     clusters: #Nx.Tensor<
       f32[9][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.219042>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.186212>
       [
         [0.0, 0.0, 0.0, 0.0, 0.0, 1.508295681560412e-4, 0.0, 1.508295681560412e-4, 0.04464555159211159, 0.1469080001115799, 0.2966817617416382, 0.35972851514816284, 0.33122172951698303, 0.31794869899749756, 0.3088989555835724, 0.35806941986083984, 0.3502262234687805, 0.3734539747238159, 0.364705890417099, 0.0865761786699295, 0.011161387898027897, 1.508295681560412e-4, 1.508295681560412e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.508295681560412e-4, 0.0, 0.02624434418976307, 0.19969835877418518, 0.43861234188079834, 0.7618401050567627, 0.776168942451477, ...],
         ...
@@ -906,24 +910,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.219044>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.186214>
       6590.8154296875
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.219046>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.186216>
       [7, 0, 2, 3, 5, 5, 2, 1, 8, 8, 3, 0, 2, 0, 3, 5, 6, 1, 5, 4, 0, 0, 2, 0, 2, 1, 5, 1, 3, 8, 7, 3, 5, 3, 6, 1, 2, 1, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.225169>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.192333>
       6
     >,
     clusters: #Nx.Tensor<
       f32[10][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.225215>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.192379>
       [
         [0.0, 0.0, 0.0, 0.0, 0.0, 1.5686274855397642e-4, 0.0, 1.5686274855397642e-4, 0.04643137380480766, 0.1527843177318573, 0.3036862909793854, 0.34792155027389526, 0.32549017667770386, 0.3087058961391449, 0.30760782957077026, 0.35372552275657654, 0.34384310245513916, 0.3678431212902069, 0.3535686433315277, 0.0900392234325409, 0.011607843451201916, 1.5686274855397642e-4, 1.5686274855397642e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.5686274855397642e-4, 0.0, 0.027294117957353592, 0.20768629014492035, 0.456156849861145, 0.7719215154647827, ...],
         ...
@@ -931,24 +935,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.225217>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.192381>
       6452.82421875
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.225219>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.192383>
       [7, 0, 2, 3, 5, 5, 2, 1, 8, 8, 9, 0, 2, 0, 3, 5, 6, 1, 5, 4, 0, 0, 2, 0, 2, 1, 5, 1, 9, 8, 7, 9, 5, 9, 6, 1, 2, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.231915>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.199073>
       5
     >,
     clusters: #Nx.Tensor<
       f32[11][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.231961>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.199119>
       [
         [0.0, 3.016591363120824e-4, 3.016591363120824e-4, 0.0012066365452483296, 9.049774380400777e-4, 6.033182726241648e-4, 6.033182726241648e-4, 0.012368024326860905, 0.1381598860025406, 0.2422322928905487, 0.40452486276626587, 0.4615384638309479, 0.30648568272590637, 0.2190045416355133, 0.23438915610313416, 0.29713425040245056, 0.45610859990119934, 0.5276018381118774, 0.32428357005119324, 0.1381598860025406, 0.036500755697488785, 3.016591363120824e-4, 0.0015082956524565816, 0.0012066365452483296, 3.016591363120824e-4, 0.0, 3.016591363120824e-4, 0.0, 0.0, 0.0, 0.0, 0.0015082956524565816, 3.016591363120824e-4, 0.017496230080723763, 0.22292611002922058, 0.4105581045150757, 0.580995500087738, 0.7309200763702393, ...],
         ...
@@ -956,24 +960,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.231963>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.199121>
       6222.57080078125
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.231965>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.199123>
       [0, 6, 1, 8, 8, 5, 1, 2, 10, 9, 8, 6, 1, 6, 7, 5, 1, 2, 7, 9, 6, 4, 1, 6, 1, 2, 5, 2, 7, 10, 0, 4, 8, 8, 8, 5, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.239293>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.206445>
       6
     >,
     clusters: #Nx.Tensor<
       f32[12][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.239339>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.206491>
       [
         [0.0, 0.0, 0.0, 0.0, 0.0, 2.4509805371053517e-4, 0.0, 2.4509805371053517e-4, 0.07230392098426819, 0.13308824598789215, 0.16789215803146362, 0.16225489974021912, 0.18480391800403595, 0.1924019604921341, 0.18406862020492554, 0.22230391204357147, 0.2132353037595749, 0.19191177189350128, 0.20441177487373352, 0.0784313827753067, 0.018137255683541298, 2.4509805371053517e-4, 7.35294190235436e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.4509805371053517e-4, 7.35294132027775e-4, 0.04264706000685692, 0.3142157196998596, ...],
         ...
@@ -981,24 +985,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.239341>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.206493>
       6077.1826171875
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.239343>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.206495>
       [7, 3, 2, 3, 5, 5, 6, 1, 8, 4, 5, 0, 2, 0, 3, 10, 6, 1, 5, 4, 0, 11, 2, 0, 2, 1, 5, 1, 9, 10, 7, 11, 3, 9, 3, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.247244>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.214390>
       5
     >,
     clusters: #Nx.Tensor<
       f32[13][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.247290>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.214436>
       [
         [0.0, 3.267973952461034e-4, 3.267973952461034e-4, 0.0013071895809844136, 9.803922148421407e-4, 6.535947904922068e-4, 6.535947904922068e-4, 0.003594771260395646, 0.12156862765550613, 0.26241829991340637, 0.4372549057006836, 0.5, 0.3320261538028717, 0.23725491762161255, 0.25392159819602966, 0.32189545035362244, 0.4941176474094391, 0.5633987188339233, 0.3513071835041046, 0.13496731221675873, 0.03790849819779396, 3.267973952461034e-4, 0.0016339869471266866, 6.535947904922068e-4, 3.267973952461034e-4, 0.0, 3.267973952461034e-4, 0.0, 0.0, 0.0, 0.0, 9.803922148421407e-4, 3.267973952461034e-4, 0.017320262268185616, 0.1954248547554016, 0.3732026517391205, ...],
         ...
@@ -1006,24 +1010,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.247292>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.214438>
       5979.98828125
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.247294>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.214440>
       [0, 6, 5, 11, 11, 12, 3, 1, 4, 4, 11, 6, 5, 10, 11, 12, 3, 1, 11, 7, 10, 6, 5, 10, 3, 1, 11, 1, 11, 4, 0, 6, 11, 11, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257294348.255797>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.222937>
       5
     >,
     clusters: #Nx.Tensor<
       f32[14][784]
-      EXLA.Backend<host:0, 0.697554249.257294348.255843>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.222983>
       [
         [0.0, 0.0, 0.0, 0.0, 0.0, 2.3068052541930228e-4, 0.0, 0.0, 0.06828143447637558, 0.22168396413326263, 0.31026530265808105, 0.30980393290519714, 0.30011534690856934, 0.27843138575553894, 0.28765860199928284, 0.3312572240829468, 0.3100346028804779, 0.3550172746181488, 0.3289504051208496, 0.11764705926179886, 0.017070358619093895, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.3068052541930228e-4, 0.0, ...],
         ...
@@ -1031,24 +1035,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257294348.255845>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.222985>
       5835.94775390625
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257294348.255847>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.222987>
       [7, 0, 2, 3, 5, 5, 6, 1, 8, 4, 9, 0, 2, 0, 3, 13, 6, 1, 5, 4, 0, 11, 2, 12, 2, 1, 5, 1, 9, 10, 7, 11, 3, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257556492.2779>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.232057>
       4
     >,
     clusters: #Nx.Tensor<
       f32[15][784]
-      EXLA.Backend<host:0, 0.697554249.257556492.2825>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.232103>
       [
         [0.0, 6.535947904922068e-4, 6.535947904922068e-4, 0.0026143791619688272, 0.0013071895809844136, 0.0013071895809844136, 0.0013071895809844136, 0.0, 0.0, 0.0797385647892952, 0.41111111640930176, 0.6673202514648438, 0.4562091529369354, 0.3379085063934326, 0.35424837470054626, 0.40784311294555664, 0.5908496975898743, 0.6248366236686707, 0.2980392277240753, 0.024183006957173347, 0.0, 0.0, 0.0019607844296842813, 6.535947904922068e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0013071895809844136, 6.535947904922068e-4, 0.0, ...],
         ...
@@ -1056,24 +1060,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257556492.2827>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.232105>
       5697.43701171875
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257556492.2829>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.232107>
       [0, 12, 1, 8, 8, 5, 1, 2, 10, 14, 8, 6, 1, 6, 7, 5, 13, 2, 7, 9, 6, 12, 1, 3, 1, 2, 5, 2, 7, 14, 11, 12, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257556492.12536>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.241808>
       5
     >,
     clusters: #Nx.Tensor<
       f32[16][784]
-      EXLA.Backend<host:0, 0.697554249.257556492.12582>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.241854>
       [
         [0.0, 5.602241144515574e-4, 5.602241144515574e-4, 0.0022408964578062296, 0.0011204482289031148, 0.0011204482289031148, 0.0011204482289031148, 0.0, 0.0, 0.06834734231233597, 0.3523809611797333, 0.5826330780982971, 0.3932773172855377, 0.28963586688041687, 0.3036414682865143, 0.3495798110961914, 0.5064426064491272, 0.5355742573738098, 0.2554621994495392, 0.02072829194366932, 0.0, 5.602241144515574e-4, 0.002801120514050126, 5.602241144515574e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0011204482289031148, 5.602241144515574e-4, ...],
         ...
@@ -1081,24 +1085,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257556492.12584>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.241856>
       5572.9951171875
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257556492.12586>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.241858>
       [0, 12, 1, 8, 8, 5, 1, 2, 10, 14, 8, 4, 1, 6, 7, 9, 13, 2, 7, 15, 6, 12, 1, 6, 13, 2, 5, 2, 7, 14, 11, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257556492.22895>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.252161>
       5
     >,
     clusters: #Nx.Tensor<
       f32[17][784]
-      EXLA.Backend<host:0, 0.697554249.257556492.22941>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.252207>
       [
         [0.0, 3.267973952461034e-4, 3.267973952461034e-4, 0.0013071895809844136, 9.803922148421407e-4, 6.535947904922068e-4, 6.535947904922068e-4, 0.003594771260395646, 0.12156862765550613, 0.26241829991340637, 0.4372549057006836, 0.5, 0.3320261538028717, 0.23725491762161255, 0.25392159819602966, 0.32189545035362244, 0.4941176474094391, 0.5633987188339233, 0.3513071835041046, 0.13496731221675873, 0.03790849819779396, 3.267973952461034e-4, 0.0016339869471266866, 6.535947904922068e-4, 3.267973952461034e-4, 0.0, 3.267973952461034e-4, 0.0, 0.0, 0.0, 0.0, 9.803922148421407e-4, ...],
         ...
@@ -1106,24 +1110,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257556492.22943>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.252209>
       5474.91015625
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257556492.22945>
+      EXLA.Backend<host:0, 0.2154564112.3514957836.252211>
       [0, 15, 3, 11, 11, 16, 3, 1, 8, 4, 11, 15, 5, 10, 14, 12, 3, 1, 14, 7, 10, 15, 5, 10, 13, 16, 16, 1, 14, 4, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257556492.33856>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.972>
       5
     >,
     clusters: #Nx.Tensor<
       f32[18][784]
-      EXLA.Backend<host:0, 0.697554249.257556492.33902>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.1018>
       [
         [0.0, 3.5650626523420215e-4, 3.5650626523420215e-4, 0.0014260250609368086, 0.0010695188539102674, 7.130125304684043e-4, 7.130125304684043e-4, 0.003921568859368563, 0.10837790369987488, 0.23814617097377777, 0.448128342628479, 0.5351158380508423, 0.36221033334732056, 0.25704100728034973, 0.2770053744316101, 0.3383244276046753, 0.5115864276885986, 0.5593582987785339, 0.32477715611457825, 0.11800356209278107, 0.039928700774908066, 3.5650626523420215e-4, 0.0017825312679633498, 7.130125304684043e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, ...],
         ...
@@ -1131,24 +1135,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257556492.33904>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.1020>
       5393.45166015625
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257556492.33906>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.1022>
       [0, 15, 17, 11, 11, 16, 3, 1, 8, 4, 11, 15, 5, 10, 14, 12, 3, 1, 14, 7, 10, 15, 17, 10, 13, 16, 16, 1, 14, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257556492.45419>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.12529>
       5
     >,
     clusters: #Nx.Tensor<
       f32[19][784]
-      EXLA.Backend<host:0, 0.697554249.257556492.45465>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.12575>
       [
         [0.0, 3.5650626523420215e-4, 3.5650626523420215e-4, 0.0014260250609368086, 0.0010695188539102674, 7.130125304684043e-4, 7.130125304684043e-4, 0.003921568859368563, 0.10837790369987488, 0.23814617097377777, 0.448128342628479, 0.5351158380508423, 0.36221033334732056, 0.25704100728034973, 0.2770053744316101, 0.3383244276046753, 0.5115864276885986, 0.5593582987785339, 0.32477715611457825, 0.11800356209278107, 0.039928700774908066, 3.5650626523420215e-4, 0.0017825312679633498, 7.130125304684043e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, ...],
         ...
@@ -1156,24 +1160,24 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257556492.45467>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.12577>
       5257.630859375
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257556492.45469>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.12579>
       [0, 15, 17, 11, 11, 16, 3, 1, 8, 4, 11, 15, 5, 10, 14, 12, 3, 1, 14, 7, 10, 15, 17, 10, 13, 18, 16, 1, ...]
     >
   },
   %Scholar.Cluster.KMeans{
     num_iterations: #Nx.Tensor<
       s64
-      EXLA.Backend<host:0, 0.697554249.257556492.57584>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.24688>
       5
     >,
     clusters: #Nx.Tensor<
       f32[20][784]
-      EXLA.Backend<host:0, 0.697554249.257556492.57630>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.24734>
       [
         [0.0, 5.602241144515574e-4, 5.602241144515574e-4, 0.0022408964578062296, 0.0011204482289031148, 0.0011204482289031148, 0.0011204482289031148, 0.0, 0.0, 0.06834734231233597, 0.3523809611797333, 0.5826330780982971, 0.3932773172855377, 0.28963586688041687, 0.3036414682865143, 0.3495798110961914, 0.5064426064491272, 0.5355742573738098, 0.2554621994495392, 0.02072829194366932, 0.0, 5.602241144515574e-4, 0.002801120514050126, 5.602241144515574e-4, 0.0, 0.0, 0.0, 0.0, 0.0, ...],
         ...
@@ -1181,12 +1185,12 @@ models =
     >,
     inertia: #Nx.Tensor<
       f32
-      EXLA.Backend<host:0, 0.697554249.257556492.57632>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.24736>
       5166.4755859375
     >,
     labels: #Nx.Tensor<
       s64[200]
-      EXLA.Backend<host:0, 0.697554249.257556492.57634>
+      EXLA.Backend<host:0, 0.2154564112.3515219980.24738>
       [0, 15, 17, 11, 11, 16, 3, 1, 8, 4, 11, 15, 5, 10, 14, 12, 3, 1, 14, 7, 10, 15, 17, 10, 13, 18, 16, ...]
     >
   }
@@ -1284,25 +1288,25 @@ best_model = Enum.at(models, 1)
 %Scholar.Cluster.KMeans{
   num_iterations: #Nx.Tensor<
     s64
-    EXLA.Backend<host:0, 0.697554249.257294348.194803>
+    EXLA.Backend<host:0, 0.3966508439.1811808276.203409>
     3
   >,
   clusters: #Nx.Tensor<
     f32[3][784]
-    EXLA.Backend<host:0, 0.697554249.257294348.194849>
+    EXLA.Backend<host:0, 0.3966508439.1811808275.200808>
     [
-      [0.0, 5.9417710872367024e-5, 1.1883542174473405e-4, 2.376708434894681e-4, 2.376708434894681e-4, 4.753416869789362e-4, 2.376708434894681e-4, 0.013071895577013493, 0.05971479415893555, 0.12269756942987442, 0.27730244398117065, 0.3171122968196869, 0.2941770851612091, 0.2795603275299072, 0.28009507060050964, 0.31200236082077026, 0.2995246648788452, 0.3170528709888458, 0.25864526629447937, 0.07664884626865387, 0.02192513458430767, 1.7825313261710107e-4, 4.1592397610656917e-4, 3.565062361303717e-4, 1.1883542174473405e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.376708434894681e-4, 5.9417710872367024e-5, 0.009566251188516617, 0.05246583744883537, 0.11509210616350174, 0.23559121787548065, 0.3770647943019867, 0.5828877091407776, 0.6433154940605164, 0.7103387117385864, 0.7102198004722595, 0.6955437064170837, 0.7320261001586914, 0.675638735294342, 0.6002377271652222, 0.5515151619911194, 0.35151517391204834, ...],
+      [0.0, 5.9417710872367024e-5, 1.1883542174473405e-4, 2.376708434894681e-4, 2.376708434894681e-4, 4.753416869789362e-4, 2.376708434894681e-4, 0.013071895577013493, 0.059714801609516144, 0.12269756942987442, 0.27730241417884827, 0.3171122968196869, 0.2941770851612091, 0.2795603275299072, 0.28009507060050964, 0.31200239062309265, 0.2995246648788452, 0.3170528709888458, 0.25864526629447937, 0.07664884626865387, 0.02192513458430767, 1.7825313261710107e-4, 4.1592397610656917e-4, 3.565062361303717e-4, 1.1883542174473405e-4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.376708434894681e-4, 5.9417710872367024e-5, 0.009566251188516617, 0.05246583744883537, 0.11509209871292114, 0.23559121787548065, 0.3770647943019867, 0.5828877091407776, 0.6433154940605164, 0.7103386521339417, 0.7102198004722595, 0.6955437064170837, 0.7320261001586914, 0.6756388545036316, 0.6002376675605774, 0.5515151619911194, 0.35151517391204834, ...],
       ...
     ]
   >,
   inertia: #Nx.Tensor<
     f32
-    EXLA.Backend<host:0, 0.697554249.257294348.194851>
-    9246.3125
+    EXLA.Backend<host:0, 0.3966508439.1811808275.200812>
+    9246.3134765625
   >,
   labels: #Nx.Tensor<
     s64[200]
-    EXLA.Backend<host:0, 0.697554249.257294348.194853>
+    EXLA.Backend<host:0, 0.3966508439.1811808275.200816>
     [0, 0, 2, 0, 1, 1, 2, 1, 1, 1, 0, 0, 2, 0, 0, 1, 2, 1, 1, 2, 0, 0, 2, 0, 2, 1, 1, 1, 0, 1, 0, 0, 1, 0, 2, 1, 2, 1, 1, 1, 0, 0, 2, 0, 2, 1, ...]
   >
 }
