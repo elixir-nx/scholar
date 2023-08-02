@@ -10,7 +10,7 @@ defmodule Scholar.Metrics.Similarity do
     axis: [
       type: {:custom, Scholar.Options, :axis, []},
       doc: """
-      Axis to calculate the distance over. By default the distance
+      Axis over which the distance will be calculated. By default the distance
       is calculated between the whole tensors.
       """
     ]
