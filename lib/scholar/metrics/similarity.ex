@@ -53,7 +53,7 @@ defmodule Scholar.Metrics.Similarity do
         0.25
       >
 
-      iex> x = Nx.iota({2,3})
+      iex> x = Nx.tensor([[0, 1, 2], [3, 4, 5]])
       iex> y = Nx.tensor([[0, 3, 4], [3, 4, 8]])
       iex> Scholar.Metrics.Similarity.jaccard(x, y, axis: 1)
       #Nx.Tensor<
