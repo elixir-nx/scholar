@@ -204,6 +204,21 @@ defmodule Scholar.Metrics.Regression do
     end
   end
 
+  deftransform explained_variance_score(y_true, y_pred, opts \\ []) do
+    explained_variance_score_n(
+      y_true,
+      y_pred,
+      NimbleOptions.validate!(opts, @explained_variance_schema)
+    )
+  end
+
+  defnp explained_variance_score_n(y_true, y_pred, opts) do
+    y_diff_avg = Nx.mean(y_true - y_pred, axex: [0])
+    num = Nx.mean(squared_euclidean(y_true, y_pred + y_diff_avg), axex: [0])
+    y_true_avg = Nx.mean(y_true, axex: [0])
+    den = Nx.mean(squared_euclidean(y_true, y_diff_avg), axex: [0])
+  end
+
   @doc ~S"""
   Calculates the maximum residual error.
 
