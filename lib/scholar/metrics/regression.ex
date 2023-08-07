@@ -287,7 +287,7 @@ defmodule Scholar.Metrics.Regression do
 
         result = Nx.broadcast(Nx.tensor(1, type: Nx.type(numerator)), numerator)
         result = Nx.select(numerator_mask and not denominator_mask, 0, result)
-        denominator = Nx.select(not denominator_mask, 1, denominator)
+        denominator = Nx.select(denominator_mask, denominator, 1)
         Nx.select(valid_score, 1 - numerator / denominator, result)
     end
   end
