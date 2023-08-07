@@ -148,7 +148,6 @@ defmodule Scholar.ModelSelection do
     |> Nx.stack(axis: 1)
   end
 
-  @spec combinations([{any, any}]) :: list
   defp combinations([]), do: [[]]
 
   defp combinations([{name, values} | opts]) do
