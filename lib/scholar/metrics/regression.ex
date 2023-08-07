@@ -133,10 +133,16 @@ defmodule Scholar.Metrics.Regression do
     |> Nx.mean()
   end
 
-  @doc ~S"""
+  @doc """
   Calculates the $R^2$ score of predictions with respect to targets.
 
+  #{~S'''
   $$R^2 = 1 - \frac{\sum (y_i - \hat{y}_i)^2}{\sum (y_i - \bar{y})^2}$$
+  '''}
+
+  ## Options
+
+  #{NimbleOptions.docs(@r2_schema)}
 
   ## Examples
 
@@ -148,25 +154,33 @@ defmodule Scholar.Metrics.Regression do
         0.9486081600189209
       >
 
-      iex> Scholar.Metrics.Regression.r2_score(Nx.tensor([-2.0, -2.0, -2.0], type: :f64), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64), force_finite: true)
+      iex> y_true = Nx.tensor([-2.0, -2.0, -2.0], type: :f64)
+      iex> y_pred = Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64)
+      iex> Scholar.Metrics.Regression.r2_score(y_true, y_pred, force_finite: true)
       #Nx.Tensor<
         f64
         0.0
       >
 
-      iex> Scholar.Metrics.Regression.r2_score(Nx.tensor([-2.0, -2.0, -2.0], type: :f64), Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64), force_finite: false)
+      iex> y_true = Nx.tensor([-2.0, -2.0, -2.0], type: :f64)
+      iex> y_pred = Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64)
+      iex> Scholar.Metrics.Regression.r2_score(y_true, y_pred, force_finite: false)
       #Nx.Tensor<
         f64
         -Inf
       >
 
-      iex> Scholar.Metrics.Regression.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0]), force_finite: false)
+      iex> y_true = Nx.tensor([-2.0, -2.0, -2.0])
+      iex> y_pred = Nx.tensor([-2.0, -2.0, -2.0])
+      iex> Scholar.Metrics.Regression.r2_score(y_true, y_pred, force_finite: false)
       #Nx.Tensor<
         f32
         NaN
       >
 
-      iex> Scholar.Metrics.Regression.r2_score(Nx.tensor([-2.0, -2.0, -2.0]), Nx.tensor([-2.0, -2.0, -2.0]), force_finite: true)
+      iex> y_true = Nx.tensor([-2.0, -2.0, -2.0])
+      iex> y_pred = Nx.tensor([-2.0, -2.0, -2.0])
+      iex> Scholar.Metrics.Regression.r2_score(y_true, y_pred, force_finite: true)
       #Nx.Tensor<
         f32
         1.0
@@ -183,24 +197,98 @@ defmodule Scholar.Metrics.Regression do
     y_mean = Nx.broadcast(Nx.mean(y_true), Nx.shape(y_true))
     sst = squared_euclidean(y_true, y_mean)
 
+    handle_non_finite(ssr, sst, opts)
+  end
+
+  @doc """
+  Explained variance regression score function.
+
+  Best possible score is 1.0, lower values are worse.
+
+  ## Options
+
+  #{NimbleOptions.docs(@r2_schema)}
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([3, -0.5, 2, 7], type: {:f, 32})
+      iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8], type: {:f, 32})
+      iex> Scholar.Metrics.Regression.explained_variance_score(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.9571734666824341
+      >
+
+      iex> y_true = Nx.tensor([-2.0, -2.0, -2.0], type: :f64)
+      iex> y_pred = Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64)
+      iex> Scholar.Metrics.Regression.explained_variance_score(y_true, y_pred, force_finite: true)
+      #Nx.Tensor<
+        f64
+        0.0
+      >
+
+      iex> y_true = Nx.tensor([-2.0, -2.0, -2.0], type: :f64)
+      iex> y_pred = Nx.tensor([-2.0, -2.0, -2.0 + 1.0e-8], type: :f64)
+      iex> Scholar.Metrics.Regression.explained_variance_score(y_true, y_pred, force_finite: false)
+      #Nx.Tensor<
+        f64
+        -Inf
+      >
+
+      iex> y_true = Nx.tensor([-2.0, -2.0, -2.0])
+      iex> y_pred = Nx.tensor([-2.0, -2.0, -2.0])
+      iex> Scholar.Metrics.Regression.explained_variance_score(y_true, y_pred, force_finite: false)
+      #Nx.Tensor<
+        f32
+        NaN
+      >
+
+      iex> y_true = Nx.tensor([-2.0, -2.0, -2.0])
+      iex> y_pred = Nx.tensor([-2.0, -2.0, -2.0])
+      iex> Scholar.Metrics.Regression.explained_variance_score(y_true, y_pred, force_finite: true)
+      #Nx.Tensor<
+        f32
+        1.0
+      >
+  """
+  deftransform explained_variance_score(y_true, y_pred, opts \\ []) do
+    explained_variance_score_n(
+      y_true,
+      y_pred,
+      NimbleOptions.validate!(opts, @r2_schema)
+    )
+  end
+
+  defnp explained_variance_score_n(y_true, y_pred, opts) do
+    y_diff_avg = Nx.mean(y_true - y_pred, axes: [0])
+    sample_size = Nx.axis_size(y_true, 0)
+
+    numerator = squared_euclidean(y_true, y_pred + y_diff_avg, axes: [0]) / sample_size
+
+    y_true_avg = Nx.mean(y_true, axes: [0])
+    denominator = Nx.mean((y_true - y_true_avg) ** 2, axes: [0])
+    handle_non_finite(numerator, denominator, opts)
+  end
+
+  defnp handle_non_finite(numerator, denominator, opts) do
     case opts[:force_finite] do
       false ->
-        infinity_mask = ssr != 0 and sst == 0
-        nan_mask = ssr == 0 and sst == 0
-        sst = Nx.select(sst == 0, 1, sst)
-        res = Nx.select(infinity_mask, Nx.tensor(:neg_infinity), 1 - ssr / sst)
+        infinity_mask = numerator != 0 and denominator == 0
+        nan_mask = numerator == 0 and denominator == 0
+        denominator = Nx.select(denominator == 0, 1, denominator)
+        res = Nx.select(infinity_mask, Nx.tensor(:neg_infinity), 1 - numerator / denominator)
         Nx.select(nan_mask, Nx.tensor(:nan), res)
 
       true ->
-        sst_mask = sst != 0
-        ssr_mask = ssr != 0
+        denominator_mask = denominator != 0
+        numerator_mask = numerator != 0
 
-        valid_score = ssr_mask and sst_mask
+        valid_score = numerator_mask and denominator_mask
 
-        result = Nx.broadcast(Nx.tensor(1, type: Nx.type(ssr)), ssr)
-        result = Nx.select(ssr_mask and not sst_mask, 0, result)
-        sst = Nx.select(not sst_mask, 1, sst)
-        Nx.select(valid_score, 1 - ssr / sst, result)
+        result = Nx.broadcast(Nx.tensor(1, type: Nx.type(numerator)), numerator)
+        result = Nx.select(numerator_mask and not denominator_mask, 0, result)
+        denominator = Nx.select(not denominator_mask, 1, denominator)
+        Nx.select(valid_score, 1 - numerator / denominator, result)
     end
   end
 
