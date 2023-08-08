@@ -16,6 +16,7 @@ defmodule Scholar.Linear.RidgeRegression do
 
   * $\alpha$ is the parameter that controls level of regularization
   """
+  require Nx
   import Nx.Defn
   import Scholar.Shared
 
@@ -124,7 +125,11 @@ defmodule Scholar.Linear.RidgeRegression do
 
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     x_type = to_float_type(a)
-    sample_weights = Nx.tensor(sample_weights, type: x_type)
+
+    sample_weights =
+      if Nx.is_tensor(sample_weights),
+        do: Nx.as_type(sample_weights, x_type),
+        else: Nx.tensor(sample_weights, type: x_type)
 
     {alpha, opts} = Keyword.pop!(opts, :alpha)
     alpha = Nx.tensor(alpha, type: x_type) |> Nx.flatten()
@@ -210,7 +215,8 @@ defmodule Scholar.Linear.RidgeRegression do
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
     original_rank = Nx.rank(coeff)
     coeff = if original_rank == 1, do: Nx.new_axis(coeff, 0), else: coeff
-    (Nx.dot(x, [1], coeff, [1]) + intercept) |> Nx.squeeze(axes: [0])
+    res = Nx.dot(x, [-1], coeff, [-1]) + intercept
+    if original_rank <= 1, do: Nx.squeeze(res, axes: [1]), else: res
   end
 
   # Implements sample weighting by rescaling inputs and
