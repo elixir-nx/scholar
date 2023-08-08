@@ -184,7 +184,8 @@ defmodule Scholar.ModelSelection do
       ...> ]
       iex> Scholar.ModelSelection.grid_search(x, y, folding_fun, scoring_fun, opts)
   """
-  def grid_search(x, y, folding_fun, scoring_fun, opts) when is_list(opts) do
+  def grid_search(x, y, folding_fun, scoring_fun, opts)
+      when is_list(opts) and is_function(folding_fun, 1) and is_function(scoring_fun, 2) do
     params = combinations(opts)
 
     for param <- params do
@@ -227,7 +228,8 @@ defmodule Scholar.ModelSelection do
       iex> Scholar.ModelSelection.weighted_grid_search(x, y, weights, folding_fun, scoring_fun, opts)
   """
   def weighted_grid_search(x, y, weights, folding_fun, scoring_fun, opts)
-      when is_list(weights) and is_list(opts) do
+      when is_list(weights) and is_list(opts) and is_function(folding_fun, 1) and
+             is_function(scoring_fun, 3) do
     params = combinations(opts)
 
     for weight <- weights,
