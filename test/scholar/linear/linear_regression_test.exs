@@ -697,6 +697,71 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-2, atol: 1.0e-2)
       assert_all_close(expected_intercept, actual_intercept)
     end
+
+    test "test fit - weights as a tensor of different type than data" do
+      a =
+        Nx.tensor([
+          [
+            0.7731901407241821,
+            0.5813425779342651,
+            0.8365984559059143,
+            0.2182593196630478,
+            0.06448899209499359,
+            0.9420031905174255
+          ],
+          [
+            0.6547101736068726,
+            0.05023770406842232,
+            0.657528281211853,
+            0.24924135208129883,
+            0.8238568902015686,
+            0.11182288080453873
+          ],
+          [
+            0.7693489193916321,
+            0.6696648001670837,
+            0.6877049803733826,
+            0.08740159869194031,
+            0.6053816676139832,
+            0.5419610142707825
+          ],
+          [
+            0.03419172018766403,
+            0.8298202753067017,
+            0.6097439527511597,
+            0.0184243805706501,
+            0.5578944087028503,
+            0.9986271858215332
+          ]
+        ])
+
+      b =
+        Nx.tensor([
+          0.38682249188423157,
+          0.8040792346000671,
+          0.8069542646408081,
+          0.3620224595069885
+        ])
+
+      sample_weights =
+        Nx.tensor([
+          1,
+          2,
+          3,
+          4
+        ])
+
+      expected_coeff =
+        Nx.tensor([0.42989581, 0.29024197, -0.07561158, -0.15607637, 0.39304042, -0.37964429])
+
+      expected_intercept = Nx.tensor(0.3153022844013591)
+
+      %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
+        LinearRegression.fit(a, b, sample_weights: sample_weights)
+
+      assert_all_close(expected_coeff, actual_coeff, rtol: 1.0e-2, atol: 1.0e-2)
+      assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-2, atol: 1.0e-2)
+    end
   end
 
   describe "predict" do
