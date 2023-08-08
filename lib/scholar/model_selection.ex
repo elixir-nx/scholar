@@ -87,10 +87,9 @@ defmodule Scholar.ModelSelection do
 
       iex> folding_fun = fn x -> Scholar.ModelSelection.k_fold_split(x, 3) end
       iex> scoring_fun = fn x, y ->
-      ...>   opts = [fit_intercept?: true]
       ...>   {x_train, x_test} = x
       ...>   {y_train, y_test} = y
-      ...>   model = Scholar.Linear.LinearRegression.fit(x_train, y_train, opts)
+      ...>   model = Scholar.Linear.LinearRegression.fit(x_train, y_train, fit_intercept?: true)
       ...>   y_pred = Scholar.Linear.LinearRegression.predict(model, x_test)
       ...>   mse = Scholar.Metrics.Regression.mean_square_error(y_test, y_pred)
       ...>   mae = Scholar.Metrics.Regression.mean_absolute_error(y_test, y_pred)
@@ -107,7 +106,8 @@ defmodule Scholar.ModelSelection do
         ]
       >
   """
-  def cross_validate(x, y, folding_fun, scoring_fun) do
+  def cross_validate(x, y, folding_fun, scoring_fun)
+      when is_function(folding_fun, 1) and is_function(scoring_fun, 2) do
     Stream.zip([folding_fun.(x), folding_fun.(y)])
     |> Enum.map(fn {x, y} -> scoring_fun.(x, y) |> Nx.stack() end)
     |> Nx.stack(axis: 1)
@@ -120,12 +120,10 @@ defmodule Scholar.ModelSelection do
 
       iex> folding_fun = fn x -> Scholar.ModelSelection.k_fold_split(x, 3) end
       iex> scoring_fun = fn x, y, weights ->
-      ...>   opts = [fit_intercept?: true]
       ...>   {x_train, x_test} = x
       ...>   {y_train, y_test} = y
       ...>   {weights_train, _weights_test} = weights
-      ...>   opts = Keyword.put(opts, :sample_weights, weights_train)
-      ...>   model = Scholar.Linear.LinearRegression.fit(x_train, y_train, opts)
+      ...>   model = Scholar.Linear.LinearRegression.fit(x_train, y_train, fit_intercept?: true, sample_weights: weights_train)
       ...>   y_pred = Scholar.Linear.LinearRegression.predict(model, x_test)
       ...>   mse = Scholar.Metrics.Regression.mean_square_error(y_test, y_pred)
       ...>   mae = Scholar.Metrics.Regression.mean_absolute_error(y_test, y_pred)
@@ -144,7 +142,8 @@ defmodule Scholar.ModelSelection do
       >
 
   """
-  def weighted_cross_validate(x, y, weights, folding_fun, scoring_fun) when is_function(folding_fun, 1) and is_function(scoring_fun, 3) do
+  def weighted_cross_validate(x, y, weights, folding_fun, scoring_fun)
+      when is_function(folding_fun, 1) and is_function(scoring_fun, 3) do
     Stream.zip([folding_fun.(x), folding_fun.(y), folding_fun.(weights)])
     |> Enum.map(fn {x, y, weights} -> scoring_fun.(x, y, weights) |> Nx.stack() end)
     |> Nx.stack(axis: 1)
@@ -185,7 +184,7 @@ defmodule Scholar.ModelSelection do
       ...> ]
       iex> Scholar.ModelSelection.grid_search(x, y, folding_fun, scoring_fun, opts)
   """
-  def grid_search(x, y, folding_fun, scoring_fun, opts) do
+  def grid_search(x, y, folding_fun, scoring_fun, opts) when is_list(opts) do
     params = combinations(opts)
 
     for param <- params do
@@ -193,7 +192,7 @@ defmodule Scholar.ModelSelection do
 
       %{
         hyperparameters: param,
-        score: Nx.mean(cross_validate(x, y, folding_fun, scoring_function), axes: [1])
+        score: Nx.mean(cross_validate(x, y, folding_fun, scoring_fun), axes: [1])
       }
     end
   end
@@ -227,55 +226,22 @@ defmodule Scholar.ModelSelection do
       ...> ]
       iex> Scholar.ModelSelection.weighted_grid_search(x, y, weights, folding_fun, scoring_fun, opts)
   """
-  def weighted_grid_search(x, y, weights, folding_fun, scoring_fun, opts) do
+  def weighted_grid_search(x, y, weights, folding_fun, scoring_fun, opts)
+      when is_list(weights) and is_list(opts) do
     params = combinations(opts)
 
     for weight <- weights,
         param <- params do
-      scoring_function = check_arity_weighted(scoring_fun, params)
+      scoring_fun = &scoring_fun.(&1, &2, &3, param)
 
       %{
         weights: weight,
         hyperparameters: param,
         score:
-          Nx.mean(weighted_cross_validate(x, y, weight, folding_fun, scoring_function),
+          Nx.mean(weighted_cross_validate(x, y, weight, folding_fun, scoring_fun),
             axes: [1]
           )
       }
-    end
-  end
-
-  defp check_arity(scoring_fun, opts) do
-    cond do
-      is_function(scoring_fun, 3) ->
-        fn x, y -> scoring_fun.(x, y, opts) end
-
-      is_function(scoring_fun, 2) and opts != [] ->
-        raise ArgumentError, "no options must be given if scoring_fun expects two arguments"
-
-      is_function(scoring_fun, 2) ->
-        scoring_fun
-
-      true ->
-        raise ArgumentError,
-              "expected scoring_fun to be a function of arity 2 or 3, got: #{inspect(scoring_fun)}"
-    end
-  end
-
-  defp check_arity_weighted(scoring_fun, opts) do
-    cond do
-      is_function(scoring_fun, 4) ->
-        fn x, y, weights -> scoring_fun.(x, y, weights, opts) end
-
-      is_function(scoring_fun, 3) and opts != [] ->
-        raise ArgumentError, "no options must be given if scoring_fun expects three arguments"
-
-      is_function(scoring_fun, 3) ->
-        scoring_fun
-
-      true ->
-        raise ArgumentError,
-              "expected scoring_fun to be a function of arity 3 or 4, got: #{inspect(scoring_fun)}"
     end
   end
 end
