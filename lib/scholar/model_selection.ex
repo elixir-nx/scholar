@@ -188,7 +188,7 @@ defmodule Scholar.ModelSelection do
     params = combinations(opts)
 
     for param <- params do
-      scoring_function = check_arity(scoring_fun, params)
+      scoring_fun = &scoring_fun.(&1, &2, param)
 
       [
         hyperparameters: param,
