@@ -183,11 +183,14 @@ defmodule Scholar.ModelSelection do
   def grid_search(x, y, folding_fun, scoring_fun, opts) do
     params = combinations(opts)
 
-    for param <- params,
-        do: [
-          hyperparameters: param,
-          score: Nx.mean(cross_validate(x, y, folding_fun, scoring_fun, param), axes: [1])
-        ]
+    for param <- params do
+      scoring_fun = fn x, y -> scoring_fun(x, y, opts) end
+
+      [
+        hyperparameters: param,
+        score: Nx.mean(cross_validate(x, y, folding_fun, scoring_fun), axes: [1])
+      ]
+    end
   end
 
   @doc """
