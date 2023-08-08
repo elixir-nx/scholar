@@ -144,7 +144,7 @@ defmodule Scholar.ModelSelection do
       >
 
   """
-  def weighted_cross_validate(x, y, weights, folding_fun, scoring_fun) do
+  def weighted_cross_validate(x, y, weights, folding_fun, scoring_fun) when is_function(folding_fun, 1) and is_function(scoring_fun, 3) do
     Stream.zip([folding_fun.(x), folding_fun.(y), folding_fun.(weights)])
     |> Enum.map(fn {x, y, weights} -> scoring_fun.(x, y, weights) |> Nx.stack() end)
     |> Nx.stack(axis: 1)
@@ -160,8 +160,9 @@ defmodule Scholar.ModelSelection do
 
   @doc """
   General interface of grid search.
-  If you want to use `opts` in some functions inside `scoring_fun`, you need to pass it as a parameter
-  like in the example below.
+
+  The `opts` must be a keyword list of list values, which will become different
+  combinations to perform the grid search on.
 
   ## Examples
 
@@ -190,10 +191,10 @@ defmodule Scholar.ModelSelection do
     for param <- params do
       scoring_fun = &scoring_fun.(&1, &2, param)
 
-      [
+      %{
         hyperparameters: param,
         score: Nx.mean(cross_validate(x, y, folding_fun, scoring_function), axes: [1])
-      ]
+      }
     end
   end
 
@@ -233,14 +234,14 @@ defmodule Scholar.ModelSelection do
         param <- params do
       scoring_function = check_arity_weighted(scoring_fun, params)
 
-      [
+      %{
         weights: weight,
         hyperparameters: param,
         score:
           Nx.mean(weighted_cross_validate(x, y, weight, folding_fun, scoring_function),
             axes: [1]
           )
-      ]
+      }
     end
   end
 
