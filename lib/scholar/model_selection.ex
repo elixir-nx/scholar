@@ -86,7 +86,8 @@ defmodule Scholar.ModelSelection do
   ## Examples
 
       iex> folding_fun = fn x -> Scholar.ModelSelection.k_fold_split(x, 3) end
-      iex> scoring_fun = fn x, y, opts ->
+      iex> scoring_fun = fn x, y ->
+      ...>   opts = [fit_intercept?: true]
       ...>   {x_train, x_test} = x
       ...>   {y_train, y_test} = y
       ...>   model = Scholar.Linear.LinearRegression.fit(x_train, y_train, opts)
@@ -106,9 +107,9 @@ defmodule Scholar.ModelSelection do
         ]
       >
   """
-  def cross_validate(x, y, folding_fun, scoring_fun, opts \\ []) do
+  def cross_validate(x, y, folding_fun, scoring_fun) do
     Stream.zip([folding_fun.(x), folding_fun.(y)])
-    |> Enum.map(fn {x, y} -> scoring_fun.(x, y, opts) |> Nx.stack() end)
+    |> Enum.map(fn {x, y} -> scoring_fun.(x, y) |> Nx.stack() end)
     |> Nx.stack(axis: 1)
   end
 
@@ -118,7 +119,8 @@ defmodule Scholar.ModelSelection do
   ## Examples
 
       iex> folding_fun = fn x -> Scholar.ModelSelection.k_fold_split(x, 3) end
-      iex> scoring_fun = fn x, y, weights, opts ->
+      iex> scoring_fun = fn x, y, weights ->
+      ...>   opts = [fit_intercept?: true]
       ...>   {x_train, x_test} = x
       ...>   {y_train, y_test} = y
       ...>   {weights_train, _weights_test} = weights
@@ -142,9 +144,9 @@ defmodule Scholar.ModelSelection do
       >
 
   """
-  def weighted_cross_validate(x, y, weights, folding_fun, scoring_fun, opts \\ []) do
+  def weighted_cross_validate(x, y, weights, folding_fun, scoring_fun) do
     Stream.zip([folding_fun.(x), folding_fun.(y), folding_fun.(weights)])
-    |> Enum.map(fn {x, y, weights} -> scoring_fun.(x, y, weights, opts) |> Nx.stack() end)
+    |> Enum.map(fn {x, y, weights} -> scoring_fun.(x, y, weights) |> Nx.stack() end)
     |> Nx.stack(axis: 1)
   end
 
@@ -158,6 +160,8 @@ defmodule Scholar.ModelSelection do
 
   @doc """
   General interface of grid search.
+  If you want to use `opts` in some functions inside `scoring_fun`, you need to pass it as a parameter
+  like in the example below.
 
   ## Examples
 
@@ -184,17 +188,20 @@ defmodule Scholar.ModelSelection do
     params = combinations(opts)
 
     for param <- params do
-      scoring_fun = fn x, y -> scoring_fun(x, y, opts) end
+      scoring_function = check_arity(scoring_fun, params)
 
       [
         hyperparameters: param,
-        score: Nx.mean(cross_validate(x, y, folding_fun, scoring_fun), axes: [1])
+        score: Nx.mean(cross_validate(x, y, folding_fun, scoring_function), axes: [1])
       ]
     end
   end
 
   @doc """
   General interface of weighted grid search.
+
+  If you want to use `opts` in some functions inside `scoring_fun`, you need to pass it as a parameter
+  like in the example below.
 
   ## Examples
 
@@ -223,14 +230,51 @@ defmodule Scholar.ModelSelection do
     params = combinations(opts)
 
     for weight <- weights,
-        param <- params,
-        do: [
-          weights: weight,
-          hyperparameters: param,
-          score:
-            Nx.mean(weighted_cross_validate(x, y, weight, folding_fun, scoring_fun, param),
-              axes: [1]
-            )
-        ]
+        param <- params do
+      scoring_function = check_arity_weighted(scoring_fun, params)
+
+      [
+        weights: weight,
+        hyperparameters: param,
+        score:
+          Nx.mean(weighted_cross_validate(x, y, weight, folding_fun, scoring_function),
+            axes: [1]
+          )
+      ]
+    end
+  end
+
+  defp check_arity(scoring_fun, opts) do
+    cond do
+      is_function(scoring_fun, 3) ->
+        fn x, y -> scoring_fun.(x, y, opts) end
+
+      is_function(scoring_fun, 2) and opts != [] ->
+        raise ArgumentError, "no options must be given if scoring_fun expects two arguments"
+
+      is_function(scoring_fun, 2) ->
+        scoring_fun
+
+      true ->
+        raise ArgumentError,
+              "expected scoring_fun to be a function of arity 2 or 3, got: #{inspect(scoring_fun)}"
+    end
+  end
+
+  defp check_arity_weighted(scoring_fun, opts) do
+    cond do
+      is_function(scoring_fun, 4) ->
+        fn x, y, weights -> scoring_fun.(x, y, weights, opts) end
+
+      is_function(scoring_fun, 3) and opts != [] ->
+        raise ArgumentError, "no options must be given if scoring_fun expects three arguments"
+
+      is_function(scoring_fun, 3) ->
+        scoring_fun
+
+      true ->
+        raise ArgumentError,
+              "expected scoring_fun to be a function of arity 3 or 4, got: #{inspect(scoring_fun)}"
+    end
   end
 end
