@@ -1,0 +1,157 @@
+# Using Cross-Validation for Gradient Boosting Trees
+
+```elixir
+Mix.install([
+  {:scholar, github: "elixir-nx/scholar", override: true},
+  {:explorer, "~> 0.6.1"},
+  {:exla, "~> 0.5.3"},
+  {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
+  {:exgboost, "~> 0.3"},
+  {:req, "~> 0.3.9"},
+  {:kino_vega_lite, "~> 0.1.9"},
+  {:kino, "~> 0.10.0"},
+  {:kino_explorer, "~> 0.1.7"}
+])
+```
+
+## Setup
+
+```elixir
+require Explorer.DataFrame, as: DF
+require Explorer.Series, as: S
+```
+
+As in the <a href="https://hexdocs.pm/scholar/linear_regression.html">Linear Regression in Practice</a> notebook, we are going to work with the California Housing dataset to predict the median house price, so let's download the data.
+
+```elixir
+data =
+  Req.get!(
+    "https://raw.githubusercontent.com/sonarsushant/California-House-Price-Prediction/master/housing.csv"
+  ).body
+
+df = DF.load_csv!(data)
+```
+
+We are going to perform a couple of transformations to ensure we can work with tensors. That is, filling the missing values on the `total_bedrooms` column, and casting the `ocean_proximity` feature to a numerical type. We are also going to separate our labels from our training data.
+
+```elixir
+y = DF.select(df, "median_house_value") |> Nx.concatenate()
+
+x =
+  df
+  |> DF.discard(["median_house_value"])
+  |> DF.mutate(
+    total_bedrooms: fill_missing(total_bedrooms, :mean),
+    ocean_proximity: cast(ocean_proximity, :category)
+  )
+  |> Nx.stack(axis: 1)
+
+{x, y}
+```
+
+Before training our model, we separate the data between train and test sets.
+
+```elixir
+num_rows = DF.n_rows(df)
+
+train_ratio = 0.8
+num_train = round(train_ratio * num_rows)
+
+{x_train, x_test} = {x[[0..(num_train - 1), ..]], x[[num_train..(num_rows - 1), ..]]}
+{y_train, y_test} = {y[[0..(num_train - 1)]], y[[num_train..(num_rows - 1)]]}
+```
+
+## Training a Gradient Boosting Tree
+
+Gradient boosting works by sequentially adding predictors to an ensemble, each one correcting its predecessor. Let's go through a simple regression example, using decision trees as the base predictors; this is called _gradient tree boosting_, or _gradient boosted regression trees_ (GBRT).
+
+EXGBoost provides an implementation of gradient boosting trees optimized for large dataset, _histogram-based gradient boosting trees_. We can enable it by passing `:hist` to the `tree_method` option. For the full list of hyperparamters refer to the <a href="https://hexdocs.pm/exgboost/EXGBoost.html">EXGBoost</a> docs.
+
+```elixir
+y_pred =
+  EXGBoost.train(
+    x_train,
+    y_train,
+    booster: :gbtree,
+    tree_method: :hist,
+    objective: :reg_squarederror,
+    num_boost_rounds: 100,
+    evals: [{x_train, y_train, "training"}],
+    verbose_eval: true
+  )
+  |> EXGBoost.predict(x_test)
+```
+
+Having our predictions, we can meassure performance by calculating root mean squared error of predictions with respect to target values.
+
+```elixir
+alias Scholar.Metrics.Regression, as: Metrics
+
+Metrics.mean_square_error(y_test, y_pred)
+|> Nx.sqrt()
+|> Nx.to_number()
+```
+
+With very little preprocessing we get similar results to the linear regression model. However, we can improve our model evaluation process by using cross-validation.
+
+## Evaluating with Cross-Validation
+
+_k_-fold cross-validation works by creating splits on the training set into _k_ smaller sets, so that the model is trained using $$ k -1 $$ of the splits (folds) as training data and validated on the remaining part of the data. When using this technique, the performance measure is the average of the values computed in each iteration.
+
+<br />
+
+<img src="https://scikit-learn.org/stable/_images/grid_search_cross_validation.png" height="500" width="500" />
+
+<!-- livebook:{"break_markdown":true} -->
+
+Scholar provides tools for performing _k_-fold CV.
+
+```elixir
+alias Scholar.ModelSelection
+```
+
+First, we need to define a folding function that will perform the _k_-folds, and also a scoring function that will train the model and evaluate performance with each split.
+
+```elixir
+folding_fn = fn x -> ModelSelection.k_fold_split(x, 10) end
+
+scoring_fn = fn x, y ->
+  {x_train, x_test} = x
+  {y_train, y_test} = y
+
+  y_pred =
+    EXGBoost.train(
+      x_train,
+      y_train,
+      booster: :gbtree,
+      objective: :reg_squarederror,
+      num_boost_rounds: 100,
+      evals: [{x_train, y_train, "training"}],
+      verbose_eval: true
+    )
+    |> EXGBoost.predict(x_test)
+
+  Metrics.mean_square_error(y_test, y_pred)
+  |> Nx.sqrt()
+end
+```
+
+Now let's run the cross-validation function and put the scores tensor in a series.
+
+```elixir
+cv_score =
+  ModelSelection.cross_validate(
+    x_train,
+    y_train,
+    folding_fn,
+    scoring_fn
+  )
+  |> Nx.squeeze()
+  |> S.from_tensor()
+```
+
+Taking the average results in the performance reported by cross-validation.
+
+```elixir
+S.mean(cv_score)
+```
