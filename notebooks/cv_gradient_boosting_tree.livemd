@@ -60,7 +60,7 @@ Before training our model, we separate the data between train and test sets.
 
 Gradient boosting works by sequentially adding predictors to an ensemble, each one correcting its predecessor. Let's go through a simple regression example, using decision trees as the base predictors; this is called _gradient tree boosting_, or _gradient boosted regression trees_ (GBRT).
 
-EXGBoost provides an implementation of gradient boosting trees optimized for large dataset, _histogram-based gradient boosting trees_. We can enable it by passing `:hist` to the `tree_method` option. For the full list of hyperparamters refer to the <a href="https://hexdocs.pm/exgboost/EXGBoost.html">EXGBoost</a> docs.
+EXGBoost provides an implementation of gradient boosting trees optimized for large dataset, _histogram-based gradient boosting trees_. We can enable it by passing `:hist` to the `tree_method` option. For the full list of hyperparameters refer to the <a href="https://hexdocs.pm/exgboost/EXGBoost.html">EXGBoost</a> docs.
 
 ```elixir
 y_pred =
@@ -119,6 +119,7 @@ scoring_fn = fn x, y ->
       x_train,
       y_train,
       booster: :gbtree,
+      tree_method: :hist,
       objective: :reg_squarederror,
       num_boost_rounds: 100,
       evals: [{x_train, y_train, "training"}],
@@ -149,4 +150,61 @@ Taking the average results in the performance reported by cross-validation.
 
 ```elixir
 S.mean(cv_score)
+```
+
+## Fine-Tuning our model with Grid Search
+
+Finding the right configuration of hyperparameters is an important part of the process when selecting a model. One could try different combinations of hyperparameter values manually, but this can get tedious and time consuming. Instead, we can use the _Grid Search_ method, an iterative process for finding an optimal configuration of hyperparameter values for a given model.
+
+First, we need to provide a "grid" of hyperparameter values, so that the algorithm can train and evaluate our model with all possible combinations.
+
+```elixir
+grid = [
+  tree_method: [:auto, :hist],
+  max_depth: [4, 8],
+  num_boost_rounds: [100, 500]
+]
+```
+
+We also need to adapt our scoring function in order to use the hyperparameter values for each grid search iteration.
+
+```elixir
+gs_scoring_fn = fn x, y, hyperparams ->
+  {x_train, x_test} = x
+  {y_train, y_test} = y
+
+  opts =
+    hyperparams ++
+      [
+        booster: :gbtree,
+        objective: :reg_squarederror,
+        evals: [{x_train, y_train, "training"}],
+        verbose_eval: true
+      ]
+
+  y_pred =
+    x_train
+    |> EXGBoost.train(y_train, opts)
+    |> EXGBoost.predict(x_test)
+
+  Metrics.mean_square_error(y_test, y_pred)
+  |> Nx.sqrt()
+end
+```
+
+Let's run the grid search and see the results. Remember that the more hyperparameter values you add to the grid, the more it will take the algorithm to end.
+
+```elixir
+gs_scores = ModelSelection.grid_search(x, y, folding_fn, gs_scoring_fn, grid)
+```
+
+The output is a list of maps, each corresponding to an iteration of the grid search algorithm. Every iteration yields a `score` calculated by our scoring function. Let's find the set of hyperparameters that optimizes the score.
+
+```elixir
+gs_scores
+|> Enum.min_by(fn %{score: score} ->
+  score
+  |> Nx.squeeze()
+  |> Nx.to_number()
+end)
 ```
