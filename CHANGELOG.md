@@ -4,7 +4,7 @@
 
 ## v0.2.0 (2023-08-16)
 
-This version requires Elixir v1.14.5+.
+This version requires Elixir v1.14+.
 
 ### Enhancements
 
