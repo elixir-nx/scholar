@@ -81,8 +81,8 @@ defmodule Scholar.Linear.RidgeRegression do
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
-  Fits a Ridge regression model for sample inputs `a` and
-  sample targets `b`.
+  Fits a Ridge regression model for sample inputs `x` and
+  sample targets `y`.
 
   ## Options
 
@@ -110,11 +110,11 @@ defmodule Scholar.Linear.RidgeRegression do
         )
       }
   """
-  deftransform fit(a, b, opts \\ []) do
+  deftransform fit(x, y, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     sample_weights? = opts[:sample_weights] != nil
-    kernel_cholesky = opts[:solver] == :cholesky and Nx.axis_size(a, 0) < Nx.axis_size(a, 1)
+    kernel_cholesky = opts[:solver] == :cholesky and Nx.axis_size(x, 0) < Nx.axis_size(x, 1)
 
     opts =
       [
@@ -124,7 +124,7 @@ defmodule Scholar.Linear.RidgeRegression do
         opts
 
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
-    x_type = to_float_type(a)
+    x_type = to_float_type(x)
 
     sample_weights =
       if Nx.is_tensor(sample_weights),
@@ -133,14 +133,14 @@ defmodule Scholar.Linear.RidgeRegression do
 
     {alpha, opts} = Keyword.pop!(opts, :alpha)
     alpha = Nx.tensor(alpha, type: x_type) |> Nx.flatten()
-    num_targets = if Nx.rank(b) == 1, do: 1, else: Nx.axis_size(b, 1)
+    num_targets = if Nx.rank(y) == 1, do: 1, else: Nx.axis_size(y, 1)
 
     if Nx.size(alpha) not in [0, 1, num_targets] do
       raise ArgumentError,
             "expected number of targets be the same as number of penalties, got: #{inspect(num_targets)} != #{inspect(Nx.size(alpha))}"
     end
 
-    fit_n(a, b, sample_weights, alpha, opts)
+    fit_n(x, y, sample_weights, alpha, opts)
   end
 
   defnp fit_n(a, b, sample_weights, alpha, opts) do

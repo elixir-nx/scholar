@@ -4,9 +4,9 @@ defmodule Scholar.Interpolation.BezierSpline do
 
   This kind of interpolation is calculated by fitting a set of
   continuous cubic polynomials of which the first and second
-  derivatives are also continuous (which makes them curves of class C2).
+  derivatives are also continuous (which makes them curves of class $C^2$).
   In contrast to the `Scholar.Interpolation.CubicSpline` algorithm,
-  the Bezier curves aren't necessarily of class C2, but this interpolation
+  the Bezier curves aren't necessarily of class $C^2$, but this interpolation
   forces this so it yields a smooth function as the result.
 
   The interpolated curve also has local control,
