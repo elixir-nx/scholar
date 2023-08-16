@@ -1,6 +1,6 @@
 defmodule Scholar.Neighbors.KNearestNeighbors do
   @moduledoc """
-  The K-Nearest Neighbors.
+  The K-Nearest Neighbors. It implements both classification and regression.
   """
   import Nx.Defn
   import Scholar.Shared
@@ -39,8 +39,8 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       doc: ~S"""
       Name of the metric. Possible values:
 
-      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or :infinity)
-        we can set Manhattan (1), Euclidean (2), Chebyshev (:infinity), or any arbitrary $L_p$ metric.
+      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
+        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
       """

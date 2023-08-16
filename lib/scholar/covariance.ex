@@ -110,7 +110,7 @@ defmodule Scholar.Covariance do
   end
 
   @doc """
-  Computes covariance matrix for sample inputs `x`.
+  Computes correlation matrix for sample inputs `x`.
 
   The value on the position $Corr_{ij}$ in the $Corr$ matrix is calculated using the formula:
   #{~S'''

@@ -32,8 +32,8 @@ defmodule Scholar.Linear.LinearRegression do
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
-  Fits a linear regression model for sample inputs `a` and
-  sample targets `b`.
+  Fits a linear regression model for sample inputs `x` and
+  sample targets `y`.
 
   ## Options
 

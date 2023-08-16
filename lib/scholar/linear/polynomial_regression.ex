@@ -42,8 +42,8 @@ defmodule Scholar.Linear.PolynomialRegression do
   @transform_opts_schema NimbleOptions.new!(transform_opts)
 
   @doc """
-  Fits a polynomial regression model for sample inputs `a` and
-  sample targets `b`.
+  Fits a polynomial regression model for sample inputs `x` and
+  sample targets `y`.
 
   ## Options
 
@@ -91,12 +91,12 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> model.degree
       2
   """
-  deftransform fit(a, b, opts \\ []) do
+  deftransform fit(x, y, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    a_transform = transform(a, fit_intercept?: false, degree: opts[:degree])
+    x_transform = transform(x, fit_intercept?: false, degree: opts[:degree])
 
     linear_reg =
-      Scholar.Linear.LinearRegression.fit(a_transform, b, Keyword.take(opts, [:fit_intercept?]))
+      Scholar.Linear.LinearRegression.fit(x_transform, y, Keyword.take(opts, [:fit_intercept?]))
 
     %__MODULE__{
       coefficients: linear_reg.coefficients,

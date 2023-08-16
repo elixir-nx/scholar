@@ -1,6 +1,6 @@
 defmodule Scholar.Neighbors.RadiusNearestNeighbors do
   @moduledoc """
-  The Radius Nearest Neighbors.
+  The Radius Nearest Neighbors. It implements both classification and regression.
   """
   import Nx.Defn
   import Scholar.Shared
@@ -38,8 +38,8 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
       doc: ~S"""
       Name of the metric. Possible values:
 
-      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or :infinity)
-        we can set Manhattan (1), Euclidean (2), Chebyshev (:infinity), or any arbitrary $L_p$ metric.
+      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
+        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
       """
@@ -48,7 +48,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
       type: {:in, [:classification, :regression]},
       default: :classification,
       doc: """
-      Task that will be performed using K Nearest Neighbors. Possible values:
+      Task that will be performed using Radius Nearest Neighbors. Possible values:
 
       * `:classification` - Classifier implementing the Radius Nearest Neighbors vote.
 
@@ -61,7 +61,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
-  Fit the K-nearest neighbors classifier from the training data set.
+  Fit the Radius nearest neighbors classifier from the training data set.
 
   For classification, provided labels need to be consecutive non-negative integers. If your labels does
   not meet this condition please use `Scholar.Preprocessing.ordinal_encode`

@@ -103,19 +103,25 @@ defmodule Scholar.Metrics.Similarity do
     (intersection_size / union_size) |> Nx.as_type(result_type)
   end
 
-  @doc ~S"""
+  @doc """
   Calculates Jaccard similarity based on binary attributes.
   It assumes that inputs have the same shape.
 
+  #{~S'''
   $$
   J(X, Y) = \frac{M\_{11}}{M\_{01} + M\_{10} + M\_{11}}
   $$
+  '''}
 
   Where:
 
   * $M_{11}$ is the total number of attributes, for which both $X$ and $Y$ have 1.
   * $M_{10}$ is the total number of attributes, for which $X$ has 1 and $Y$ has 0.
   * $M_{01}$ is the total number of attributes, for which $X$ has 0 and $Y$ has 1.
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
 
   ## Examples
 
@@ -226,9 +232,13 @@ defmodule Scholar.Metrics.Similarity do
     2 * j / (1 + j)
   end
 
-  @doc ~S"""
+  @doc """
   Calculates Dice coefficient based on binary attributes.
   It assumes that inputs have the same shape.
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
 
   ## Examples
 
@@ -266,7 +276,7 @@ defmodule Scholar.Metrics.Similarity do
     2 * j / (1 + j)
   end
 
-  defn unique_size(%Nx.Tensor{shape: shape} = tensor, opts) do
+  defnp unique_size(%Nx.Tensor{shape: shape} = tensor, opts) do
     case shape do
       {} ->
         raise "expected tensor to have at least one dimension, got scalar"

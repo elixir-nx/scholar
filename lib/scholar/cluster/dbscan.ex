@@ -34,8 +34,8 @@ defmodule Scholar.Cluster.DBSCAN do
       doc: ~S"""
       Name of the metric. Possible values:
 
-      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or :infinity)
-        we can set Manhattan (1), Euclidean (2), Chebyshev (:infinity), or any arbitrary $L_p$ metric.
+      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
+        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
       """
@@ -43,7 +43,7 @@ defmodule Scholar.Cluster.DBSCAN do
     weights: [
       type: {:custom, Scholar.Options, :weights, []},
       doc: """
-      The weights for each observation in x. If equals to `nil`,
+      The weights for each observation in `x`. If equals to `nil`,
       all observations are assigned equal weight.
       """
     ]
@@ -63,11 +63,11 @@ defmodule Scholar.Cluster.DBSCAN do
   The function returns a struct with the following parameters:
 
   * `:core_sample_indices` - Indices of core samples represented as a mask.
-    The mask is a boolean array of shape {num_samples} where `1` indicates
+    The mask is a boolean array of shape `{num_samples}` where `1` indicates
     that the corresponding sample is a core sample and `0` otherwise.
 
   * `:labels` - Cluster labels for each point in the dataset given to fit().
-    Noisy samples are given the label -1.
+    Noisy samples are given the label `-1`.
 
   ## Examples
 

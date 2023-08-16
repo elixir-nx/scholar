@@ -283,7 +283,7 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  Encodes a tensor's values into integers from range 0 to `:num_classes` - 1.
+  Encodes a tensor's values into integers from range 0 to `:num_classes - 1`.
 
   ## Options
 
