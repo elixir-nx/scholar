@@ -32,7 +32,7 @@ data =
 df = DF.load_csv!(data)
 ```
 
-The dataset consists of 7 columns: age, sex, bmi, children (number), smoker (yes-no), region (NE, NW, SE, SW), and charges that we want to predict. Cause gradient boosting trees that we are using in our analysis accept numerical data, we need to process further three columns: sex, smoker and region and encode them from categorical to numerical.
+The dataset consists of 7 columns: age, sex, BMI (body mass index), children (number), smoker (yes-no), region (NE, NW, SE, SW), and charges that we want to predict. Since gradient boosting trees that we are using in our analysis accept numerical data, we need to process further three columns: sex, smoker and region and encode them from categorical to numerical.
 
 ```elixir
 y = DF.select(df, "charges") |> Nx.concatenate()
@@ -61,7 +61,7 @@ Before training our model, we separate the data between train and test sets.
 
 Gradient boosting works by sequentially adding predictors to an ensemble, each one correcting its predecessor. Let's go through a simple regression example, using decision trees as the base predictors; this is called _gradient tree boosting_, or _gradient boosted regression trees_ (GBRT).
 
-EXGBoost provides an implementation of gradient boosting trees optimized for large dataset, _histogram-based gradient boosting trees_. We can enable it by passing `:hist` to the `tree_method` option. For the full list of hyperparameters refer to the <a href="https://hexdocs.pm/exgboost/EXGBoost.html">EXGBoost</a> docs.
+EXGBoost provides an implementation of gradient boosting trees that accepts a wide range of hyperparameter configurations. For the full list of hyperparameters refer to the <a href="https://hexdocs.pm/exgboost/EXGBoost.html">EXGBoost</a> docs.
 
 ```elixir
 y_pred =
@@ -69,7 +69,7 @@ y_pred =
     x_train,
     y_train,
     booster: :gbtree,
-    tree_method: :hist,
+    tree_method: :auto,
     objective: :reg_squarederror,
     num_boost_rounds: 100,
     evals: [{x_train, y_train, "training"}],
@@ -109,7 +109,7 @@ alias Scholar.ModelSelection
 First, we need to define a folding function that will perform the _k_-folds, and also a scoring function that will train the model and evaluate performance with each split.
 
 ```elixir
-folding_fn = fn x -> ModelSelection.k_fold_split(x, 10) end
+folding_fn = fn x -> ModelSelection.k_fold_split(x, 5) end
 
 scoring_fn = fn x, y ->
   {x_train, x_test} = x
@@ -120,7 +120,7 @@ scoring_fn = fn x, y ->
       x_train,
       y_train,
       booster: :gbtree,
-      tree_method: :hist,
+      tree_method: :auto,
       objective: :reg_squarederror,
       num_boost_rounds: 100,
       evals: [{x_train, y_train, "training"}],
@@ -161,9 +161,10 @@ First, we need to provide a "grid" of hyperparameter values, so that the algorit
 
 ```elixir
 grid = [
-  tree_method: [:auto, :hist],
-  max_depth: [4, 8],
-  num_boost_rounds: [100, 500]
+  tree_method: [:approx, :exact],
+  max_depth: [2, 3, 4, 5, 6],
+  num_boost_rounds: [20, 50, 90],
+  subsample: [0.25, 0.5, 0.75, 1.0]
 ]
 ```
 
