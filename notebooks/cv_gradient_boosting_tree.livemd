@@ -4,8 +4,8 @@
 Mix.install([
   {:scholar, github: "elixir-nx/scholar", override: true},
   {:explorer, "~> 0.6.1"},
-  {:exla, "~> 0.5.3"},
-  {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
+  {:exla, "~> 0.6.0"},
+  {:nx, "~> 0.6.0", override: true},
   {:exgboost, "~> 0.3"},
   {:req, "~> 0.3.9"},
   {:kino_vega_lite, "~> 0.1.9"},
@@ -21,28 +21,29 @@ require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 ```
 
-As in the <a href="https://hexdocs.pm/scholar/linear_regression.html">Linear Regression in Practice</a> notebook, we are going to work with the California Housing dataset to predict the median house price, so let's download the data.
+In this notebook we are going to work with <a href="https://www.kaggle.com/datasets/mirichoi0218/insurance">Medical Cost Personal Datasets</a> to predict medical charges that were applied to each person from the dataset.
 
 ```elixir
 data =
   Req.get!(
-    "https://raw.githubusercontent.com/sonarsushant/California-House-Price-Prediction/master/housing.csv"
+    "https://gist.githubusercontent.com/meperezcuello/82a9f1c1c473d6585e750ad2e3c05a41/raw/d42d226d0dd64e7f5395a0eec1b9190a10edbc03/Medical_Cost.csv"
   ).body
 
 df = DF.load_csv!(data)
 ```
 
-We are going to perform a couple of transformations to ensure we can work with tensors. That is, filling the missing values on the `total_bedrooms` column, and casting the `ocean_proximity` feature to a numerical type. We are also going to separate our labels from our training data.
+The dataset consists of 7 columns: age, sex, bmi, children (number), smoker (yes-no), region (NE, NW, SE, SW), and charges that we want to predict. Cause gradient boosting trees that we are using in our analysis accept numerical data, we need to process further three columns: sex, smoker and region and encode them from categorical to numerical.
 
 ```elixir
-y = DF.select(df, "median_house_value") |> Nx.concatenate()
+y = DF.select(df, "charges") |> Nx.concatenate()
 
 x =
   df
-  |> DF.discard(["median_house_value"])
+  |> DF.discard(["charges"])
   |> DF.mutate(
-    total_bedrooms: fill_missing(total_bedrooms, :mean),
-    ocean_proximity: cast(ocean_proximity, :category)
+    sex: cast(sex, :category),
+    smoker: cast(smoker, :category),
+    region: cast(region, :category)
   )
   |> Nx.stack(axis: 1)
 
