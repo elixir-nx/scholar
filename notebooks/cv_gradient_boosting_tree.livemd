@@ -1,4 +1,4 @@
-# Using Cross-Validation for Gradient Boosting Trees
+# Using cross-validation with gradient boosting trees
 
 ```elixir
 Mix.install([
@@ -57,7 +57,7 @@ Before training our model, we separate the data between train and test sets.
 {y_train, y_test} = Nx.split(y, 0.8)
 ```
 
-## Training a Gradient Boosting Tree
+## Training a gradient boosting tree
 
 Gradient boosting works by sequentially adding predictors to an ensemble, each one correcting its predecessor. Let's go through a simple regression example, using decision trees as the base predictors; this is called _gradient tree boosting_, or _gradient boosted regression trees_ (GBRT).
 
@@ -90,11 +90,9 @@ Metrics.mean_square_error(y_test, y_pred)
 
 With very little preprocessing we get similar results to the linear regression model. However, we can improve our model evaluation process by using cross-validation.
 
-## Evaluating with Cross-Validation
+## Evaluating with cross-validation
 
 _k_-fold cross-validation works by creating splits on the training set into _k_ smaller sets, so that the model is trained using $ k - 1 $ splits (folds) as training data and is validated on the remaining part of the data. When using this technique, the performance measure is the average of the values computed in each iteration.
-
-<br />
 
 <img src="https://scikit-learn.org/stable/_images/grid_search_cross_validation.png" height="350" width="700" style="display:block;margin:auto;" />
 
@@ -153,7 +151,7 @@ Taking the average results in the performance reported by cross-validation.
 S.mean(cv_score)
 ```
 
-## Fine-Tuning our model with Grid Search
+## Fine-tuning our model with grid search
 
 Finding the right configuration of hyperparameters is an important part of the process when selecting a model. One could try different combinations of hyperparameter values manually, but this can get tedious and time consuming. Instead, we can use the _Grid Search_ method, an iterative process for finding an optimal configuration of hyperparameter values for a given model.
 
