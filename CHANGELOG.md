@@ -31,6 +31,7 @@ This version requires Elixir v1.14+.
   * Add Gaussian Mixtures
   * Add Model selection functionalities: K-fold, K-fold Cross Validation, Grid Search
   * Change structure of metrics in Scholar
+  * Add a guide with Cross-Validation and Grid Search
 
 ## v0.1.0 (2023-03-29)
 
