@@ -4,7 +4,7 @@
 
 ```elixir
 Mix.install([
-  {:scholar, github: "elixir-nx/scholar", override: true},
+  {:scholar, github: "elixir-nx/scholar"},
   {:exla, "~> 0.6.0"},
   {:nx, "~> 0.6.0", override: true},
   {:explorer, "~> 0.6.1"},
