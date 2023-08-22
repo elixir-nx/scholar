@@ -33,7 +33,6 @@ defmodule Scholar.MixProject do
       {:nx, "~> 0.6", override: true},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, "~> 0.6"},
-      {:explorer, "~> 0.5.1", only: [:test, :dev]},
       {:polaris, "~> 0.1"}
     ]
   end
