@@ -81,7 +81,7 @@ defmodule Scholar.Interpolation.Linear do
   end
 
   @doc """
-  Returns the value fit by `train/2` corresponding to the `target_x` input.
+  Returns the value fit by `fit/2` corresponding to the `target_x` input.
 
   ## Examples
 

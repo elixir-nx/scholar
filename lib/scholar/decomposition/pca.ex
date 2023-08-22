@@ -176,7 +176,7 @@ defmodule Scholar.Decomposition.PCA do
   end
 
   @doc """
-  For a fitted model performs a decomposition.
+  For a fitted `model` performs a decomposition.
 
   ## Options
 

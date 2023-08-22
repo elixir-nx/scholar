@@ -2,6 +2,7 @@ defmodule Scholar.Linear.LinearRegression do
   @moduledoc """
   Ordinary least squares linear regression.
   """
+  require Nx
   import Nx.Defn
   import Scholar.Shared
 
@@ -31,8 +32,8 @@ defmodule Scholar.Linear.LinearRegression do
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
-  Fits a linear regression model for sample inputs `a` and
-  sample targets `b`.
+  Fits a linear regression model for sample inputs `x` and
+  sample targets `y`.
 
   ## Options
 
@@ -73,7 +74,11 @@ defmodule Scholar.Linear.LinearRegression do
 
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     x_type = to_float_type(x)
-    sample_weights = Nx.tensor(sample_weights, type: x_type)
+
+    sample_weights =
+      if Nx.is_tensor(sample_weights),
+        do: Nx.as_type(sample_weights, x_type),
+        else: Nx.tensor(sample_weights, type: x_type)
 
     fit_n(x, y, sample_weights, opts)
   end

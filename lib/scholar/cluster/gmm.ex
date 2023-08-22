@@ -393,7 +393,8 @@ defmodule Scholar.Cluster.GaussianMixture do
       )
   """
   defn predict(
-         %__MODULE__{weights: weights, means: means, precisions_cholesky: precisions_cholesky},
+         %__MODULE__{weights: weights, means: means, precisions_cholesky: precisions_cholesky} =
+           _model,
          x
        ) do
     assert_same_shape!(x[0], means[0])
@@ -423,7 +424,8 @@ defmodule Scholar.Cluster.GaussianMixture do
       )
   """
   defn predict_prob(
-         %__MODULE__{weights: weights, means: means, precisions_cholesky: precisions_cholesky},
+         %__MODULE__{weights: weights, means: means, precisions_cholesky: precisions_cholesky} =
+           _model,
          x
        ) do
     assert_same_shape!(x[0], means[0])

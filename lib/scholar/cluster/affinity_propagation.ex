@@ -1,6 +1,9 @@
 defmodule Scholar.Cluster.AffinityPropagation do
   @moduledoc """
-  Model representing affinity propagation clustering.
+  Model representing affinity propagation clustering. The first dimension
+  of `:clusters_centers` is set to the number of samples in the dataset.
+  The artificial centers are filled with `:infinity` values. To fillter
+  them out use `prune` function.
   """
 
   import Nx.Defn
@@ -303,7 +306,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
     {availability_matrix, responsibility_matrix, similarity_matrix, affinity_matrix}
   end
 
-  defn initialize_similarities(data, opts \\ []) do
+  defnp initialize_similarities(data, opts \\ []) do
     {n, dims} = Nx.shape(data)
     self_preference = opts[:self_preference]
     t1 = Nx.reshape(data, {1, n, dims}) |> Nx.broadcast({n, n, dims})
