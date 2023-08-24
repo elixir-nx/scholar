@@ -177,6 +177,8 @@ defmodule Scholar.Linear.SVMTest do
 
     model = SVM.fit(x_train, y_train, num_classes: 3, margin: 10)
     res = SVM.predict(model, x_test)
-    assert Scholar.Metrics.Classification.accuracy(y_test, res) >= 0.89
+
+    assert Nx.greater_equal(Scholar.Metrics.Classification.accuracy(res, y_test), 0.89) ==
+             Nx.u8(1)
   end
 end
