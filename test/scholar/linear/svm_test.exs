@@ -18,6 +18,6 @@ defmodule Scholar.Linear.SVMTest do
 
     accuracy = Scholar.Metrics.Classification.accuracy(res, y_test)
 
-    assert Nx.greater_equal(Nx.backend_transfer(accuracy), 0.89) == Nx.u8(1)
+    assert Nx.greater_equal(Nx.backend_transfer(accuracy), 0.96) == Nx.u8(1)
   end
 end
