@@ -1,6 +1,17 @@
 defmodule Scholar.Linear.SVM do
   @moduledoc """
-  SVM in both binary and multinomial variants for classification and regression.
+  SVM classifier
+
+  It uses the OvR strategy to handle both binary and multinomial classification.
+  This implementation uses stochastic gradient descent from default or any other optimizer
+  available in `Polaris`. This makes it similar to a sklearn SGDClassifier [1].
+  It means that on average it will work slower than algorithms that use QP and kernel trick (LIBSVM [2]) or
+  Coordinate Descent Algorithm (LIBLINEAR [3]), but you can use any type of optimizer
+  and regularizer available in `Polaris`.
+
+  [1] - https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.SGDClassifier.html
+  [2] - https://www.csie.ntu.edu.tw/~cjlin/libsvm/
+  [3] - https://www.csie.ntu.edu.tw/~cjlin/liblinear/
   """
   import Nx.Defn
   import Scholar.Shared
