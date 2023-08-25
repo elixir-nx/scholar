@@ -10,8 +10,8 @@ defmodule Scholar.Linear.SVMTest do
     y_train = Nx.dot(y_train, Nx.iota({3}, backend: EXLA.Backend))
     y_test = Nx.dot(y_test, Nx.iota({3}, backend: EXLA.Backend))
 
-    x_train = Scholar.Preprocessing.standard_scale(x_train)
-    x_test = Scholar.Preprocessing.standard_scale(x_test)
+    x_train = Scholar.Preprocessing.standard_scale(x_train, axes: [-1])
+    x_test = Scholar.Preprocessing.standard_scale(x_test, axes: [-1])
 
     model = SVM.fit(x_train, y_train, num_classes: 3, margin: 10)
     res = SVM.predict(model, x_test)
