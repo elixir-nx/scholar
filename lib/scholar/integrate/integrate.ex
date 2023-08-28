@@ -17,7 +17,7 @@ defmodule Scholar.Integrate do
     keep_axis: [
       type: :boolean,
       default: false,
-      doc: "If set to true, the axes which are reduced are kept."
+      doc: "If set to true, the axis which is reduced are kept."
     ]
   ]
 

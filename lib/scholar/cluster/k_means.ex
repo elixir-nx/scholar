@@ -53,7 +53,7 @@ defmodule Scholar.Cluster.KMeans do
     weights: [
       type: {:custom, Scholar.Options, :weights, []},
       doc: """
-      The weights for each observation in x. If equals to `nil`,
+      The weights for each observation in `x`. If equals to `nil`,
       all observations are assigned equal weight.
       """
     ],

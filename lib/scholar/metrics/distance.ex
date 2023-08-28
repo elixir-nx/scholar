@@ -1,6 +1,7 @@
 defmodule Scholar.Metrics.Distance do
   @moduledoc """
   Distance metrics between multi-dimensional tensors.
+  They all support distance calculations between any subset of axes.
   """
 
   import Nx.Defn

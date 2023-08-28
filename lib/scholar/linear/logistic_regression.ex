@@ -201,7 +201,7 @@ defmodule Scholar.Linear.LogisticRegression do
   end
 
   @doc """
-  Makes predictions with the given model on inputs `x`.
+  Makes predictions with the given `model` on inputs `x`.
 
   ## Examples
 
@@ -214,13 +214,13 @@ defmodule Scholar.Linear.LogisticRegression do
         [1]
       >
   """
-  defn predict(%__MODULE__{coefficients: coeff, bias: bias}, x) do
+  defn predict(%__MODULE__{coefficients: coeff, bias: bias} = _model, x) do
     inter = Nx.dot(x, [1], coeff, [0]) + bias
     Nx.argmax(inter, axis: 1)
   end
 
   @doc """
-  Calculates probabilities of predictions with the given model on inputs `x`.
+  Calculates probabilities of predictions with the given `model` on inputs `x`.
 
   ## Examples
 
@@ -235,7 +235,7 @@ defmodule Scholar.Linear.LogisticRegression do
         ]
       >
   """
-  defn predict_probability(%__MODULE__{coefficients: coeff, bias: bias}, x) do
+  defn predict_probability(%__MODULE__{coefficients: coeff, bias: bias} = _model, x) do
     softmax(Nx.dot(x, [1], coeff, [0]) + bias)
   end
 end
