@@ -6,7 +6,7 @@ defmodule Scholar.Linear.SVM do
   This implementation uses stochastic gradient descent from default or any other optimizer
   available in `Polaris`. This makes it similar to a sklearn SGDClassifier [1].
   It means that on average it will work slower than algorithms that use QP and kernel trick (LIBSVM [2]) or
-  Coordinate Descent Algorithm (LIBLINEAR [3]). It also cannot use different kernels like in LIBSVM, 
+  Coordinate Descent Algorithm (LIBLINEAR [3]). It also cannot use different kernels like in LIBSVM,
   but you can use any type of optimizer and regularizer available in `Polaris`.
 
   [1] - https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.SGDClassifier.html
@@ -29,8 +29,7 @@ defmodule Scholar.Linear.SVM do
       type: :pos_integer,
       default: 1000,
       doc: """
-      number of iterations of gradient descent performed inside logistic
-      regression.
+      number of iterations of gradient descent performed inside SVM.
       """
     ],
     learning_loop_unroll: [
@@ -202,8 +201,8 @@ defmodule Scholar.Linear.SVM do
             has_converged =
               Nx.indexed_put(
                 has_converged,
-                Nx.new_axis(Nx.new_axis(j, -1), -1),
-                Nx.new_axis(has_converged_j, -1)
+                Nx.new_axis(j, -1),
+                has_converged_j
               )
 
             {{coef, bias, has_converged, coef_optimizer_state, bias_optimizer_state},
