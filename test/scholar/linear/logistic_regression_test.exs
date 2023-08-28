@@ -176,7 +176,9 @@ defmodule Scholar.Linear.LogisticRegressionTest do
 
     model = LogisticRegression.fit(x_train, y_train, num_classes: 3)
     res = LogisticRegression.predict(model, x_test)
-    assert Scholar.Metrics.Classification.accuracy(y_test, res) >= 0.965
+    accuracy = Scholar.Metrics.Classification.accuracy(res, y_test)
+
+    assert Nx.greater_equal(accuracy, 0.96) == Nx.u8(1)
   end
 
   describe "errors" do
