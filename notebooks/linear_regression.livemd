@@ -8,7 +8,6 @@ Mix.install([
   {:explorer, "~> 0.6.1"},
   {:exla, "~> 0.6.0"},
   {:nx, "~> 0.6.0", override: true},
-  {:vega_lite, github: "livebook-dev/vega_lite", override: true},
   {:req, "~> 0.3.9"},
   {:kino_vega_lite, "~> 0.1.9"},
   {:kino, "~> 0.10.0"},
@@ -28,7 +27,6 @@ In the livebook, we will cover the typical use cases of linear regression on pra
 
 ```elixir
 alias VegaLite, as: Vl
-alias VegaLite.Data
 require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 alias Scholar.Linear.LinearRegression, as: LR
@@ -189,7 +187,11 @@ Vl.new(
     scale: y_scale,
     axis: [grid: false]
   ),
-  Data.chart(line, [type: :line, color: :green], x: "x", y: "y")
+  Vl.new()
+  |> Vl.data_from_values(line)
+  |> Vl.mark(:line, color: :green)
+  |> Vl.encode_field(:x, "x", type: :quantitative, scale: x_scale)
+  |> Vl.encode_field(:y, "y", type: :quantitative, scale: y_scale)
 ])
 ```
 
@@ -249,8 +251,16 @@ Vl.new(
     scale: y_scale,
     axis: [grid: false]
   ),
-  Data.chart(line, [type: :line, color: :green], x: "x", y: "y"),
-  Data.chart(prediction, [type: :circle, color: :red, size: 80], x: "x", y: "y")
+  Vl.new()
+  |> Vl.data_from_values(line)
+  |> Vl.mark(:line, color: :green)
+  |> Vl.encode_field(:x, "x", type: :quantitative, scale: x_scale)
+  |> Vl.encode_field(:y, "y", type: :quantitative, scale: y_scale),
+  Vl.new()
+  |> Vl.data_from_values(prediction)
+  |> Vl.mark(:circle, color: :red, size: 80)
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative)
 ])
 ```
 
@@ -288,7 +298,7 @@ x_b |> Nx.LinAlg.pinv() |> Nx.dot(y)
 
 Before moving on to a more complex example, this section will briefly show how to use another regression method. While not strictly linear, the approach and calculations that go into it is similar enough that it makes sense for it to be explained alongside linear regression.
 
-Instead of the `Scholar.Linear.LinearRegression` module, the following example uses `Scholar.Linear.PolynomialRegression`. Polynomial and linear regression differ in one key way. Linear regression optimizes a function in the form of $f(x) = ax + b$, whereas polynomial regression 
+Instead of the `Scholar.Linear.LinearRegression` module, the following example uses `Scholar.Linear.PolynomialRegression`. Polynomial and linear regression differ in one key way. Linear regression optimizes a function in the form of $f(x) = ax + b$, whereas polynomial regression
 uses the function $f(x) = b + a_1x^1 + a_2x^2 + … + a_nx^n$, where $n$ represents the degree. Notice how if the degree is $1$, the function represents linear regression.
 
 <!-- livebook:{"break_markdown":true} -->
@@ -533,12 +543,21 @@ Vl.new(
   height: 630
 )
 |> Vl.layers([
-  Data.chart(df, :circle,
-    x: [field: "x", type: :quantitative, scale: x_scale, axis: [grid: false]],
-    y: [field: "y", type: :quantitative, scale: y_scale, axis: [grid: false]]
-  ),
-  Data.chart(df_results, [type: :line, color: :green], x: "x", y: "y"),
-  Data.chart(df_prediction, [type: :circle, color: :red, size: 80], x: "x", y: "y")
+  Vl.new()
+  |> Vl.data_from_values(df)
+  |> Vl.mark(:circle)
+  |> Vl.encode_field(:x, "x", type: :quantitative, scale: x_scale, axis: [grid: false])
+  |> Vl.encode_field(:y, "y", type: :quantitative, scale: y_scale, axis: [grid: false]),
+  Vl.new()
+  |> Vl.data_from_values(df_results)
+  |> Vl.mark(:line, color: :green)
+  |> Vl.encode_field(:x, "x", type: :quantitative, scale: x_scale)
+  |> Vl.encode_field(:y, "y", type: :quantitative, scale: y_scale),
+  Vl.new()
+  |> Vl.data_from_values(df_prediction)
+  |> Vl.mark(:circle, color: :red, size: 80)
+  |> Vl.encode_field(:x, "x", type: :quantitative, scale: x_scale)
+  |> Vl.encode_field(:y, "y", type: :quantitative, scale: y_scale)
 ])
 ```
 
@@ -931,12 +950,26 @@ Vl.new(
   width: 630,
   height: 630
 )
-|> Data.heatmap(corr_to_plot,
-  x: "x",
-  y: "y",
-  color: [field: "corr_val", type: :quantitative, scale: [scheme: :viridis]],
-  text: "corr_val"
-)
+|> Vl.data_from_values(corr_to_plot)
+|> Vl.layers([
+  Vl.new()
+  |> Vl.mark(:rect)
+  |> Vl.encode_field(:x, "x", type: :nominal, title: "", sort: false)
+  |> Vl.encode_field(:y, "y", type: :nominal, title: "", sort: false)
+  |> Vl.encode_field(:color, "corr_val", type: :quantitative, scale: [scheme: :viridis]),
+  Vl.new()
+  |> Vl.mark(:text)
+  |> Vl.encode_field(:x, "x", type: :nominal, title: "")
+  |> Vl.encode_field(:y, "y", type: :nominal, title: "")
+  |> Vl.encode_field(:text, "corr_val", type: :quantitative)
+  |> Vl.encode_field(:color, "corr_val",
+    type: :quantitative,
+    condition: [
+      [test: "datum['corr_val'] < 0", value: :white],
+      [test: "datum['corr_val'] >= 0", value: :black]
+    ]
+  )
+])
 ```
 
 <!-- livebook:{"output":true} -->
