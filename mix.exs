@@ -2,7 +2,7 @@ defmodule Scholar.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-nx/scholar"
-  @version "0.2.0"
+  @version "0.2.1"
 
   def project do
     [
@@ -32,7 +32,7 @@ defmodule Scholar.MixProject do
       {:ex_doc, "~> 0.30", only: :docs},
       {:nx, "~> 0.6"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
-      {:exla, "~> 0.6"},
+      {:exla, "~> 0.6", optional: true},
       {:polaris, "~> 0.1"}
     ]
   end
