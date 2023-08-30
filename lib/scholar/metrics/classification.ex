@@ -67,7 +67,7 @@ defmodule Scholar.Metrics.Classification do
   brier_score_loss_schema = [
     sample_weights: [
       type: {:custom, Scholar.Options, :weights, []},
-      default: Nx.tensor(1.0),
+      default: 1.0,
       doc: """
       Sample weights of the observations.
       """
