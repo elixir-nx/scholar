@@ -47,3 +47,5 @@ jobs:
         if: ${{ matrix.lint }}
 
       - run: mix test
+
+      - run: USE_EXLA_AT_COMPILE_TIME=1 mix compile --force
