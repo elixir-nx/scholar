@@ -55,7 +55,8 @@ defmodule Scholar.MixProject do
       extras: [
         "notebooks/linear_regression.livemd",
         "notebooks/k_means.livemd",
-        "notebooks/k_nearest_neighbors.livemd"
+        "notebooks/k_nearest_neighbors.livemd",
+        "notebooks/cv_gradient_boosting_tree.livemd"
       ],
       groups_for_modules: [
         Models: [
