@@ -116,6 +116,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
     iterations = opts[:iterations]
     damping_factor = opts[:damping_factor]
     self_preference = opts[:self_preference]
+    data = to_float(data)
 
     {initial_a, initial_r, s, affinity_matrix} =
       initialize_matrices(data, self_preference: self_preference)
@@ -306,15 +307,13 @@ defmodule Scholar.Cluster.AffinityPropagation do
     {availability_matrix, responsibility_matrix, similarity_matrix, affinity_matrix}
   end
 
-  defnp initialize_similarities(data, opts \\ []) do
-    {n, dims} = Nx.shape(data)
+  defn initialize_similarities(data, opts \\ []) do
+    n = Nx.axis_size(data, 0)
     self_preference = opts[:self_preference]
-    t1 = Nx.reshape(data, {1, n, dims}) |> Nx.broadcast({n, n, dims})
-    t2 = Nx.reshape(data, {n, 1, dims}) |> Nx.broadcast({n, n, dims})
 
-    dist =
-      (-1 * Scholar.Metrics.Distance.squared_euclidean(t1, t2, axes: [-1]))
-      |> Nx.as_type(to_float_type(data))
+    norm1 = Nx.sum(data ** 2, axes: [1], keep_axes: true)
+    norm2 = Nx.sum(data ** 2, axes: [1], keep_axes: true) |> Nx.transpose()
+    dist = -1 * (norm1 + norm2 - 2 * Nx.dot(data, [1], data, [1]))
 
     fill_in =
       cond do
