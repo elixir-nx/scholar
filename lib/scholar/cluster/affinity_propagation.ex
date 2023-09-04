@@ -307,7 +307,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
     {availability_matrix, responsibility_matrix, similarity_matrix, affinity_matrix}
   end
 
-  defn initialize_similarities(data, opts \\ []) do
+  defnp initialize_similarities(data, opts \\ []) do
     n = Nx.axis_size(data, 0)
     self_preference = opts[:self_preference]
 
