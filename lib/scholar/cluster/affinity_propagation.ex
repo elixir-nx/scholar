@@ -312,7 +312,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
     self_preference = opts[:self_preference]
 
     norm1 = Nx.sum(data ** 2, axes: [1], keep_axes: true)
-    norm2 = Nx.sum(data ** 2, axes: [1], keep_axes: true) |> Nx.transpose()
+    norm2 = Nx.transpose(norm1)
     dist = -1 * (norm1 + norm2 - 2 * Nx.dot(data, [1], data, [1]))
 
     fill_in =
