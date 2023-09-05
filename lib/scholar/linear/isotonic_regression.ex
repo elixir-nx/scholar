@@ -442,10 +442,9 @@ defmodule Scholar.Linear.IsotonicRegression do
             sum_wy = sample_weights[i] * y[i]
             sum_w = sample_weights[i]
 
-            {y, sample_weights, i, target, sum_w, sum_wy, _prev_y = prev_y, k,
-             _inner_terminating_flag,
+            {y, sample_weights, i, target, sum_w, sum_wy, prev_y, k, _inner_terminating_flag,
              y_size} =
-              while {y, sample_weights, i, target, sum_w, sum_wy, prev_y, k,
+              while {y, sample_weights, i, target, sum_w, sum_wy, _prev_y = prev_y, k,
                      inner_terminating_flag = 0, y_size},
                     not inner_terminating_flag do
                 prev_y = y[k]
