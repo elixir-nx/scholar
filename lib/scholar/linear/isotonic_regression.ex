@@ -204,7 +204,9 @@ defmodule Scholar.Linear.IsotonicRegression do
   end
 
   @doc """
-  Builds a function for predictions with the given `model`.
+  Preprocesses the `model` for prediction.
+  
+  Returns an updated `model`.
 
   ## Examples
 
@@ -289,8 +291,9 @@ defmodule Scholar.Linear.IsotonicRegression do
 
   deftransform check_preprocess(model) do
     if model.preprocess == {} do
-      raise ArgumentError, "Model has not been preprocessed. Please call
-      `preprocess` on the model before calling `predict`."
+      raise ArgumentError,
+            "model has not been preprocessed. " <>
+              "Please call preprocess/1 on the model before calling predict/2"
     end
   end
 
