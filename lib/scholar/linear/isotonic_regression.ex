@@ -205,7 +205,7 @@ defmodule Scholar.Linear.IsotonicRegression do
 
   @doc """
   Preprocesses the `model` for prediction.
-  
+
   Returns an updated `model`.
 
   ## Examples
