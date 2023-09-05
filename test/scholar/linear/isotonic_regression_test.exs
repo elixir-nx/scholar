@@ -95,12 +95,22 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       x = Nx.tensor([2.0, 2.0, 3.0, 4.0, 5.0, 5.0, 6.0])
       y = Nx.tensor([11, 12, 9, 7, 5, 4, 2])
       sample_weights = Nx.tensor([1, 3, 2, 7, 4, 2, 1])
-      model = Scholar.Linear.IsotonicRegression.fit(x, y, sample_weights: sample_weights, increasing?: false)
+
+      model =
+        Scholar.Linear.IsotonicRegression.fit(x, y,
+          sample_weights: sample_weights,
+          increasing?: false
+        )
 
       assert model.x_min == Nx.tensor(2.0)
       assert model.x_max == Nx.tensor(6.0)
       assert model.x_thresholds == Nx.tensor([2.0, 3.0, 4.0, 5.0, 6.0, 0.0, 0.0])
-      assert_all_close(model.y_thresholds, Nx.tensor([11.75, 9.0, 7.0, 4.666666507720947, 2.0, 0.0, 0.0]))
+
+      assert_all_close(
+        model.y_thresholds,
+        Nx.tensor([11.75, 9.0, 7.0, 4.666666507720947, 2.0, 0.0, 0.0])
+      )
+
       assert model.increasing? == false
       assert model.cutoff_index == Nx.tensor(4)
       assert model.preprocess == {}
