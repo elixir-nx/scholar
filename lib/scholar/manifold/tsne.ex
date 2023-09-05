@@ -2,9 +2,9 @@ defmodule Scholar.Manifold.TSNE do
   @moduledoc """
   TSNE (t-Distributed Stochastic Neighbor Embedding) is a nonlinear dimensionality reduction technique.
 
-  ## References
+  ## Reference
 
-  * [t-SNE: t-Distributed Stochastic Neighbor Embedding](http://www.jmlr.org/papers/volume9/vandermaaten08a/vandermaaten08a.pdf)
+  * [Van der Maaten, L., & Hinton, G. (2008). Visualizing data using t-SNE. Journal of machine learning research, 9(11).](http://www.jmlr.org/papers/volume9/vandermaaten08a/vandermaaten08a.pdf)
   """
   import Nx.Defn
   import Scholar.Shared
