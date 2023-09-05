@@ -9,7 +9,6 @@ Mix.install([
   {:exla, "~> 0.6.0"},
   {:nx, "~> 0.6.0", override: true},
   {:req, "~> 0.3.9"},
-  {:vega_lite, github: "livebook-dev/vega_lite", override: true},
   {:kino_vega_lite, "~> 0.1.9"},
   {:kino, "~> 0.10.0"},
   {:scidata, "~> 0.1.10"},
@@ -29,7 +28,6 @@ We will extensively use VegaLite, Explorer, and Scholar throughout this guide, s
 
 ```elixir
 alias VegaLite, as: Vl
-alias VegaLite.Data
 require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 require Explorer.Query, as: Q
@@ -120,36 +118,42 @@ Vl.new(
     axis: [grid: false]
   )
   |> Vl.encode_field(:color, "label", type: :nominal, scale: [scheme: :plasma]),
-  Data.chart(
-    point_to_predict,
-    [type: :point, color: :green, size: 400, shape: :triangle, filled: true],
-    x: "x",
-    y: "y"
-  ),
-  Data.chart(
-    point_to_predict,
-    [type: :arc, outer_radius: 99, inner_radius: 97, color: :brown],
-    x: "x",
-    y: "y"
-  ),
-  Data.chart(
-    point_to_predict,
-    [type: :arc, outer_radius: 170, inner_radius: 168, color: :blue],
-    x: "x",
-    y: "y"
-  ),
-  Data.chart(k_eq_3, [type: :text, size: 20, color: :brown],
-    x: "x",
-    y: "y",
-    extra_fields: ["name"]
+  Vl.new()
+  |> Vl.data_from_values(point_to_predict)
+  |> Vl.mark(:point, color: :green, size: 400, shape: :triangle, filled: true)
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative),
+  Vl.new()
+  |> Vl.data_from_values(point_to_predict)
+  |> Vl.mark(:arc,
+    outer_radius: 99,
+    inner_radius: 97,
+    color: :brown,
+    stroke_dash: [stroke_dash: [5, 5]]
   )
-  |> Vl.encode_field(:text, "name", type: :nominal),
-  Data.chart(k_eq_5, [type: :text, size: 20, color: :blue],
-    x: "x",
-    y: "y",
-    extra_fields: ["name"]
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative),
+  Vl.new()
+  |> Vl.data_from_values(point_to_predict)
+  |> Vl.mark(:arc,
+    outer_radius: 170,
+    inner_radius: 168,
+    color: :blue
   )
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative),
+  Vl.new()
+  |> Vl.data_from_values(k_eq_3)
+  |> Vl.mark(:text, size: 20, color: :brown)
   |> Vl.encode_field(:text, "name", type: :nominal)
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative),
+  Vl.new()
+  |> Vl.data_from_values(k_eq_5)
+  |> Vl.mark(:text, size: 20, color: :blue)
+  |> Vl.encode_field(:text, "name", type: :nominal)
+  |> Vl.encode_field(:x, "x", type: :quantitative)
+  |> Vl.encode_field(:y, "y", type: :quantitative)
 ])
 ```
 
@@ -373,9 +377,6 @@ correlation = Scholar.Covariance.correlation_matrix(tensor_data, biased: true)
 correlation_list = Nx.to_flat_list(correlation)
 column_names = DF.names(df_data)
 
-width = 630
-height = 630
-
 corr_to_plot =
   DF.new(
     x: List.flatten(List.duplicate(column_names, corr_size)),
@@ -385,27 +386,33 @@ corr_to_plot =
 
 Vl.new(
   title: [
-    text: "Correlation Matrix for Wine Dataset",
-    offset: 20
-  ],
-  width: width,
-  height: height
-)
-
-Vl.new(
-  title: [
     text: "Correlation Matrix for California Housing",
     offset: 20
   ],
   width: 630,
   height: 630
 )
-|> Data.heatmap(corr_to_plot,
-  x: "x",
-  y: "y",
-  color: [field: "corr_val", type: :quantitative, scale: [scheme: :viridis]],
-  text: "corr_val"
-)
+|> Vl.data_from_values(corr_to_plot)
+|> Vl.config(axis: [grid: false, tickband: :extent])
+|> Vl.layers([
+  Vl.new()
+  |> Vl.mark(:rect)
+  |> Vl.encode_field(:x, "x", type: :nominal, title: "", sort: false)
+  |> Vl.encode_field(:y, "y", type: :nominal, title: "", sort: false)
+  |> Vl.encode_field(:color, "corr_val", type: :quantitative, scale: [scheme: :inferno]),
+  Vl.new()
+  |> Vl.mark(:text)
+  |> Vl.encode_field(:x, "x", type: :nominal, title: "")
+  |> Vl.encode_field(:y, "y", type: :nominal, title: "")
+  |> Vl.encode_field(:text, "corr_val", type: :quantitative)
+  |> Vl.encode_field(:color, "corr_val",
+    type: :quantitative,
+    condition: [
+      [test: "datum['corr_val'] < 0", value: :white],
+      [test: "datum['corr_val'] >= 0", value: :black]
+    ]
+  )
+])
 ```
 
 <!-- livebook:{"output":true} -->
@@ -600,10 +607,10 @@ Vl.new(
   width: 630,
   height: 630
 )
-|> Data.chart(results, [type: :line, color: :gray, stroke_dash: [5, 5], point: true],
-  x: [field: "num_neighbors", type: :quantitative, scale: [domain: [1, 31]]],
-  y: [field: "accuracy", type: :quantitative, scale: [domain: [0.7, 0.8]]]
-)
+|> Vl.data_from_values(results)
+|> Vl.mark(:line, color: :gray, stroke_dash: [5, 5], point: true)
+|> Vl.encode_field(:x, "num_neighbors", type: :quantitative, scale: [domain: [1, 31]])
+|> Vl.encode_field(:y, "accuracy", type: :quantitative, scale: [domain: [0.7, 0.85]])
 ```
 
 <!-- livebook:{"output":true} -->
@@ -971,16 +978,19 @@ Vl.new(
   height: 630
 )
 |> Vl.layers([
-  Data.chart(samples_mean_distances, [type: :line, color: :jet],
-    x: [field: "index", type: :quantitative, scale: [domain: [0, 1510]]],
-    extra_fields: ["mean_distances"]
-  )
+  Vl.new()
+  |> Vl.data_from_values(samples_mean_distances)
+  |> Vl.mark(:line, color: :jet)
+  |> Vl.encode_field(:x, "index", type: :quantitative, scale: [domain: [0, 1510]])
   |> Vl.encode_field(:y, "mean_distances",
     type: :quantitative,
     title: "Mean distance to clusters",
     scale: [domain: [0.0065, 0.012]]
   ),
-  Data.chart(DF.new(y: [0.009]), [type: :rule, color: :red, stroke_dash: [5, 5]], y: "y")
+  Vl.new()
+  |> Vl.data_from_values(DF.new(y: [0.009]))
+  |> Vl.mark(:rule, color: :red, stroke_dash: [5, 5])
+  |> Vl.encode_field(:y, "y", type: :quantitative, title: "")
 ])
 ```
 

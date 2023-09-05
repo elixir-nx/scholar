@@ -2,7 +2,7 @@ defmodule Scholar.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-nx/scholar"
-  @version "0.2.0"
+  @version "0.2.1"
 
   def project do
     [
@@ -33,7 +33,7 @@ defmodule Scholar.MixProject do
       # {:nx, "~> 0.6", override: true},
       {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
-      {:exla, "~> 0.6"},
+      {:exla, "~> 0.6", optional: true},
       {:polaris, "~> 0.1"}
     ]
   end
@@ -56,7 +56,8 @@ defmodule Scholar.MixProject do
       extras: [
         "notebooks/linear_regression.livemd",
         "notebooks/k_means.livemd",
-        "notebooks/k_nearest_neighbors.livemd"
+        "notebooks/k_nearest_neighbors.livemd",
+        "notebooks/cv_gradient_boosting_tree.livemd"
       ],
       groups_for_modules: [
         Models: [

@@ -12,7 +12,6 @@ Mix.install([
   {:scidata, "~> 0.1.10"},
   {:req, "~> 0.3.9"},
   {:kino, "~> 0.10.0"},
-  {:vega_lite, github: "livebook-dev/vega_lite", override: true},
   {:kino_vega_lite, "~> 0.1.9"}
 ])
 ```
@@ -29,7 +28,6 @@ The main purpose of this livebook is to introduce the **KMeans** clustering algo
 
 ```elixir
 alias VegaLite, as: Vl
-alias VegaLite.Data
 alias Scholar.Cluster.KMeans
 require Explorer.DataFrame, as: DF
 Nx.global_default_backend(EXLA.Backend)
@@ -171,11 +169,11 @@ Vl.new(
     offset: 25
   ]
 )
-|> Data.chart(df, :circle,
-  x: "petal_length",
-  y: "petal_width",
-  color: "species"
-)
+|> Vl.data_from_values(df)
+|> Vl.mark(:circle)
+|> Vl.encode_field(:x, "petal_length", type: :quantitative)
+|> Vl.encode_field(:y, "petal_width", type: :quantitative)
+|> Vl.encode_field(:color, "species")
 ```
 
 <!-- livebook:{"output":true} -->
@@ -310,11 +308,17 @@ Vl.new(
   ]
 )
 |> Vl.layers([
-  Data.chart(df, :circle, x: "petal_length", y: "petal_width", color: "species"),
-  Data.chart(coords, [type: :circle, color: :green, size: 100],
-    x: "cluster_petal_length",
-    y: "cluster_petal_width"
-  )
+  Vl.new()
+  |> Vl.data_from_values(df)
+  |> Vl.mark(:circle)
+  |> Vl.encode_field(:x, "petal_length", type: :quantitative)
+  |> Vl.encode_field(:y, "petal_width", type: :quantitative)
+  |> Vl.encode_field(:color, "species"),
+  Vl.new()
+  |> Vl.data_from_values(coords)
+  |> Vl.mark(:circle, color: :green, size: 100)
+  |> Vl.encode_field(:x, "cluster_petal_length", type: :quantitative)
+  |> Vl.encode_field(:y, "cluster_petal_width", type: :quantitative)
 ])
 ```
 
