@@ -344,11 +344,9 @@ defmodule Scholar.Linear.IsotonicRegression do
         _ -> opts[:y_max]
       end
 
-    y = contiguous_isotonic_regression(y, sample_weights, max_size)
+    y = contiguous_isotonic_regression(y, sample_weights, max_size, opts)
 
-    y = Nx.clip(y, y_min, y_max)
-
-    y
+    Nx.clip(y, y_min, y_max)
   end
 
   deftransformp check_input_shape(x) do
@@ -416,14 +414,18 @@ defmodule Scholar.Linear.IsotonicRegression do
     {x_output, y_output, sample_weights_output, index}
   end
 
-  defnp contiguous_isotonic_regression(y, sample_weights, max_size) do
-    y_size = max_size
+  defnp contiguous_isotonic_regression(y, sample_weights, max_size, opts) do
+    y_size = if opts[:increasing?], do: max_size, else: Nx.axis_size(y, 0) - 1
+    y = if opts[:increasing?], do: y, else: Nx.reverse(y)
+    sample_weights = if opts[:increasing?], do: sample_weights, else: Nx.reverse(sample_weights)
+
     target = Nx.iota({Nx.axis_size(y, 0)}, type: :s64)
     type_wy = Nx.Type.merge(Nx.type(y), Nx.type(sample_weights))
+    i = if opts[:increasing?], do: 0, else: Nx.axis_size(y, 0) - 1 - max_size
 
     {{y, target}, _} =
       while {{y, target},
-             {i = 0, sample_weights, sum_w = Nx.tensor(0, type: Nx.type(sample_weights)),
+             {i, sample_weights, sum_w = Nx.tensor(0, type: Nx.type(sample_weights)),
               sum_wy = Nx.tensor(0, type: type_wy), prev_y = Nx.tensor(0, type: type_wy), _k = 0,
               terminating_flag = 0, y_size}},
             i < y_size + 1 and not terminating_flag do
@@ -479,8 +481,10 @@ defmodule Scholar.Linear.IsotonicRegression do
         end
       end
 
+    i = if opts[:increasing?], do: 0, else: Nx.axis_size(y, 0) - 1 - max_size
+
     {y, _} =
-      while {y, {target, i = 0, _k = 0, max_size}}, i < max_size + 1 do
+      while {y, {target, i, _k = 0, max_size}}, i < max_size + 1 do
         k = target[i] + 1
         indices = Nx.iota({Nx.axis_size(y, 0)})
         in_range? = Nx.logical_and(i + 1 <= indices, indices < k)
@@ -489,6 +493,6 @@ defmodule Scholar.Linear.IsotonicRegression do
         {y, {target, i, k, max_size}}
       end
 
-    y
+    if opts[:increasing?], do: y, else: Nx.reverse(y)
   end
 end
