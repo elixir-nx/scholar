@@ -16,7 +16,8 @@ defmodule Scholar.Linear.IsotonicRegression do
              :x_max,
              :x_thresholds,
              :y_thresholds,
-             :cutoff_index
+             :cutoff_index,
+             :preprocess
            ]}
   defstruct [
     :x_min,
@@ -24,8 +25,19 @@ defmodule Scholar.Linear.IsotonicRegression do
     :x_thresholds,
     :y_thresholds,
     :increasing?,
-    :cutoff_index
+    :cutoff_index,
+    :preprocess
   ]
+
+  @type t() :: %__MODULE__{
+          x_min: Nx.Tensor.t(),
+          x_max: Nx.Tensor.t(),
+          x_thresholds: Nx.Tensor.t(),
+          y_thresholds: Nx.Tensor.t(),
+          increasing?: true | false,
+          cutoff_index: Nx.Tensor.t(),
+          preprocess: Tuple.t() | Scholar.Interpolation.Linear.t()
+        }
 
   opts = [
     y_min: [
@@ -96,11 +108,14 @@ defmodule Scholar.Linear.IsotonicRegression do
     * `:cutoff_index` - The index of the last valid threshold. Rest elements are placeholders
       for the sake of preserving shape of tensor.
 
+    * `:preprocess` - Interpolation function to be applied on input tensor `x`. Before `preprocess/1`
+      is applied it is set to {}
+
   ## Examples
 
       iex> x = Nx.tensor([1, 4, 7, 9, 10, 11])
       iex> y = Nx.tensor([1, 3, 6, 8, 9, 10])
-      iex> model = Scholar.Linear.IsotonicRegression.fit(x, y)
+      iex> Scholar.Linear.IsotonicRegression.fit(x, y)
       %Scholar.Linear.IsotonicRegression{
         x_min: Nx.tensor(
           1.0
@@ -115,12 +130,10 @@ defmodule Scholar.Linear.IsotonicRegression do
           [1.0, 3.0, 6.0, 8.0, 9.0, 10.0]
         ),
         increasing?: true,
-        sample_weights: Nx.tensor(
-          [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-        ),
         cutoff_index: Nx.tensor(
           5
-        )
+        ),
+        preprocess: {}
       }
   """
   deftransform fit(x, y, opts \\ []) do
@@ -156,7 +169,8 @@ defmodule Scholar.Linear.IsotonicRegression do
       x_thresholds: x_unique,
       y_thresholds: y,
       increasing?: opts[:increasing?],
-      cutoff_index: index_cut
+      cutoff_index: index_cut,
+      preprocess: {}
     }
   end
 
@@ -168,19 +182,25 @@ defmodule Scholar.Linear.IsotonicRegression do
       iex> x = Nx.tensor([1, 4, 7, 9, 10, 11])
       iex> y = Nx.tensor([1, 3, 6, 8, 9, 10])
       iex> model = Scholar.Linear.IsotonicRegression.fit(x, y)
-      iex> function = Scholar.Linear.IsotonicRegression.build_function(model)
+      iex> model = Scholar.Linear.IsotonicRegression.preprocess(model)
       iex> to_predict = Nx.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-      iex> Scholar.Linear.IsotonicRegression.predict(function, model, to_predict)
+      iex> Scholar.Linear.IsotonicRegression.predict(model, to_predict)
       #Nx.Tensor<
         f32[10]
         [1.0, 1.6666667461395264, 2.3333334922790527, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
       >
   """
-  defn predict(function, model, x) do
+  defn predict(model, x) do
     check_input_shape(x)
+    check_preprocess(model)
+
     x = Nx.flatten(x)
     x = Nx.clip(x, model.x_min, model.x_max)
-    Scholar.Interpolation.Linear.predict(function, x)
+
+    Scholar.Interpolation.Linear.predict(
+      model.preprocess,
+      x
+    )
   end
 
   @doc """
@@ -191,31 +211,86 @@ defmodule Scholar.Linear.IsotonicRegression do
       iex> x = Nx.tensor([1, 4, 7, 9, 10, 11])
       iex> y = Nx.tensor([1, 3, 6, 8, 9, 10])
       iex> model = Scholar.Linear.IsotonicRegression.fit(x, y)
-      iex> function = Scholar.Linear.IsotonicRegression.build_function(model)
-      %Scholar.Interpolation.Linear{
-        coefficients: Nx.tensor(
-          [
-            [0.6666666865348816, 0.3333333134651184],
-            [1.0, -1.0],
-            [1.0, -1.0],
-            [1.0, -1.0],
-            [1.0, -1.0]
-          ]
+      iex> Scholar.Linear.IsotonicRegression.preprocess(model)
+      %Scholar.Linear.IsotonicRegression{
+        x_min: Nx.tensor(
+          1.0
         ),
-        x: Nx.tensor(
-          [1.0, 4.0, 7.0, 9.0, 10.0]
-        )
+        x_max: Nx.tensor(
+          11.0
+        ),
+        x_thresholds: Nx.tensor(
+          [1.0, 4.0, 7.0, 9.0, 10.0, 11.0]
+        ),
+        y_thresholds: Nx.tensor(
+          [1.0, 3.0, 6.0, 8.0, 9.0, 10.0]
+        ),
+        increasing?: true,
+        cutoff_index: Nx.tensor(
+          5
+        ),
+        preprocess: %Scholar.Interpolation.Linear{
+          coefficients: Nx.tensor(
+            [
+              [0.6666666865348816, 0.3333333134651184],
+              [1.0, -1.0],
+              [1.0, -1.0],
+              [1.0, -1.0],
+              [1.0, -1.0]
+            ]
+          ),
+          x: Nx.tensor(
+            [1.0, 4.0, 7.0, 9.0, 10.0]
+          )
+        }
       }
   """
-  def build_function(model) do
+  def preprocess(model, trim_duplicates \\ true) do
     cutoff = Nx.to_number(model.cutoff_index)
     x = model.x_thresholds[0..cutoff]
     y = model.y_thresholds[0..cutoff]
 
-    if Nx.size(y) == 1 do
-      Nx.broadcast(y, Nx.shape(x))
-    else
-      Scholar.Interpolation.Linear.fit(x, y)
+    {x, y} =
+      if trim_duplicates do
+        keep_mask =
+          Nx.logical_or(
+            Nx.not_equal(y[1..-2//1], y[0..-3//1]),
+            Nx.not_equal(y[1..-2//1], y[2..-1//1])
+          )
+
+        keep_mask = Nx.concatenate([Nx.tensor([1]), keep_mask, Nx.tensor([1])])
+
+        indices =
+          Nx.iota({Nx.axis_size(y, 0)})
+          |> Nx.add(1)
+          |> Nx.multiply(keep_mask)
+          |> Nx.to_flat_list()
+
+        indices = Enum.filter(indices, fn x -> x != 0 end) |> Nx.tensor() |> Nx.subtract(1)
+        x = Nx.take(x, indices)
+        y = Nx.take(y, indices)
+        {x, y}
+      else
+        {x, y}
+      end
+
+    model = %__MODULE__{model | x_thresholds: x}
+    model = %__MODULE__{model | y_thresholds: y}
+
+    %__MODULE__{
+      model
+      | preprocess:
+          Scholar.Interpolation.Linear.fit(
+            model.x_thresholds,
+            model.y_thresholds
+          )
+    }
+  end
+
+  deftransform check_preprocess(model) do
+    if model.preprocess == {} do
+      raise ArgumentError, "Model has not been preprocessed. Please call
+      `preprocess` on the model before calling `predict`."
     end
   end
 
@@ -235,8 +310,6 @@ defmodule Scholar.Linear.IsotonicRegression do
     x = Nx.take(x, lex_indices)
     y = Nx.take(y, lex_indices)
     sample_weights = Nx.take(sample_weights, lex_indices)
-
-    {x, y, sample_weights}
 
     {x_unique, y_unique, sample_weights_unique, index_cut} = make_unique(x, y, sample_weights)
 
