@@ -27,6 +27,22 @@ defmodule Scholar.Options do
     end
   end
 
+  def loss_function(function) do
+    case function do
+      function when is_function(function, 2) ->
+        {:ok, function}
+
+      nil ->
+        loss_fn = &Scholar.Linear.SVM.hinge_loss(&1, &2, c: 1.0, margin: 10)
+
+        {:ok, loss_fn}
+
+      _ ->
+        {:error,
+         "expected loss function to be a function with arity 2, got: #{inspect(function)}"}
+    end
+  end
+
   def axes(axes) do
     # Axes are further validated by Nx, including against the tensor.
     if axes == nil or is_list(axes) do

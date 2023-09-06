@@ -72,6 +72,7 @@ defmodule Scholar.MixProject do
           Scholar.Linear.LogisticRegression,
           Scholar.Linear.PolynomialRegression,
           Scholar.Linear.RidgeRegression,
+          Scholar.Linear.SVM,
           Scholar.Manifold.TSNE,
           Scholar.NaiveBayes.Complement,
           Scholar.NaiveBayes.Gaussian,

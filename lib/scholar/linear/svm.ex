@@ -52,19 +52,12 @@ defmodule Scholar.Linear.SVM do
       doc:
         "The convergence tolerance. If the `abs(loss) < size(x) * :eps`, the algorithm is considered to have converged."
     ],
-    c: [
-      type: {:custom, Scholar.Options, :positive_number, []},
-      default: 1.0,
+    loss_fn: [
+      type: {:custom, Scholar.Options, :loss_function, []},
+      default: nil,
       doc: """
-      Regularization parameter. The strength of the regularization is inversely proportional to `c`.
-      Must be strictly positive.
-      """
-    ],
-    margin: [
-      type: {:custom, Scholar.Options, :positive_number, []},
-      default: 1.0,
-      doc: """
-      The margin parameter. Must be strictly positive.
+      The loss function that is used in the algorithm. Functions should take two arguments: `y_predicted` and `y_true`.
+      If now provided it is set to highe loss without regularization.
       """
     ]
   ]
@@ -94,12 +87,12 @@ defmodule Scholar.Linear.SVM do
       %Scholar.Linear.SVM{
         coefficients: Nx.tensor(
           [
-            [0.12540853023529053, 0.08362007141113281, 0.0585469976067543],
-            [0.049581315368413925, 0.09911946952342987, 0.10407327115535736]
+            [1.6899993419647217, 1.4599995613098145, 1.322001338005066],
+            [1.4799995422363281, 1.9599990844726562, 2.0080013275146484]
           ]
         ),
         bias: Nx.tensor(
-          [0.42999985814094543, 0.5799997448921204]
+          [0.23000003397464752, 0.4799998104572296]
         )
       }
   """
@@ -156,30 +149,27 @@ defmodule Scholar.Linear.SVM do
   end
 
   # SVM training loop
-
   defnp fit_n(x, y, coef, bias, coef_optimizer_state, bias_optimizer_state, opts) do
     iterations = opts[:iterations]
     num_classes = opts[:num_classes]
     optimizer_update_fn = opts[:optimizer_update_fn]
-    c = opts[:c]
     eps = opts[:eps]
-    margin = opts[:margin]
 
     {{final_coef, final_bias}, _} =
       while {{coef, bias},
              {x, iterations, y, coef_optimizer_state, bias_optimizer_state,
-              has_converged = Nx.broadcast(Nx.u8(0), {num_classes}), eps, margin, c, iter = 0}},
+              has_converged = Nx.broadcast(Nx.u8(0), {num_classes}), eps, iter = 0}},
             iter < iterations and not Nx.all(has_converged) do
         # ++++ inner while ++++++
         {{coef, bias, has_converged, coef_optimizer_state, bias_optimizer_state}, _} =
           while {{coef, bias, has_converged, coef_optimizer_state, bias_optimizer_state},
-                 {x, y, c, margin, iterations, iter, eps, j = 0}},
+                 {x, y, iterations, iter, eps, j = 0}},
                 j < num_classes do
             y_j = y == j
             coef_j = Nx.take(coef, j)
             bias_j = Nx.take(bias, j)
 
-            {loss, {coef_grad, bias_grad}} = loss_and_grad(coef_j, bias_j, x, y_j, c, margin)
+            {loss, {coef_grad, bias_grad}} = loss_and_grad(coef_j, bias_j, x, y_j, opts[:loss_fn])
             grad = Nx.broadcast(0.0, {num_classes, Nx.axis_size(x, 1)})
             coef_grad = Nx.put_slice(grad, [j, 0], Nx.new_axis(coef_grad, 0))
 
@@ -206,14 +196,14 @@ defmodule Scholar.Linear.SVM do
               )
 
             {{coef, bias, has_converged, coef_optimizer_state, bias_optimizer_state},
-             {x, y, c, margin, iterations, iter, eps, j + 1}}
+             {x, y, iterations, iter, eps, j + 1}}
           end
 
         # ++++ end inner while ++++++
 
         {{coef, bias},
          {x, iterations, y, coef_optimizer_state, bias_optimizer_state, has_converged, eps,
-          margin, c, iter + 1}}
+          iter + 1}}
       end
 
     %__MODULE__{
@@ -222,12 +212,30 @@ defmodule Scholar.Linear.SVM do
     }
   end
 
-  defnp loss_and_grad(coeff, bias, xs, ys, c, margin) do
+  defnp loss_and_grad(coeff, bias, xs, ys, loss_fn) do
     value_and_grad({coeff, bias}, fn {coeff, bias} ->
-      0.5 * Nx.sum(coeff ** 2, axes: [-1]) +
-        c * Nx.sum(Nx.max(0, margin - (Nx.dot(xs, Nx.transpose(coeff)) + bias) * ys), axes: [-1])
+      y_pred = predict(coeff, bias, xs)
+      loss_fn.(y_pred, ys)
     end)
   end
+
+  defnp predict(coeff, bias, xs) do
+    # Nx.dot(xs, [1], coeff, [1]) + bias
+    Nx.dot(xs, Nx.transpose(coeff)) + bias
+  end
+
+  defn hinge_loss(y_pred, ys, opts \\ []) do
+    c = opts[:c]
+    margin = opts[:margin]
+    c * Nx.sum(Nx.max(0, margin - y_pred) * ys, axes: [-1])
+  end
+
+  # defnp loss_and_grad(coeff, bias, xs, ys, c, margin) do
+  #   value_and_grad({coeff, bias}, fn {coeff, bias} ->
+  #     0.5 * Nx.sum(coeff ** 2, axes: [-1]) +
+  #       c * Nx.sum(Nx.max(0, margin - (Nx.dot(xs, Nx.transpose(coeff)) + bias) * ys), axes: [-1])
+  #   end)
+  # end
 
   @doc """
   Makes predictions with the given model on inputs `x`.
