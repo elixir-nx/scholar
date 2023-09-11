@@ -21,7 +21,7 @@ require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 ```
 
-In this notebook we are going to work with <a href="https://www.kaggle.com/datasets/mirichoi0218/insurance">Medical Cost Personal Datasets</a> to predict medical charges that were applied to each person from the dataset.
+In this notebook we are going to work with [Medical Cost Personal Datasets](https://www.kaggle.com/datasets/mirichoi0218/insurance) to predict medical charges that were applied to each person from the dataset.
 
 ```elixir
 data =
@@ -61,7 +61,7 @@ Before training our model, we separate the data between train and test sets.
 
 Gradient boosting works by sequentially adding predictors to an ensemble, each one correcting its predecessor. Let's go through a simple regression example, using decision trees as the base predictors; this is called _gradient tree boosting_, or _gradient boosted regression trees_ (GBRT).
 
-EXGBoost provides an implementation of gradient boosting trees that accepts a wide range of hyperparameter configurations. For the full list of hyperparameters refer to the <a href="https://hexdocs.pm/exgboost/EXGBoost.html">EXGBoost</a> docs.
+EXGBoost provides an implementation of gradient boosting trees that accepts a wide range of hyperparameter configurations. For the full list of hyperparameters refer to the [EXGBoost](https://hexdocs.pm/exgboost/EXGBoost.html) docs.
 
 ```elixir
 y_pred =
@@ -92,9 +92,9 @@ With very little preprocessing we get similar results to the linear regression m
 
 ## Evaluating with cross-validation
 
-_k_-fold cross-validation works by creating splits on the training set into _k_ smaller sets, so that the model is trained using $ k - 1 $ splits (folds) as training data and is validated on the remaining part of the data. When using this technique, the performance measure is the average of the values computed in each iteration.
+_k_-fold cross-validation works by creating splits on the training set into _k_ smaller sets, so that the model is trained using $k - 1$ splits (folds) as training data and is validated on the remaining part of the data. When using this technique, the performance measure is the average of the values computed in each iteration.
 
-<img src="https://scikit-learn.org/stable/_images/grid_search_cross_validation.png" height="350" width="700" style="display:block;margin:auto;" />
+<img src="https://scikit-learn.org/stable/_images/grid_search_cross_validation.png" height="350" width="550" style="display:block;margin:auto;" />
 
 <!-- livebook:{"break_markdown":true} -->
 
@@ -153,12 +153,16 @@ S.mean(cv_score)
 
 ## Fine-tuning our model with grid search
 
-Finding the right configuration of hyperparameters is an important part of the process when selecting a model. One could try different combinations of hyperparameter values manually, but this can get tedious and time consuming. Instead, we can use the _Grid Search_ method, an iterative process for finding an optimal configuration of hyperparameter values for a given model.
+Finding the right configuration of hyperparameters is an important part of the process when selecting a model. One could try different combinations of hyperparameter values manually, but this can get tedious and time consuming. Instead, we can use the _grid search_ method, an iterative process for finding an optimal configuration of hyperparameter values for a given model.
 
 First, we need to provide a "grid" of hyperparameter values, so that the algorithm can train and evaluate our model with all possible combinations.
 
 ```elixir
 grid = [
+  booster: [:gbtree],
+  objective: [:reg_squarederror],
+  evals: [[{x_train, y_train, "training"}]],
+  verbose_eval: [true],
   tree_method: [:approx, :exact],
   max_depth: [2, 3, 4, 5, 6],
   num_boost_rounds: [20, 50, 90],
@@ -173,18 +177,9 @@ gs_scoring_fn = fn x, y, hyperparams ->
   {x_train, x_test} = x
   {y_train, y_test} = y
 
-  opts =
-    hyperparams ++
-      [
-        booster: :gbtree,
-        objective: :reg_squarederror,
-        evals: [{x_train, y_train, "training"}],
-        verbose_eval: true
-      ]
-
   y_pred =
     x_train
-    |> EXGBoost.train(y_train, opts)
+    |> EXGBoost.train(y_train, hyperparams)
     |> EXGBoost.predict(x_test)
 
   Metrics.mean_square_error(y_test, y_pred)
@@ -195,16 +190,38 @@ end
 Let's run the grid search and see the results. Remember that the more hyperparameter values you add to the grid, the more it will take the algorithm to end.
 
 ```elixir
-gs_scores = ModelSelection.grid_search(x, y, folding_fn, gs_scoring_fn, grid)
+gs_scores =
+  ModelSelection.grid_search(
+    x_train,
+    y_train,
+    folding_fn,
+    gs_scoring_fn,
+    grid
+  )
 ```
 
 The output is a list of maps, each corresponding to an iteration of the grid search algorithm. Every iteration yields a `score` calculated by our scoring function. Let's find the set of hyperparameters that optimizes the score.
 
 ```elixir
-gs_scores
-|> Enum.min_by(fn %{score: score} ->
-  score
-  |> Nx.squeeze()
-  |> Nx.to_number()
-end)
+best_config =
+  Enum.min_by(gs_scores, fn %{score: score} ->
+    score
+    |> Nx.squeeze()
+    |> Nx.to_number()
+  end)
+```
+
+Finally we train and evaluate a model using the best hyperparameter configuration found by grid search.
+
+```elixir
+%{hyperparameters: opts} = best_config
+
+model = EXGBoost.train(x_train, y_train, opts)
+y_pred = EXGBoost.predict(model, x_test)
+
+rmse =
+  Metrics.mean_square_error(y_test, y_pred)
+  |> Nx.sqrt()
+
+"RMSE: #{Nx.to_number(rmse)}"
 ```
