@@ -53,7 +53,7 @@ defmodule Scholar.Linear.SVM do
         "The convergence tolerance. If the `abs(loss) < size(x) * :eps`, the algorithm is considered to have converged."
     ],
     loss_fn: [
-      type: {:custom, Scholar.Options, :loss_function, []},
+      type: {:custom, Scholar.Linear.SVM, :loss_function, []},
       default: nil,
       doc: """
       The loss function that is used in the algorithm. Functions should take two arguments: `y_predicted` and `y_true`.
@@ -61,6 +61,22 @@ defmodule Scholar.Linear.SVM do
       """
     ]
   ]
+
+  def loss_function(function) do
+    case function do
+      function when is_function(function, 2) ->
+        {:ok, function}
+
+      nil ->
+        loss_fn = &Scholar.Linear.SVM.hinge_loss(&1, &2, c: 1.0, margin: 10)
+
+        {:ok, loss_fn}
+
+      _ ->
+        {:error,
+         "expected loss function to be a function with arity 2, got: #{inspect(function)}"}
+    end
+  end
 
   @opts_schema NimbleOptions.new!(opts)
 
@@ -220,8 +236,7 @@ defmodule Scholar.Linear.SVM do
   end
 
   defnp predict(coeff, bias, xs) do
-    # Nx.dot(xs, [1], coeff, [1]) + bias
-    Nx.dot(xs, Nx.transpose(coeff)) + bias
+    Nx.dot(xs, [-1], coeff, [-1]) + bias
   end
 
   defn hinge_loss(y_pred, ys, opts \\ []) do
@@ -229,13 +244,6 @@ defmodule Scholar.Linear.SVM do
     margin = opts[:margin]
     c * Nx.sum(Nx.max(0, margin - y_pred) * ys, axes: [-1])
   end
-
-  # defnp loss_and_grad(coeff, bias, xs, ys, c, margin) do
-  #   value_and_grad({coeff, bias}, fn {coeff, bias} ->
-  #     0.5 * Nx.sum(coeff ** 2, axes: [-1]) +
-  #       c * Nx.sum(Nx.max(0, margin - (Nx.dot(xs, Nx.transpose(coeff)) + bias) * ys), axes: [-1])
-  #   end)
-  # end
 
   @doc """
   Makes predictions with the given model on inputs `x`.
@@ -251,7 +259,7 @@ defmodule Scholar.Linear.SVM do
       >
   """
   defn predict(%__MODULE__{coefficients: coeff, bias: bias}, x) do
-    score = Nx.dot(x, [1], coeff, [1]) + bias
+    score = predict(coeff, bias, x)
     Nx.argmax(score, axis: -1)
   end
 end
