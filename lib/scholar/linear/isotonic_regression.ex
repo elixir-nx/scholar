@@ -362,7 +362,7 @@ defmodule Scholar.Linear.IsotonicRegression do
         _ -> opts[:y_max]
       end
 
-    y = contiguous_isotonic_regression(y, sample_weights, max_size, increasing?, opts)
+    y = contiguous_isotonic_regression(y, sample_weights, max_size, increasing?)
 
     Nx.clip(y, y_min, y_max)
   end
@@ -432,7 +432,7 @@ defmodule Scholar.Linear.IsotonicRegression do
     {x_output, y_output, sample_weights_output, index}
   end
 
-  defnp contiguous_isotonic_regression(y, sample_weights, max_size, increasing?, opts) do
+  defnp contiguous_isotonic_regression(y, sample_weights, max_size, increasing?) do
     y_size = if increasing?, do: max_size, else: Nx.axis_size(y, 0) - 1
     y = if increasing?, do: y, else: Nx.reverse(y)
     sample_weights = if increasing?, do: sample_weights, else: Nx.reverse(sample_weights)
