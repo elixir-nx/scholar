@@ -11,9 +11,8 @@ defmodule Scholar.Linear.IsotonicRegression do
 
   @derive {
     Nx.Container,
-    #  keep: [:increasing?],
     containers: [
-      :increasing?,
+      :increasing,
       :x_min,
       :x_max,
       :x_thresholds,
@@ -27,7 +26,7 @@ defmodule Scholar.Linear.IsotonicRegression do
     :x_max,
     :x_thresholds,
     :y_thresholds,
-    :increasing?,
+    :increasing,
     :cutoff_index,
     :preprocess
   ]
@@ -37,7 +36,7 @@ defmodule Scholar.Linear.IsotonicRegression do
           x_max: Nx.Tensor.t(),
           x_thresholds: Nx.Tensor.t(),
           y_thresholds: Nx.Tensor.t(),
-          increasing?: Nx.Tensor.t(),
+          increasing: Nx.Tensor.t(),
           cutoff_index: Nx.Tensor.t(),
           preprocess: Tuple.t() | Scholar.Interpolation.Linear.t()
         }
@@ -57,7 +56,7 @@ defmodule Scholar.Linear.IsotonicRegression do
       is set to `Nx.Constant.infinity()`.
       """
     ],
-    increasing?: [
+    increasing: [
       type: {:in, [:auto, true, false]},
       default: :auto,
       doc: """
@@ -107,7 +106,7 @@ defmodule Scholar.Linear.IsotonicRegression do
 
     * `:y_thresholds` - Predicted values associated with each threshold.
 
-    * `:increasing?` - Whether the isotonic regression is increasing.
+    * `:increasing` - Whether the isotonic regression is increasing.
 
     * `:cutoff_index` - The index of the last valid threshold. Rest elements are placeholders
       for the sake of preserving shape of tensor.
@@ -133,7 +132,7 @@ defmodule Scholar.Linear.IsotonicRegression do
         y_thresholds: Nx.tensor(
           [1.0, 3.0, 6.0, 8.0, 9.0, 10.0]
         ),
-        increasing?: Nx.u8(1),
+        increasing: Nx.u8(1),
         cutoff_index: Nx.tensor(
           5
         ),
@@ -161,8 +160,8 @@ defmodule Scholar.Linear.IsotonicRegression do
 
     sample_weights = Nx.broadcast(sample_weights, {Nx.axis_size(y, 0)})
 
-    increasing? =
-      case opts[:increasing?] do
+    increasing =
+      case opts[:increasing] do
         :auto ->
           check_increasing(x, y)
 
@@ -173,20 +172,18 @@ defmodule Scholar.Linear.IsotonicRegression do
           Nx.u8(0)
       end
 
-    # opts = Keyword.replace(opts, :increasing?, increasing?)
-
-    fit_n(x, y, sample_weights, increasing?, opts)
+    fit_n(x, y, sample_weights, increasing, opts)
   end
 
-  defnp fit_n(x, y, sample_weights, increasing?, opts) do
-    {x_min, x_max, x_unique, y, index_cut} = build_y(x, y, sample_weights, increasing?, opts)
+  defnp fit_n(x, y, sample_weights, increasing, opts) do
+    {x_min, x_max, x_unique, y, index_cut} = build_y(x, y, sample_weights, increasing, opts)
 
     %__MODULE__{
       x_min: x_min,
       x_max: x_max,
       x_thresholds: x_unique,
       y_thresholds: y,
-      increasing?: increasing?,
+      increasing: increasing,
       cutoff_index: index_cut,
       preprocess: {}
     }
@@ -245,7 +242,7 @@ defmodule Scholar.Linear.IsotonicRegression do
         y_thresholds: Nx.tensor(
           [1.0, 3.0, 6.0, 8.0, 9.0, 10.0]
         ),
-        increasing?: Nx.u8(1),
+        increasing: Nx.u8(1),
         cutoff_index: Nx.tensor(
           5
         ),
@@ -324,7 +321,7 @@ defmodule Scholar.Linear.IsotonicRegression do
     Nx.take(iota, indices)
   end
 
-  defnp build_y(x, y, sample_weights, increasing?, opts) do
+  defnp build_y(x, y, sample_weights, increasing, opts) do
     check_input_shape(x)
     x = Nx.flatten(x)
     lex_indices = lexsort(y, x)
@@ -334,7 +331,7 @@ defmodule Scholar.Linear.IsotonicRegression do
 
     {x_unique, y_unique, sample_weights_unique, index_cut} = make_unique(x, y, sample_weights)
 
-    y = isotonic_regression(y_unique, sample_weights_unique, index_cut, increasing?, opts)
+    y = isotonic_regression(y_unique, sample_weights_unique, index_cut, increasing, opts)
 
     x_min =
       Nx.reduce_min(
@@ -349,7 +346,7 @@ defmodule Scholar.Linear.IsotonicRegression do
     {x_min, x_max, x_unique, y, index_cut}
   end
 
-  defnp isotonic_regression(y, sample_weights, max_size, increasing?, opts) do
+  defnp isotonic_regression(y, sample_weights, max_size, increasing, opts) do
     y_min =
       case opts[:y_min] do
         nil -> Nx.Constants.neg_infinity()
@@ -362,7 +359,7 @@ defmodule Scholar.Linear.IsotonicRegression do
         _ -> opts[:y_max]
       end
 
-    y = contiguous_isotonic_regression(y, sample_weights, max_size, increasing?)
+    y = contiguous_isotonic_regression(y, sample_weights, max_size, increasing)
 
     Nx.clip(y, y_min, y_max)
   end
@@ -432,14 +429,14 @@ defmodule Scholar.Linear.IsotonicRegression do
     {x_output, y_output, sample_weights_output, index}
   end
 
-  defnp contiguous_isotonic_regression(y, sample_weights, max_size, increasing?) do
-    y_size = if increasing?, do: max_size, else: Nx.axis_size(y, 0) - 1
-    y = if increasing?, do: y, else: Nx.reverse(y)
-    sample_weights = if increasing?, do: sample_weights, else: Nx.reverse(sample_weights)
+  defnp contiguous_isotonic_regression(y, sample_weights, max_size, increasing) do
+    y_size = if increasing, do: max_size, else: Nx.axis_size(y, 0) - 1
+    y = if increasing, do: y, else: Nx.reverse(y)
+    sample_weights = if increasing, do: sample_weights, else: Nx.reverse(sample_weights)
 
     target = Nx.iota({Nx.axis_size(y, 0)}, type: :s64)
     type_wy = Nx.Type.merge(Nx.type(y), Nx.type(sample_weights))
-    i = if increasing?, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size
+    i = if increasing, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size
 
     {{y, target}, _} =
       while {{y, target},
@@ -499,7 +496,7 @@ defmodule Scholar.Linear.IsotonicRegression do
         end
       end
 
-    i = if increasing?, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size
+    i = if increasing, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size
 
     {y, _} =
       while {y, {target, i, _k = 0, max_size}}, i < max_size + 1 do
@@ -511,13 +508,13 @@ defmodule Scholar.Linear.IsotonicRegression do
         {y, {target, i, k, max_size}}
       end
 
-    if increasing?, do: y, else: Nx.reverse(y)
+    if increasing, do: y, else: Nx.reverse(y)
   end
 
   defnp check_increasing(x, y) do
     x = Nx.new_axis(x, -1)
     y = Nx.new_axis(y, -1)
     model = Scholar.Linear.LinearRegression.fit(x, y)
-    Nx.greater_equal(model.coefficients[0][0], 0) == Nx.u8(1)
+    model.coefficients[0][0] >= 0
   end
 end
