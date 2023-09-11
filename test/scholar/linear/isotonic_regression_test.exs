@@ -71,7 +71,7 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
         )
       )
 
-      assert model.increasing? == true
+      assert model.increasing? == Nx.u8(1)
       assert model.cutoff_index == Nx.tensor(99)
       assert model.preprocess == {}
     end
@@ -86,7 +86,7 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       assert model.x_thresholds == Nx.tensor([2.0, 3.0, 4.0, 5.0, 0.0])
       assert_all_close(model.y_thresholds, Nx.tensor([2.75, 7.0, 8.0, 9.0, 0]))
 
-      assert model.increasing? == true
+      assert model.increasing? == Nx.u8(1)
       assert model.cutoff_index == Nx.tensor(3)
       assert model.preprocess == {}
     end
@@ -111,7 +111,7 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
         Nx.tensor([11.75, 9.0, 7.0, 4.666666507720947, 2.0, 0.0, 0.0])
       )
 
-      assert model.increasing? == false
+      assert model.increasing? == Nx.u8(0)
       assert model.cutoff_index == Nx.tensor(4)
       assert model.preprocess == {}
     end
@@ -121,10 +121,8 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       y = Nx.tensor([11, 12, 9, 7, 5, 4, 2])
       sample_weights = Nx.tensor([1, 3, 2, 7, 4, 2, 1])
 
-      IO.inspect(Scholar.Linear.IsotonicRegression.check_increasing(x, y))
-
       model = Scholar.Linear.IsotonicRegression.fit(x, y, sample_weights: sample_weights)
-      assert model.increasing? == false
+      assert model.increasing? == Nx.u8(0)
     end
   end
 
