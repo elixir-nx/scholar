@@ -70,6 +70,7 @@ defmodule Scholar.MixProject do
           Scholar.Interpolation.BezierSpline,
           Scholar.Interpolation.CubicSpline,
           Scholar.Interpolation.Linear,
+          Scholar.Linear.IsotonicRegression,
           Scholar.Linear.LinearRegression,
           Scholar.Linear.LogisticRegression,
           Scholar.Linear.PolynomialRegression,
