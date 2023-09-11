@@ -173,8 +173,6 @@ defmodule Scholar.Linear.IsotonicRegression do
           Nx.u8(0)
       end
 
-    # opts = Keyword.replace(opts, :increasing?, increasing?)
-
     fit_n(x, y, sample_weights, increasing?, opts)
   end
 
