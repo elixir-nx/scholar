@@ -55,12 +55,13 @@ defmodule Scholar.Linear.IsotonicRegression do
       """
     ],
     increasing?: [
-      type: :boolean,
-      default: true,
+      type: {:in, [:auto, true, false]},
+      default: :auto,
       doc: """
       Whether the isotonic regression should be fit with the constraint that the
       function is monotonically increasing. If `false`, the constraint is that
-      the function is monotonically decreasing.
+      the function is monotonically decreasing. If `:auto`, the constraint is
+      determined automatically based on the data.
       """
     ],
     out_of_bounds: [
@@ -156,6 +157,15 @@ defmodule Scholar.Linear.IsotonicRegression do
         else: Nx.tensor(sample_weights, type: x_type)
 
     sample_weights = Nx.broadcast(sample_weights, {Nx.axis_size(y, 0)})
+
+    increasing? = opts[:increasing?]
+
+    increasing? =
+      if increasing? == :auto,
+        do: check_increasing(x, y),
+        else: increasing?
+
+    opts = Keyword.replace(opts, :increasing?, increasing?)
 
     fit_n(x, y, sample_weights, opts)
   end
@@ -494,5 +504,12 @@ defmodule Scholar.Linear.IsotonicRegression do
       end
 
     if opts[:increasing?], do: y, else: Nx.reverse(y)
+  end
+
+  deftransform check_increasing(x, y) do
+    x = Nx.new_axis(x, -1)
+    y = Nx.new_axis(y, -1)
+    model = Scholar.Linear.LinearRegression.fit(x, y)
+    Nx.greater_equal(model.coefficients[0][0], 0) == Nx.u8(1)
   end
 end

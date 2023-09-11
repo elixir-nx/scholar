@@ -115,6 +115,17 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       assert model.cutoff_index == Nx.tensor(4)
       assert model.preprocess == {}
     end
+
+    test "fit with sample_weights and :increasing? as default (:auto)" do
+      x = Nx.tensor([2.0, 2.0, 3.0, 4.0, 5.0, 5.0, 6.0])
+      y = Nx.tensor([11, 12, 9, 7, 5, 4, 2])
+      sample_weights = Nx.tensor([1, 3, 2, 7, 4, 2, 1])
+
+      IO.inspect(Scholar.Linear.IsotonicRegression.check_increasing(x, y))
+
+      model = Scholar.Linear.IsotonicRegression.fit(x, y, sample_weights: sample_weights)
+      assert model.increasing? == false
+    end
   end
 
   test "preprocess" do
