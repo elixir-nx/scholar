@@ -30,7 +30,8 @@ defmodule Scholar.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.30", only: :docs},
-      {:nx, "~> 0.6"},
+      # {:nx, "~> 0.6", override: true},
+      {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, "~> 0.6", optional: true},
       {:polaris, "~> 0.1"}
@@ -69,6 +70,7 @@ defmodule Scholar.MixProject do
           Scholar.Interpolation.BezierSpline,
           Scholar.Interpolation.CubicSpline,
           Scholar.Interpolation.Linear,
+          Scholar.Linear.IsotonicRegression,
           Scholar.Linear.LinearRegression,
           Scholar.Linear.LogisticRegression,
           Scholar.Linear.PolynomialRegression,
