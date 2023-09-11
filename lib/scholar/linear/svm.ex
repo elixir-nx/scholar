@@ -7,7 +7,7 @@ defmodule Scholar.Linear.SVM do
   available in `Polaris`. This makes it similar to a sklearn SGDClassifier [1].
   It means that on average it will work slower than algorithms that use QP and kernel trick (LIBSVM [2]) or
   Coordinate Descent Algorithm (LIBLINEAR [3]). It also cannot use different kernels like in LIBSVM,
-  but you can use any type of optimizer and regularizer available in `Polaris`.
+  but you can use any type of optimizer available in `Polaris`.
 
   [1] - https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.SGDClassifier.html
   [2] - https://www.csie.ntu.edu.tw/~cjlin/libsvm/
