@@ -160,8 +160,10 @@ defmodule Scholar.Linear.IsotonicRegression do
 
     sample_weights = Nx.broadcast(sample_weights, {Nx.axis_size(y, 0)})
 
+    {increasing, opts} = Keyword.pop(opts, :increasing)
+
     increasing =
-      case opts[:increasing] do
+      case increasing do
         :auto ->
           check_increasing(x, y)
 
