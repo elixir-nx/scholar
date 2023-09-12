@@ -304,25 +304,21 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
     {num_samples, num_features} = Nx.shape(data)
     {num_samples_x, _num_features} = Nx.shape(x)
     broadcast_shape = {num_samples_x, num_samples, num_features}
-    data = Nx.new_axis(data, 0) |> Nx.broadcast(broadcast_shape)
-    x = Nx.new_axis(x, 1) |> Nx.broadcast(broadcast_shape)
+    data_broadcast = Nx.new_axis(data, 0) |> Nx.broadcast(broadcast_shape)
+    x_broadcast = Nx.new_axis(x, 1) |> Nx.broadcast(broadcast_shape)
 
     dist =
       case metric do
         {:minkowski, p} ->
           Scholar.Metrics.Distance.minkowski(
-            data,
-            x,
+            data_broadcast,
+            x_broadcast,
             axes: [-1],
             p: p
           )
 
         :cosine ->
-          Scholar.Metrics.Distance.cosine(
-            data,
-            x,
-            axes: [-1]
-          )
+          Scholar.Metrics.Distance.pairwise_cosine(x, data)
       end
 
     {val, ind} = Nx.top_k(-dist, k: default_num_neighbors)
