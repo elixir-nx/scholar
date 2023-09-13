@@ -27,6 +27,7 @@ defmodule Scholar.Covariance do
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
+  This function is deprecated and will be removed in the future. Use `Nx.covariance/2` instead.
   Computes covariance matrix for sample inputs `x`.
 
   The value on the position $Cov_{ij}$ in the $Cov$ matrix is calculated using the formula:
@@ -110,6 +111,7 @@ defmodule Scholar.Covariance do
   end
 
   @doc """
+  This function is deprecated and will be removed in the future. Use `Scholar.Stats.correlation_matrix/2` instead.
   Computes correlation matrix for sample inputs `x`.
 
   The value on the position $Corr_{ij}$ in the $Corr$ matrix is calculated using the formula:
