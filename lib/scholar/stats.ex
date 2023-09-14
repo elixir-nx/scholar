@@ -52,22 +52,9 @@ defmodule Scholar.Stats do
         ]
       ]
 
-  correlation_schema = [
-    ddof: [
-      type: {:custom, Scholar.Options, :non_negative_integer, []},
-      default: 0,
-      doc: """
-      Delta Degrees of Freedom. The divisor used in calculations is N - ddof,
-      where N represents the number of elements.
-      """
-    ]
-  ]
-
   @moment_schema NimbleOptions.new!(general)
   @skew_schema NimbleOptions.new!(skew_schema)
   @kurtosis_schema NimbleOptions.new!(kurtosis_schema)
-  @correlation_schema NimbleOptions.new!(correlation_schema)
-
   @doc """
   Calculates the nth moment about the mean for a sample.
 
@@ -194,10 +181,6 @@ defmodule Scholar.Stats do
     * $Cov(X\_i, X\_j)$ is covariance between features $X_i$ and $X_j$
   '''}
 
-  ## Options
-
-  #{NimbleOptions.docs(@correlation_schema)}
-
   ## Example
 
       iex> Scholar.Stats.correlation_matrix(Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]]))
@@ -219,27 +202,34 @@ defmodule Scholar.Stats do
         ]
       >
 
-      iex> Scholar.Stats.correlation_matrix(Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]]),
-      ...>   ddof: 1
-      ...> )
+      iex> x = Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]])
+      iex> means = Nx.mean(x, axes: [-2])
+      iex> Scholar.Stats.correlation_matrix(x, means)
       #Nx.Tensor<
         f32[3][3]
         [
-          [1.0, 0.5803170204162598, -0.7997867465019226],
-          [0.5803170204162598, 1.0, 0.024736013263463974],
-          [-0.7997867465019226, 0.024736013263463974, 1.0]
+          [1.0, 0.580316960811615, -0.7997867465019226],
+          [0.580316960811615, 1.0, 0.024736011400818825],
+          [-0.7997867465019226, 0.024736011400818825, 1.0]
         ]
       >
   """
 
-  deftransform correlation_matrix(x, opts \\ []) do
-    correlation_matrix_n(x, NimbleOptions.validate!(opts, @correlation_schema))
+  deftransform correlation_matrix(x) do
+    correlation_matrix_n(
+      x,
+      Nx.mean(x, axes: [-2])
+    )
   end
 
-  defnp correlation_matrix_n(x, opts) do
-    variances = Nx.variance(x, axes: [0], ddof: opts[:ddof])
+  deftransform correlation_matrix(x, means) do
+    correlation_matrix_n(x, means)
+  end
 
-    Nx.covariance(x, opts) / Nx.sqrt(Nx.new_axis(variances, 1) * Nx.new_axis(variances, 0))
+  defnp correlation_matrix_n(x, means) do
+    variances = Nx.variance(x, axes: [-2])
+
+    Nx.covariance(x, means) / Nx.sqrt(Nx.new_axis(variances, 1) * Nx.new_axis(variances, 0))
   end
 
   deftransformp num_samples(tensor, opts) do
