@@ -55,7 +55,6 @@ defmodule Scholar.Stats do
   @moment_schema NimbleOptions.new!(general)
   @skew_schema NimbleOptions.new!(skew_schema)
   @kurtosis_schema NimbleOptions.new!(kurtosis_schema)
-
   @doc """
   Calculates the nth moment about the mean for a sample.
 
@@ -168,6 +167,69 @@ defmodule Scholar.Stats do
       :fisher -> vals - 3
       :pearson -> vals
     end
+  end
+
+  @doc """
+  Computes correlation matrix for sample inputs `x`.
+
+  The value on the position $Corr_{ij}$ in the $Corr$ matrix is calculated using the formula:
+  #{~S'''
+  $$ Corr(X\_i, X\_j) = \frac{Cov(X\_i, X\_j)}{\sqrt{Cov(X\_i, X\_i)Cov(X\_j, X\_j)}} $$
+  Where:
+    * $X_i$ is a $i$th row of input
+
+    * $Cov(X\_i, X\_j)$ is covariance between features $X_i$ and $X_j$
+  '''}
+
+  ## Example
+
+      iex> Scholar.Stats.correlation_matrix(Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]]))
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [1.0, 0.580316960811615, -0.7997867465019226],
+          [0.580316960811615, 1.0, 0.024736011400818825],
+          [-0.7997867465019226, 0.024736011400818825, 1.0]
+        ]
+      >
+
+      iex> Scholar.Stats.correlation_matrix(Nx.tensor([[3, 6], [2, 3], [7, 9], [5, 3]]))
+      #Nx.Tensor<
+        f32[2][2]
+        [
+          [1.0, 0.6673083305358887],
+          [0.6673083305358887, 1.0]
+        ]
+      >
+
+      iex> x = Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]])
+      iex> means = Nx.mean(x, axes: [-2])
+      iex> Scholar.Stats.correlation_matrix(x, means)
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [1.0, 0.580316960811615, -0.7997867465019226],
+          [0.580316960811615, 1.0, 0.024736011400818825],
+          [-0.7997867465019226, 0.024736011400818825, 1.0]
+        ]
+      >
+  """
+
+  deftransform correlation_matrix(x) do
+    correlation_matrix_n(
+      x,
+      Nx.mean(x, axes: [-2])
+    )
+  end
+
+  deftransform correlation_matrix(x, means) do
+    correlation_matrix_n(x, means)
+  end
+
+  defnp correlation_matrix_n(x, means) do
+    variances = Nx.variance(x, axes: [-2])
+
+    Nx.covariance(x, means) / Nx.sqrt(Nx.new_axis(variances, 1) * Nx.new_axis(variances, 0))
   end
 
   deftransformp num_samples(tensor, opts) do
