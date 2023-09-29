@@ -8,7 +8,7 @@ defmodule Scholar.NaiveBayes.Complement do
 
   Reference:
 
-  * [1] - [Paper about Complement Naive Bayes Algorithm](https://www.aaai.org/Papers/ICML/2003/ICML03-081.pdf?ref=https://githubhelp.com)
+  * [1] - [Paper about Complement Naive Bayes Algorithm](https://cdn.aaai.org/ICML/2003/ICML03-081.pdf)
   """
   import Nx.Defn
   import Scholar.Shared
