@@ -169,19 +169,16 @@ defmodule Scholar.Manifold.TSNE do
 
     case opts[:metric] do
       :squared_euclidean ->
-        Distance.squared_euclidean(t1, t2, axes: [2])
-        # Distance.pairwise_squared_euclidean(x)
+        Distance.pairwise_squared_euclidean(x)
 
       :euclidean ->
-        Distance.euclidean(t1, t2, axes: [2])
-        # Distance.pairwise_euclidean(x)
+        Distance.pairwise_euclidean(x)
 
       :manhattan ->
         Distance.manhattan(t1, t2, axes: [2])
 
       :cosine ->
-        Distance.cosine(t1, t2, axes: [2])
-        # Distance.pairwise_cosine(x)
+      Distance.pairwise_cosine(x)
 
       :chebyshev ->
         Distance.chebyshev(t1, t2, axes: [2])
@@ -242,8 +239,12 @@ defmodule Scholar.Manifold.TSNE do
               low = low,
               high = high,
               {max_iters, tol,
-               perplexity_val = Nx.Constants.infinity(to_float_type(target_perplexity)),
-               distances, target_perplexity, i = 0}
+               perplexity_val =
+                 Nx.Constants.infinity(
+                   Nx.Type.to_floating(
+                     Nx.Type.merge(Nx.type(target_perplexity), Nx.type(distances))
+                   )
+                 ), distances, target_perplexity, i = 0}
             },
             i < max_iters and Nx.abs(perplexity_val - target_perplexity) > tol do
         mid = (low + high) / 2
