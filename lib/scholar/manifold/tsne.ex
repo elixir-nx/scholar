@@ -178,7 +178,7 @@ defmodule Scholar.Manifold.TSNE do
         Distance.manhattan(t1, t2, axes: [2])
 
       :cosine ->
-      Distance.pairwise_cosine(x)
+        Distance.pairwise_cosine(x)
 
       :chebyshev ->
         Distance.chebyshev(t1, t2, axes: [2])
