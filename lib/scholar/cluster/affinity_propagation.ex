@@ -290,6 +290,10 @@ defmodule Scholar.Cluster.AffinityPropagation do
       Nx.new_axis(cluster_centers, 0) |> Nx.broadcast(broadcast_shape),
       axes: [-1]
     )
+
+    dist = Scholar.Metrics.Distance.pairwise_euclidean(x, cluster_centers)
+
+    Nx.select(Nx.is_nan(dist), Nx.Constants.infinity(Nx.type(dist)), dist)
     |> Nx.argmin(axis: 1)
   end
 
@@ -311,9 +315,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
     n = Nx.axis_size(data, 0)
     self_preference = opts[:self_preference]
 
-    norm1 = Nx.sum(data ** 2, axes: [1], keep_axes: true)
-    norm2 = Nx.transpose(norm1)
-    dist = -1 * (norm1 + norm2 - 2 * Nx.dot(data, [1], data, [1]))
+    dist = -Scholar.Metrics.Distance.pairwise_squared_euclidean(data)
 
     fill_in =
       cond do
