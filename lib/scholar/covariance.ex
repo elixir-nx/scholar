@@ -26,6 +26,7 @@ defmodule Scholar.Covariance do
 
   @opts_schema NimbleOptions.new!(opts)
 
+  @deprecated "Use Nx.convariance/2 instead"
   @doc """
   Computes covariance matrix for sample inputs `x`.
 
@@ -109,6 +110,7 @@ defmodule Scholar.Covariance do
     end
   end
 
+  @deprecated "Use Scholar.Stats.correlation_matrix/2 instead"
   @doc """
   Computes correlation matrix for sample inputs `x`.
 

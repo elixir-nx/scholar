@@ -448,7 +448,7 @@ defmodule Scholar.Metrics.Distance do
     merged_type = Nx.Type.merge(Nx.type(x), Nx.type(y))
     res = Nx.select(one_zero?, Nx.tensor(0, type: merged_type), res)
     one_merged_type = Nx.tensor(1, type: merged_type)
-    one_merged_type - Nx.select(both_zero?, one_merged_type, res)
+    Nx.max(0, one_merged_type - Nx.select(both_zero?, one_merged_type, res))
   end
 
   @doc """
@@ -548,5 +548,155 @@ defmodule Scholar.Metrics.Distance do
     result_type = Nx.Type.to_floating(Nx.Type.merge(Nx.type(x), Nx.type(y)))
     w = Nx.as_type(w, result_type)
     Nx.weighted_mean(x != y, w, axes: opts[:axes]) |> Nx.as_type(result_type)
+  end
+
+  @doc """
+  Pairwise squared euclidean distance.
+
+  ## Examples
+
+      iex> x = Nx.iota({6, 6})
+      iex> y = Nx.reverse(x)
+      iex> Scholar.Metrics.Distance.pairwise_squared_euclidean(x, y)
+      #Nx.Tensor<
+        s64[6][6]
+        [
+          [5470, 3526, 2014, 934, 286, 70],
+          [3526, 2014, 934, 286, 70, 286],
+          [2014, 934, 286, 70, 286, 934],
+          [934, 286, 70, 286, 934, 2014],
+          [286, 70, 286, 934, 2014, 3526],
+          [70, 286, 934, 2014, 3526, 5470]
+        ]
+      >
+  """
+  defn pairwise_squared_euclidean(x, y) do
+    y_norm = Nx.sum(y * y, axes: [1]) |> Nx.new_axis(0)
+    x_norm = Nx.sum(x * x, axes: [1], keep_axes: true)
+    Nx.max(0, x_norm + y_norm - 2 * Nx.dot(x, [-1], y, [-1]))
+  end
+
+  @doc """
+  Pairwise squared euclidean distance. It is equivalent to
+  Scholar.Metrics.Distance.pairwise_squared_euclidean(x, x)
+
+  ## Examples
+
+      iex> x = Nx.iota({6, 6})
+      iex> Scholar.Metrics.Distance.pairwise_squared_euclidean(x)
+      #Nx.Tensor<
+        s64[6][6]
+        [
+          [0, 216, 864, 1944, 3456, 5400],
+          [216, 0, 216, 864, 1944, 3456],
+          [864, 216, 0, 216, 864, 1944],
+          [1944, 864, 216, 0, 216, 864],
+          [3456, 1944, 864, 216, 0, 216],
+          [5400, 3456, 1944, 864, 216, 0]
+        ]
+      >
+  """
+  defn pairwise_squared_euclidean(x) do
+    x_norm = Nx.sum(x * x, axes: [1], keep_axes: true)
+    Nx.max(0, x_norm + Nx.transpose(x_norm) - 2 * Nx.dot(x, [-1], x, [-1]))
+  end
+
+  @doc """
+  Pairwise euclidean distance.
+
+  ## Examples
+
+      iex> x = Nx.iota({6, 6})
+      iex> y = Nx.reverse(x)
+      iex> Scholar.Metrics.Distance.pairwise_euclidean(x, y)
+      #Nx.Tensor<
+        f32[6][6]
+        [
+          [73.9594497680664, 59.380130767822266, 44.87761306762695, 30.561412811279297, 16.911535263061523, 8.366600036621094],
+          [59.380130767822266, 44.87761306762695, 30.561412811279297, 16.911535263061523, 8.366600036621094, 16.911535263061523],
+          [44.87761306762695, 30.561412811279297, 16.911535263061523, 8.366600036621094, 16.911535263061523, 30.561412811279297],
+          [30.561412811279297, 16.911535263061523, 8.366600036621094, 16.911535263061523, 30.561412811279297, 44.87761306762695],
+          [16.911535263061523, 8.366600036621094, 16.911535263061523, 30.561412811279297, 44.87761306762695, 59.380130767822266],
+          [8.366600036621094, 16.911535263061523, 30.561412811279297, 44.87761306762695, 59.380130767822266, 73.9594497680664]
+        ]
+      >
+  """
+  defn pairwise_euclidean(x, y) do
+    Nx.sqrt(pairwise_squared_euclidean(x, y))
+  end
+
+  @doc """
+  Pairwise euclidean distance. It is equivalent to
+  Scholar.Metrics.Distance.pairwise_euclidean(x, x)
+
+  ## Examples
+
+      iex> x = Nx.iota({6, 6})
+      iex> Scholar.Metrics.Distance.pairwise_euclidean(x)
+      #Nx.Tensor<
+        f32[6][6]
+        [
+          [0.0, 14.696938514709473, 29.393877029418945, 44.090816497802734, 58.78775405883789, 73.48469543457031],
+          [14.696938514709473, 0.0, 14.696938514709473, 29.393877029418945, 44.090816497802734, 58.78775405883789],
+          [29.393877029418945, 14.696938514709473, 0.0, 14.696938514709473, 29.393877029418945, 44.090816497802734],
+          [44.090816497802734, 29.393877029418945, 14.696938514709473, 0.0, 14.696938514709473, 29.393877029418945],
+          [58.78775405883789, 44.090816497802734, 29.393877029418945, 14.696938514709473, 0.0, 14.696938514709473],
+          [73.48469543457031, 58.78775405883789, 44.090816497802734, 29.393877029418945, 14.696938514709473, 0.0]
+        ]
+      >
+  """
+  defn pairwise_euclidean(x) do
+    Nx.sqrt(pairwise_squared_euclidean(x))
+  end
+
+  @doc """
+  Pairwise cosine distance.
+
+  ## Examples
+
+      iex> x = Nx.iota({6, 6})
+      iex> y = Nx.reverse(x)
+      iex> Scholar.Metrics.Distance.pairwise_cosine(x, y)
+      #Nx.Tensor<
+        f32[6][6]
+        [
+          [0.2050153613090515, 0.21226388216018677, 0.22395789623260498, 0.24592703580856323, 0.30156970024108887, 0.6363636255264282],
+          [0.03128105401992798, 0.03429150581359863, 0.039331674575805664, 0.049365341663360596, 0.07760530710220337, 0.30156970024108887],
+          [0.014371514320373535, 0.01644366979598999, 0.020004630088806152, 0.02736520767211914, 0.049365341663360596, 0.24592703580856323],
+          [0.0091819167137146, 0.010854601860046387, 0.013785064220428467, 0.020004630088806152, 0.039331674575805664, 0.22395789623260498],
+          [0.006820023059844971, 0.008272230625152588, 0.010854601860046387, 0.01644366979598999, 0.03429150581359863, 0.21226388216018677],
+          [0.005507469177246094, 0.006820023059844971, 0.0091819167137146, 0.014371514320373535, 0.03128105401992798, 0.2050153613090515]
+        ]
+      >
+  """
+  defn pairwise_cosine(x, y) do
+    x_normalized = Scholar.Preprocessing.normalize(x, axes: [1])
+    y_normalized = Scholar.Preprocessing.normalize(y, axes: [1])
+    Nx.max(0, 1 - Nx.dot(x_normalized, [-1], y_normalized, [-1]))
+  end
+
+  @doc """
+  Pairwise cosine distance. It is equivalent to
+  Scholar.Metrics.Distance.pairwise_euclidean(x, x)
+
+  ## Examples
+
+      iex> x = Nx.iota({6, 6})
+      iex> Scholar.Metrics.Distance.pairwise_cosine(x)
+      #Nx.Tensor<
+        f32[6][6]
+        [
+          [0.0, 0.0793418288230896, 0.1139642596244812, 0.13029760122299194, 0.1397092342376709, 0.14581435918807983],
+          [0.0793418288230896, 0.0, 0.0032819509506225586, 0.006624102592468262, 0.008954286575317383, 0.01060718297958374],
+          [0.1139642596244812, 0.0032819509506225586, 1.1920928955078125e-7, 5.82277774810791e-4, 0.0013980269432067871, 0.0020949840545654297],
+          [0.13029760122299194, 0.006624102592468262, 5.82277774810791e-4, 5.960464477539063e-8, 1.7595291137695312e-4, 4.686713218688965e-4],
+          [0.1397092342376709, 0.008954286575317383, 0.0013980269432067871, 1.7595291137695312e-4, 0.0, 7.027387619018555e-5],
+          [0.14581435918807983, 0.01060718297958374, 0.0020949840545654297, 4.686713218688965e-4, 7.027387619018555e-5, 0.0]
+        ]
+      >
+  """
+  defn pairwise_cosine(x) do
+    x_normalized = Scholar.Preprocessing.normalize(x, axes: [1])
+    Nx.max(0, 1 - Nx.dot(x_normalized, [-1], x_normalized, [-1]))
   end
 end

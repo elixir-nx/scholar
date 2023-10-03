@@ -65,6 +65,14 @@ defmodule Scholar.Options do
     end
   end
 
+  def non_negative_integer(num) do
+    if is_integer(num) and num >= 0 do
+      {:ok, num}
+    else
+      {:error, "expected a non-negative integer, got: #{inspect(num)}"}
+    end
+  end
+
   def weights(weights) do
     if is_nil(weights) or
          (Nx.is_tensor(weights) and Nx.rank(weights) in 0..1) or

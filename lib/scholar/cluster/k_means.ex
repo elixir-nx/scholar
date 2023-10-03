@@ -300,24 +300,8 @@ defmodule Scholar.Cluster.KMeans do
   """
   defn predict(%__MODULE__{clusters: clusters} = _model, x) do
     assert_same_shape!(x[0], clusters[0])
-    {num_clusters, _} = Nx.shape(clusters)
-    {num_samples, num_features} = Nx.shape(x)
 
-    clusters =
-      clusters
-      |> Nx.new_axis(1)
-      |> Nx.broadcast({num_clusters, num_samples, num_features})
-      |> Nx.reshape({num_clusters * num_samples, num_features})
-
-    inertia_for_centroids =
-      Scholar.Metrics.Distance.squared_euclidean(
-        Nx.tile(x, [num_clusters, 1]),
-        clusters,
-        axes: [1]
-      )
-      |> Nx.reshape({num_clusters, num_samples})
-
-    inertia_for_centroids |> Nx.argmin(axis: 0)
+    Scholar.Metrics.Distance.pairwise_squared_euclidean(clusters, x) |> Nx.argmin(axis: 0)
   end
 
   @doc """
@@ -343,14 +327,6 @@ defmodule Scholar.Cluster.KMeans do
       )
   """
   defn transform(%__MODULE__{clusters: clusters} = _model, x) do
-    {num_clusters, num_features} = Nx.shape(clusters)
-    {num_samples, _} = Nx.shape(x)
-    broadcast_shape = {num_samples, num_clusters, num_features}
-
-    Scholar.Metrics.Distance.euclidean(
-      Nx.new_axis(x, 1) |> Nx.broadcast(broadcast_shape),
-      Nx.new_axis(clusters, 0) |> Nx.broadcast(broadcast_shape),
-      axes: [-1]
-    )
+    Scholar.Metrics.Distance.pairwise_euclidean(x, clusters)
   end
 end

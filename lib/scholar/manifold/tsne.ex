@@ -118,9 +118,9 @@ defmodule Scholar.Manifold.TSNE do
   end
 
   defnp fit_n(x, key, opts \\ []) do
-    {perplexity, learning_rate, num_iters, num_components, exaggeration, init, metric} =
+    {perplexity, learning_rate, num_iters, num_components, exaggeration, init} =
       {opts[:perplexity], opts[:learning_rate], opts[:num_iters], opts[:num_components],
-       opts[:exaggeration], opts[:init], opts[:metric]}
+       opts[:exaggeration], opts[:init]}
 
     x = to_float(x)
     {n, _dims} = Nx.shape(x)
@@ -138,14 +138,14 @@ defmodule Scholar.Manifold.TSNE do
           x_embedded / Nx.standard_deviation(x_embedded[[.., 0]]) * 1.0e-4
       end
 
-    p = p_joint(x, perplexity, metric)
+    p = p_joint(x, perplexity, opts)
 
     {y, _} =
       while {y1, {y2 = y1, learning_rate, p}},
             i <- 2..(num_iters - 1),
             unroll: opts[:learning_loop_unroll] do
-        q = q_joint(y1, metric)
-        grad = gradient(p * exaggeration(i, exaggeration), q, y1, metric)
+        q = q_joint(y1, opts)
+        grad = gradient(p * exaggeration(i, exaggeration), q, y1, opts)
         y_next = y1 - learning_rate * grad + momentum(i) * (y1 - y2)
         {y_next, {y1, learning_rate, p}}
       end
@@ -153,7 +153,7 @@ defmodule Scholar.Manifold.TSNE do
     y
   end
 
-  defnp pairwise_dist(x, metric) do
+  defn pairwise_dist(x, opts) do
     {num_samples, num_features} = Nx.shape(x)
     broadcast_shape = {num_samples, num_samples, num_features}
 
@@ -167,18 +167,18 @@ defmodule Scholar.Manifold.TSNE do
       |> Nx.reshape({num_samples, 1, num_features})
       |> Nx.broadcast(broadcast_shape)
 
-    case metric do
+    case opts[:metric] do
       :squared_euclidean ->
-        Distance.squared_euclidean(t1, t2, axes: [2])
+        Distance.pairwise_squared_euclidean(x)
 
       :euclidean ->
-        Distance.euclidean(t1, t2, axes: [2])
+        Distance.pairwise_euclidean(x)
 
       :manhattan ->
         Distance.manhattan(t1, t2, axes: [2])
 
       :cosine ->
-        Distance.cosine(t1, t2, axes: [2])
+        Distance.pairwise_cosine(x)
 
       :chebyshev ->
         Distance.chebyshev(t1, t2, axes: [2])
@@ -239,8 +239,12 @@ defmodule Scholar.Manifold.TSNE do
               low = low,
               high = high,
               {max_iters, tol,
-               perplexity_val = Nx.Constants.infinity(to_float_type(target_perplexity)),
-               distances, target_perplexity, i = 0}
+               perplexity_val =
+                 Nx.Constants.infinity(
+                   Nx.Type.to_floating(
+                     Nx.Type.merge(Nx.type(target_perplexity), Nx.type(distances))
+                   )
+                 ), distances, target_perplexity, i = 0}
             },
             i < max_iters and Nx.abs(perplexity_val - target_perplexity) > tol do
         mid = (low + high) / 2
@@ -261,18 +265,18 @@ defmodule Scholar.Manifold.TSNE do
     (high + low) / 2
   end
 
-  defnp q_joint(y, metric) do
-    distances = pairwise_dist(y, metric)
+  defnp q_joint(y, opts) do
+    distances = pairwise_dist(y, opts)
     n = Nx.axis_size(distances, 0)
     inv_distances = 1 / (1 + distances)
     inv_distances = inv_distances / Nx.sum(inv_distances)
     Nx.put_diagonal(inv_distances, Nx.broadcast(0, {n}))
   end
 
-  defnp gradient(p, q, y, metric) do
+  defnp gradient(p, q, y, opts) do
     pq_diff = Nx.new_axis(p - q, 2)
     y_diff = Nx.new_axis(y, 1) - Nx.new_axis(y, 0)
-    distances = pairwise_dist(y, metric)
+    distances = pairwise_dist(y, opts)
 
     inv_distances = Nx.new_axis(1 / (1 + distances), 2)
 
@@ -297,9 +301,9 @@ defmodule Scholar.Manifold.TSNE do
     end
   end
 
-  defnp p_joint(x, perplexity, metric) do
+  defnp p_joint(x, perplexity, opts) do
     {n, _} = Nx.shape(x)
-    distances = pairwise_dist(x, metric)
+    distances = pairwise_dist(x, opts)
     sigmas = find_sigmas(distances, perplexity)
     p_cond = p_conditional(distances, sigmas)
     (p_cond + Nx.transpose(p_cond)) / (2 * n)
