@@ -162,17 +162,18 @@ defmodule Scholar.Linear.IsotonicRegression do
 
     {increasing, opts} = Keyword.pop(opts, :increasing)
 
-    increasing =
-      case increasing do
-        :auto ->
-          check_increasing(x, y)
+    # increasing =
+    #   case increasing do
+    #     :auto ->
+    #       check_increasing(x, y)
 
-        true ->
-          Nx.u8(1)
+    #     true ->
+    #       Nx.u8(1)
 
-        false ->
-          Nx.u8(0)
-      end
+    #     false ->
+    #       Nx.u8(0)
+    #   end
+    increasing = Nx.u8(1)
 
     fit_n(x, y, sample_weights, increasing, opts)
   end
@@ -209,7 +210,7 @@ defmodule Scholar.Linear.IsotonicRegression do
   """
   defn predict(model, x) do
     check_input_shape(x)
-    check_preprocess(model)
+    # check_preprocess(model)
 
     x = Nx.flatten(x)
     x = Nx.clip(x, model.x_min, model.x_max)
@@ -264,37 +265,37 @@ defmodule Scholar.Linear.IsotonicRegression do
         }
       }
   """
-  def preprocess(model, trim_duplicates \\ true) do
-    cutoff = Nx.to_number(model.cutoff_index)
-    x = model.x_thresholds[0..cutoff]
-    y = model.y_thresholds[0..cutoff]
+  defn preprocess(model) do
+    # cutoff = Nx.to_number(model.cutoff_index)
+    # x = model.x_thresholds[0..cutoff]
+    # y = model.y_thresholds[0..cutoff]
 
-    {x, y} =
-      if trim_duplicates do
-        keep_mask =
-          Nx.logical_or(
-            Nx.not_equal(y[1..-2//1], y[0..-3//1]),
-            Nx.not_equal(y[1..-2//1], y[2..-1//1])
-          )
+    # {x, y} =
+    #   if trim_duplicates do
+    #     keep_mask =
+    #       Nx.logical_or(
+    #         Nx.not_equal(y[1..-2//1], y[0..-3//1]),
+    #         Nx.not_equal(y[1..-2//1], y[2..-1//1])
+    #       )
 
-        keep_mask = Nx.concatenate([Nx.tensor([1]), keep_mask, Nx.tensor([1])])
+    #     keep_mask = Nx.concatenate([Nx.tensor([1]), keep_mask, Nx.tensor([1])])
 
-        indices =
-          Nx.iota({Nx.axis_size(y, 0)})
-          |> Nx.add(1)
-          |> Nx.multiply(keep_mask)
-          |> Nx.to_flat_list()
+    #     indices =
+    #       Nx.iota({Nx.axis_size(y, 0)})
+    #       |> Nx.add(1)
+    #       |> Nx.multiply(keep_mask)
+    #       |> Nx.to_flat_list()
 
-        indices = Enum.filter(indices, fn x -> x != 0 end) |> Nx.tensor() |> Nx.subtract(1)
-        x = Nx.take(x, indices)
-        y = Nx.take(y, indices)
-        {x, y}
-      else
-        {x, y}
-      end
+    #     indices = Enum.filter(indices, fn x -> x != 0 end) |> Nx.tensor() |> Nx.subtract(1)
+    #     x = Nx.take(x, indices)
+    #     y = Nx.take(y, indices)
+    #     {x, y}
+    #   else
+    #     {x, y}
+    #   end
 
-    model = %__MODULE__{model | x_thresholds: x}
-    model = %__MODULE__{model | y_thresholds: y}
+    # model = %__MODULE__{model | x_thresholds: x}
+    # model = %__MODULE__{model | y_thresholds: y}
 
     %__MODULE__{
       model
@@ -515,8 +516,7 @@ defmodule Scholar.Linear.IsotonicRegression do
 
   defnp check_increasing(x, y) do
     x = Nx.new_axis(x, -1)
-    y = Nx.new_axis(y, -1)
     model = Scholar.Linear.LinearRegression.fit(x, y)
-    model.coefficients[0][0] >= 0
+    Nx.squeeze(model.coefficients[0] >= 0)
   end
 end

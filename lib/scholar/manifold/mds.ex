@@ -7,7 +7,7 @@ defmodule Scholar.Manifold.MDS do
   * [t-SNE: t-Distributed Stochastic Neighbor Embedding](http://www.jmlr.org/papers/volume9/vandermaaten08a/vandermaaten08a.pdf)
   """
   import Nx.Defn
-  # import Scholar.Shared
+  import Scholar.Shared
   alias Scholar.Metrics.Distance
 
   @derive {Nx.Container, containers: [:embedding, :stress, :n_iter]}
@@ -72,7 +72,7 @@ defmodule Scholar.Manifold.MDS do
   defnp smacof(dissimilarities, x, max_iter, opts) do
     # n = Nx.axis_size(dissimilarities, 0)
     similarities_flat = Nx.flatten(dissimilarities)
-    similarities_flat_indices = lower_triangle_indices(similarities_flat)
+    similarities_flat_indices = lower_triangle_indices(dissimilarities)
 
     similarities_flat_w = Nx.take(similarities_flat, similarities_flat_indices)
 
@@ -81,11 +81,12 @@ defmodule Scholar.Manifold.MDS do
     eps = opts[:eps]
 
     {{x, stress, i}, _} =
-      while {{x, _stress = Nx.Constants.infinity(), i = 0}, dissimilarities, max_iter,
-             similarities_flat_indices, similarities_flat, similarities_flat_w,
-             old_stress = Nx.Constants.infinity(), metric, normalized_stress, eps,
-             stop_value = 0},
+      while {{x, _stress = Nx.Constants.infinity(Nx.type(dissimilarities)), i = 0},
+             {dissimilarities, max_iter, similarities_flat_indices, similarities_flat,
+              similarities_flat_w, old_stress = Nx.Constants.infinity(Nx.type(dissimilarities)),
+              metric, normalized_stress, eps, stop_value = 0}},
             i < max_iter and not stop_value do
+        # i < 1 and not stop_value do
         dis = Distance.pairwise_euclidean(x)
         n = Nx.axis_size(dissimilarities, 0)
 
@@ -102,18 +103,31 @@ defmodule Scholar.Manifold.MDS do
             dis_flat_w = Nx.take(dis_flat, dis_flat_indices)
             # dis_flat_w = Nx.flatten(remove_main_diag(dis))
 
-            disparities_flat =
+            disparities_flat_model =
               Scholar.Linear.IsotonicRegression.fit(similarities_flat_w, dis_flat_w)
 
+            model = Scholar.Linear.IsotonicRegression.preprocess(disparities_flat_model)
+
             disparities_flat =
-              Scholar.Linear.IsotonicRegression.predict(disparities_flat, similarities_flat_w)
+              Scholar.Linear.IsotonicRegression.predict(model, similarities_flat_w)
 
-            # disparities = Nx.select(similarities_flat != 0, disparities_flat, disparities)
+            # similarities_flat_indices
 
-            disparities = Nx.indexed_put(dis_flat, similarities_flat_indices, disparities_flat)
+            # disparities = Nx.select(similarities_flat != 0, disparities_flat, disparities_flat)
+            # {dis_flat, similarities_flat_indices, disparities_flat}
+
+            disparities =
+              Nx.indexed_put(
+                dis_flat,
+                Nx.new_axis(similarities_flat_indices, -1),
+                disparities_flat
+              )
+
+            # disparities = Nx.reshape(dis, {n, n})
+
             disparities = Nx.reshape(disparities, {n, n})
 
-            disparities * Nx.sum(Nx.sqrt(n * (n - 1) / 2 / disparities ** 2))
+            disparities * Nx.sqrt(n * (n - 1) / 2 / Nx.sum(disparities ** 2))
           end
 
         stress = Nx.sum((Nx.flatten(dis) - Nx.flatten(disparities)) ** 2) / 2
@@ -137,9 +151,9 @@ defmodule Scholar.Manifold.MDS do
 
         old_stress = stress / dis
 
-        {{x, stress, i + 1}, dissimilarities, max_iter, similarities_flat_indices,
-         similarities_flat, similarities_flat_w, old_stress, metric, normalized_stress, eps,
-         stop_value}
+        {{x, stress, i + 1},
+         {dissimilarities, max_iter, similarities_flat_indices, similarities_flat,
+          similarities_flat_w, old_stress, metric, normalized_stress, eps, stop_value}}
       end
 
     {x, stress, i}
@@ -148,11 +162,17 @@ defmodule Scholar.Manifold.MDS do
   defnp mds_main_loop(dissimilarities, x, key, opts) do
     n_init = opts[:n_init]
 
+    type = Nx.Type.merge(to_float_type(x), to_float_type(dissimilarities))
+    dissimilarities = Nx.as_type(dissimilarities, type)
+    x = Nx.as_type(x, type)
+
     {{best, best_stress, best_iter}, _} =
-      while {{best = x, best_stress = Nx.Constants.infinity(), best_iter = 0},
-             {n_init, dissimilarities, x, i = 0}},
+      while {{best = x, best_stress = Nx.Constants.infinity(type),
+              best_iter = 0}, {n_init, dissimilarities, x, i = 0}},
             i < n_init do
+        #           # i < 1 do
         {temp, stress, iter} = smacof(dissimilarities, x, opts[:max_iter], opts)
+        # smacof(dissimilarities, x, opts[:max_iter], opts)
 
         {best, best_stress, best_iter} =
           if stress < best_stress, do: {temp, stress, iter}, else: {best, best_stress, best_iter}
@@ -168,15 +188,30 @@ defmodule Scholar.Manifold.MDS do
     n_init = opts[:n_init]
     max_iter = opts[:max_iter]
     num_samples = Nx.axis_size(dissimilarities, 0)
-    {dummy, new_key} = Nx.Random.uniform(key, shape: {num_samples, opts[:num_components]})
+
+    type = to_float_type(dissimilarities)
+    dissimilarities = Nx.as_type(dissimilarities, type)
+
+    {dummy, new_key} =
+      Nx.Random.uniform(key,
+        shape: {num_samples, opts[:num_components]},
+        type: type
+      )
+
+    dissimilarities = Distance.pairwise_euclidean(dissimilarities)
 
     {{best, best_stress, best_iter}, _} =
-      while {{best = dummy, best_stress = Nx.Constants.infinity(), best_iter = 0},
+      while {{best = dummy, best_stress = Nx.Constants.infinity(type), best_iter = 0},
              {n_init, new_key, max_iter, dissimilarities, i = 0}},
             i < n_init do
+        #           i < 1 do
         num_samples = Nx.axis_size(dissimilarities, 0)
-        {x, new_key} = Nx.Random.uniform(new_key, shape: {num_samples, opts[:num_components]})
+
+        {x, new_key} =
+          Nx.Random.uniform(new_key, shape: {num_samples, opts[:num_components]}, type: type)
+
         {temp, stress, iter} = smacof(dissimilarities, x, max_iter, opts)
+        # smacof(dissimilarities, x, max_iter, opts)
 
         {best, best_stress, best_iter} =
           if stress < best_stress, do: {temp, stress, iter}, else: {best, best_stress, best_iter}
@@ -187,7 +222,7 @@ defmodule Scholar.Manifold.MDS do
     {best, best_stress, best_iter}
   end
 
-  defnp lower_triangle_indices(tensor) do
+  defn lower_triangle_indices(tensor) do
     n = Nx.axis_size(tensor, 0)
 
     temp = Nx.broadcast(Nx.s64(0), {div(n * (n - 1), 2)})
@@ -271,6 +306,7 @@ defmodule Scholar.Manifold.MDS do
   end
 
   defnp fit_n(x, key, opts) do
+    # mds_main_loop(x, key, opts)
     {best, best_stress, best_iter} = mds_main_loop(x, key, opts)
     %__MODULE__{embedding: best, stress: best_stress, n_iter: best_iter}
   end
