@@ -14,9 +14,15 @@ defmodule Scholar.Cluster.HierarchicalTest do
       #   0 1 2 3 4 5
       data = Nx.tensor([[1, 5], [2, 5], [1, 4], [4, 5], [5, 5], [5, 4], [1, 2], [1, 1], [2, 1]])
 
-      result = Hierarchical.fit(data, dissimilarity: :euclidean, linkage: :single)
+      result =
+        Hierarchical.fit(data,
+          dissimilarity: :euclidean,
+          # group_by: [num_clusters: 3],
+          group_by: [height: 2.0],
+          linkage: :single
+        )
 
-      assert result == [
+      assert result.dendrogram == [
                {9, [1, 0], 1.0},
                {10, [4, 3], 1.0},
                {11, [7, 6], 1.0},
@@ -26,6 +32,8 @@ defmodule Scholar.Cluster.HierarchicalTest do
                {15, [13, 12], 2.0},
                {16, [15, 14], 2.0}
              ]
+
+      assert result.labels == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
 
       #  8: [0] [1] [2] [3] [4] [5] [6] [7] [8]
       #  9: [01] [2] [3] [4] [5] [6] [7] [8]

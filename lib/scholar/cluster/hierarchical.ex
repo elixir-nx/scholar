@@ -28,6 +28,23 @@ defmodule Scholar.Cluster.Hierarchical do
       doc:
         "Pairwise dissimilarity function: computes the 'dissimilarity' between each pair of data points."
     ],
+    group_by: [
+      type: :non_empty_keyword_list,
+      keys: [
+        height: [
+          type: :float,
+          doc: "Height of the dendrogram to use as the split point for clusters."
+        ],
+        num_clusters: [
+          type: :pos_integer,
+          doc: "Number of clusters to form."
+        ]
+      ],
+      doc: """
+      How to group the dendrogram into clusters.
+      Must provide either a height or a number of clusters.
+      """
+    ],
     linkage: [
       type: {:in, @linkage_types},
       default: :single,
@@ -38,6 +55,7 @@ defmodule Scholar.Cluster.Hierarchical do
   def fit(data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     dissimilarity = opts[:dissimilarity]
+    group_by = opts[:group_by]
     linkage = opts[:linkage]
 
     dissimilarity_fun =
@@ -67,9 +85,28 @@ defmodule Scholar.Cluster.Hierarchical do
         l when l in [:centroid, :median] -> &primitive/2
       end
 
-    data
-    |> dissimilarity_fun.()
-    |> cluster_fun.(update_fun)
+    dendrogram =
+      data
+      |> dissimilarity_fun.()
+      |> cluster_fun.(update_fun)
+
+    labels =
+      if group_by do
+        group_fun =
+          case group_by do
+            [height: height] -> &group_by_height(&1, height)
+            [num_clusters: num_clusters] -> &group_by_num_clusters(&1, num_clusters)
+          end
+
+        dendrogram |> group_fun.() |> groups_to_labels()
+      else
+        nil
+      end
+
+    %{
+      dendrogram: dendrogram,
+      labels: labels
+    }
   end
 
   # Cluster functions
@@ -163,4 +200,49 @@ defmodule Scholar.Cluster.Hierarchical do
   def single(dac, dbc, _dab, _na, _nb, _nc), do: min(dac, dbc)
   def ward(_dac, _dbc, _dab, _na, _nb, _nc), do: raise("not yet implemented")
   def weighted(_dac, _dbc, _dab, _na, _nb, _nc), do: raise("not yet implemented")
+
+  # Grouping functions
+
+  defp group_by_height([{count, _, _} | _] = dendrogram, height_cutoff) do
+    clusters = Map.new(0..(count - 1), &{&1, [&1]})
+
+    Enum.reduce_while(dendrogram, clusters, fn {c, [a, b], height}, clusters ->
+      if height >= height_cutoff do
+        {:halt, clusters}
+      else
+        clusters =
+          clusters
+          |> Map.put(c, clusters[a] ++ clusters[b])
+          |> Map.drop([a, b])
+
+        {:cont, clusters}
+      end
+    end)
+  end
+
+  defp group_by_num_clusters([{count, _, _} | _] = dendrogram, num_clusters) do
+    clusters = Map.new(0..(count - 1), &{&1, [&1]})
+
+    Enum.reduce_while(dendrogram, {clusters, count}, fn {c, [a, b], _}, {clusters, count} ->
+      if count == num_clusters do
+        {:halt, clusters}
+      else
+        clusters =
+          clusters
+          |> Map.put(c, clusters[a] ++ clusters[b])
+          |> Map.drop([a, b])
+
+        {:cont, {clusters, count - 1}}
+      end
+    end)
+  end
+
+  defp groups_to_labels(groups) do
+    groups
+    |> Enum.sort()
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {{_, v}, i} -> v |> Enum.sort() |> Enum.map(&{&1, i}) end)
+    |> Enum.map(fn {_, label} -> label end)
+    |> Nx.tensor()
+  end
 end
