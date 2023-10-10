@@ -26,7 +26,7 @@ defmodule Scholar.Metrics.ClassificationTest do
     end
 
     test "equals precision when beta is 0" do
-      beta = Nx.tensor(0)
+      beta = 0
       y_true = Nx.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1], type: :u32)
       y_pred = Nx.tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], type: :u32)
       fbeta_scores = Classification.fbeta_score(y_true, y_pred, beta, num_classes: 2)

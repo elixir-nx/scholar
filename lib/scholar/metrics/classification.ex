@@ -638,6 +638,11 @@ defmodule Scholar.Metrics.Classification do
         f32[2]
         [0.0, 0.0]
       >
+      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), 0.5, num_classes: 2, average: :none)
+      #Nx.Tensor<
+        f32[2]
+        [0.0, 0.0]
+      >
   """
   deftransform fbeta_score(y_true, y_pred, beta, opts \\ []) do
     fbeta_score_n(y_true, y_pred, beta, NimbleOptions.validate!(opts, @fbeta_score_schema))
@@ -754,7 +759,7 @@ defmodule Scholar.Metrics.Classification do
       >
   """
   deftransform f1_score(y_true, y_pred, opts \\ []) do
-    fbeta_score_n(y_true, y_pred, Nx.tensor(1), NimbleOptions.validate!(opts, @f1_score_schema))
+    fbeta_score_n(y_true, y_pred, 1, NimbleOptions.validate!(opts, @f1_score_schema))
   end
 
   @doc """
