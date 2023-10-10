@@ -46,7 +46,66 @@ defmodule Scholar.Metrics.Classification do
         ]
       ]
 
-  fbeta_score_schema = f1_score_schema
+  fbeta_score_schema =
+    general_schema ++
+      [
+        average: [
+          type: {:in, [:micro, :macro, :weighted, :none]},
+          default: :none,
+          doc: """
+          This determines the type of averaging performed on the data.
+
+          * `:macro` - Calculate metrics for each label, and find their unweighted mean.
+          This does not take label imbalance into account.
+
+          * `:weighted` - Calculate metrics for each label, and find their average weighted by
+          support (the number of true instances for each label).
+
+          * `:micro` - Calculate metrics globally by counting the total true positives,
+          false negatives and false positives.
+
+          * `:none` - The F-score values for each class are returned.
+          """
+        ],
+        beta: [
+          type: {:custom, Scholar.Options, :beta, []},
+          doc: """
+          Determines the weight of recall in the combined score.
+          For values of `beta` > 1 it gives more weight to recall, while `beta` < 1 favors precision.
+          """
+        ]
+      ]
+
+  precision_recall_fscore_support_schema =
+    general_schema ++
+      [
+        average: [
+          type: {:in, [:micro, :macro, :weighted, :none]},
+          default: :none,
+          doc: """
+          This determines the type of averaging performed on the data.
+
+          * `:macro` - Calculate metrics for each label, and find their unweighted mean.
+          This does not take label imbalance into account.
+
+          * `:weighted` - Calculate metrics for each label, and find their average weighted by
+          support (the number of true instances for each label).
+
+          * `:micro` - Calculate metrics globally by counting the total true positives,
+          false negatives and false positives.
+
+          * `:none` - The F-score values for each class are returned.
+          """
+        ],
+        beta: [
+          type: {:custom, Scholar.Options, :beta, []},
+          default: 1,
+          doc: """
+          Determines the weight of recall in the combined score.
+          For values of `beta` > 1 it gives more weight to recall, while `beta` < 1 favors precision.
+          """
+        ]
+      ]
 
   confusion_matrix_schema =
     general_schema ++
@@ -167,6 +226,9 @@ defmodule Scholar.Metrics.Classification do
   @cohen_kappa_schema NimbleOptions.new!(cohen_kappa_schema)
   @fbeta_score_schema NimbleOptions.new!(fbeta_score_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
+  @precision_recall_fscore_support_schema NimbleOptions.new!(
+                                            precision_recall_fscore_support_schema
+                                          )
   @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
   @accuracy_schema NimbleOptions.new!(accuracy_schema)
   @top_k_accuracy_score_schema NimbleOptions.new!(top_k_accuracy_score_schema)
@@ -603,58 +665,56 @@ defmodule Scholar.Metrics.Classification do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(1), num_classes: 3)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.u32(1), num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.u32(2), num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.5555555820465088, 0.625]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.f32(0.5), num_classes: 3)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.f32(0.5), num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.8333333134651184, 0.29411765933036804]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3, average: :macro)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.u32(2), num_classes: 3, average: :macro)
       #Nx.Tensor<
         f32
         0.6157407760620117
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3, average: :weighted)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.u32(2), num_classes: 3, average: :weighted)
       #Nx.Tensor<
         f32
         0.5958333611488342
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.f32(0.5), num_classes: 3, average: :micro)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.f32(0.5), num_classes: 3, average: :micro)
       #Nx.Tensor<
         f32
         0.6000000238418579
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), Nx.tensor(0.5), num_classes: 2, average: :none)
+      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), beta: Nx.tensor(0.5), num_classes: 2, average: :none)
       #Nx.Tensor<
         f32[2]
         [0.0, 0.0]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), 0.5, num_classes: 2, average: :none)
+      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), beta: 0.5, num_classes: 2, average: :none)
       #Nx.Tensor<
         f32[2]
         [0.0, 0.0]
       >
   """
-  deftransform fbeta_score(y_true, y_pred, beta, opts \\ []) do
-    fbeta_score_n(y_true, y_pred, beta, NimbleOptions.validate!(opts, @fbeta_score_schema))
+  deftransform fbeta_score(y_true, y_pred, opts \\ []) do
+    fbeta_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @fbeta_score_schema))
   end
 
-  defnp fbeta_score_n(y_true, y_pred, beta, opts) do
-    check_shape(y_pred, y_true)
-    num_classes = check_num_classes(opts[:num_classes])
-    average = opts[:average]
+  defnp fbeta_score_n(y_true, y_pred, opts) do
+    check_beta(opts[:beta])
 
-    {_precision, _recall, per_class_fscore} =
-      precision_recall_fscore_n(y_true, y_pred, beta, num_classes, average)
+    {_precision, _recall, per_class_fscore, _support} =
+      precision_recall_fscore_support_n(y_true, y_pred, opts)
 
     per_class_fscore
   end
@@ -677,7 +737,119 @@ defmodule Scholar.Metrics.Classification do
     end
   end
 
-  defnp precision_recall_fscore_n(y_true, y_pred, beta, num_classes, average) do
+  @doc """
+  Calculates precision, recall, F-score and support for each
+  class. It also supports a `beta` argument which weights
+  recall more than precision by it's value.
+
+  ## Options
+
+  #{NimbleOptions.docs(@precision_recall_fscore_support_schema)}
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
+      iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3)
+      {#Nx.Tensor<
+       f32[3]
+       [0.6666666865348816, 1.0, 0.25]
+      >,
+      #Nx.Tensor<
+       f32[3]
+       [0.6666666865348816, 0.5, 1.0]
+      >,
+      #Nx.Tensor<
+       f32[3]
+       [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
+      >,
+      #Nx.Tensor<
+       u64[3]
+       [3, 6, 1]
+      >}
+      iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3, average: :macro)
+      {#Nx.Tensor<
+       f32[3]
+       [0.6666666865348816, 1.0, 0.25]
+      >,
+      #Nx.Tensor<
+       f32[3]
+       [0.6666666865348816, 0.5, 1.0]
+      >,
+      #Nx.Tensor<
+       f32
+       0.5777778029441833
+      >,
+      #Nx.Tensor<
+       f32
+       NaN
+      >}
+      iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3, average: :weighted)
+      {#Nx.Tensor<
+       f32[3]
+       [0.6666666865348816, 1.0, 0.25]
+      >,
+      #Nx.Tensor<
+       f32[3]
+       [0.6666666865348816, 0.5, 1.0]
+      >,
+      #Nx.Tensor<
+       f32
+       0.6399999856948853
+      >,
+      #Nx.Tensor<
+       f32
+       NaN
+      >}
+      iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3, average: :micro)
+      {#Nx.Tensor<
+       f32
+       0.6000000238418579
+      >,
+      #Nx.Tensor<
+       f32
+       0.6000000238418579
+      >,
+      #Nx.Tensor<
+       f32
+       0.6000000238418579
+      >,
+      #Nx.Tensor<
+       f32
+       NaN
+      >}
+      iex> Scholar.Metrics.Classification.precision_recall_fscore_support(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), beta: 2, num_classes: 2, average: :none)
+      {#Nx.Tensor<
+       f32[2]
+       [0.0, 0.0]
+      >,
+      #Nx.Tensor<
+       f32[2]
+       [0.0, 0.0]
+      >,
+      #Nx.Tensor<
+       f32[2]
+       [0.0, 0.0]
+      >,
+      #Nx.Tensor<
+       u64[2]
+       [2, 2]
+      >}
+  """
+  deftransform precision_recall_fscore_support(y_true, y_pred, opts) do
+    precision_recall_fscore_support_n(
+      y_true,
+      y_pred,
+      NimbleOptions.validate!(opts, @precision_recall_fscore_support_schema)
+    )
+  end
+
+  defnp precision_recall_fscore_support_n(y_true, y_pred, opts) do
+    check_shape(y_pred, y_true)
+    num_classes = check_num_classes(opts[:num_classes])
+    beta = opts[:beta]
+    average = opts[:average]
+
     confusion_matrix = confusion_matrix(y_true, y_pred, num_classes: num_classes)
     {true_positive, false_positive, false_negative} = fbeta_score_v(confusion_matrix, average)
 
@@ -700,13 +872,15 @@ defmodule Scholar.Metrics.Classification do
 
     case average do
       :none ->
-        {precision, recall, per_class_fscore}
+        support = (y_true == Nx.iota({num_classes, 1})) |> Nx.sum(axes: [1])
+
+        {precision, recall, per_class_fscore, support}
 
       :micro ->
-        {precision, recall, per_class_fscore}
+        {precision, recall, per_class_fscore, Nx.Constants.nan()}
 
       :macro ->
-        {precision, recall, Nx.mean(per_class_fscore)}
+        {precision, recall, Nx.mean(per_class_fscore), Nx.Constants.nan()}
 
       :weighted ->
         support = (y_true == Nx.iota({num_classes, 1})) |> Nx.sum(axes: [1])
@@ -716,7 +890,7 @@ defmodule Scholar.Metrics.Classification do
           |> safe_division(Nx.sum(support))
           |> Nx.sum()
 
-        {precision, recall, per_class_fscore}
+        {precision, recall, per_class_fscore, Nx.Constants.nan()}
     end
   end
 
@@ -762,7 +936,12 @@ defmodule Scholar.Metrics.Classification do
       >
   """
   deftransform f1_score(y_true, y_pred, opts \\ []) do
-    fbeta_score_n(y_true, y_pred, 1, NimbleOptions.validate!(opts, @f1_score_schema))
+    opts =
+      opts
+      |> NimbleOptions.validate!(@f1_score_schema)
+      |> Keyword.put(:beta, 1)
+
+    fbeta_score_n(y_true, y_pred, opts)
   end
 
   @doc """
@@ -1233,6 +1412,10 @@ defmodule Scholar.Metrics.Classification do
 
   deftransformp check_num_classes(num_classes) do
     num_classes || raise ArgumentError, "missing option :num_classes"
+  end
+
+  deftransformp check_beta(beta) do
+    beta || raise ArgumentError, "missing option :beta"
   end
 
   defnp safe_division(nominator, denominator) do

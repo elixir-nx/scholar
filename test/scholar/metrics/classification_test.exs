@@ -20,7 +20,7 @@ defmodule Scholar.Metrics.ClassificationTest do
       beta = Nx.tensor(:infinity)
       y_true = Nx.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1], type: :u32)
       y_pred = Nx.tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], type: :u32)
-      fbeta_scores = Classification.fbeta_score(y_true, y_pred, beta, num_classes: 2)
+      fbeta_scores = Classification.fbeta_score(y_true, y_pred, beta: beta, num_classes: 2)
 
       assert_all_close(fbeta_scores, Classification.recall(y_true, y_pred, num_classes: 2))
     end
@@ -29,7 +29,7 @@ defmodule Scholar.Metrics.ClassificationTest do
       beta = 0
       y_true = Nx.tensor([0, 0, 0, 0, 0, 1, 1, 1, 1, 1], type: :u32)
       y_pred = Nx.tensor([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], type: :u32)
-      fbeta_scores = Classification.fbeta_score(y_true, y_pred, beta, num_classes: 2)
+      fbeta_scores = Classification.fbeta_score(y_true, y_pred, beta: beta, num_classes: 2)
 
       assert_all_close(fbeta_scores, Classification.precision(y_true, y_pred, num_classes: 2))
     end
