@@ -25,7 +25,8 @@ defmodule Scholar.Cluster.Hierarchical do
     dissimilarity: [
       type: {:in, @dissimilarity_types},
       default: :euclidean,
-      doc: "Pairwise dissimilarity function: computes the 'dissimilarity' between each datum."
+      doc:
+        "Pairwise dissimilarity function: computes the 'dissimilarity' between each pair of data points."
     ],
     linkage: [
       type: {:in, @linkage_types},
@@ -89,7 +90,7 @@ defmodule Scholar.Cluster.Hierarchical do
     # Cluster sizes.
     size = Map.new(0..(n_row - 1), &{&1, 1})
 
-    # Dissimilarities between each pair of datum.
+    # Dissimilarities between each pair of data points.
     # Map of %{[i, j] => dissimiliarity} where i, j are the indices of the two data.
     ci = n_row |> CondensedMatrix.pairwise_indices() |> Nx.to_list()
     cd = pd |> CondensedMatrix.condense_pairwise() |> Nx.to_list()
