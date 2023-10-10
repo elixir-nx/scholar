@@ -41,10 +41,12 @@ defmodule Scholar.Metrics.Classification do
           * `:micro` - Calculate metrics globally by counting the total true positives,
           false negatives and false positives.
 
-          * `:none` - The f1 scores for each class are returned.
+          * `:none` - The F-score values for each class are returned.
           """
         ]
       ]
+
+  fbeta_score_schema = f1_score_schema
 
   confusion_matrix_schema =
     general_schema ++
@@ -163,6 +165,7 @@ defmodule Scholar.Metrics.Classification do
   @confusion_matrix_schema NimbleOptions.new!(confusion_matrix_schema)
   @balanced_accuracy_schema NimbleOptions.new!(balanced_accuracy_schema)
   @cohen_kappa_schema NimbleOptions.new!(cohen_kappa_schema)
+  @fbeta_score_schema NimbleOptions.new!(fbeta_score_schema)
   @f1_score_schema NimbleOptions.new!(f1_score_schema)
   @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
   @accuracy_schema NimbleOptions.new!(accuracy_schema)
@@ -586,6 +589,135 @@ defmodule Scholar.Metrics.Classification do
   end
 
   @doc """
+  Calculates F-beta score given rank-1 tensors which represent
+  the expected (`y_true`) and predicted (`y_pred`) classes.
+
+  If all examples are true negatives, then the result is 0 to
+  avoid zero division.
+
+  ## Options
+
+  #{NimbleOptions.docs(@fbeta_score_schema)}
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
+      iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(1), num_classes: 3)
+      #Nx.Tensor<
+        f32[3]
+        [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
+      >
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(2), num_classes: 3)
+      #Nx.Tensor<
+        f32[3]
+        [0.6666666865348816, 0.5555555820465088, 0.625]
+      >
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(0.5), num_classes: 3)
+      #Nx.Tensor<
+        f32[3]
+        [0.6666666865348816, 0.8333333134651184, 0.29411765933036804]
+      >
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(2), num_classes: 3, average: :macro)
+      #Nx.Tensor<
+        f32
+        0.6157407760620117
+      >
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(2), num_classes: 3, average: :weighted)
+      #Nx.Tensor<
+        f32
+        0.5958333611488342
+      >
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(0.5), num_classes: 3, average: :micro)
+      #Nx.Tensor<
+        f32
+        0.6000000238418579
+      >
+      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), Nx.tensor(0.5), num_classes: 2, average: :none)
+      #Nx.Tensor<
+        f32[2]
+        [0.0, 0.0]
+      >
+      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), 0.5, num_classes: 2, average: :none)
+      #Nx.Tensor<
+        f32[2]
+        [0.0, 0.0]
+      >
+  """
+  deftransform fbeta_score(y_true, y_pred, beta, opts \\ []) do
+    fbeta_score_n(y_true, y_pred, beta, NimbleOptions.validate!(opts, @fbeta_score_schema))
+  end
+
+  defnp fbeta_score_n(y_true, y_pred, beta, opts) do
+    check_shape(y_pred, y_true)
+    num_classes = check_num_classes(opts[:num_classes])
+    average = opts[:average]
+
+    {_precision, _recall, per_class_fscore} = precision_recall_fscore_n(y_true, y_pred, beta, num_classes, average)
+
+    per_class_fscore
+  end
+
+  defnp fbeta_score_v(confusion_matrix, average) do
+    true_positive = Nx.take_diagonal(confusion_matrix)
+    false_positive = Nx.sum(confusion_matrix, axes: [0]) - true_positive
+    false_negative = Nx.sum(confusion_matrix, axes: [1]) - true_positive
+
+    case average do
+      :micro ->
+        true_positive = Nx.sum(true_positive)
+        false_positive = Nx.sum(false_positive)
+        false_negative = Nx.sum(false_negative)
+
+        {true_positive, false_positive, false_negative}
+
+      _ ->
+      {true_positive, false_positive, false_negative}
+    end
+  end
+
+  defnp precision_recall_fscore_n(y_true, y_pred, beta, num_classes, average) do
+    confusion_matrix = confusion_matrix(y_true, y_pred, num_classes: num_classes)
+    {true_positive, false_positive, false_negative} = fbeta_score_v(confusion_matrix, average)
+
+    precision = safe_division(true_positive, true_positive + false_positive)
+    recall = safe_division(true_positive, true_positive + false_negative)
+
+    per_class_fscore =
+      cond do
+        # Should only be +Inf
+        Nx.is_infinity(beta) ->
+          recall
+        beta == 0 ->
+          precision
+        true ->
+          beta2 = Nx.pow(beta, 2)
+          safe_division((1 + beta2) * precision * recall, beta2 * precision + recall)
+      end
+
+    case average do
+      :none ->
+        {precision, recall, per_class_fscore}
+
+      :micro ->
+        {precision, recall, per_class_fscore}
+
+      :macro ->
+        {precision, recall, Nx.mean(per_class_fscore)}
+
+      :weighted ->
+        support = (y_true == Nx.iota({num_classes, 1})) |> Nx.sum(axes: [1])
+
+        per_class_fscore =
+          per_class_fscore * support
+          |> safe_division(Nx.sum(support))
+          |> Nx.sum()
+
+        {precision, recall, per_class_fscore}
+    end
+  end
+
+  @doc """
   Calculates F1 score given rank-1 tensors which represent
   the expected (`y_true`) and predicted (`y_pred`) classes.
 
@@ -620,50 +752,14 @@ defmodule Scholar.Metrics.Classification do
         f32
         0.6000000238418579
       >
-      iex> Scholar.Metrics.Classification.f1_score(Nx.tensor([1,0,1,0]), Nx.tensor([0, 1, 0, 1]), num_classes: 2, average: :none)
+      iex> Scholar.Metrics.Classification.f1_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), num_classes: 2, average: :none)
       #Nx.Tensor<
         f32[2]
         [0.0, 0.0]
       >
   """
   deftransform f1_score(y_true, y_pred, opts \\ []) do
-    f1_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @f1_score_schema))
-  end
-
-  defnp f1_score_n(y_true, y_pred, opts) do
-    check_shape(y_pred, y_true)
-    num_classes = check_num_classes(opts[:num_classes])
-
-    case opts[:average] do
-      :micro ->
-        accuracy(y_true, y_pred)
-
-      _ ->
-        cm = confusion_matrix(y_true, y_pred, num_classes: num_classes)
-        true_positive = Nx.take_diagonal(cm)
-        false_positive = Nx.sum(cm, axes: [0]) - true_positive
-        false_negative = Nx.sum(cm, axes: [1]) - true_positive
-
-        precision = safe_division(true_positive, true_positive + false_positive)
-
-        recall = safe_division(true_positive, true_positive + false_negative)
-
-        per_class_f1 = safe_division(2 * precision * recall, precision + recall)
-
-        case opts[:average] do
-          :none ->
-            per_class_f1
-
-          :macro ->
-            Nx.mean(per_class_f1)
-
-          :weighted ->
-            support = (y_true == Nx.iota({num_classes, 1})) |> Nx.sum(axes: [1])
-
-            safe_division(per_class_f1 * support, Nx.sum(support))
-            |> Nx.sum()
-        end
-    end
+    fbeta_score_n(y_true, y_pred, 1, NimbleOptions.validate!(opts, @f1_score_schema))
   end
 
   @doc """

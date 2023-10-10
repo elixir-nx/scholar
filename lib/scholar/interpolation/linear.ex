@@ -20,6 +20,8 @@ defmodule Scholar.Interpolation.Linear do
   @derive {Nx.Container, containers: [:coefficients, :x]}
   defstruct [:coefficients, :x]
 
+  @type t :: %Scholar.Interpolation.Linear{}
+
   @doc """
   Fits a linear interpolation of the given `(x, y)` points
 
