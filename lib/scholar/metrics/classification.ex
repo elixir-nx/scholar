@@ -658,7 +658,7 @@ defmodule Scholar.Metrics.Classification do
     per_class_fscore
   end
 
-  defn fbeta_score_v(confusion_matrix, average) do
+  defnp fbeta_score_v(confusion_matrix, average) do
     true_positive = Nx.take_diagonal(confusion_matrix)
     false_positive = Nx.sum(confusion_matrix, axes: [0]) - true_positive
     false_negative = Nx.sum(confusion_matrix, axes: [1]) - true_positive
@@ -676,7 +676,7 @@ defmodule Scholar.Metrics.Classification do
     end
   end
 
-  defn precision_recall_fscore_n(y_true, y_pred, beta, num_classes, average) do
+  defnp precision_recall_fscore_n(y_true, y_pred, beta, num_classes, average) do
     confusion_matrix = confusion_matrix(y_true, y_pred, num_classes: num_classes)
     {true_positive, false_positive, false_negative} = fbeta_score_v(confusion_matrix, average)
 
