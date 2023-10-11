@@ -7,7 +7,7 @@ defmodule Scholar.Metrics.DiscountedCumulativeGain do
   """
 
   @doc """
-  Computes the DCG based on true relevancies (`y_true`) and predicted scores (`y_score`).
+  Computes the DCG based on true relevance scores (`y_true`) and their respective predicted scores (`y_score`).
   """
   def compute(y_true, y_score, k \\ nil) do
     # Ensure tensors are of the same shape
