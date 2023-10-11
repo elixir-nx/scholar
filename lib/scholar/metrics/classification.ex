@@ -653,7 +653,8 @@ defmodule Scholar.Metrics.Classification do
     num_classes = check_num_classes(opts[:num_classes])
     average = opts[:average]
 
-    {_precision, _recall, per_class_fscore} = precision_recall_fscore_n(y_true, y_pred, beta, num_classes, average)
+    {_precision, _recall, per_class_fscore} =
+      precision_recall_fscore_n(y_true, y_pred, beta, num_classes, average)
 
     per_class_fscore
   end
@@ -672,7 +673,7 @@ defmodule Scholar.Metrics.Classification do
         {true_positive, false_positive, false_negative}
 
       _ ->
-      {true_positive, false_positive, false_negative}
+        {true_positive, false_positive, false_negative}
     end
   end
 
@@ -688,8 +689,10 @@ defmodule Scholar.Metrics.Classification do
         # Should only be +Inf
         Nx.is_infinity(beta) ->
           recall
+
         beta == 0 ->
           precision
+
         true ->
           beta2 = Nx.pow(beta, 2)
           safe_division((1 + beta2) * precision * recall, beta2 * precision + recall)
@@ -709,7 +712,7 @@ defmodule Scholar.Metrics.Classification do
         support = (y_true == Nx.iota({num_classes, 1})) |> Nx.sum(axes: [1])
 
         per_class_fscore =
-          per_class_fscore * support
+          (per_class_fscore * support)
           |> safe_division(Nx.sum(support))
           |> Nx.sum()
 
