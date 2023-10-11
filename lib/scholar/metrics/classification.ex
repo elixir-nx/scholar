@@ -603,32 +603,32 @@ defmodule Scholar.Metrics.Classification do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(1), num_classes: 3)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(1), num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(2), num_classes: 3)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.5555555820465088, 0.625]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(0.5), num_classes: 3)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.f32(0.5), num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.8333333134651184, 0.29411765933036804]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(2), num_classes: 3, average: :macro)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3, average: :macro)
       #Nx.Tensor<
         f32
         0.6157407760620117
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(2), num_classes: 3, average: :weighted)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3, average: :weighted)
       #Nx.Tensor<
         f32
         0.5958333611488342
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.tensor(0.5), num_classes: 3, average: :micro)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.f32(0.5), num_classes: 3, average: :micro)
       #Nx.Tensor<
         f32
         0.6000000238418579
