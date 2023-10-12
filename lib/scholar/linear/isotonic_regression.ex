@@ -38,7 +38,7 @@ defmodule Scholar.Linear.IsotonicRegression do
           y_thresholds: Nx.Tensor.t(),
           increasing: Nx.Tensor.t(),
           cutoff_index: Nx.Tensor.t(),
-          preprocess: Tuple.t() | Scholar.Interpolation.Linear.t()
+          preprocess: tuple() | Scholar.Interpolation.Linear.t()
         }
 
   opts = [

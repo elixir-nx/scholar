@@ -49,11 +49,12 @@ defmodule Scholar.MixProject do
 
   defp docs do
     [
-      main: "Scholar",
+      main: "readme",
       source_url: @source_url,
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [
+        "README.md",
         "notebooks/linear_regression.livemd",
         "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd",
