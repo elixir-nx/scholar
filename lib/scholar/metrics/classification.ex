@@ -707,14 +707,16 @@ defmodule Scholar.Metrics.Classification do
       >
   """
   deftransform fbeta_score(y_true, y_pred, opts \\ []) do
-    fbeta_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @fbeta_score_schema))
+    opts = NimbleOptions.validate!(opts, @fbeta_score_schema)
+    {beta, opts} = Keyword.pop(opts, :beta)
+    fbeta_score_n(y_true, y_pred, beta, opts)
   end
 
-  defnp fbeta_score_n(y_true, y_pred, opts) do
-    check_beta(opts[:beta])
+  defnp fbeta_score_n(y_true, y_pred, beta, opts) do
+    check_beta(beta)
 
     {_precision, _recall, per_class_fscore, _support} =
-      precision_recall_fscore_support_n(y_true, y_pred, opts)
+      precision_recall_fscore_support_n(y_true, y_pred, beta, opts)
 
     per_class_fscore
   end
@@ -837,17 +839,20 @@ defmodule Scholar.Metrics.Classification do
       >}
   """
   deftransform precision_recall_fscore_support(y_true, y_pred, opts) do
+    opts = NimbleOptions.validate!(opts, @precision_recall_fscore_support_schema)
+    {beta, opts} = Keyword.pop(opts, :beta)
+
     precision_recall_fscore_support_n(
       y_true,
       y_pred,
-      NimbleOptions.validate!(opts, @precision_recall_fscore_support_schema)
+      beta,
+      opts
     )
   end
 
-  defnp precision_recall_fscore_support_n(y_true, y_pred, opts) do
+  defnp precision_recall_fscore_support_n(y_true, y_pred, beta, opts) do
     check_shape(y_pred, y_true)
     num_classes = check_num_classes(opts[:num_classes])
-    beta = opts[:beta]
     average = opts[:average]
 
     confusion_matrix = confusion_matrix(y_true, y_pred, num_classes: num_classes)
@@ -936,12 +941,7 @@ defmodule Scholar.Metrics.Classification do
       >
   """
   deftransform f1_score(y_true, y_pred, opts \\ []) do
-    opts =
-      opts
-      |> NimbleOptions.validate!(@f1_score_schema)
-      |> Keyword.put(:beta, 1)
-
-    fbeta_score_n(y_true, y_pred, opts)
+    fbeta_score_n(y_true, y_pred, 1, opts)
   end
 
   @doc """
