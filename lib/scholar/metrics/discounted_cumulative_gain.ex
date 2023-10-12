@@ -10,7 +10,6 @@ defmodule Scholar.Metrics.DiscountedCumulativeGain do
   Computes the DCG based on true relevance scores (`y_true`) and their respective predicted scores (`y_score`).
   """
   def compute(y_true, y_score, k \\ nil) do
-    # Ensure tensors are of the same shape
     if Nx.shape(y_true) != Nx.shape(y_score) do
       raise ArgumentError, "y_true and y_score tensors must have the same shape"
     end
@@ -23,31 +22,18 @@ defmodule Scholar.Metrics.DiscountedCumulativeGain do
     truncated_y_true = truncate_at_k(sorted_y_true, k)
     dcg_value(truncated_y_true)
   end
+
   defp handle_ties(y_true, y_score) do
-    # Zip y_true and y_score together to work with pairs and convert to lists
-    zipped = y_true |> Nx.to_list() |> Enum.zip(Nx.to_list(y_score))
+    sorted_y_true = Nx.sort(y_true, axis: 0, direction: :desc)
+    sorted_y_score = Nx.sort(y_score, axis: 0, direction: :desc)
 
-    # Group items by their predicted scores and adjust groups if they contain ties
-    adjusted =
-      zipped
-      |> Enum.group_by(&elem(&1, 1))
-      |> Enum.flat_map(&adjust_group/1)
+    diff = Nx.diff(sorted_y_score)
+    selector = Nx.pad(diff, 1, [{1, 0, 0}])
+    adjusted_y_score = Nx.select(selector, sorted_y_score, 0)
 
-    # Convert the lists back to tensors
-    {
-      Nx.tensor(Enum.map(adjusted, &elem(&1, 0))),
-      Nx.tensor(Enum.map(adjusted, &elem(&1, 1)))
-    }
-  end
+    adjusted_y_true = Nx.select(selector, sorted_y_true, 0)
 
-  # If a group has more than one element (i.e., there are ties), sort it by true_val
-  # and assign all elements the average rank. Otherwise, return the group unmodified.
-  defp adjust_group({_score, [single]}), do: [single]
-
-  defp adjust_group({score, group}) when length(group) > 1 do
-    group
-    |> Enum.sort_by(&elem(&1, 0), &>=/2)
-    |> Enum.map(&{elem(&1, 0), score})
+    {adjusted_y_true, adjusted_y_score}
   end
 
   defp dcg_value(y_true) do
