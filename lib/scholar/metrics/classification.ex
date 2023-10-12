@@ -69,6 +69,7 @@ defmodule Scholar.Metrics.Classification do
         ],
         beta: [
           type: {:custom, Scholar.Options, :beta, []},
+          required: true,
           doc: """
           Determines the weight of recall in the combined score.
           For values of `beta` > 1 it gives more weight to recall, while `beta` < 1 favors precision.
@@ -713,8 +714,6 @@ defmodule Scholar.Metrics.Classification do
   end
 
   defnp fbeta_score_n(y_true, y_pred, beta, opts) do
-    check_beta(beta)
-
     {_precision, _recall, per_class_fscore, _support} =
       precision_recall_fscore_support_n(y_true, y_pred, beta, opts)
 
@@ -1356,10 +1355,6 @@ defmodule Scholar.Metrics.Classification do
 
   deftransformp check_num_classes(num_classes) do
     num_classes || raise ArgumentError, "missing option :num_classes"
-  end
-
-  deftransformp check_beta(beta) do
-    beta || raise ArgumentError, "missing option :beta"
   end
 
   defnp safe_division(nominator, denominator) do
