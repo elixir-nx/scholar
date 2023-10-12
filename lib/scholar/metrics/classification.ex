@@ -753,90 +753,34 @@ defmodule Scholar.Metrics.Classification do
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3)
-      {#Nx.Tensor<
-       f32[3]
-       [0.6666666865348816, 1.0, 0.25]
-      >,
-      #Nx.Tensor<
-       f32[3]
-       [0.6666666865348816, 0.5, 1.0]
-      >,
-      #Nx.Tensor<
-       f32[3]
-       [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
-      >,
-      #Nx.Tensor<
-       u64[3]
-       [3, 6, 1]
-      >}
+      {Nx.f32([0.6666666865348816, 1.0, 0.25]),
+       Nx.f32([0.6666666865348816, 0.5, 1.0]),
+       Nx.f32([0.6666666865348816, 0.6666666865348816, 0.4000000059604645]),
+       Nx.u64([3, 6, 1])}
       iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3, average: :macro)
-      {#Nx.Tensor<
-       f32[3]
-       [0.6666666865348816, 1.0, 0.25]
-      >,
-      #Nx.Tensor<
-       f32[3]
-       [0.6666666865348816, 0.5, 1.0]
-      >,
-      #Nx.Tensor<
-       f32
-       0.5777778029441833
-      >,
-      #Nx.Tensor<
-       f32
-       NaN
-      >}
+      {Nx.f32([0.6666666865348816, 1.0, 0.25]),
+       Nx.f32([0.6666666865348816, 0.5, 1.0]),
+       Nx.f32(0.5777778029441833),
+       Nx.Constants.nan()}
       iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3, average: :weighted)
-      {#Nx.Tensor<
-       f32[3]
-       [0.6666666865348816, 1.0, 0.25]
-      >,
-      #Nx.Tensor<
-       f32[3]
-       [0.6666666865348816, 0.5, 1.0]
-      >,
-      #Nx.Tensor<
-       f32
-       0.6399999856948853
-      >,
-      #Nx.Tensor<
-       f32
-       NaN
-      >}
+      {Nx.f32([0.6666666865348816, 1.0, 0.25]),
+       Nx.f32([0.6666666865348816, 0.5, 1.0]),
+       Nx.f32(0.6399999856948853),
+       Nx.Constants.nan()}
       iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3, average: :micro)
-      {#Nx.Tensor<
-       f32
-       0.6000000238418579
-      >,
-      #Nx.Tensor<
-       f32
-       0.6000000238418579
-      >,
-      #Nx.Tensor<
-       f32
-       0.6000000238418579
-      >,
-      #Nx.Tensor<
-       f32
-       NaN
-      >}
-      iex> Scholar.Metrics.Classification.precision_recall_fscore_support(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), beta: 2, num_classes: 2, average: :none)
-      {#Nx.Tensor<
-       f32[2]
-       [0.0, 0.0]
-      >,
-      #Nx.Tensor<
-       f32[2]
-       [0.0, 0.0]
-      >,
-      #Nx.Tensor<
-       f32[2]
-       [0.0, 0.0]
-      >,
-      #Nx.Tensor<
-       u64[2]
-       [2, 2]
-      >}
+      {Nx.f32(0.6000000238418579),
+       Nx.f32(0.6000000238418579),
+       Nx.f32(0.6000000238418579),
+       Nx.Constants.nan()}
+
+      iex> y_true = Nx.tensor([1, 0, 1, 0], type: :u32)
+      iex> y_pred = Nx.tensor([0, 1, 0, 1], type: :u32)
+      iex> opts = [beta: 2, num_classes: 2, average: :none]
+      iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, opts)
+      {Nx.f32([0.0, 0.0]),
+       Nx.f32([0.0, 0.0]),
+       Nx.f32([0.0, 0.0]),
+       Nx.u64([2, 2])}
   """
   deftransform precision_recall_fscore_support(y_true, y_pred, opts) do
     opts = NimbleOptions.validate!(opts, @precision_recall_fscore_support_schema)
@@ -941,7 +885,7 @@ defmodule Scholar.Metrics.Classification do
       >
   """
   deftransform f1_score(y_true, y_pred, opts \\ []) do
-    fbeta_score_n(y_true, y_pred, 1, opts)
+    fbeta_score_n(y_true, y_pred, 1, NimbleOptions.validate!(opts, @f1_score_schema))
   end
 
   @doc """
