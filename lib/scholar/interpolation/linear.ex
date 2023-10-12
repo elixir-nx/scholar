@@ -20,8 +20,6 @@ defmodule Scholar.Interpolation.Linear do
 
   @derive {Nx.Container, containers: [:coefficients, :x]}
   defstruct [:coefficients, :x]
-
-
   @type t :: %Scholar.Interpolation.Linear{}
 
   opts_schema = [
