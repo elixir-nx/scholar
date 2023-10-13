@@ -37,7 +37,6 @@ defmodule Scholar.Interpolation.Linear do
   ]
 
   @opts_schema NimbleOptions.new!(opts_schema)
-  
   @doc """
   Fits a linear interpolation of the given `(x, y)` points
 
