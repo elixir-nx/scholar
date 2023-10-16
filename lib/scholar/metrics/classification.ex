@@ -46,36 +46,7 @@ defmodule Scholar.Metrics.Classification do
         ]
       ]
 
-  fbeta_score_schema =
-    general_schema ++
-      [
-        average: [
-          type: {:in, [:micro, :macro, :weighted, :none]},
-          default: :none,
-          doc: """
-          This determines the type of averaging performed on the data.
-
-          * `:macro` - Calculate metrics for each label, and find their unweighted mean.
-          This does not take label imbalance into account.
-
-          * `:weighted` - Calculate metrics for each label, and find their average weighted by
-          support (the number of true instances for each label).
-
-          * `:micro` - Calculate metrics globally by counting the total true positives,
-          false negatives and false positives.
-
-          * `:none` - The F-score values for each class are returned.
-          """
-        ],
-        beta: [
-          type: {:custom, Scholar.Options, :beta, []},
-          required: true,
-          doc: """
-          Determines the weight of recall in the combined score.
-          For values of `beta` > 1 it gives more weight to recall, while `beta` < 1 favors precision.
-          """
-        ]
-      ]
+  fbeta_score_schema = f1_score_schema
 
   precision_recall_fscore_support_schema =
     general_schema ++
@@ -666,51 +637,49 @@ defmodule Scholar.Metrics.Classification do
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.u32(1), num_classes: 3)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(1), num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.u32(2), num_classes: 3)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.5555555820465088, 0.625]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.f32(0.5), num_classes: 3)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.f32(0.5), num_classes: 3)
       #Nx.Tensor<
         f32[3]
         [0.6666666865348816, 0.8333333134651184, 0.29411765933036804]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.u32(2), num_classes: 3, average: :macro)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3, average: :macro)
       #Nx.Tensor<
         f32
         0.6157407760620117
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.u32(2), num_classes: 3, average: :weighted)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3, average: :weighted)
       #Nx.Tensor<
         f32
         0.5958333611488342
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, beta: Nx.f32(0.5), num_classes: 3, average: :micro)
+      iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.f32(0.5), num_classes: 3, average: :micro)
       #Nx.Tensor<
         f32
         0.6000000238418579
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), beta: Nx.tensor(0.5), num_classes: 2, average: :none)
+      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), Nx.tensor(0.5), num_classes: 2, average: :none)
       #Nx.Tensor<
         f32[2]
         [0.0, 0.0]
       >
-      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), beta: 0.5, num_classes: 2, average: :none)
+      iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), 0.5, num_classes: 2, average: :none)
       #Nx.Tensor<
         f32[2]
         [0.0, 0.0]
       >
   """
-  deftransform fbeta_score(y_true, y_pred, opts \\ []) do
-    opts = NimbleOptions.validate!(opts, @fbeta_score_schema)
-    {beta, opts} = Keyword.pop(opts, :beta)
-    fbeta_score_n(y_true, y_pred, beta, opts)
+  deftransform fbeta_score(y_true, y_pred, beta, opts \\ []) do
+    fbeta_score_n(y_true, y_pred, beta, NimbleOptions.validate!(opts, @fbeta_score_schema))
   end
 
   defnp fbeta_score_n(y_true, y_pred, beta, opts) do
