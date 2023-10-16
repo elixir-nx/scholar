@@ -102,7 +102,7 @@ defmodule Scholar.Options do
   end
 
   def beta(beta) do
-    if (is_number(beta) and beta >= 0) or (Nx.is_tensor(beta) and Nx.size(beta) == 1) do
+    if (is_number(beta) and beta >= 0) or (Nx.is_tensor(beta) and Nx.rank(beta) == 0) do
       {:ok, beta}
     else
       {:error, "expect 'beta' to be in the range [0, inf]"}
