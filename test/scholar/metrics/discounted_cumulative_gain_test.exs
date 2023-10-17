@@ -25,9 +25,11 @@ defmodule Scholar.Metrics.DiscountedCumulativeGainTest do
       y_true = Nx.tensor([3, 2, 3])
       y_score = Nx.tensor([3.0, 2.2, 3.5, 0.5])
 
-      assert_raise ArgumentError, "y_true and y_score tensors must have the same shape", fn ->
-        DiscountedCumulativeGain.compute(y_true, y_score)
-      end
+      assert_raise ArgumentError,
+                   "expected tensor to have shape {3}, got tensor with shape {4}",
+                   fn ->
+                     DiscountedCumulativeGain.compute(y_true, y_score)
+                   end
     end
 
     test "computes DCG for top-k values" do
