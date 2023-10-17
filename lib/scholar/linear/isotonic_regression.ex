@@ -204,7 +204,7 @@ defmodule Scholar.Linear.IsotonicRegression do
       iex> Scholar.Linear.IsotonicRegression.predict(model, to_predict)
       #Nx.Tensor<
         f32[10]
-        [1.0, 1.6666667461395264, 2.3333334922790527, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+        [1.0, 1.6666667461395264, 2.3333332538604736, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
       >
   """
   defn predict(model, x) do
@@ -259,7 +259,7 @@ defmodule Scholar.Linear.IsotonicRegression do
             ]
           ),
           x: Nx.tensor(
-            [1.0, 4.0, 7.0, 9.0, 10.0]
+            [1.0, 4.0, 7.0, 9.0, 10.0, 11.0]
           )
         }
       }
