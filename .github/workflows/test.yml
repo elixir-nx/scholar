@@ -16,7 +16,6 @@ jobs:
             lint: true
           - elixir: "1.14.5"
             otp: "25.3"
-            lint: true
     steps:
       - uses: actions/checkout@v2
 
