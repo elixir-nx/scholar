@@ -629,6 +629,10 @@ defmodule Scholar.Metrics.Classification do
   If all examples are true negatives, then the result is 0 to
   avoid zero division.
 
+  #{~S'''
+  $$F_\beta = (1 + \beta^2) \cdot \frac{\mathrm{precision} \cdot \mathrm{recall}}{(\beta^2 \cdot \mathrm{precision}) + \mathrm{recall}}$$
+  '''}
+
   ## Options
 
   #{NimbleOptions.docs(@fbeta_score_schema)}
