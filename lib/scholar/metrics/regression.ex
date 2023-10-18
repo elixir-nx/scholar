@@ -11,7 +11,6 @@ defmodule Scholar.Metrics.Regression do
   any supported `Nx` compiler.
   """
 
-  import Nx, only: [is_tensor: 1]
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
   import Scholar.Metrics.Distance
@@ -27,24 +26,7 @@ defmodule Scholar.Metrics.Regression do
     ]
   ]
 
-  mean_tweedie_deviance_schema = [
-    check_tensors: [
-      type: :boolean,
-      default: false,
-      doc: """
-      Flag indicating if tensor inputs should be checked to conform with the
-      necessary properties for the given power value.
-      """
-    ]
-  ]
-
-  mean_poisson_deviance_schema = mean_tweedie_deviance_schema
-  mean_gamma_deviance_schema = mean_tweedie_deviance_schema
-
   @r2_schema NimbleOptions.new!(r2_schema)
-  @mean_tweedie_deviance_schema NimbleOptions.new!(mean_tweedie_deviance_schema)
-  @mean_poisson_deviance_schema NimbleOptions.new!(mean_poisson_deviance_schema)
-  @mean_gamma_deviance_schema NimbleOptions.new!(mean_gamma_deviance_schema)
 
   # Standard Metrics
 
@@ -165,10 +147,6 @@ defmodule Scholar.Metrics.Regression do
   \end{cases}$$
   '''}
 
-  ## Options
-
-  #{NimbleOptions.docs(@mean_tweedie_deviance_schema)}
-
   ## Examples
 
       iex> y_true = Nx.tensor([1, 1, 1, 1, 1, 2, 2, 1, 3, 1], type: :u32)
@@ -179,11 +157,33 @@ defmodule Scholar.Metrics.Regression do
         0.18411168456077576
       >
   """
-  deftransform mean_tweedie_deviance(y_true, y_pred, power, opts \\ []) do
-    opts = NimbleOptions.validate!(opts, @mean_tweedie_deviance_schema)
+  deftransform mean_tweedie_deviance(y_true, y_pred, power) do
+    mean_tweedie_deviance_n(y_true, y_pred, power)
+  end
 
-    if opts[:check_tensors] do
-      check_tweedie_deviance_power(y_true, y_pred, power)
+  @doc """
+  Similar to `mean_tweedie_deviance/3` but raises `RuntimeError` if the
+  inputs cannot be used with the given power argument.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([1, 1, 1, 1, 1, 2, 2, 1, 3, 1], type: :u32)
+      iex> y_pred = Nx.tensor([2, 2, 1, 1, 2, 2, 2, 1, 3, 1], type: :u32)
+      iex> Scholar.Metrics.Regression.mean_tweedie_deviance!(y_true, y_pred, 1)
+      #Nx.Tensor<
+        f32
+        0.18411168456077576
+      >
+  """
+  def mean_tweedie_deviance!(y_true, y_pred, power) do
+    message = "mean Tweedie deviance with power=#{power} can only be used on "
+
+    case check_tweedie_deviance_power(y_true, y_pred, power) |> Nx.to_number() do
+      1 -> :ok
+      2 -> raise message <> "strictly positive y_pred"
+      4 -> raise message <> "non-negative y_true and strictly positive y_pred"
+      5 -> raise message <> "strictly positive y_true and strictly positive y_pred"
+      100 -> raise "something went wrong, branch should never appear"
     end
 
     mean_tweedie_deviance_n(y_true, y_pred, power)
@@ -227,74 +227,40 @@ defmodule Scholar.Metrics.Regression do
     Nx.mean(deviance)
   end
 
-  defp check_tweedie_deviance_power(y_true, y_pred, power) when is_number(power) do
-    message = "Mean Tweedie deviance with power=#{power} can only be used on "
-
+  defnp check_tweedie_deviance_power(y_true, y_pred, power) do
     cond do
       power < 0 ->
-        if nx_to_bool(Nx.greater(y_pred, 0)) do
-          :ok
+        if Nx.all(y_pred > 0) do
+          Nx.u8(1)
         else
-          raise message <> "strictly positive y_pred."
+          Nx.u8(2)
         end
 
       power == 0 ->
-        :ok
+        Nx.u8(1)
 
       power >= 1 and power < 2 ->
-        if nx_to_bool(Nx.greater_equal(y_true, 0)) and nx_to_bool(Nx.greater(y_pred, 0)) do
-          :ok
+        if Nx.all(y_true >= 0) and Nx.all(y_pred > 0) do
+          Nx.u8(1)
         else
-          raise message <> "non-negative y_true and strictly positive y_pred."
+          Nx.u8(4)
         end
 
       power >= 2 ->
-        if nx_to_bool(Nx.greater(y_true, 0)) and nx_to_bool(Nx.greater(y_pred, 0)) do
-          :ok
+        if Nx.all(y_true > 0) and Nx.all(y_pred > 0) do
+          Nx.u8(1)
         else
-          raise message <> "strictly positive y_true and strictly positive y_pred."
+          Nx.u8(5)
         end
 
       true ->
-        raise "Something went wrong, branch should never appear."
-    end
-  end
-
-  defp check_tweedie_deviance_power(y_true, y_pred, power) when is_tensor(power) do
-    check_tweedie_deviance_power(y_true, y_pred, Nx.to_number(power))
-  end
-
-  defp check_tweedie_deviance_power(y_true, y_pred, :neg_infinity) do
-    # Same math function check
-    check_tweedie_deviance_power(y_true, y_pred, -1)
-  end
-
-  defp check_tweedie_deviance_power(y_true, y_pred, :infinity) do
-    # Same math function check
-    check_tweedie_deviance_power(y_true, y_pred, 2)
-  end
-
-  defp check_tweedie_deviance_power(_y_true, _y_pred, :nan) do
-    raise "NaN is not supported."
-  end
-
-  defp nx_to_bool(tensor) when is_tensor(tensor) do
-    tensor
-    |> Nx.all()
-    |> Nx.to_number()
-    |> case do
-      0 -> false
-      1 -> true
+        Nx.u8(100)
     end
   end
 
   @doc """
   Calculates the mean Poisson deviance of predictions
   with respect to targets.
-
-  ## Options
-
-  #{NimbleOptions.docs(@mean_poisson_deviance_schema)}
 
   ## Examples
 
@@ -306,17 +272,13 @@ defmodule Scholar.Metrics.Regression do
         0.18411168456077576
       >
   """
-  deftransform mean_poisson_deviance(y_true, y_pred, opts \\ []) do
-    mean_tweedie_deviance(y_true, y_pred, 1, opts)
+  defn mean_poisson_deviance(y_true, y_pred) do
+    mean_tweedie_deviance_n(y_true, y_pred, 1)
   end
 
   @doc """
   Calculates the mean Gamma deviance of predictions
   with respect to targets.
-
-  ## Options
-
-  #{NimbleOptions.docs(@mean_gamma_deviance_schema)}
 
   ## Examples
 
@@ -328,8 +290,8 @@ defmodule Scholar.Metrics.Regression do
         0.115888312458992
       >
   """
-  deftransform mean_gamma_deviance(y_true, y_pred, opts \\ []) do
-    mean_tweedie_deviance(y_true, y_pred, 2, opts)
+  defn mean_gamma_deviance(y_true, y_pred) do
+    mean_tweedie_deviance_n(y_true, y_pred, 2)
   end
 
   @doc """
