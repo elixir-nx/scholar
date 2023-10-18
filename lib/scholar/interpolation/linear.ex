@@ -20,6 +20,7 @@ defmodule Scholar.Interpolation.Linear do
 
   @derive {Nx.Container, containers: [:coefficients, :x]}
   defstruct [:coefficients, :x]
+
   @type t :: %Scholar.Interpolation.Linear{}
 
   opts_schema = [
@@ -36,7 +37,6 @@ defmodule Scholar.Interpolation.Linear do
   ]
 
   @opts_schema NimbleOptions.new!(opts_schema)
-
   @doc """
   Fits a linear interpolation of the given `(x, y)` points
 
