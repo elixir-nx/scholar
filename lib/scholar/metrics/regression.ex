@@ -157,7 +157,7 @@ defmodule Scholar.Metrics.Regression do
         0.18411168456077576
       >
   """
-  deftransform mean_tweedie_deviance(y_true, y_pred, power) do
+  defn mean_tweedie_deviance(y_true, y_pred, power) do
     mean_tweedie_deviance_n(y_true, y_pred, power)
   end
 
