@@ -315,10 +315,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
       >
   """
   defn predict(%__MODULE__{cluster_centers: cluster_centers} = _model, x) do
-    {num_clusters, num_features} = Nx.shape(cluster_centers)
-    {num_samples, _} = Nx.shape(x)
-    broadcast_shape = {num_samples, num_clusters, num_features}
-
     dist = Scholar.Metrics.Distance.pairwise_euclidean(x, cluster_centers)
 
     Nx.select(Nx.is_nan(dist), Nx.Constants.infinity(Nx.type(dist)), dist)
