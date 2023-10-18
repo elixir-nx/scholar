@@ -127,7 +127,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
     iterations = opts[:iterations]
     damping_factor = opts[:damping_factor]
     self_preference = opts[:self_preference]
-    # data = to_float(data)
     num_samples = Nx.axis_size(data, 0)
 
     {initial_a, initial_r, s, affinity_matrix} =
