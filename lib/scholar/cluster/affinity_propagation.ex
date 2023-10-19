@@ -189,7 +189,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
               Nx.u8(1)
             else
               stop
-            end
           end
         end
 
