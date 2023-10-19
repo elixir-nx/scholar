@@ -180,13 +180,16 @@ defmodule Scholar.Cluster.AffinityPropagation do
         e = Nx.put_slice(e, [0, Nx.remainder(i, converge_after)], curr_e_slice)
         k = Nx.sum(curr_e, axes: [0])
 
-        stop = if i >= converge_after do
-          se = Nx.sum(e, axes: [1])
-          unconverged = Nx.sum((se == 0) + (se == converge_after)) != num_samples
-          if (not unconverged and k > 0) or i == iterations do
-            Nx.u8(1)
-          else
-            stop
+        stop =
+          if i >= converge_after do
+            se = Nx.sum(e, axes: [1])
+            unconverged = Nx.sum((se == 0) + (se == converge_after)) != num_samples
+
+            if (not unconverged and k > 0) or i == iterations do
+              Nx.u8(1)
+            else
+              stop
+            end
           end
         end
 
