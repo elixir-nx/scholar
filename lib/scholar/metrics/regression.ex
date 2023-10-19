@@ -165,6 +165,8 @@ defmodule Scholar.Metrics.Regression do
   Similar to `mean_tweedie_deviance/3` but raises `RuntimeError` if the
   inputs cannot be used with the given power argument.
 
+  Note: This function cannot be used in `defn`.
+
   ## Examples
 
       iex> y_true = Nx.tensor([1, 1, 1, 1, 1, 2, 2, 1, 3, 1], type: :u32)
