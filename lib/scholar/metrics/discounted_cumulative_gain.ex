@@ -12,8 +12,7 @@ defmodule Scholar.Metrics.DiscountedCumulativeGain do
 
   opts = [
     k: [
-      default: nil,
-      type: {:custom, Scholar.Options, :positive_number_or_nil, []},
+      type: {:custom, Scholar.Options, :positive_number, []},
       doc: "Truncation parameter to consider only the top-k elements."
     ]
   ]

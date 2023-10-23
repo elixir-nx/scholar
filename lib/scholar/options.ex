@@ -100,7 +100,4 @@ defmodule Scholar.Options do
     {:error,
      "expected metric to be a :cosine or tuple {:minkowski, p} where p is a positive number or :infinity, got: #{inspect(metric)}"}
   end
-
-  def positive_number_or_nil(nil), do: {:ok, nil}
-  def positive_number_or_nil(k), do: positive_number(k)
 end
