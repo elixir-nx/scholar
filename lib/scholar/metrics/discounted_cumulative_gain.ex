@@ -50,14 +50,14 @@ defmodule Scholar.Metrics.DiscountedCumulativeGain do
   end
 
   defnp handle_ties(y_true, y_score) do
-    sorted_y_true = Nx.sort(y_true, axis: 0, direction: :desc)
-    sorted_y_score = Nx.sort(y_score, axis: 0, direction: :desc)
+    sorted_indices = Nx.argsort(y_score, axis: 0, direction: :desc)
 
-    diff = Nx.diff(sorted_y_score)
-    selector = Nx.pad(diff, 1, [{1, 0, 0}])
-    adjusted_y_score = Nx.select(selector, sorted_y_score, 0)
+    sorted_y_true = Nx.take(y_true, sorted_indices)
+    sorted_y_score = Nx.take(y_score, sorted_indices)
 
-    adjusted_y_true = Nx.select(selector, sorted_y_true, 0)
+    tie_sorted_indices = Nx.argsort(sorted_y_true, axis: 0, direction: :desc)
+    adjusted_y_true = Nx.take(sorted_y_true, tie_sorted_indices)
+    adjusted_y_score = Nx.take(sorted_y_score, tie_sorted_indices)
 
     {adjusted_y_true, adjusted_y_score}
   end

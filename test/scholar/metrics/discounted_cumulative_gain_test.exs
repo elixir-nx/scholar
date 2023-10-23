@@ -9,7 +9,8 @@ defmodule Scholar.Metrics.DiscountedCumulativeGainTest do
 
       result = DiscountedCumulativeGain.compute(y_true, y_score)
 
-      assert %Nx.Tensor{data: data} = Nx.broadcast(result, {1})
+      x = Nx.tensor([7.140995025634766])
+      assert x == Nx.broadcast(result, {1})
     end
 
     test "computes DCG with ties" do
@@ -18,7 +19,8 @@ defmodule Scholar.Metrics.DiscountedCumulativeGainTest do
 
       result = DiscountedCumulativeGain.compute(y_true, y_score)
 
-      assert %Nx.Tensor{data: data} = Nx.broadcast(result, {1})
+      x = Nx.tensor([6.3927892607143715])
+      assert x == Nx.broadcast(result, {1})
     end
 
     test "raises error when shapes mismatch" do
@@ -36,9 +38,10 @@ defmodule Scholar.Metrics.DiscountedCumulativeGainTest do
       y_true = Nx.tensor([3, 2, 3, 0, 1, 2])
       y_score = Nx.tensor([3.0, 2.2, 3.5, 0.5, 1.0, 2.1])
 
-      result = DiscountedCumulativeGain.compute(y_true, y_score, 3)
+      result = DiscountedCumulativeGain.compute(y_true, y_score, k: 3)
 
-      assert %Nx.Tensor{data: data} = Nx.broadcast(result, {1})
+      x = Nx.tensor([5.892789363861084])
+      assert x == Nx.broadcast(result, {1})
     end
   end
 end
