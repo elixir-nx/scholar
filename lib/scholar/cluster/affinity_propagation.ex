@@ -13,7 +13,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
            containers: [
              :labels,
              :cluster_centers_indices,
-             :affinity_matrix,
              :cluster_centers,
              :num_clusters,
              :iterations
@@ -21,7 +20,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
   defstruct [
     :labels,
     :cluster_centers_indices,
-    :affinity_matrix,
     :cluster_centers,
     :num_clusters,
     :iterations
@@ -87,8 +85,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
   The function returns a struct with the following parameters:
 
-    * `:affinity_matrix` - Affinity matrix. It is a negated squared euclidean distance of each pair of points.
-
     * `:clusters_centers` - Cluster centers from the initial data.
 
     * `:cluster_centers_indices` - Indices of cluster centers.
@@ -103,13 +99,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
       %Scholar.Cluster.AffinityPropagation{
         labels: Nx.tensor([0, 3, 3, 3]),
         cluster_centers_indices: Nx.tensor([0, -1, -1, 3]),
-        affinity_matrix: Nx.tensor(
-          [
-            [-0.0, -6162.0, -5358.0, -5499.0],
-            [-6162.0, -0.0, -1030.0, -913.0],
-            [-5358.0, -1030.0, -0.0, -31.0],
-            [-5499.0, -913.0, -31.0, -0.0]
-          ]),
         cluster_centers: Nx.tensor(
           [
             [12.0, 5.0, 78.0, 2.0],
@@ -136,8 +125,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
     converge_after = opts[:converge_after]
     num_samples = Nx.axis_size(data, 0)
 
-    {initial_a, initial_r, s, affinity_matrix} =
-      initialize_matrices(data, self_preference: self_preference)
+    {initial_a, initial_r, s} = initialize_matrices(data, self_preference: self_preference)
 
     {n, _} = Nx.shape(initial_a)
     {normal, _new_key} = Nx.Random.normal(key, 0, 1, shape: {n, n}, type: Nx.type(s))
@@ -236,7 +224,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
       end
 
     %__MODULE__{
-      affinity_matrix: affinity_matrix,
       cluster_centers_indices: cluster_centers_indices,
       cluster_centers: cluster_centers,
       labels: labels,
@@ -259,13 +246,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
       %Scholar.Cluster.AffinityPropagation{
         labels: Nx.tensor([0, 1, 1, 1]),
         cluster_centers_indices: Nx.tensor([0, 3]),
-        affinity_matrix: Nx.tensor(
-          [
-            [-0.0, -6162.0, -5358.0, -5499.0],
-            [-6162.0, -0.0, -1030.0, -913.0],
-            [-5358.0, -1030.0, -0.0, -31.0],
-            [-5499.0, -913.0, -31.0, -0.0]
-          ]),
         cluster_centers: Nx.tensor(
           [
             [12.0, 5.0, 78.0, 2.0],
@@ -331,17 +311,16 @@ defmodule Scholar.Cluster.AffinityPropagation do
     {n, _} = Nx.shape(data)
     self_preference = opts[:self_preference]
 
-    {similarity_matrix, affinity_matrix} =
-      initialize_similarities(data, self_preference: self_preference)
+    similarity_matrix = initialize_similarity(data, self_preference: self_preference)
 
     zero = Nx.tensor(0, type: Nx.type(similarity_matrix))
     availability_matrix = Nx.broadcast(zero, {n, n})
     responsibility_matrix = Nx.broadcast(zero, {n, n})
 
-    {availability_matrix, responsibility_matrix, similarity_matrix, affinity_matrix}
+    {availability_matrix, responsibility_matrix, similarity_matrix}
   end
 
-  defnp initialize_similarities(data, opts \\ []) do
+  defnp initialize_similarity(data, opts \\ []) do
     n = Nx.axis_size(data, 0)
     dist = -Scholar.Metrics.Distance.pairwise_squared_euclidean(data)
 
@@ -351,7 +330,6 @@ defmodule Scholar.Cluster.AffinityPropagation do
         self_preference -> Nx.broadcast(self_preference, {n})
       end
 
-    s_modified = dist |> Nx.put_diagonal(fill_in)
-    {s_modified, dist}
+    Nx.put_diagonal(dist, fill_in)
   end
 end
