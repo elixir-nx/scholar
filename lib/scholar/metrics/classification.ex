@@ -161,6 +161,25 @@ defmodule Scholar.Metrics.Classification do
     ]
   ]
 
+  log_loss_schema =
+    general_schema ++ [
+      normalize: [
+        type: :boolean,
+        default: true,
+        doc: """
+        If `true`, return the mean loss over the samples.
+        Otherwise, return the sum of losses over the samples.
+        """
+      ],
+      sample_weights: [
+        type: {:custom, Scholar.Options, :weights, []},
+        default: 1.0,
+        doc: """
+        Sample weights of the observations.
+        """
+      ]
+    ]
+
   top_k_accuracy_score_schema =
     general_schema ++
       [
@@ -203,6 +222,7 @@ defmodule Scholar.Metrics.Classification do
                                           )
   @brier_score_loss_schema NimbleOptions.new!(brier_score_loss_schema)
   @accuracy_schema NimbleOptions.new!(accuracy_schema)
+  @log_loss_schema NimbleOptions.new!(log_loss_schema)
   @top_k_accuracy_score_schema NimbleOptions.new!(top_k_accuracy_score_schema)
   @zero_one_loss_schema NimbleOptions.new!(zero_one_loss_schema)
 
@@ -1231,6 +1251,26 @@ defmodule Scholar.Metrics.Classification do
       end
 
     1 - Nx.sum(weights_matrix * cm) / Nx.sum(weights_matrix * expected)
+  end
+
+  @doc """
+  Computes the log loss, aka logistic loss or cross-entropy loss, of predictive
+  class probabilities given the true classes.
+
+  ## Options
+
+  #{NimbleOptions.docs(@log_loss_schema)}
+  """
+  deftransform log_loss(y_true, y_prob, opts \\ []) do
+    log_loss_n(
+      y_true,
+      y_prob,
+      NimbleOptions.validate!(opts, @log_loss_schema)
+    )
+  end
+
+  defnp log_loss_n(y_true, y_prob, opts) do
+    y_true
   end
 
   @doc """
