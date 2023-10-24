@@ -1271,7 +1271,21 @@ defmodule Scholar.Metrics.Classification do
   end
 
   defnp log_loss_n(y_true, y_prob, opts) do
+    assert_rank!(y_true, 1)
+    assert_rank!(y_prob, 2)
+    if Nx.axis_size(y_true, 0) != Nx.axis_size(y_prob, 0) do
+      raise ArgumentError, "y_true and y_prob must have the same size along axis 0"
+    end
     num_classes = opts[:num_classes]
+    if Nx.axis_size(y_prob, 1) != num_classes do
+      raise ArgumentError, "y_prob must have a size of num_classes along axis 1"
+    end
+    weights = validate_weights(
+      opts[:sample_weights],
+      Nx.axis_size(y_true, 0),
+      type: to_float_type(y_prob)
+    )
+
     y_true_onehot =
       ordinal_encode(y_true, num_classes: num_classes)
       |> one_hot_encode(num_classes: num_classes)
@@ -1282,7 +1296,12 @@ defmodule Scholar.Metrics.Classification do
       |> Nx.log()
       |> Nx.negate()
 
-    Nx.mean(sample_loss)
+    if opts[:normalize] do
+      Nx.weighted_mean(sample_loss, weights)
+    else
+      Nx.multiply(sample_loss, weights)
+      |> Nx.sum()
+    end
   end
 
   @doc """
