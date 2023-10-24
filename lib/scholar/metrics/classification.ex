@@ -13,6 +13,7 @@ defmodule Scholar.Metrics.Classification do
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
+  import Scholar.Preprocessing
   alias Scholar.Integrate
 
   general_schema = [
@@ -1270,7 +1271,18 @@ defmodule Scholar.Metrics.Classification do
   end
 
   defnp log_loss_n(y_true, y_prob, opts) do
-    y_true
+    num_classes = opts[:num_classes]
+    y_true_onehot =
+      ordinal_encode(y_true, num_classes: num_classes)
+      |> one_hot_encode(num_classes: num_classes)
+    y_prob = Nx.clip(y_prob, 0, 1)
+    sample_loss =
+      Nx.multiply(y_true_onehot, y_prob)
+      |> Nx.sum(axes: [-1])
+      |> Nx.log()
+      |> Nx.negate()
+
+    Nx.mean(sample_loss)
   end
 
   @doc """
