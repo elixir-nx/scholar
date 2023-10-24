@@ -1,6 +1,7 @@
 defmodule Scholar.Metrics.DiscountedCumulativeGain do
   @moduledoc """
   Discounted Cumulative Gain (DCG) is a measure of ranking quality.
+
   It is based on the assumption that highly relevant documents appearing lower
   in a search result list should be penalized as the graded relevance value is
   reduced logarithmically proportional to the position of the result.
