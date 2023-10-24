@@ -40,14 +40,16 @@ defmodule Scholar.Cluster.AffinityPropagation do
       """
     ],
     preference: [
-      type: :float,
+      type: {:or, [:float, :atom]},
+      default: :reduce_min,
       doc: """
-      Preferences for each point - points with larger values of preferences
-      are more likely to be chosen as exemplars. The number of clusters is
-      influenced by this option. If the preferences are not passed as arguments,
-      they will be set to the median of the input similarities (resulting in a
-      moderate number of clusters). For a smaller amount of clusters, this can
-      be set to the minimum value of the similarities.
+      How to compute the preferences for each point - points with larger values
+      of preferences are more likely to be chosen as exemplars. The number of clusters is
+      influenced by this option.
+
+      The preferences is either an atom, each is a `Nx` reduction function to
+      apply on the input similarities (such as `:reduce_min`, `:median`, `:mean`,
+      etc) or a float.
       """
     ],
     key: [
@@ -233,14 +235,15 @@ defmodule Scholar.Cluster.AffinityPropagation do
   defnp initialize_similarity(data, opts \\ []) do
     n = Nx.axis_size(data, 0)
     dist = -Scholar.Metrics.Distance.pairwise_squared_euclidean(data)
+    preference = initialize_preference(dist, opts[:preference])
+    Nx.put_diagonal(dist, Nx.broadcast(preference, {n}))
+  end
 
-    fill_in =
-      case opts[:preference] do
-        nil -> Nx.broadcast(Nx.median(dist), {n})
-        preference -> Nx.broadcast(preference, {n})
-      end
-
-    Nx.put_diagonal(dist, fill_in)
+  deftransformp initialize_preference(dist, preference) do
+    cond do
+      is_atom(preference) -> apply(Nx, preference, [dist])
+      is_float(preference) -> preference
+    end
   end
 
   @doc """
