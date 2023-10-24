@@ -1255,12 +1255,42 @@ defmodule Scholar.Metrics.Classification do
   end
 
   @doc """
-  Computes the log loss, aka logistic loss or cross-entropy loss, of predictive
-  class probabilities given the true classes.
+  Computes the log loss, aka logistic loss or cross-entropy loss.
+
+  The log-loss is a measure of how well a forecaster performs, with smaller
+  values being better. For each sample, a forecaster outputs a probability for
+  each class, from which the log loss is computed by averaging the negative log
+  of the probability forecasted for the true class over a number of samples.
+
+  `y_true` should contain `num_classes` unique values, and the sum of `y_pred`
+  along axis 1 should be 1 to respect the law of total probability.
 
   ## Options
 
   #{NimbleOptions.docs(@log_loss_schema)}
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 0, 1, 1])
+      iex> y_pred = Nx.tensor([[0.9, 0.1], [0.8, 0.2], [0.3, 0.7], [0.01, 0.99]])
+      iex> Scholar.Metrics.Classification.log_loss(y_true, y_pred, num_classes: 2)
+      #Nx.Tensor<
+        f32
+        0.17380733788013458
+      >
+
+      iex> Scholar.Metrics.Classification.log_loss(y_true, y_pred, num_classes: 2, normalize: false)
+      #Nx.Tensor<
+        f32
+        0.6952293515205383
+      >
+
+      iex> weights = Nx.tensor([0.7, 2.3, 1.3, 0.34])
+      iex(361)> Scholar.Metrics.Classification.log_loss(y_true, y_pred, num_classes: 2, sample_weights: weights)
+      #Nx.Tensor<
+        f32
+        0.22717177867889404
+      >
   """
   deftransform log_loss(y_true, y_prob, opts \\ []) do
     log_loss_n(
