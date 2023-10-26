@@ -10,6 +10,8 @@ defmodule Scholar.Interpolation.CubicSpline do
   could appear if a single n-th degree polynomial were to be
   fitted over all of the points.
 
+  Cubic spline interpolation is $O(N)$ where $N$ is the number of points.
+
   Reference:
 
     * [1] - [Cubic Spline Interpolation theory](https://en.wikiversity.org/wiki/Cubic_Spline_Interpolation)

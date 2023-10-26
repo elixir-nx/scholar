@@ -6,6 +6,8 @@ defmodule Scholar.Decomposition.PCA do
   of data set [1]. The sample data is decomposed using linear combination of
   vectors that lie on the directions of those components.
 
+  The time complexity is $O(NP^2 + P^3)$ where $N$ is the number of samples and $P$ is the number of features.
+  Space complexity is $O(P * (P+N))$.
   Reference:
 
   * [1] - [Principal Component Analysis](https://en.wikipedia.org/wiki/Principal_component_analysis)

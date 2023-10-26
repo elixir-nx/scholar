@@ -1,6 +1,9 @@
 defmodule Scholar.Covariance do
   @moduledoc ~S"""
   Algorithms to estimate the covariance of features given a set of points.
+
+  Time complexity of covariance estimation is $O(N * K^2)$ where $N$ is the number of samples
+  and $K$ is the number of features.
   """
   import Nx.Defn
 

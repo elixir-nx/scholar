@@ -1,6 +1,8 @@
 defmodule Scholar.Linear.PolynomialRegression do
   @moduledoc """
   Least squares polynomial regression.
+
+  Time complexity of polynomial regression is $O((K^2) * (K+N))$ where $N$ is the number of samples and $K$ is the number of features.
   """
 
   import Nx.Defn
