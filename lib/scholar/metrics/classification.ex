@@ -1279,7 +1279,6 @@ defmodule Scholar.Metrics.Classification do
         f32
         0.17380733788013458
       >
-
       iex> Scholar.Metrics.Classification.log_loss(y_true, y_prob, num_classes: 2, normalize: false)
       #Nx.Tensor<
         f32
