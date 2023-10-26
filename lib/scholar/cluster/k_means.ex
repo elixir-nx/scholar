@@ -11,6 +11,10 @@ defmodule Scholar.Cluster.KMeans do
   converges. Since some initializations are unfortunate and converge to sub-optimal results
   we need repeat the whole procedure a few times and take the best result.
 
+  Average time complexity is $O(CKNI)$, where $C$ is the number of clusters, $N$ is the number of samples,
+  $I$ is the number of iterations until convergence, and $K$ is the number of features. Space
+  complexity is $O(K*(N+C))$.
+
   Reference:
 
   * [1] - [K-Means Algorithm](https://cs.nyu.edu/~roweis/csc2515-2006/readings/lloyd57.pdf)

@@ -4,6 +4,9 @@ defmodule Scholar.Linear.IsotonicRegression do
   observations by solving a convex optimization problem. It is a form of
   regression analysis that can be used as an alternative to polynomial
   regression to fit nonlinear data.
+
+  Time complexity of isotonic regression is $O(N^2)$ where $N$ is the
+  number of points.
   """
   require Nx
   import Nx.Defn, except: [transform: 2]

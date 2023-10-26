@@ -14,6 +14,8 @@ defmodule Scholar.Interpolation.Linear do
   b = y_1 - ax_1 = y_0 - ax_0
   \end{cases}
   $$
+
+  Linear interpolation has $O(N)$ time and space complexity where $N$ is the number of points.
   """
   import Nx.Defn
   import Scholar.Shared
