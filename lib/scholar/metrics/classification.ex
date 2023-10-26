@@ -1284,7 +1284,6 @@ defmodule Scholar.Metrics.Classification do
         f32
         0.6952293515205383
       >
-
       iex> weights = Nx.tensor([0.7, 2.3, 1.3, 0.34])
       iex(361)> Scholar.Metrics.Classification.log_loss(y_true, y_prob, num_classes: 2, sample_weights: weights)
       #Nx.Tensor<
