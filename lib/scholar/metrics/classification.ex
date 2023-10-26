@@ -1263,7 +1263,7 @@ defmodule Scholar.Metrics.Classification do
   each class, from which the log loss is computed by averaging the negative log
   of the probability forecasted for the true class over a number of samples.
 
-  `y_true` should contain `num_classes` unique values, and the sum of `y_pred`
+  `y_true` should contain `num_classes` unique values, and the sum of `y_prob`
   along axis 1 should be 1 to respect the law of total probability.
 
   ## Options
@@ -1273,21 +1273,21 @@ defmodule Scholar.Metrics.Classification do
   ## Examples
 
       iex> y_true = Nx.tensor([0, 0, 1, 1])
-      iex> y_pred = Nx.tensor([[0.9, 0.1], [0.8, 0.2], [0.3, 0.7], [0.01, 0.99]])
-      iex> Scholar.Metrics.Classification.log_loss(y_true, y_pred, num_classes: 2)
+      iex> y_prob = Nx.tensor([[0.9, 0.1], [0.8, 0.2], [0.3, 0.7], [0.01, 0.99]])
+      iex> Scholar.Metrics.Classification.log_loss(y_true, y_prob, num_classes: 2)
       #Nx.Tensor<
         f32
         0.17380733788013458
       >
 
-      iex> Scholar.Metrics.Classification.log_loss(y_true, y_pred, num_classes: 2, normalize: false)
+      iex> Scholar.Metrics.Classification.log_loss(y_true, y_prob, num_classes: 2, normalize: false)
       #Nx.Tensor<
         f32
         0.6952293515205383
       >
 
       iex> weights = Nx.tensor([0.7, 2.3, 1.3, 0.34])
-      iex(361)> Scholar.Metrics.Classification.log_loss(y_true, y_pred, num_classes: 2, sample_weights: weights)
+      iex(361)> Scholar.Metrics.Classification.log_loss(y_true, y_prob, num_classes: 2, sample_weights: weights)
       #Nx.Tensor<
         f32
         0.22717177867889404
