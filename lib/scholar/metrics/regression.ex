@@ -455,6 +455,46 @@ defmodule Scholar.Metrics.Regression do
     end
   end
 
+  @doc """
+  $D^2$ regression score function, fraction of Tweedie
+  deviance explained.
+
+  Best possible score is 1.0, lower values are worse and it
+  can also be negative.
+
+  Since it uses the mean Tweedie deviance, it also includes
+  the Gaussian, Poisson, Gamma and inverse-Gaussian
+  distribution families as special cases.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([1, 1, 1, 1, 1, 2, 2, 1, 3, 1], type: :u32)
+      iex> y_pred = Nx.tensor([2, 2, 1, 1, 2, 2, 2, 1, 3, 1], type: :u32)
+      iex> Scholar.Metrics.Regression.d2_tweedie_score(y_true, y_pred, 1)
+      #Nx.Tensor<
+        f32
+        0.32202935218811035
+      >
+  """
+  defn d2_tweedie_score(y_true, y_pred, power) do
+    if Nx.size(y_pred) < 2 do
+      Nx.Constants.nan()
+    else
+      d2_tweedie_score_n(y_true, y_pred, power)
+    end
+  end
+
+  defnp d2_tweedie_score_n(y_true, y_pred, power) do
+    y_true = Nx.squeeze(y_true)
+    y_pred = Nx.squeeze(y_pred)
+
+    numerator = mean_tweedie_deviance_n(y_true, y_pred, power)
+    y_avg = Nx.mean(y_true)
+    denominator = mean_tweedie_deviance_n(y_true, y_avg, power)
+
+    1 - numerator / denominator
+  end
+
   @doc ~S"""
   Calculates the maximum residual error.
 
