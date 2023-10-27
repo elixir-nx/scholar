@@ -55,4 +55,15 @@ defmodule Scholar.Metrics.RegressionTest do
       end
     end
   end
+
+  describe "d2_tweedie_score/3" do
+    test "equal R^2 when power is 0" do
+      y_true = Nx.tensor([1, 1, 1, 1, 1, 2, 2, 1, 3, 1], type: :u32)
+      y_pred = Nx.tensor([2, 2, 1, 1, 2, 2, 2, 1, 3, 1], type: :u32)
+      d2 = Regression.d2_tweedie_score(y_true, y_pred, 0)
+      r2 = Regression.r2_score(y_true, y_pred)
+
+      assert Nx.equal(d2, r2)
+    end
+  end
 end
