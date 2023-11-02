@@ -303,27 +303,32 @@ defmodule Scholar.Interpolation.CubicSpline do
     w = Nx.indexed_put(w, Nx.new_axis(0, 0), w_0)
     g = Nx.indexed_put(g, Nx.new_axis(0, 0), g_0)
 
-    {{w, g}, _} = while {{w, g}, {index = 1, i, j, k, b}}, index < n do
-      w = if index < n - 1 do
-        w_i = k[index] / (j[index] - i[index - 1] * w[index - 1])
-        Nx.indexed_put(w, Nx.new_axis(index, 0), w_i)
-      else
-        w
+    {{w, g}, _} =
+      while {{w, g}, {index = 1, i, j, k, b}}, index < n do
+        w =
+          if index < n - 1 do
+            w_i = k[index] / (j[index] - i[index - 1] * w[index - 1])
+            Nx.indexed_put(w, Nx.new_axis(index, 0), w_i)
+          else
+            w
+          end
+
+        g_i = (b[index] - i[index - 1] * g[index - 1]) / (j[index] - i[index - 1] * w[index - 1])
+        g = Nx.indexed_put(g, Nx.new_axis(index, 0), g_i)
+
+        {{w, g}, {index + 1, i, j, k, b}}
       end
 
-      g_i = (b[index] - i[index - 1] * g[index - 1]) / (j[index] - i[index - 1] * w[index - 1])
-      g = Nx.indexed_put(g, Nx.new_axis(index, 0), g_i)
-
-      {{w, g}, {index + 1, i, j, k, b}}
-    end
     p = Nx.indexed_put(p, Nx.new_axis(n - 1, 0), g[n - 1])
 
-    {p, _} = while {p, {index = n - 1, g, w}}, index > 0 do
-      p_i = g[index - 1] - w[index - 1] * p[index]
-      p = Nx.indexed_put(p, Nx.new_axis(index - 1, 0), p_i)
+    {p, _} =
+      while {p, {index = n - 1, g, w}}, index > 0 do
+        p_i = g[index - 1] - w[index - 1] * p[index]
+        p = Nx.indexed_put(p, Nx.new_axis(index - 1, 0), p_i)
 
-      {p, {index - 1, g, w}}
-    end
+        {p, {index - 1, g, w}}
+      end
+
     p
   end
 end
