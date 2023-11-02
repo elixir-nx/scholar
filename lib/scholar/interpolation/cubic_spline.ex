@@ -96,7 +96,6 @@ defmodule Scholar.Interpolation.CubicSpline do
 
     slope = dy / dx
 
-    # {a, b} =
     s =
       case {n, opts[:boundary_condition]} do
         {3, :not_a_knot} ->
@@ -110,8 +109,6 @@ defmodule Scholar.Interpolation.CubicSpline do
           b = Nx.stack([2 * slope[0], 3 * (dx[0] * slope[1] + dx[1] * slope[0]), 2 * slope[1]])
 
           tridiagonal_solve(a, b)
-          # Nx.LinAlg.solve(a, b)
-          # {a, b}
 
         {_, :not_a_knot} ->
           up_diag =
@@ -153,8 +150,6 @@ defmodule Scholar.Interpolation.CubicSpline do
             ])
 
           tridiagonal_solve(a, b)
-          # Nx.LinAlg.solve(a, b)
-          # {a, b}
 
         _ ->
           up_diag =
@@ -194,8 +189,6 @@ defmodule Scholar.Interpolation.CubicSpline do
             ])
 
           tridiagonal_solve(a, b)
-          # Nx.LinAlg.solve(a, b)
-          # {a, b}
       end
 
     t = (s[0..-2//1] + s[1..-1//1] - 2 * slope) / dx
@@ -208,7 +201,6 @@ defmodule Scholar.Interpolation.CubicSpline do
     c = Nx.stack([c_3, c_2, c_1, c_0], axis: 1)
 
     %__MODULE__{coefficients: c, x: x}
-    # %__MODULE__{coefficients: a, x: b}
   end
 
   predict_opts = [
@@ -310,16 +302,6 @@ defmodule Scholar.Interpolation.CubicSpline do
     g_0 = b[0] / j[0]
     w = Nx.indexed_put(w, Nx.new_axis(0, 0), w_0)
     g = Nx.indexed_put(g, Nx.new_axis(0, 0), g_0)
-
-
-    # for i in range(1,n-1):
-    #     w[i] = c[i]/(b[i] - a[i-1]*w[i-1])
-    # for i in range(1,n):
-    #     g[i] = (d[i] - a[i-1]*g[i-1])/(b[i] - a[i-1]*w[i-1])
-    # p[n-1] = g[n-1]
-    # for i in range(n-1,0,-1):
-    #     p[i-1] = g[i-1] - w[i-1]*p[i]
-    # return p
 
     {{w, g}, _} = while {{w, g}, {index = 1, i, j, k, b}}, index < n do
       w = if index < n - 1 do
