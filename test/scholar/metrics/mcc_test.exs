@@ -6,16 +6,13 @@ defmodule Scholar.Metrics.MCCTest do
     test "returns 1 for perfect predictions" do
       y_true = Nx.tensor([1, 0, 1, 0, 1])
       y_pred = Nx.tensor([1, 0, 1, 0, 1])
-
-      value = MCC.compute(y_true, y_pred) |> Nx.reshape({1}) |> Nx.to_list() |> hd()
-      assert value == 1.0
+      assert MCC.compute(y_true, y_pred) == Nx.tensor([1.0], type: :f32)
     end
 
     test "returns -1 for completely wrong predictions" do
       y_true = Nx.tensor([1, 0, 1, 0, 1])
       y_pred = Nx.tensor([0, 1, 0, 1, 0])
-      value = MCC.compute(y_true, y_pred) |> Nx.reshape({1}) |> Nx.to_list() |> hd()
-      assert value == -1.0
+      assert MCC.compute(y_true, y_pred) == Nx.tensor([-1.0], type: :f32)
     end
 
     test "returns 0 when all predictions are positive" do
@@ -33,9 +30,7 @@ defmodule Scholar.Metrics.MCCTest do
     test "computes MCC for generic case" do
       y_true = Nx.tensor([1, 0, 1, 0, 1])
       y_pred = Nx.tensor([1, 0, 1, 1, 1])
-      mcc_tensor = MCC.compute(y_true, y_pred)
-      mcc_value = Nx.reshape(mcc_tensor, {1}) |> Nx.to_list() |> hd()
-      assert mcc_value == 0.6123723983764648
+      assert MCC.compute(y_true, y_pred) == Nx.tensor([0.6123723983764648], type: :f32)
     end
 
     test "returns 0 when TP, TN, FP, and FN are all 0" do
