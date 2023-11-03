@@ -36,9 +36,9 @@ defmodule Scholar.Metrics.MCC do
       Nx.tensor([-1.0], type: :f32)
     else
       Nx.select(
-        Nx.equal(mcc_denominator, zero_tensor),
+        mcc_denominator == zero_tensor,
         zero_tensor,
-        Nx.divide(mcc_numerator, mcc_denominator)
+        mcc_numerator / mcc_denominator
       )
     end
   end
