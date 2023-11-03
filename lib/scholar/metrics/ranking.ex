@@ -1,36 +1,38 @@
-defmodule Scholar.Metrics.DiscountedCumulativeGain do
+defmodule Scholar.Metrics.Ranking do
   @moduledoc """
-  Discounted Cumulative Gain (DCG) is a measure of ranking quality.
+  Provides metrics and calculations related to ranking quality.
 
-  It is based on the assumption that highly relevant documents appearing lower
-  in a search result list should be penalized as the graded relevance value is
-  reduced logarithmically proportional to the position of the result.
+  Ranking metrics evaluate the quality of ordered lists of items,
+  often used in information retrieval and recommendation systems.
+
+  This module currently supports the following ranking metrics:
+    * Discounted Cumulative Gain (DCG)
   """
 
   import Nx.Defn
   import Scholar.Shared
   require Nx
 
-  opts = [
+  @dcg_opts [
     k: [
       type: {:custom, Scholar.Options, :positive_number, []},
       doc: "Truncation parameter to consider only the top-k elements."
     ]
   ]
 
-  @opts_schema NimbleOptions.new!(opts)
+  @dcg_opts_schema NimbleOptions.new!(@dcg_opts)
 
-  deftransform compute(y_true, y_score, opts \\ []) do
-    compute_n(y_true, y_score, NimbleOptions.validate!(opts, @opts_schema))
+  deftransform dcg(y_true, y_score, opts \\ []) do
+    dcg_n(y_true, y_score, NimbleOptions.validate!(opts, @dcg_opts_schema))
   end
 
   @doc """
   ## Options
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@dcg_opts_schema)}
 
   Computes the DCG based on true relevance scores (`y_true`) and their respective predicted scores (`y_score`).
   """
-  defn compute_n(y_true, y_score, opts) do
+  defn dcg_n(y_true, y_score, opts) do
     y_true_shape = Nx.shape(y_true)
     y_score_shape = Nx.shape(y_score)
 
