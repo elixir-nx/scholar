@@ -70,7 +70,6 @@ defmodule Scholar.Manifold.MDS do
 
   # initialize x randomly or pass the init x earlier
   defnp smacof(dissimilarities, x, max_iter, opts) do
-    # n = Nx.axis_size(dissimilarities, 0)
     similarities_flat = Nx.flatten(dissimilarities)
     similarities_flat_indices = lower_triangle_indices(dissimilarities)
 
@@ -86,7 +85,6 @@ defmodule Scholar.Manifold.MDS do
               similarities_flat_w, old_stress = Nx.Constants.infinity(Nx.type(dissimilarities)),
               metric, normalized_stress, eps, stop_value = 0}},
             i < max_iter and not stop_value do
-        # i < 1 and not stop_value do
         dis = Distance.pairwise_euclidean(x)
         n = Nx.axis_size(dissimilarities, 0)
 
@@ -101,7 +99,6 @@ defmodule Scholar.Manifold.MDS do
             n = Nx.axis_size(dis, 0)
 
             dis_flat_w = Nx.take(dis_flat, dis_flat_indices)
-            # dis_flat_w = Nx.flatten(remove_main_diag(dis))
 
             disparities_flat_model =
               Scholar.Linear.IsotonicRegression.fit(similarities_flat_w, dis_flat_w)
@@ -111,19 +108,12 @@ defmodule Scholar.Manifold.MDS do
             disparities_flat =
               Scholar.Linear.IsotonicRegression.predict(model, similarities_flat_w)
 
-            # similarities_flat_indices
-
-            # disparities = Nx.select(similarities_flat != 0, disparities_flat, disparities_flat)
-            # {dis_flat, similarities_flat_indices, disparities_flat}
-
             disparities =
               Nx.indexed_put(
                 dis_flat,
                 Nx.new_axis(similarities_flat_indices, -1),
                 disparities_flat
               )
-
-            # disparities = Nx.reshape(dis, {n, n})
 
             disparities = Nx.reshape(disparities, {n, n})
 
@@ -159,32 +149,31 @@ defmodule Scholar.Manifold.MDS do
     {x, stress, i}
   end
 
-  defnp mds_main_loop(dissimilarities, x, key, opts) do
+  defnp mds_main_loop(dissimilarities, x, _key, opts) do
     n_init = opts[:n_init]
 
     type = Nx.Type.merge(to_float_type(x), to_float_type(dissimilarities))
     dissimilarities = Nx.as_type(dissimilarities, type)
     x = Nx.as_type(x, type)
 
+    dissimilarities = Distance.pairwise_euclidean(dissimilarities)
+
     {{best, best_stress, best_iter}, _} =
       while {{best = x, best_stress = Nx.Constants.infinity(type),
               best_iter = 0}, {n_init, dissimilarities, x, i = 0}},
             i < n_init do
-        #           # i < 1 do
         {temp, stress, iter} = smacof(dissimilarities, x, opts[:max_iter], opts)
-        # smacof(dissimilarities, x, opts[:max_iter], opts)
 
         {best, best_stress, best_iter} =
           if stress < best_stress, do: {temp, stress, iter}, else: {best, best_stress, best_iter}
 
-        {best, best_stress, best_iter, {n_init, dissimilarities, x, i + 1}}
+        {{best, best_stress, best_iter}, {n_init, dissimilarities, x, i + 1}}
       end
 
     {best, best_stress, best_iter}
   end
 
   defnp mds_main_loop(dissimilarities, key, opts) do
-    # key = opts[:key]
     n_init = opts[:n_init]
     max_iter = opts[:max_iter]
     num_samples = Nx.axis_size(dissimilarities, 0)
@@ -204,14 +193,12 @@ defmodule Scholar.Manifold.MDS do
       while {{best = dummy, best_stress = Nx.Constants.infinity(type), best_iter = 0},
              {n_init, new_key, max_iter, dissimilarities, i = 0}},
             i < n_init do
-        #           i < 1 do
         num_samples = Nx.axis_size(dissimilarities, 0)
 
         {x, new_key} =
           Nx.Random.uniform(new_key, shape: {num_samples, opts[:num_components]}, type: type)
 
         {temp, stress, iter} = smacof(dissimilarities, x, max_iter, opts)
-        # smacof(dissimilarities, x, max_iter, opts)
 
         {best, best_stress, best_iter} =
           if stress < best_stress, do: {temp, stress, iter}, else: {best, best_stress, best_iter}
@@ -257,16 +244,24 @@ defmodule Scholar.Manifold.MDS do
   ## Examples
 
       iex> x = Nx.iota({4,5})
-      iex> Scholar.Manifold.MDS.fit(x)
-      #Nx.Tensor<
-        f32[4][2]
-        [
-          [-2197.154296875, 0.0],
-          [-1055.148681640625, 0.0],
-          [1055.148681640625, 0.0],
-          [2197.154296875, 0.0]
-        ]
-      >
+      iex> key = Nx.Random.key(42)
+      iex> Scholar.Manifold.MDS.fit(x, key: key)
+      %Scholar.Manifold.MDS{
+        embedding: Nx.tensor(
+          [
+            [0.040477119386196136, -0.4997042417526245],
+            [-0.35801631212234497, -0.09504470974206924],
+            [-0.08517580479383469, 0.35293734073638916],
+            [0.42080432176589966, 0.23617777228355408]
+          ]
+        ),
+        stress: Nx.tensor(
+          0.0016479993937537074
+        ),
+        n_iter: Nx.tensor(
+          19
+        )
+      }
   """
   deftransform fit(x) do
     opts = NimbleOptions.validate!([], @opts_schema)
@@ -288,16 +283,24 @@ defmodule Scholar.Manifold.MDS do
   ## Examples
 
       iex> x = Nx.iota({4,5})
-      iex> Scholar.Manifold.MDS.fit(x, num_components: 2)
-      #Nx.Tensor<
-        f32[4][2]
-        [
-          [-2197.154296875, 0.0],
-          [-1055.148681640625, 0.0],
-          [1055.148681640625, 0.0],
-          [2197.154296875, 0.0]
-        ]
-      >
+      iex> key = Nx.Random.key(42)
+      iex> Scholar.Manifold.MDS.fit(x, num_components: 2, key: key)
+      %Scholar.Manifold.MDS{
+        embedding: Nx.tensor(
+          [
+            [0.040477119386196136, -0.4997042417526245],
+            [-0.35801631212234497, -0.09504470974206924],
+            [-0.08517580479383469, 0.35293734073638916],
+            [0.42080432176589966, 0.23617777228355408]
+          ]
+        ),
+        stress: Nx.tensor(
+          0.0016479993937537074
+        ),
+        n_iter: Nx.tensor(
+          19
+        )
+      }
   """
   deftransform fit(x, opts) when is_list(opts) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -306,7 +309,6 @@ defmodule Scholar.Manifold.MDS do
   end
 
   defnp fit_n(x, key, opts) do
-    # mds_main_loop(x, key, opts)
     {best, best_stress, best_iter} = mds_main_loop(x, key, opts)
     %__MODULE__{embedding: best, stress: best_stress, n_iter: best_iter}
   end
@@ -325,17 +327,25 @@ defmodule Scholar.Manifold.MDS do
   ## Examples
 
       iex> x = Nx.iota({4,5})
-      iex> init = Nx.reverse(Nx.iota({4,5}))
+      iex> key = Nx.Random.key(42)
+      iex> init = Nx.reverse(Nx.iota({4,2}))
       iex> Scholar.Manifold.MDS.fit(x, init)
-      #Nx.Tensor<
-        f32[4][2]
-        [
-          [-2197.154296875, 0.0],
-          [-1055.148681640625, 0.0],
-          [1055.148681640625, 0.0],
-          [2197.154296875, 0.0]
-        ]
-      >
+      %Scholar.Manifold.MDS{
+        embedding: Nx.tensor(
+          [
+            [0.41079193353652954, 0.41079193353652954],
+            [0.1369306445121765, 0.1369306445121765],
+            [-0.1369306445121765, -0.1369306445121765],
+            [-0.41079193353652954, -0.41079193353652954]
+          ]
+        ),
+        stress: Nx.tensor(
+          0.0
+        ),
+        n_iter: Nx.tensor(
+          3
+        )
+      }
   """
   deftransform fit(x, init) do
     opts = NimbleOptions.validate!([], @opts_schema)
@@ -357,17 +367,25 @@ defmodule Scholar.Manifold.MDS do
   ## Examples
 
       iex> x = Nx.iota({4,5})
-      iex> init = Nx.reverse(Nx.iota({4,5}))
-      iex> Scholar.Manifold.MDS.fit(x, init, num_clusters: 3)
-      #Nx.Tensor<
-        f32[4][3]
-        [
-          [-2197.154296875, 0.0, 0.0],
-          [-1055.148681640625, 0.0, 0.0],
-          [1055.148681640625, 0.0, 0.0],
-          [2197.154296875, 0.0, 0.0]
-        ]
-      >
+      iex> key = Nx.Random.key(42)
+      iex> init = Nx.reverse(Nx.iota({4,3}))
+      iex> Scholar.Manifold.MDS.fit(x, init, num_components: 3, key: key)
+      %Scholar.Manifold.MDS{
+        embedding: Nx.tensor(
+          [
+            [0.3354101777076721, 0.3354101777076721, 0.3354101777076721],
+            [0.11180339753627777, 0.11180339753627777, 0.11180339753627777],
+            [-0.11180339753627777, -0.11180340498685837, -0.11180339753627777],
+            [-0.3354102075099945, -0.3354102075099945, -0.3354102075099945]
+          ]
+        ),
+        stress: Nx.tensor(
+          2.6645352591003757e-15
+        ),
+        n_iter: Nx.tensor(
+          3
+        )
+      }
   """
   deftransform fit(x, init, opts) when is_list(opts) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -379,17 +397,4 @@ defmodule Scholar.Manifold.MDS do
     {best, best_stress, best_iter} = mds_main_loop(x, init, key, opts)
     %__MODULE__{embedding: best, stress: best_stress, n_iter: best_iter}
   end
-
-  # defn remove_main_diag_indices(tensor) do
-  #   n = Nx.axis_size(tensor, 0)
-
-  #   temp =
-  #     Nx.broadcast(Nx.s64(0), {n})
-  #     |> Nx.indexed_put(Nx.new_axis(0, -1), Nx.s64(1))
-  #     |> Nx.tile([n - 1])
-
-  #   Nx.iota({n * (n - 1)}) + Nx.cumulative_sum(temp)
-  #   # indices = Nx.iota({n * (n - 1)}) + Nx.cumulative_sum(temp)
-  #   # Nx.take(Nx.flatten(tensor), indices) |> Nx.reshape({n, n - 1})
-  # end
 end

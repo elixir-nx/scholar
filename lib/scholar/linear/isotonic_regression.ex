@@ -162,18 +162,18 @@ defmodule Scholar.Linear.IsotonicRegression do
 
     {increasing, opts} = Keyword.pop(opts, :increasing)
 
-    # increasing =
-    #   case increasing do
-    #     :auto ->
-    #       check_increasing(x, y)
+    increasing =
+      case increasing do
+        :auto ->
+          check_increasing(x, y)
 
-    #     true ->
-    #       Nx.u8(1)
+        true ->
+          Nx.u8(1)
 
-    #     false ->
-    #       Nx.u8(0)
-    #   end
-    increasing = Nx.u8(1)
+        false ->
+          Nx.u8(0)
+      end
+    # increasing = Nx.u8(1)
 
     fit_n(x, y, sample_weights, increasing, opts)
   end
