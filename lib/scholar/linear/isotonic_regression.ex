@@ -173,6 +173,7 @@ defmodule Scholar.Linear.IsotonicRegression do
         false ->
           Nx.u8(0)
       end
+
     # increasing = Nx.u8(1)
 
     fit_n(x, y, sample_weights, increasing, opts)

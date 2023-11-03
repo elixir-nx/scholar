@@ -159,8 +159,8 @@ defmodule Scholar.Manifold.MDS do
     dissimilarities = Distance.pairwise_euclidean(dissimilarities)
 
     {{best, best_stress, best_iter}, _} =
-      while {{best = x, best_stress = Nx.Constants.infinity(type),
-              best_iter = 0}, {n_init, dissimilarities, x, i = 0}},
+      while {{best = x, best_stress = Nx.Constants.infinity(type), best_iter = 0},
+             {n_init, dissimilarities, x, i = 0}},
             i < n_init do
         {temp, stress, iter} = smacof(dissimilarities, x, opts[:max_iter], opts)
 
