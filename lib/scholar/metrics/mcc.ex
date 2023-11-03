@@ -30,10 +30,8 @@ defmodule Scholar.Metrics.MCC do
     zero_tensor = Nx.tensor([0.0], type: :f32)
 
     if Nx.all(
-         Nx.logical_and(
-           Nx.equal(true_positives, zero_tensor),
-           Nx.equal(true_negatives, zero_tensor)
-         )
+           true_positives == zero_tensor and
+           true_negatives ==  zero_tensor
        ) do
       Nx.tensor([-1.0], type: :f32)
     else
