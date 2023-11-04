@@ -2,8 +2,8 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
   @moduledoc """
   The K-Nearest Neighbors.
 
-  It implements both classification and regression. The time complexity is
-  $O(N^2)$ for $N$ samples.
+  It implements both classification and regression. This implements the linear
+  version of kNN and therefore it has time complexity $O(N^2)$ for $N$ samples.
   """
   import Nx.Defn
   import Scholar.Shared
