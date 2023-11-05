@@ -1448,4 +1448,42 @@ defmodule Scholar.Metrics.Classification do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_true, y_pred)
   end
+
+  @doc """
+  Matthews Correlation Coefficient (MCC) provides a measure of the quality of binary classifications.
+
+  It returns a value between -1 and 1 where 1 represents a perfect prediction, 0 represents no better
+  than random prediction, and -1 indicates total disagreement between prediction and observation.
+  """
+  defn mcc(y_true, y_pred) do
+    true_positives = binary_true_positives(y_true, y_pred)
+    true_negatives = binary_true_negatives(y_true, y_pred)
+    false_positives = binary_false_positives(y_true, y_pred)
+    false_negatives = binary_false_negatives(y_true, y_pred)
+
+    mcc_numerator = true_positives * true_negatives - false_positives * false_negatives
+
+    mcc_denominator =
+      Nx.sqrt(
+        (true_positives + false_positives) *
+          (true_positives + false_negatives) *
+          (true_negatives + false_positives) *
+          (true_negatives + false_negatives)
+      )
+
+    zero_tensor = Nx.tensor([0.0], type: :f32)
+
+    if Nx.all(
+         true_positives == zero_tensor and
+           true_negatives == zero_tensor
+       ) do
+      Nx.tensor([-1.0], type: :f32)
+    else
+      Nx.select(
+        mcc_denominator == zero_tensor,
+        zero_tensor,
+        mcc_numerator / mcc_denominator
+      )
+    end
+  end
 end
