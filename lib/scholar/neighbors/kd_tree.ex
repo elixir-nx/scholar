@@ -29,9 +29,9 @@ defmodule Scholar.Neighbors.KDTree do
 
   import Nx.Defn
 
-  @derive {Nx.Container, keep: [:levels], containers: [:indexes]}
-  @enforce_keys [:levels, :indexes]
-  defstruct [:levels, :indexes]
+  @derive {Nx.Container, keep: [:levels], containers: [:indexes, :data]}
+  @enforce_keys [:levels, :indexes, :data]
+  defstruct [:levels, :indexes, :data]
 
   @doc """
   Builds a KDTree without known min-max bounds.
@@ -48,6 +48,7 @@ defmodule Scholar.Neighbors.KDTree do
 
       iex> Scholar.Neighbors.KDTree.unbanded(Nx.iota({5, 2}), compiler: EXLA.Defn)
       %Scholar.Neighbors.KDTree{
+        data: Nx.iota({5, 2}),
         levels: 3,
         indexes: Nx.u32([3, 1, 4, 0, 2])
       }
@@ -69,7 +70,7 @@ defmodule Scholar.Neighbors.KDTree do
         Nx.argsort(tensor[[.., 0]], direction: :desc, type: :u32)
       end
 
-    %__MODULE__{levels: levels, indexes: indexes}
+    %__MODULE__{levels: levels, indexes: indexes, data: tensor}
   end
 
   defp recur([{_i, %Nx.Tensor{shape: {1}} = leaf} | rest], next, acc, tensor, level, levels, opts) do
@@ -143,11 +144,16 @@ defmodule Scholar.Neighbors.KDTree do
 
       iex> Scholar.Neighbors.KDTree.banded(Nx.iota({5, 2}), 10)
       %Scholar.Neighbors.KDTree{
+        data: Nx.iota({5, 2}),
         levels: 3,
         indexes: Nx.u32([3, 1, 4, 0, 2])
       }
   """
-  defn banded(tensor, amplitude) do
+  deftransform banded(tensor, amplitude) do
+    %__MODULE__{levels: levels(tensor), indexes: banded_n(tensor, amplitude), data: tensor}
+  end
+
+  defnp banded_n(tensor, amplitude) do
     levels = levels(tensor)
     {size, dims} = Nx.shape(tensor)
     band = amplitude + 1
@@ -162,8 +168,7 @@ defmodule Scholar.Neighbors.KDTree do
       end
 
     k = rem(level, dims)
-    indexes = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
-    %__MODULE__{levels: levels, indexes: indexes}
+    Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
   end
 
   defnp update_tags(tags, indexes, level, levels, size) do

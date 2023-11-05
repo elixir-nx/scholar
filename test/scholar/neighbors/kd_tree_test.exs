@@ -35,18 +35,24 @@ defmodule Scholar.Neighbors.KDTreeTest do
     end
 
     test "corner cases" do
-      assert Scholar.Neighbors.KDTree.unbanded(Nx.iota({1, 2}), compiler: EXLA.Defn) ==
-               %Scholar.Neighbors.KDTree{levels: 1, indexes: Nx.u32([0])}
+      assert %Scholar.Neighbors.KDTree{levels: 1, indexes: indexes} =
+               Scholar.Neighbors.KDTree.unbanded(Nx.iota({1, 2}), compiler: EXLA.Defn)
 
-      assert Scholar.Neighbors.KDTree.unbanded(Nx.iota({2, 2}), compiler: EXLA.Defn) ==
-               %Scholar.Neighbors.KDTree{levels: 2, indexes: Nx.u32([1, 0])}
+      assert indexes == Nx.u32([0])
+
+      assert %Scholar.Neighbors.KDTree{levels: 2, indexes: indexes} =
+               Scholar.Neighbors.KDTree.unbanded(Nx.iota({2, 2}), compiler: EXLA.Defn)
+
+      assert indexes == Nx.u32([1, 0])
     end
   end
 
   describe "banded" do
     test "iota" do
-      assert Scholar.Neighbors.KDTree.banded(Nx.iota({5, 2}), 10) ==
-               %Scholar.Neighbors.KDTree{levels: 3, indexes: Nx.u32([3, 1, 4, 0, 2])}
+      assert %Scholar.Neighbors.KDTree{levels: 3, indexes: indexes} =
+               Scholar.Neighbors.KDTree.banded(Nx.iota({5, 2}), 10)
+
+      assert indexes == Nx.u32([3, 1, 4, 0, 2])
     end
 
     test "float" do
