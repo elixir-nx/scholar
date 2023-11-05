@@ -23,7 +23,6 @@ defmodule Scholar.Neighbors.KDTree do
     * [GPU-friendly, Parallel, and (Almost-)In-Place Construction of Left-Balanced k-d Trees](https://arxiv.org/pdf/2211.00120.pdf).
   """
 
-  import Bitwise
   import Nx.Defn
 
   # TODO: Benchmark
@@ -65,7 +64,7 @@ defmodule Scholar.Neighbors.KDTree do
         acc = recur([{1, left}, {2, right}], [], acc, tensor, 1, levels, opts)
         Nx.from_binary(acc, :u32)
       else
-        degenerate_slice(tensor)
+        Nx.argsort(tensor[[.., 0]], direction: :desc, type: :u32)
       end
 
     %__MODULE__{levels: levels, indexes: indexes}
@@ -105,18 +104,14 @@ defmodule Scholar.Neighbors.KDTree do
   end
 
   defp root_slice(tensor, subtree_size) do
-    indexes = Nx.argsort(tensor[[.., 0]])
+    indexes = Nx.argsort(tensor[[.., 0]], type: :u32)
 
     {Nx.slice(indexes, [0], [subtree_size]), indexes[subtree_size],
      Nx.slice(indexes, [subtree_size + 1], [Nx.size(indexes) - subtree_size - 1])}
   end
 
-  defp degenerate_slice(tensor) do
-    Nx.argsort(tensor[[.., 0]], direction: :desc) |> Nx.as_type(:u32)
-  end
-
   defp recur_slice(tensor, indexes, k, subtree_size) do
-    sorted = Nx.argsort(Nx.take(tensor, indexes)[[.., k]])
+    sorted = Nx.argsort(Nx.take(tensor, indexes)[[.., k]], type: :u32)
     indexes = Nx.take(indexes, sorted)
 
     {Nx.slice(indexes, [0], [subtree_size]), indexes[subtree_size],
@@ -124,13 +119,106 @@ defmodule Scholar.Neighbors.KDTree do
   end
 
   defp unbanded_subtree_size(i, levels, size) do
+    import Bitwise
     diff = levels - unbanded_level(i) - 1
-    inner = (1 <<< diff) - 1
-    fllc_s = (i <<< diff) + inner
-    inner + min(max(0, size - fllc_s), 1 <<< diff)
+    shifted = 1 <<< diff
+    fllc_s = (i <<< diff) + shifted - 1
+    shifted - 1 + min(max(0, size - fllc_s), shifted)
   end
 
   defp unbanded_level(i) when is_integer(i), do: 31 - clz32(i + 1)
+
+  @doc """
+  BANDED
+  """
+  defn banded(tensor, amplitude) do
+    levels = levels(tensor)
+    {size, dims} = Nx.shape(tensor)
+    band = amplitude + 1
+    tags = Nx.broadcast(Nx.u32(0), {size})
+
+    {_level, tags, _tensor, _band} =
+      while {level = 0, tags, tensor, band}, level < levels - 1 do
+        k = rem(level, dims)
+        indexes = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
+        tags = update_tags(tags, indexes, level, levels, size)
+        {level + 1, tags, tensor, band}
+      end
+
+    %__MODULE__{levels: levels, indexes: tags}
+  end
+
+  defnp update_tags(tags, indexes, level, levels, size) do
+    # 1
+    # indexes = [0, 1, 2, 3, 4]
+    # tags = [0, 0, 0, 0, 0]
+    # out = [1, 1, 1, 0, 2]
+    #
+    # 2
+    # indexes = [3, 0, 1, 2, 4]
+    # tags = [1, 1, 1, 0, 2]
+    # out = [3, 1, 4, 0, 2]
+    #
+    # out = [3, 1, 4, 0, 2]
+    pos = Nx.argsort(indexes) |> print_value(label: "POS")
+
+    pivot =
+      (print_value(banded_segment_begin(tags, levels, size), label: "sb") +
+         print_value(banded_subtree_size(left_child(tags), levels, size), label: "ss"))
+      |> print_value(label: "PIVOT")
+
+    Nx.select(
+      pos < (1 <<< level) - 1,
+      tags,
+      Nx.select(
+        pos < pivot,
+        left_child(tags),
+        Nx.select(
+          pos > pivot,
+          right_child(tags),
+          tags
+        )
+      )
+    )
+    |> print_value(label: "TAGS")
+  end
+
+  defnp banded_subtree_size(i, levels, size) do
+    diff = levels - banded_level(i) - 1
+    shifted = 1 <<< diff
+    fllc_s = (i <<< diff) + shifted - 1
+    shifted - 1 + min(max(0, size - fllc_s), shifted)
+  end
+
+  # defnp banded_segment_begin(t, levels, size) do
+  #   while t, j <- 0..(size - 1) do
+  #     s = t[j]
+  #     i = (1 <<< banded_level(s)) - 1
+
+  #     {_, _, acc} =
+  #       while {i, s, acc = i}, i + 1 <= s do
+  #         {i + 1, s, acc + banded_subtree_size(i, levels, size)}
+  #       end
+
+  #     Nx.put_slice(t, [j], Nx.stack(acc))
+  #   end
+  # end
+
+  # defnp banded_segment_begin(i, levels, size) do
+  #   level = banded_level(i)
+  #   top = (1 <<< level) - 1
+  #   diff = levels - level - 1
+  #   shifted = 1 <<< diff
+  #   left_siblings = i - top
+
+  #   left_siblings_inner = left_siblings * (shifted - 1)
+  #   left_siblings_last_if_full = left_siblings * (1 <<< (diff - 1))
+
+  #   top + left_siblings_inner + left_siblings_last_if_full -
+  #     min(left_siblings_last_if_full, size - (1 <<< (levels - 1)) - 1)
+  # end
+
+  defnp banded_level(i), do: 31 - Nx.count_leading_zeros(i + 1)
 
   @doc """
   Returns the amplitude of a tensor for banding.
@@ -232,6 +320,8 @@ defmodule Scholar.Neighbors.KDTree do
   @clz_lookup {32, 31, 30, 30, 29, 29, 29, 29, 28, 28, 28, 28, 28, 28, 28, 28}
 
   defp clz32(x) when is_integer(x) do
+    import Bitwise
+
     n =
       if x >= 1 <<< 16 do
         if x >= 1 <<< 24 do
