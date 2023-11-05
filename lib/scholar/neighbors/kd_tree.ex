@@ -36,7 +36,7 @@ defmodule Scholar.Neighbors.KDTree do
   @doc """
   Builds a KDTree without known min-max bounds.
 
-  If your tensor has a known bound (for exmaple, -1 and 1),
+  If your tensor has a known bound (for example, -1 and 1),
   consider using the `banded/2` version which is more efficient.
 
   ## Options
@@ -55,12 +55,20 @@ defmodule Scholar.Neighbors.KDTree do
   def unbanded(tensor, opts \\ []) do
     levels = levels(tensor)
     {size, _dims} = Nx.shape(tensor)
-    subtree_size = unbanded_subtree_size(1, levels, size)
-    {left, mid, right} = Nx.Defn.jit_apply(&root_slice(&1, subtree_size), [tensor], opts)
 
-    acc = <<Nx.to_number(mid)::32-unsigned-native-integer>>
-    acc = recur([{1, left}, {2, right}], [], acc, tensor, 1, levels, opts)
-    %__MODULE__{levels: levels, indexes: Nx.from_binary(acc, :u32)}
+    indexes =
+      if size > 2 do
+        subtree_size = unbanded_subtree_size(1, levels, size)
+        {left, mid, right} = Nx.Defn.jit_apply(&root_slice(&1, subtree_size), [tensor], opts)
+
+        acc = <<Nx.to_number(mid)::32-unsigned-native-integer>>
+        acc = recur([{1, left}, {2, right}], [], acc, tensor, 1, levels, opts)
+        Nx.from_binary(acc, :u32)
+      else
+        degenerate_slice(tensor)
+      end
+
+    %__MODULE__{levels: levels, indexes: indexes}
   end
 
   defp recur([{_i, %Nx.Tensor{shape: {1}} = leaf} | rest], next, acc, tensor, level, levels, opts) do
@@ -101,6 +109,10 @@ defmodule Scholar.Neighbors.KDTree do
 
     {Nx.slice(indexes, [0], [subtree_size]), indexes[subtree_size],
      Nx.slice(indexes, [subtree_size + 1], [Nx.size(indexes) - subtree_size - 1])}
+  end
+
+  defp degenerate_slice(tensor) do
+    Nx.argsort(tensor[[.., 0]], direction: :desc) |> Nx.as_type(:u32)
   end
 
   defp recur_slice(tensor, indexes, k, subtree_size) do
