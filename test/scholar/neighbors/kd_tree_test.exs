@@ -36,13 +36,20 @@ defmodule Scholar.Neighbors.KDTreeTest do
 
   describe "banded" do
     test "iota" do
-      assert Scholar.Neighbors.KDTree.banded(Nx.iota({5, 2}), 100) ==
+      assert Scholar.Neighbors.KDTree.banded(Nx.iota({5, 2}), 10) ==
                %Scholar.Neighbors.KDTree{levels: 3, indexes: Nx.u32([3, 1, 4, 0, 2])}
     end
 
     test "sample" do
+      input = Nx.u32([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+
+      assert Nx.Defn.jit_apply(
+               &Scholar.Neighbors.KDTree.banded_segment_begin(&1, 4, 10),
+               [input]
+             ) == Nx.u32([0, 1, 7, 3, 6, 8, 9, 7, 8, 9])
+
       assert %Scholar.Neighbors.KDTree{levels: 4, indexes: indexes} =
-               Scholar.Neighbors.KDTree.unbanded(example(), compiler: EXLA.Defn)
+               Scholar.Neighbors.KDTree.banded(example(), 100)
 
       assert Nx.to_flat_list(indexes) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
     end

@@ -137,35 +137,25 @@ defmodule Scholar.Neighbors.KDTree do
     band = amplitude + 1
     tags = Nx.broadcast(Nx.u32(0), {size})
 
-    {_level, tags, _tensor, _band} =
-      while {level = 0, tags, tensor, band}, level < levels - 1 do
+    {level, tags, _tensor, _band} =
+      while {level = Nx.u32(0), tags, tensor, band}, level < levels - 1 do
         k = rem(level, dims)
         indexes = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
         tags = update_tags(tags, indexes, level, levels, size)
         {level + 1, tags, tensor, band}
       end
 
-    %__MODULE__{levels: levels, indexes: tags}
+    k = rem(level, dims)
+    indexes = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
+    %__MODULE__{levels: levels, indexes: indexes}
   end
 
   defnp update_tags(tags, indexes, level, levels, size) do
-    # 1
-    # indexes = [0, 1, 2, 3, 4]
-    # tags = [0, 0, 0, 0, 0]
-    # out = [1, 1, 1, 0, 2]
-    #
-    # 2
-    # indexes = [3, 0, 1, 2, 4]
-    # tags = [1, 1, 1, 0, 2]
-    # out = [3, 1, 4, 0, 2]
-    #
-    # out = [3, 1, 4, 0, 2]
-    pos = Nx.argsort(indexes) |> print_value(label: "POS")
+    pos = Nx.argsort(indexes, type: :u32)
 
     pivot =
-      (print_value(banded_segment_begin(tags, levels, size), label: "sb") +
-         print_value(banded_subtree_size(left_child(tags), levels, size), label: "ss"))
-      |> print_value(label: "PIVOT")
+      banded_segment_begin(tags, levels, size) +
+        banded_subtree_size(left_child(tags), levels, size)
 
     Nx.select(
       pos < (1 <<< level) - 1,
@@ -180,45 +170,46 @@ defmodule Scholar.Neighbors.KDTree do
         )
       )
     )
-    |> print_value(label: "TAGS")
   end
 
   defnp banded_subtree_size(i, levels, size) do
     diff = levels - banded_level(i) - 1
     shifted = 1 <<< diff
-    fllc_s = (i <<< diff) + shifted - 1
-    shifted - 1 + min(max(0, size - fllc_s), shifted)
+    first_lowest_level = (i <<< diff) + shifted - 1
+    # Use select instead of max to deal with overflows
+    lowest_level = Nx.select(first_lowest_level > size, Nx.u32(0), size - first_lowest_level)
+    shifted - 1 + min(lowest_level, shifted)
   end
 
-  # defnp banded_segment_begin(t, levels, size) do
-  #   while t, j <- 0..(size - 1) do
-  #     s = t[j]
-  #     i = (1 <<< banded_level(s)) - 1
+  defn banded_segment_begin(t, levels, size) do
+    while t, j <- 0..(size - 1) do
+      s = t[j]
+      i = (1 <<< banded_level(s)) - 1
 
-  #     {_, _, acc} =
-  #       while {i, s, acc = i}, i + 1 <= s do
-  #         {i + 1, s, acc + banded_subtree_size(i, levels, size)}
-  #       end
+      {_, _, acc} =
+        while {i, s, acc = i}, i + 1 <= s do
+          {i + 1, s, acc + banded_subtree_size(i, levels, size)}
+        end
 
-  #     Nx.put_slice(t, [j], Nx.stack(acc))
-  #   end
-  # end
+      Nx.put_slice(t, [j], Nx.stack(acc))
+    end
+  end
 
-  # defnp banded_segment_begin(i, levels, size) do
+  # defn banded_segment_begin(i, levels, size) do
   #   level = banded_level(i)
   #   top = (1 <<< level) - 1
   #   diff = levels - level - 1
   #   shifted = 1 <<< diff
   #   left_siblings = i - top
 
-  #   left_siblings_inner = left_siblings * (shifted - 1)
-  #   left_siblings_last_if_full = left_siblings * (1 <<< (diff - 1))
-
-  #   top + left_siblings_inner + left_siblings_last_if_full -
-  #     min(left_siblings_last_if_full, size - (1 <<< (levels - 1)) - 1)
+  #   top + left_siblings * (shifted - 1) +
+  #     min(left_siblings * shifted, size - (1 <<< (levels - 1)) - 1)
   # end
 
-  defnp banded_level(i), do: 31 - Nx.count_leading_zeros(i + 1)
+  # Since this property relies on u32, let's check the tensor type.
+  deftransformp banded_level(%Nx.Tensor{type: {:u, 32}} = i) do
+    Nx.subtract(31, Nx.count_leading_zeros(Nx.add(i, 1)))
+  end
 
   @doc """
   Returns the amplitude of a tensor for banding.
