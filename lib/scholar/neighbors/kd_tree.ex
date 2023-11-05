@@ -26,7 +26,6 @@ defmodule Scholar.Neighbors.KDTree do
   import Nx.Defn
 
   # TODO: Benchmark
-  # TODO: Add tagged/amplitude version
 
   @derive {Nx.Container, keep: [:levels], containers: [:indexes]}
   @enforce_keys [:levels, :indexes]
@@ -181,30 +180,16 @@ defmodule Scholar.Neighbors.KDTree do
     shifted - 1 + min(lowest_level, shifted)
   end
 
-  defn banded_segment_begin(t, levels, size) do
-    while t, j <- 0..(size - 1) do
-      s = t[j]
-      i = (1 <<< banded_level(s)) - 1
+  defn banded_segment_begin(i, levels, size) do
+    level = banded_level(i)
+    top = (1 <<< level) - 1
+    diff = levels - level - 1
+    shifted = 1 <<< diff
+    left_siblings = i - top
 
-      {_, _, acc} =
-        while {i, s, acc = i}, i + 1 <= s do
-          {i + 1, s, acc + banded_subtree_size(i, levels, size)}
-        end
-
-      Nx.put_slice(t, [j], Nx.stack(acc))
-    end
+    top + left_siblings * (shifted - 1) +
+      min(left_siblings * shifted, size - (1 <<< (levels - 1)) + 1)
   end
-
-  # defn banded_segment_begin(i, levels, size) do
-  #   level = banded_level(i)
-  #   top = (1 <<< level) - 1
-  #   diff = levels - level - 1
-  #   shifted = 1 <<< diff
-  #   left_siblings = i - top
-
-  #   top + left_siblings * (shifted - 1) +
-  #     min(left_siblings * shifted, size - (1 <<< (levels - 1)) - 1)
-  # end
 
   # Since this property relies on u32, let's check the tensor type.
   deftransformp banded_level(%Nx.Tensor{type: {:u, 32}} = i) do
