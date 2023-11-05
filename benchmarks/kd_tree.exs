@@ -1,3 +1,4 @@
+# mix run benchmarks/kd_tree.exs
 Nx.global_default_backend(EXLA.Backend)
 Nx.Defn.global_default_options(compiler: EXLA)
 
