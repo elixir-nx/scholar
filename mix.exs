@@ -34,7 +34,8 @@ defmodule Scholar.MixProject do
       {:nx, github: "elixir-nx/nx", sparse: "nx", override: true, branch: "v0.6"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, "~> 0.6", optional: true},
-      {:polaris, "~> 0.1"}
+      {:polaris, "~> 0.1"},
+      {:benchee, "~> 1.0", only: :dev}
     ]
   end
 

@@ -12,11 +12,15 @@ defmodule Scholar.Neighbors.KDTree do
     * `banded/2` - the tensor has min and max values with an amplitude given by `max - min`.
       It is also guaranteed that the `amplitude * levels(tensor) + 1` does not overflow
       the tensor. See `amplitude/1` to verify if this holds. This implementation happens
-      fully within `defn`.
+      fully within `defn`. This version is orders of magnitude faster than the `unbanded/2`
+      one.
 
     * `unbanded/2` - there are no known bands (min and max values) to the tensor.
       This implementation is recursive and goes in and out of the `defn`, therefore
       it cannot be called inside `defn`.
+
+  Each level traverses over the last axis of tensor, the index for a level can be
+  computed as: `rem(level, Nx.axis_size(tensor, -1))`.
 
   ## References
 
@@ -25,8 +29,6 @@ defmodule Scholar.Neighbors.KDTree do
 
   import Nx.Defn
 
-  # TODO: Benchmark
-
   @derive {Nx.Container, keep: [:levels], containers: [:indexes]}
   @enforce_keys [:levels, :indexes]
   defstruct [:levels, :indexes]
@@ -34,8 +36,9 @@ defmodule Scholar.Neighbors.KDTree do
   @doc """
   Builds a KDTree without known min-max bounds.
 
-  If your tensor has a known bound (for example, -1 and 1),
-  consider using the `banded/2` version which is more efficient.
+  If your tensor has a known band (for example, -1 and 1),
+  consider using the `banded/2` version which is often orders of
+  magnitude more efficient.
 
   ## Options
 
@@ -128,7 +131,21 @@ defmodule Scholar.Neighbors.KDTree do
   defp unbanded_level(i) when is_integer(i), do: 31 - clz32(i + 1)
 
   @doc """
-  BANDED
+  Builds a KDTree with known min-max bounds entirely within `defn`.
+
+  This requires the amplitude `|max - min|` of the tensor to be given.
+  For example, a tensor where all values are between 0 and 1 has amplitude
+  1. Values between -1 and 1 has amplitude 2. If your tensor is normalized,
+  then you know the amplitude. Otherwise you can use `amplitude/1` to check
+  it.
+
+  ## Examples
+
+      iex> Scholar.Neighbors.KDTree.banded(Nx.iota({5, 2}), 10)
+      %Scholar.Neighbors.KDTree{
+        levels: 3,
+        indexes: Nx.u32([3, 1, 4, 0, 2])
+      }
   """
   defn banded(tensor, amplitude) do
     levels = levels(tensor)
@@ -180,7 +197,7 @@ defmodule Scholar.Neighbors.KDTree do
     shifted - 1 + min(lowest_level, shifted)
   end
 
-  defn banded_segment_begin(i, levels, size) do
+  defnp banded_segment_begin(i, levels, size) do
     level = banded_level(i)
     top = (1 <<< level) - 1
     diff = levels - level - 1
@@ -212,12 +229,14 @@ defmodule Scholar.Neighbors.KDTree do
       39.0
       iex> Scholar.Neighbors.KDTree.amplitude(Nx.iota({20, 2}, type: :u8))
       -1
+      iex> Scholar.Neighbors.KDTree.amplitude(Nx.negate(Nx.iota({10, 2})))
+      19
 
   """
   def amplitude(tensor) do
     max = tensor |> Nx.reduce_max() |> Nx.to_number()
     min = tensor |> Nx.reduce_min() |> Nx.to_number()
-    amplitude = max - min
+    amplitude = abs(max - min)
     limit = tensor.type |> Nx.Constants.max_finite() |> Nx.to_number()
 
     if max + (amplitude + 1) * (Nx.axis_size(tensor, 0) - 1) > limit do
@@ -254,7 +273,32 @@ defmodule Scholar.Neighbors.KDTree do
   deftransform root, do: 0
 
   @doc """
+  Returns the parent of child `i`.
+
+  It is your responsibility to guarantee the result is positive.
+
+  ## Examples
+
+      iex> Scholar.Neighbors.KDTree.parent(1)
+      0
+      iex> Scholar.Neighbors.KDTree.parent(2)
+      0
+
+      iex> Scholar.Neighbors.KDTree.parent(Nx.u32(3))
+      #Nx.Tensor<
+        u32
+        1
+      >
+
+  """
+  deftransform parent(i) when is_integer(i), do: div(i - 1, 2)
+  deftransform parent(%Nx.Tensor{} = t), do: Nx.quotient(Nx.subtract(t, 1), 2)
+
+  @doc """
   Returns the index of the left child of i.
+
+  It is your responsibility to guarantee the result
+  is not greater than the leading axis of the tensor.
 
   ## Examples
 
@@ -275,6 +319,9 @@ defmodule Scholar.Neighbors.KDTree do
 
   @doc """
   Returns the index of the right child of i.
+
+  It is your responsibility to guarantee the result
+  is not greater than the leading axis of the tensor.
 
   ## Examples
 
