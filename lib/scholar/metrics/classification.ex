@@ -1451,6 +1451,7 @@ defmodule Scholar.Metrics.Classification do
 
   @doc """
   Matthews Correlation Coefficient (MCC) provides a measure of the quality of binary classifications.
+
   It returns a value between -1 and 1 where 1 represents a perfect prediction, 0 represents no better
   than random prediction, and -1 indicates total disagreement between prediction and observation.
   """
