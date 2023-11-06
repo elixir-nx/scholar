@@ -9,13 +9,13 @@ defmodule Scholar.Neighbors.KDTree do
 
   Two construction modes are available:
 
-    * `bound/2` - the tensor has min and max values with an amplitude given by `max - min`.
+    * `bounded/2` - the tensor has min and max values with an amplitude given by `max - min`.
       It is also guaranteed that the `amplitude * levels(tensor) + 1` does not overflow
       the tensor. See `amplitude/1` to verify if this holds. This implementation happens
-      fully within `defn`. This version is orders of magnitude faster than the `unbound/2`
+      fully within `defn`. This version is orders of magnitude faster than the `unbounded/2`
       one.
 
-    * `unbound/2` - there are no known bounds (min and max values) to the tensor.
+    * `unbounded/2` - there are no known bounds (min and max values) to the tensor.
       This implementation is recursive and goes in and out of the `defn`, therefore
       it cannot be called inside `defn`.
 
@@ -37,7 +37,7 @@ defmodule Scholar.Neighbors.KDTree do
   Builds a KDTree without known min-max bounds.
 
   If your tensor has known bounds (for example, -1 and 1),
-  consider using the `bound/2` version which is often orders of
+  consider using the `bounded/2` version which is often orders of
   magnitude more efficient.
 
   ## Options
@@ -46,7 +46,7 @@ defmodule Scholar.Neighbors.KDTree do
 
   ## Examples
 
-      iex> Scholar.Neighbors.KDTree.unbound(Nx.iota({5, 2}), compiler: EXLA)
+      iex> Scholar.Neighbors.KDTree.unbounded(Nx.iota({5, 2}), compiler: EXLA)
       %Scholar.Neighbors.KDTree{
         data: Nx.iota({5, 2}),
         levels: 3,
@@ -54,13 +54,13 @@ defmodule Scholar.Neighbors.KDTree do
       }
 
   """
-  def unbound(tensor, opts \\ []) do
+  def unbounded(tensor, opts \\ []) do
     levels = levels(tensor)
     {size, _dims} = Nx.shape(tensor)
 
     indexes =
       if size > 2 do
-        subtree_size = unbound_subtree_size(1, levels, size)
+        subtree_size = unbounded_subtree_size(1, levels, size)
         {left, mid, right} = Nx.Defn.jit_apply(&root_slice(&1, subtree_size), [tensor], opts)
 
         acc = <<Nx.to_number(mid)::32-unsigned-native-integer>>
@@ -88,7 +88,7 @@ defmodule Scholar.Neighbors.KDTree do
   defp recur([{i, indexes} | rest], next, acc, tensor, level, levels, opts) do
     %Nx.Tensor{shape: {size, dims}} = tensor
     k = rem(level, dims)
-    subtree_size = unbound_subtree_size(left_child(i), levels, size)
+    subtree_size = unbounded_subtree_size(left_child(i), levels, size)
 
     {left, mid, right} =
       Nx.Defn.jit_apply(&recur_slice(&1, &2, &3, subtree_size), [tensor, indexes, k], opts)
@@ -121,15 +121,15 @@ defmodule Scholar.Neighbors.KDTree do
      Nx.slice(indexes, [subtree_size + 1], [Nx.size(indexes) - subtree_size - 1])}
   end
 
-  defp unbound_subtree_size(i, levels, size) do
+  defp unbounded_subtree_size(i, levels, size) do
     import Bitwise
-    diff = levels - unbound_level(i) - 1
+    diff = levels - unbounded_level(i) - 1
     shifted = 1 <<< diff
     fllc_s = (i <<< diff) + shifted - 1
     shifted - 1 + min(max(0, size - fllc_s), shifted)
   end
 
-  defp unbound_level(i) when is_integer(i), do: floor(:math.log2(i + 1))
+  defp unbounded_level(i) when is_integer(i), do: floor(:math.log2(i + 1))
 
   @doc """
   Builds a KDTree with known min-max bounds entirely within `defn`.
@@ -140,23 +140,23 @@ defmodule Scholar.Neighbors.KDTree do
 
   For example, a tensor where all values are between 0 and 1 has amplitude
   1. Values between -1 and 1 has amplitude 2. If your tensor is normalized
-  to floating points, then it is most likely bound (given their high
+  to floating points, then it is most likely bounded (given their high
   precision). You can use `amplitude/1` to check your assumptions.
 
   ## Examples
 
-      iex> Scholar.Neighbors.KDTree.bound(Nx.iota({5, 2}), 10)
+      iex> Scholar.Neighbors.KDTree.bounded(Nx.iota({5, 2}), 10)
       %Scholar.Neighbors.KDTree{
         data: Nx.iota({5, 2}),
         levels: 3,
         indexes: Nx.u32([3, 1, 4, 0, 2])
       }
   """
-  deftransform bound(tensor, amplitude) do
-    %__MODULE__{levels: levels(tensor), indexes: bound_n(tensor, amplitude), data: tensor}
+  deftransform bounded(tensor, amplitude) do
+    %__MODULE__{levels: levels(tensor), indexes: bounded_n(tensor, amplitude), data: tensor}
   end
 
-  defnp bound_n(tensor, amplitude) do
+  defnp bounded_n(tensor, amplitude) do
     levels = levels(tensor)
     {size, dims} = Nx.shape(tensor)
     band = amplitude + 1
@@ -178,8 +178,8 @@ defmodule Scholar.Neighbors.KDTree do
     pos = Nx.argsort(indexes, type: :u32)
 
     pivot =
-      bound_segment_begin(tags, levels, size) +
-        bound_subtree_size(left_child(tags), levels, size)
+      bounded_segment_begin(tags, levels, size) +
+        bounded_subtree_size(left_child(tags), levels, size)
 
     Nx.select(
       pos < (1 <<< level) - 1,
@@ -196,8 +196,8 @@ defmodule Scholar.Neighbors.KDTree do
     )
   end
 
-  defnp bound_subtree_size(i, levels, size) do
-    diff = levels - bound_level(i) - 1
+  defnp bounded_subtree_size(i, levels, size) do
+    diff = levels - bounded_level(i) - 1
     shifted = 1 <<< diff
     first_lowest_level = (i <<< diff) + shifted - 1
     # Use select instead of max to deal with overflows
@@ -205,8 +205,8 @@ defmodule Scholar.Neighbors.KDTree do
     shifted - 1 + min(lowest_level, shifted)
   end
 
-  defnp bound_segment_begin(i, levels, size) do
-    level = bound_level(i)
+  defnp bounded_segment_begin(i, levels, size) do
+    level = bounded_level(i)
     top = (1 <<< level) - 1
     diff = levels - level - 1
     shifted = 1 <<< diff
@@ -217,15 +217,15 @@ defmodule Scholar.Neighbors.KDTree do
   end
 
   # Since this property relies on u32, let's check the tensor type.
-  deftransformp bound_level(%Nx.Tensor{type: {:u, 32}} = i) do
+  deftransformp bounded_level(%Nx.Tensor{type: {:u, 32}} = i) do
     Nx.subtract(31, Nx.count_leading_zeros(Nx.add(i, 1)))
   end
 
   @doc """
   Returns the amplitude of a bounded tensor.
 
-  If -1 is returned, it means the tensor cannot use the `bound` algorithm
-  to generate a KDTree and `unbound/2` must be used instead.
+  If -1 is returned, it means the tensor cannot use the `bounded` algorithm
+  to generate a KDTree and `unbounded/2` must be used instead.
 
   This cannot be invoked inside a `defn`.
 

@@ -17,17 +17,17 @@ defmodule Scholar.Neighbors.KDTreeTest do
     ])
   end
 
-  describe "unbound" do
+  describe "unbounded" do
     test "sample" do
       assert %Scholar.Neighbors.KDTree{levels: 4, indexes: indexes} =
-               Scholar.Neighbors.KDTree.unbound(example(), compiler: EXLA)
+               Scholar.Neighbors.KDTree.unbounded(example(), compiler: EXLA)
 
       assert Nx.to_flat_list(indexes) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
     end
 
     test "float" do
       assert %Scholar.Neighbors.KDTree{levels: 4, indexes: indexes} =
-               Scholar.Neighbors.KDTree.unbound(example() |> Nx.as_type(:f32),
+               Scholar.Neighbors.KDTree.unbounded(example() |> Nx.as_type(:f32),
                  compiler: EXLA
                )
 
@@ -36,35 +36,35 @@ defmodule Scholar.Neighbors.KDTreeTest do
 
     test "corner cases" do
       assert %Scholar.Neighbors.KDTree{levels: 1, indexes: indexes} =
-               Scholar.Neighbors.KDTree.unbound(Nx.iota({1, 2}), compiler: EXLA)
+               Scholar.Neighbors.KDTree.unbounded(Nx.iota({1, 2}), compiler: EXLA)
 
       assert indexes == Nx.u32([0])
 
       assert %Scholar.Neighbors.KDTree{levels: 2, indexes: indexes} =
-               Scholar.Neighbors.KDTree.unbound(Nx.iota({2, 2}), compiler: EXLA)
+               Scholar.Neighbors.KDTree.unbounded(Nx.iota({2, 2}), compiler: EXLA)
 
       assert indexes == Nx.u32([1, 0])
     end
   end
 
-  describe "bound" do
+  describe "bounded" do
     test "iota" do
       assert %Scholar.Neighbors.KDTree{levels: 3, indexes: indexes} =
-               Scholar.Neighbors.KDTree.bound(Nx.iota({5, 2}), 10)
+               Scholar.Neighbors.KDTree.bounded(Nx.iota({5, 2}), 10)
 
       assert indexes == Nx.u32([3, 1, 4, 0, 2])
     end
 
     test "float" do
       assert %Scholar.Neighbors.KDTree{levels: 4, indexes: indexes} =
-               Scholar.Neighbors.KDTree.bound(example() |> Nx.as_type(:f32), 100)
+               Scholar.Neighbors.KDTree.bounded(example() |> Nx.as_type(:f32), 100)
 
       assert Nx.to_flat_list(indexes) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
     end
 
     test "sample" do
       assert %Scholar.Neighbors.KDTree{levels: 4, indexes: indexes} =
-               Scholar.Neighbors.KDTree.bound(example(), 100)
+               Scholar.Neighbors.KDTree.bounded(example(), 100)
 
       assert Nx.to_flat_list(indexes) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
     end
