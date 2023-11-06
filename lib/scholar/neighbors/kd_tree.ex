@@ -46,7 +46,7 @@ defmodule Scholar.Neighbors.KDTree do
 
   ## Examples
 
-      iex> Scholar.Neighbors.KDTree.unbound(Nx.iota({5, 2}), compiler: EXLA.Defn)
+      iex> Scholar.Neighbors.KDTree.unbound(Nx.iota({5, 2}), compiler: EXLA)
       %Scholar.Neighbors.KDTree{
         data: Nx.iota({5, 2}),
         levels: 3,

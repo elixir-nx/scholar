@@ -20,7 +20,7 @@ defmodule Scholar.Neighbors.KDTreeTest do
   describe "unbound" do
     test "sample" do
       assert %Scholar.Neighbors.KDTree{levels: 4, indexes: indexes} =
-               Scholar.Neighbors.KDTree.unbound(example(), compiler: EXLA.Defn)
+               Scholar.Neighbors.KDTree.unbound(example(), compiler: EXLA)
 
       assert Nx.to_flat_list(indexes) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
     end
@@ -28,7 +28,7 @@ defmodule Scholar.Neighbors.KDTreeTest do
     test "float" do
       assert %Scholar.Neighbors.KDTree{levels: 4, indexes: indexes} =
                Scholar.Neighbors.KDTree.unbound(example() |> Nx.as_type(:f32),
-                 compiler: EXLA.Defn
+                 compiler: EXLA
                )
 
       assert Nx.to_flat_list(indexes) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
@@ -36,12 +36,12 @@ defmodule Scholar.Neighbors.KDTreeTest do
 
     test "corner cases" do
       assert %Scholar.Neighbors.KDTree{levels: 1, indexes: indexes} =
-               Scholar.Neighbors.KDTree.unbound(Nx.iota({1, 2}), compiler: EXLA.Defn)
+               Scholar.Neighbors.KDTree.unbound(Nx.iota({1, 2}), compiler: EXLA)
 
       assert indexes == Nx.u32([0])
 
       assert %Scholar.Neighbors.KDTree{levels: 2, indexes: indexes} =
-               Scholar.Neighbors.KDTree.unbound(Nx.iota({2, 2}), compiler: EXLA.Defn)
+               Scholar.Neighbors.KDTree.unbound(Nx.iota({2, 2}), compiler: EXLA)
 
       assert indexes == Nx.u32([1, 0])
     end
