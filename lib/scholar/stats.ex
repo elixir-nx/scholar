@@ -181,6 +181,9 @@ defmodule Scholar.Stats do
     * $Cov(X\_i, X\_j)$ is covariance between features $X_i$ and $X_j$
   '''}
 
+  Time complexity of correlation estimation is $O(N * K^2)$ where $N$ is the number of samples
+  and $K$ is the number of features.
+
   ## Example
 
       iex> Scholar.Stats.correlation_matrix(Nx.tensor([[3, 6, 5], [26, 75, 3], [23, 4, 1]]))

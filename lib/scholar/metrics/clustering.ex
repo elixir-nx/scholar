@@ -26,6 +26,8 @@ defmodule Scholar.Metrics.Clustering do
   clustering configuration is appropriate. If many points have a low or negative
   value, then the clustering configuration may have too many or too few clusters.
 
+  Time complexity of silhouette score is $O(N^2)$ where $N$ is the number of samples.
+
   ## Options
 
   #{NimbleOptions.docs(@opts_schema)}

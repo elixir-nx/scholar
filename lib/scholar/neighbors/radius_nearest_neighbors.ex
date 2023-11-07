@@ -1,6 +1,8 @@
 defmodule Scholar.Neighbors.RadiusNearestNeighbors do
   @moduledoc """
-  The Radius Nearest Neighbors. It implements both classification and regression.
+  The Radius Nearest Neighbors.
+
+  It implements both classification and regression.
   """
   import Nx.Defn
   import Scholar.Shared

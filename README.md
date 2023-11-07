@@ -1,7 +1,11 @@
-<h1><img src="./images/scholar.png" alt="Scholar" width="400"></h1>
+<p align="center">
+  <img src="https://github.com/elixir-nx/scholar/raw/main/images/scholar.png" alt="Scholar" width="400">
+  <br />
+  <a href="https://hexdocs.pm/scholar"><img src="http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat" title="Documentation" /></a>
+  <a href="https://hex.pm/packages/scholar"><img src="https://img.shields.io/hexpm/v/scholar.svg" title="Package" /></a>
+</p>
 
-[![Documentation](http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat)](https://hexdocs.pm/scholar)
-[![Package](https://img.shields.io/hexpm/v/scholar.svg)](https://hex.pm/packages/scholar)
+<br />
 
 Traditional machine learning tools built on top of Nx. Scholar implements
 several algorithms for classification, regression, clustering, dimensionality
@@ -45,6 +49,15 @@ config :nx, :default_backend, EXLA.Backend
 config :nx, :default_defn_options, [compiler: EXLA, client: :host]
 ```
 
+> #### JIT required! {: .warning}
+>
+> It is important you set the `default_defn_options` as shown in the snippet above,
+> as many algorithms in Scholar use loops which are much more memory efficient when
+> JIT compiled.
+>
+> If for some reason you cannot set a default `defn` compiler, you can explicitly
+> JIT any function, for example: `EXLA.jit(&Scholar.Cluster.AffinityPropagation.fit/1)`.
+
 ### Notebooks
 
 To use Scholar inside code notebooks, run:
@@ -59,6 +72,15 @@ Nx.global_default_backend(EXLA.Backend)
 # Client can also be set to :cuda / :romc
 Nx.Defn.global_default_options(compiler: EXLA, client: :host)
 ```
+
+> #### JIT required! {: .warning}
+>
+> It is important you set the `Nx.Defn.global_default_options/1` as shown in the snippet
+> above, as many algorithms in Scholar use loops which are much more memory efficient
+> when JIT compiled.
+>
+> If for some reason you cannot set a default `defn` compiler, you can explicitly
+> JIT any function, for example: `EXLA.jit(&Scholar.Cluster.AffinityPropagation.fit/1)`.
 
 ## License
 

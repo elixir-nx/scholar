@@ -1,6 +1,9 @@
 defmodule Scholar.Neighbors.KNearestNeighbors do
   @moduledoc """
-  The K-Nearest Neighbors. It implements both classification and regression.
+  The K-Nearest Neighbors.
+
+  It implements both classification and regression. This implements the linear
+  version of kNN and therefore it has time complexity $O(N^2)$ for $N$ samples.
   """
   import Nx.Defn
   import Scholar.Shared
@@ -162,7 +165,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
   ## Return Values
 
-    It returns a tensor with predicted class labels
+  It returns a tensor with predicted class labels.
 
   ## Examples
 
@@ -210,7 +213,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
 
   ## Return Values
 
-    It returns a tensor with probabilities of classes. They are arranged in lexicographic order.
+  It returns a tensor with probabilities of classes. They are arranged in lexicographic order.
 
   ## Examples
 
