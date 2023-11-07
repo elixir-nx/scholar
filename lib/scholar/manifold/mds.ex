@@ -23,7 +23,7 @@ defmodule Scholar.Manifold.MDS do
     ],
     metric: [
       type: :boolean,
-      default: false,
+      default: true,
       doc: ~S"""
       If `true`, use dissimilarities as metric distances in the embedding space.
       """
@@ -33,6 +33,7 @@ defmodule Scholar.Manifold.MDS do
       default: false,
       doc: ~S"""
       If `true`, normalize the stress by the sum of squared dissimilarities.
+      Only valid if `metric` is `false`.
       """
     ],
     eps: [
@@ -78,6 +79,7 @@ defmodule Scholar.Manifold.MDS do
     metric = if opts[:metric], do: 1, else: 0
     normalized_stress = if opts[:normalized_stress], do: 1, else: 0
     eps = opts[:eps]
+    n = Nx.axis_size(dissimilarities, 0)
 
     {{x, stress, i}, _} =
       while {{x, _stress = Nx.Constants.infinity(Nx.type(dissimilarities)), i = 0},
@@ -86,7 +88,6 @@ defmodule Scholar.Manifold.MDS do
               metric, normalized_stress, eps, stop_value = 0}},
             i < max_iter and not stop_value do
         dis = Distance.pairwise_euclidean(x)
-        n = Nx.axis_size(dissimilarities, 0)
 
         disparities =
           if metric do
@@ -96,14 +97,14 @@ defmodule Scholar.Manifold.MDS do
 
             dis_flat_indices = lower_triangle_indices(dis)
 
-            n = Nx.axis_size(dis, 0)
-
             dis_flat_w = Nx.take(dis_flat, dis_flat_indices)
 
             disparities_flat_model =
-              Scholar.Linear.IsotonicRegression.fit(similarities_flat_w, dis_flat_w)
+              Scholar.Linear.IsotonicRegression.fit(similarities_flat_w, dis_flat_w,
+                increasing: true
+              )
 
-            model = Scholar.Linear.IsotonicRegression.preprocess(disparities_flat_model)
+            model = Scholar.Linear.IsotonicRegression.special_preprocess(disparities_flat_model)
 
             disparities_flat =
               Scholar.Linear.IsotonicRegression.predict(model, similarities_flat_w)
@@ -133,7 +134,7 @@ defmodule Scholar.Manifold.MDS do
         ratio = disparities / dis
         b = -ratio
         b = Nx.put_diagonal(b, Nx.take_diagonal(b) + Nx.sum(ratio, axes: [1]))
-        x = 1.0 / n * Nx.dot(b, x)
+        x = Nx.dot(b, x) * (1.0 / n)
 
         dis = Nx.sum(Nx.sqrt(Nx.sum(x ** 2, axes: [1])))
 
@@ -209,7 +210,7 @@ defmodule Scholar.Manifold.MDS do
     {best, best_stress, best_iter}
   end
 
-  defn lower_triangle_indices(tensor) do
+  defnp lower_triangle_indices(tensor) do
     n = Nx.axis_size(tensor, 0)
 
     temp = Nx.broadcast(Nx.s64(0), {div(n * (n - 1), 2)})
@@ -249,17 +250,17 @@ defmodule Scholar.Manifold.MDS do
       %Scholar.Manifold.MDS{
         embedding: Nx.tensor(
           [
-            [0.040477119386196136, -0.4997042417526245],
-            [-0.35801631212234497, -0.09504470974206924],
-            [-0.08517580479383469, 0.35293734073638916],
-            [0.42080432176589966, 0.23617777228355408]
+            [16.3013916015625, -3.444634437561035],
+            [5.866805553436279, 1.6378790140151978],
+            [-5.487184524536133, 0.5837264657020569],
+            [-16.681013107299805, 1.2230290174484253]
           ]
         ),
         stress: Nx.tensor(
-          0.0016479993937537074
+          0.3993147909641266
         ),
         n_iter: Nx.tensor(
-          19
+          23
         )
       }
   """
@@ -288,17 +289,17 @@ defmodule Scholar.Manifold.MDS do
       %Scholar.Manifold.MDS{
         embedding: Nx.tensor(
           [
-            [0.040477119386196136, -0.4997042417526245],
-            [-0.35801631212234497, -0.09504470974206924],
-            [-0.08517580479383469, 0.35293734073638916],
-            [0.42080432176589966, 0.23617777228355408]
+            [16.3013916015625, -3.444634437561035],
+            [5.866805553436279, 1.6378790140151978],
+            [-5.487184524536133, 0.5837264657020569],
+            [-16.681013107299805, 1.2230290174484253]
           ]
         ),
         stress: Nx.tensor(
-          0.0016479993937537074
+          0.3993147909641266
         ),
         n_iter: Nx.tensor(
-          19
+          23
         )
       }
   """
@@ -333,10 +334,10 @@ defmodule Scholar.Manifold.MDS do
       %Scholar.Manifold.MDS{
         embedding: Nx.tensor(
           [
-            [0.41079193353652954, 0.41079193353652954],
-            [0.1369306445121765, 0.1369306445121765],
-            [-0.1369306445121765, -0.1369306445121765],
-            [-0.41079193353652954, -0.41079193353652954]
+            [11.858541488647461, 11.858541488647461],
+            [3.9528470039367676, 3.9528470039367676],
+            [-3.9528470039367676, -3.9528470039367676],
+            [-11.858541488647461, -11.858541488647461]
           ]
         ),
         stress: Nx.tensor(
@@ -373,14 +374,14 @@ defmodule Scholar.Manifold.MDS do
       %Scholar.Manifold.MDS{
         embedding: Nx.tensor(
           [
-            [0.3354101777076721, 0.3354101777076721, 0.3354101777076721],
-            [0.11180339753627777, 0.11180339753627777, 0.11180339753627777],
-            [-0.11180339753627777, -0.11180340498685837, -0.11180339753627777],
-            [-0.3354102075099945, -0.3354102075099945, -0.3354102075099945]
+            [9.682458877563477, 9.682458877563477, 9.682458877563477],
+            [3.2274858951568604, 3.2274858951568604, 3.2274858951568604],
+            [-3.2274863719940186, -3.2274863719940186, -3.2274863719940186],
+            [-9.682458877563477, -9.682458877563477, -9.682458877563477]
           ]
         ),
         stress: Nx.tensor(
-          2.6645352591003757e-15
+          9.094947017729282e-12
         ),
         n_iter: Nx.tensor(
           3

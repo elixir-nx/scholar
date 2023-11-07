@@ -4,6 +4,9 @@ defmodule Scholar.Linear.IsotonicRegression do
   observations by solving a convex optimization problem. It is a form of
   regression analysis that can be used as an alternative to polynomial
   regression to fit nonlinear data.
+
+  Time complexity of isotonic regression is $O(N^2)$ where $N$ is the
+  number of points.
   """
   require Nx
   import Nx.Defn, except: [transform: 2]
@@ -38,7 +41,7 @@ defmodule Scholar.Linear.IsotonicRegression do
           y_thresholds: Nx.Tensor.t(),
           increasing: Nx.Tensor.t(),
           cutoff_index: Nx.Tensor.t(),
-          preprocess: Tuple.t() | Scholar.Interpolation.Linear.t()
+          preprocess: tuple() | Scholar.Interpolation.Linear.t()
         }
 
   opts = [
@@ -174,8 +177,6 @@ defmodule Scholar.Linear.IsotonicRegression do
           Nx.u8(0)
       end
 
-    # increasing = Nx.u8(1)
-
     fit_n(x, y, sample_weights, increasing, opts)
   end
 
@@ -206,12 +207,12 @@ defmodule Scholar.Linear.IsotonicRegression do
       iex> Scholar.Linear.IsotonicRegression.predict(model, to_predict)
       #Nx.Tensor<
         f32[10]
-        [1.0, 1.6666667461395264, 2.3333334922790527, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+        [1.0, 1.6666667461395264, 2.3333332538604736, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
       >
   """
   defn predict(model, x) do
     check_input_shape(x)
-    # check_preprocess(model)
+    check_preprocess(model)
 
     x = Nx.flatten(x)
     x = Nx.clip(x, model.x_min, model.x_max)
@@ -261,43 +262,61 @@ defmodule Scholar.Linear.IsotonicRegression do
             ]
           ),
           x: Nx.tensor(
-            [1.0, 4.0, 7.0, 9.0, 10.0]
+            [1.0, 4.0, 7.0, 9.0, 10.0, 11.0]
           )
         }
       }
   """
-  defn preprocess(model) do
-    # cutoff = Nx.to_number(model.cutoff_index)
-    # x = model.x_thresholds[0..cutoff]
-    # y = model.y_thresholds[0..cutoff]
+  def preprocess(model, trim_duplicates \\ true) do
+    cutoff = Nx.to_number(model.cutoff_index)
+    x = model.x_thresholds[0..cutoff]
+    y = model.y_thresholds[0..cutoff]
 
-    # {x, y} =
-    #   if trim_duplicates do
-    #     keep_mask =
-    #       Nx.logical_or(
-    #         Nx.not_equal(y[1..-2//1], y[0..-3//1]),
-    #         Nx.not_equal(y[1..-2//1], y[2..-1//1])
-    #       )
+    {x, y} =
+      if trim_duplicates do
+        keep_mask =
+          Nx.logical_or(
+            Nx.not_equal(y[1..-2//1], y[0..-3//1]),
+            Nx.not_equal(y[1..-2//1], y[2..-1//1])
+          )
 
-    #     keep_mask = Nx.concatenate([Nx.tensor([1]), keep_mask, Nx.tensor([1])])
+        keep_mask = Nx.concatenate([Nx.tensor([1]), keep_mask, Nx.tensor([1])])
 
-    #     indices =
-    #       Nx.iota({Nx.axis_size(y, 0)})
-    #       |> Nx.add(1)
-    #       |> Nx.multiply(keep_mask)
-    #       |> Nx.to_flat_list()
+        indices =
+          Nx.iota({Nx.axis_size(y, 0)})
+          |> Nx.add(1)
+          |> Nx.multiply(keep_mask)
+          |> Nx.to_flat_list()
 
-    #     indices = Enum.filter(indices, fn x -> x != 0 end) |> Nx.tensor() |> Nx.subtract(1)
-    #     x = Nx.take(x, indices)
-    #     y = Nx.take(y, indices)
-    #     {x, y}
-    #   else
-    #     {x, y}
-    #   end
+        indices = Enum.filter(indices, fn x -> x != 0 end) |> Nx.tensor() |> Nx.subtract(1)
+        x = Nx.take(x, indices)
+        y = Nx.take(y, indices)
+        {x, y}
+      else
+        {x, y}
+      end
 
-    # model = %__MODULE__{model | x_thresholds: x}
-    # model = %__MODULE__{model | y_thresholds: y}
+    model = %__MODULE__{model | x_thresholds: x}
+    model = %__MODULE__{model | y_thresholds: y}
 
+    %__MODULE__{
+      model
+      | preprocess:
+          Scholar.Interpolation.Linear.fit(
+            model.x_thresholds,
+            model.y_thresholds
+          )
+    }
+  end
+
+  @doc """
+  Preprocesses the `model` for prediction.
+
+  Returns an updated `model`. This is a special version of `preprocess/1` that
+  does not trim duplicates so it can be used in defns. It is not recommended
+  to use this function directly.
+  """
+  defn special_preprocess(model) do
     %__MODULE__{
       model
       | preprocess:
@@ -517,7 +536,8 @@ defmodule Scholar.Linear.IsotonicRegression do
 
   defnp check_increasing(x, y) do
     x = Nx.new_axis(x, -1)
+    y = Nx.new_axis(y, -1)
     model = Scholar.Linear.LinearRegression.fit(x, y)
-    Nx.squeeze(model.coefficients[0] >= 0)
+    model.coefficients[0][0] >= 0
   end
 end
