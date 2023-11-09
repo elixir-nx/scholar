@@ -59,7 +59,7 @@ defmodule Scholar.Manifold.MDS do
     ],
     n_init: [
       type: :pos_integer,
-      default: 4,
+      default: 8,
       doc: ~S"""
       Number of times the embedding will be computed with different centroid seeds.
       The final embedding is the embedding with the lowest stress.
@@ -134,7 +134,7 @@ defmodule Scholar.Manifold.MDS do
         ratio = disparities / dis
         b = -ratio
         b = Nx.put_diagonal(b, Nx.take_diagonal(b) + Nx.sum(ratio, axes: [1]))
-        x = Nx.dot(b, x) * (1.0 / n)
+        x = 1.0 / n * Nx.dot(b, x)
 
         dis = Nx.sum(Nx.sqrt(Nx.sum(x ** 2, axes: [1])))
 
@@ -182,7 +182,7 @@ defmodule Scholar.Manifold.MDS do
     type = to_float_type(dissimilarities)
     dissimilarities = Nx.as_type(dissimilarities, type)
 
-    {dummy, new_key} =
+    {dummy, key} =
       Nx.Random.uniform(key,
         shape: {num_samples, opts[:num_components]},
         type: type
@@ -192,19 +192,19 @@ defmodule Scholar.Manifold.MDS do
 
     {{best, best_stress, best_iter}, _} =
       while {{best = dummy, best_stress = Nx.Constants.infinity(type), best_iter = 0},
-             {n_init, new_key, max_iter, dissimilarities, i = 0}},
+             {n_init, key, max_iter, dissimilarities, i = 0}},
             i < n_init do
         num_samples = Nx.axis_size(dissimilarities, 0)
 
-        {x, new_key} =
-          Nx.Random.uniform(new_key, shape: {num_samples, opts[:num_components]}, type: type)
+        {x, key} =
+          Nx.Random.uniform(key, shape: {num_samples, opts[:num_components]}, type: type)
 
         {temp, stress, iter} = smacof(dissimilarities, x, max_iter, opts)
 
         {best, best_stress, best_iter} =
           if stress < best_stress, do: {temp, stress, iter}, else: {best, best_stress, best_iter}
 
-        {{best, best_stress, best_iter}, {n_init, new_key, max_iter, dissimilarities, i + 1}}
+        {{best, best_stress, best_iter}, {n_init, key, max_iter, dissimilarities, i + 1}}
       end
 
     {best, best_stress, best_iter}
@@ -250,17 +250,17 @@ defmodule Scholar.Manifold.MDS do
       %Scholar.Manifold.MDS{
         embedding: Nx.tensor(
           [
-            [16.3013916015625, -3.444634437561035],
-            [5.866805553436279, 1.6378790140151978],
-            [-5.487184524536133, 0.5837264657020569],
-            [-16.681013107299805, 1.2230290174484253]
+            [13.072145462036133, -10.424199104309082],
+            [5.13038969039917, -2.341259479522705],
+            [-5.651908874511719, 1.7662434577941895],
+            [-12.550626754760742, 10.999215126037598]
           ]
         ),
         stress: Nx.tensor(
-          0.3993147909641266
+          0.36994707584381104
         ),
         n_iter: Nx.tensor(
-          23
+          20
         )
       }
   """
@@ -289,17 +289,17 @@ defmodule Scholar.Manifold.MDS do
       %Scholar.Manifold.MDS{
         embedding: Nx.tensor(
           [
-            [16.3013916015625, -3.444634437561035],
-            [5.866805553436279, 1.6378790140151978],
-            [-5.487184524536133, 0.5837264657020569],
-            [-16.681013107299805, 1.2230290174484253]
+            [13.072145462036133, -10.424199104309082],
+            [5.13038969039917, -2.341259479522705],
+            [-5.651908874511719, 1.7662434577941895],
+            [-12.550626754760742, 10.999215126037598]
           ]
         ),
         stress: Nx.tensor(
-          0.3993147909641266
+          0.36994707584381104
         ),
         n_iter: Nx.tensor(
-          23
+          20
         )
       }
   """
