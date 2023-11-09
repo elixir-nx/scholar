@@ -309,24 +309,6 @@ defmodule Scholar.Linear.IsotonicRegression do
     }
   end
 
-  @doc """
-  Preprocesses the `model` for prediction.
-
-  Returns an updated `model`. This is a special version of `preprocess/1` that
-  does not trim duplicates so it can be used in defns. It is not recommended
-  to use this function directly.
-  """
-  defn special_preprocess(model) do
-    %__MODULE__{
-      model
-      | preprocess:
-          Scholar.Interpolation.Linear.fit(
-            model.x_thresholds,
-            model.y_thresholds
-          )
-    }
-  end
-
   deftransform check_preprocess(model) do
     if model.preprocess == {} do
       raise ArgumentError,

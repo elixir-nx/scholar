@@ -104,7 +104,7 @@ defmodule Scholar.Manifold.MDS do
                 increasing: true
               )
 
-            model = Scholar.Linear.IsotonicRegression.special_preprocess(disparities_flat_model)
+            model = special_preprocess(disparities_flat_model)
 
             disparities_flat =
               Scholar.Linear.IsotonicRegression.predict(model, similarities_flat_w)
@@ -397,5 +397,16 @@ defmodule Scholar.Manifold.MDS do
   defnp fit_n(x, init, key, opts) do
     {best, best_stress, best_iter} = mds_main_loop(x, init, key, opts)
     %__MODULE__{embedding: best, stress: best_stress, n_iter: best_iter}
+  end
+
+  defnp special_preprocess(model) do
+    %Scholar.Linear.IsotonicRegression{
+      model
+      | preprocess:
+          Scholar.Interpolation.Linear.fit(
+            model.x_thresholds,
+            model.y_thresholds
+          )
+    }
   end
 end
