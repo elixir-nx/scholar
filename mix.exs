@@ -30,10 +30,9 @@ defmodule Scholar.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.30", only: :docs},
-      # {:nx, "~> 0.6", override: true},
-      {:nx, github: "elixir-nx/nx", sparse: "nx", override: true, branch: "v0.6"},
+      {:nx, "~> 0.6.3 or ~> 0.7", override: true},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
-      {:exla, "~> 0.6", optional: true},
+      {:exla, "~> 0.6.3 or ~> 0.7", optional: true},
       {:polaris, "~> 0.1"},
       {:benchee, "~> 1.0", only: :dev}
     ]
@@ -82,6 +81,7 @@ defmodule Scholar.MixProject do
           Scholar.NaiveBayes.Complement,
           Scholar.NaiveBayes.Gaussian,
           Scholar.NaiveBayes.Multinomial,
+          Scholar.Neighbors.KDTree,
           Scholar.Neighbors.KNearestNeighbors,
           Scholar.Neighbors.RadiusNearestNeighbors
         ],
@@ -91,6 +91,7 @@ defmodule Scholar.MixProject do
           Scholar.Metrics.Classification,
           Scholar.Metrics.Clustering,
           Scholar.Metrics.Distance,
+          Scholar.Metrics.Ranking,
           Scholar.Metrics.Regression,
           Scholar.Metrics.Similarity,
           Scholar.ModelSelection,
