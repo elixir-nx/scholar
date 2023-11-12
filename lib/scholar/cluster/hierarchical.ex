@@ -193,25 +193,25 @@ defmodule Scholar.Cluster.Hierarchical do
 
   # Dissimilarity update functions
 
-  defn average(dac, dbc, _dab, na, nb, _nc),
+  def average(dac, dbc, _dab, na, nb, _nc),
     do: (na * dac + nb * dbc) / (na + nb)
 
-  defn centroid(dac, dbc, dab, na, nb, _nc),
+  def centroid(dac, dbc, dab, na, nb, _nc),
     do: Nx.sqrt((na * dac + nb * dbc) / (na + nb) - na * nb * dab / (na + nb) ** 2)
 
-  defn complete(dac, dbc, _dab, _na, _nb, _nc),
+  def complete(dac, dbc, _dab, _na, _nb, _nc),
     do: max(dac, dbc)
 
-  defn median(dac, dbc, dab, _na, _nb, _nc),
+  def median(dac, dbc, dab, _na, _nb, _nc),
     do: Nx.sqrt(dac / 2 + dbc / 2 - dab / 4)
 
-  defn single(dac, dbc, _dab, _na, _nb, _nc),
+  def single(dac, dbc, _dab, _na, _nb, _nc),
     do: min(dac, dbc)
 
-  defn ward(dac, dbc, dab, na, nb, nc),
+  def ward(dac, dbc, dab, na, nb, nc),
     do: Nx.sqrt(((na + nc) * dac + (nb + nc) * dbc - nc * dab) / (na + nb + nc))
 
-  defn weighted(dac, dbc, _dab, _na, _nb, _nc),
+  def weighted(dac, dbc, _dab, _na, _nb, _nc),
     do: (dac + dbc) / 2
 
   # Grouping functions
