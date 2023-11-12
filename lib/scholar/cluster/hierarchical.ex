@@ -252,9 +252,10 @@ defmodule Scholar.Cluster.Hierarchical do
 
   defp groups_to_labels(groups) do
     groups
-    |> Enum.sort()
+    |> Enum.sort_by(fn {_label, group} -> Enum.min(group) end)
     |> Enum.with_index()
     |> Enum.flat_map(fn {{_, v}, i} -> v |> Enum.sort() |> Enum.map(&{&1, i}) end)
+    |> Enum.sort()
     |> Enum.map(fn {_, label} -> label end)
     |> Nx.tensor()
   end
