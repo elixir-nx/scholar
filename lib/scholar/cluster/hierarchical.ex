@@ -267,22 +267,20 @@ defmodule Scholar.Cluster.Hierarchical do
     pairwise = :infinity |> Nx.broadcast({num_obs}) |> Nx.make_diagonal() |> Nx.add(pairwise)
     labels = Nx.iota({num_obs})
 
-    {dendrogram, _, _, _, _, _, _, _} =
-      while {dendrogram, pairwise, labels, n = 0, num_obs = num_obs, d = -1, len = 3,
-             inf_row = Nx.broadcast(:infinity, {1, num_obs})},
-            n < num_obs do
-        {{a0, b0}, len} = if len >= 3, do: {find_pair(labels), 2}, else: {{d, -1}, len - 3}
+    {dendrogram, _, _, _} =
+      while {dendrogram, pairwise, labels, len = 3}, n <- 0..(num_obs - 2) do
+        {{a0, b0}, len} = if len >= 3, do: {find_pair(labels), 2}, else: {{-1, -1}, len - 3}
 
-        {a, b, _, _, len, _} =
-          while {a = a0, b = b0, c = -1, d = -1, len, pairwise}, not (len >= 3 and a == c) do
-            {Nx.argmin(pairwise[a]), a, b, c, len + 1, pairwise}
+        {a, b, _, len, _} =
+          while {a = a0, b = b0, c = -1, len, pairwise}, not (len >= 3 and a == c) do
+            {Nx.argmin(pairwise[a]), a, b, len + 1, pairwise}
           end
 
         new_row = Nx.stack([a, b, pairwise[[a, b]]]) |> Nx.new_axis(0)
         dendrogram = Nx.put_slice(dendrogram, [n, 0], new_row)
-        {pairwise, labels} = merge(pairwise, labels, a, b, inf_row)
+        {pairwise, labels} = merge(pairwise, labels, a, b)
 
-        {dendrogram, pairwise, labels, n + 1, num_obs, d, len, inf_row}
+        {dendrogram, pairwise, labels, len}
       end
 
     dendrogram
@@ -299,7 +297,9 @@ defmodule Scholar.Cluster.Hierarchical do
     {a, b}
   end
 
-  defn merge(pairwise, labels, a, b, inf_row) do
+  defn merge(pairwise, labels, a, b) do
+    {num_obs, _} = Nx.shape(pairwise)
+
     {pairwise, _, _, _} =
       while {pairwise, a, b, inf = @infinite_index}, c <- labels do
         if c == a or c == b or c == inf do
@@ -323,8 +323,8 @@ defmodule Scholar.Cluster.Hierarchical do
     # Drop the greater of a and b (by convention, a < b)
     pairwise =
       pairwise
-      |> Nx.put_slice([b, 0], inf_row)
-      |> Nx.put_slice([0, b], Nx.reshape(inf_row, {:auto, 1}))
+      |> Nx.put_slice([b, 0], Nx.broadcast(:infinity, {1, num_obs}))
+      |> Nx.put_slice([0, b], Nx.broadcast(:infinity, {num_obs, 1}))
 
     labels =
       labels
