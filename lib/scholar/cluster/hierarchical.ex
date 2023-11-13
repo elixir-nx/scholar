@@ -297,8 +297,10 @@ defmodule Scholar.Cluster.Hierarchical do
     {a, b}
   end
 
-  defn merge(pairwise, labels, a, b) do
+  defn merge(pairwise, labels, label_1, label_2) do
     {num_obs, _} = Nx.shape(pairwise)
+    a = Nx.min(label_1, label_2)
+    b = Nx.max(label_1, label_2)
 
     {pairwise, _, _, _} =
       while {pairwise, a, b, inf = @infinite_index}, c <- labels do
