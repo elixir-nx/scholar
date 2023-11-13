@@ -52,7 +52,7 @@ defmodule Scholar.Cluster.Hierarchical do
         "Linkage function: how to compute the dissimilarity between a newly formed cluster and the others."
     ]
   ]
-  def fit(data, opts \\ []) do
+  deftransform fit(data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     dissimilarity = opts[:dissimilarity]
     group_by = opts[:group_by]
@@ -78,7 +78,8 @@ defmodule Scholar.Cluster.Hierarchical do
     cluster_fun =
       case linkage do
         # TODO: change to `mst`
-        :single -> &primitive/2
+        # :single -> &primitive/2
+        :single -> &nearest_neighbor_chain/2
         # TODO: change to `nn_chain`
         l when l in [:average, :complete, :ward, :weighted] -> &primitive/2
         # TODO: change to `generic`
@@ -258,5 +259,78 @@ defmodule Scholar.Cluster.Hierarchical do
     |> Enum.sort()
     |> Enum.map(fn {_, label} -> label end)
     |> Nx.tensor()
+  end
+
+  defn nearest_neighbor_chain(pairwise, _update_fun) do
+    {num_obs, _} = Nx.shape(pairwise)
+    dendrogram = Nx.broadcast(-1.0, {num_obs - 1, 3})
+    pairwise = :infinity |> Nx.broadcast({num_obs}) |> Nx.make_diagonal() |> Nx.add(pairwise)
+    labels = Nx.iota({num_obs})
+
+    {dendrogram, _, _, _, _, _, _, _} =
+      while {dendrogram, pairwise, labels, n = 0, num_obs = num_obs, d = -1, len = 3,
+             inf_row = Nx.broadcast(:infinity, {1, num_obs})},
+            n < num_obs do
+        {{a0, b0}, len} = if len >= 3, do: {find_pair(labels), 2}, else: {{d, -1}, len - 3}
+
+        {a, b, _, _, len, _} =
+          while {a = a0, b = b0, c = -1, d = -1, len, pairwise}, not (len >= 3 and a == c) do
+            {Nx.argmin(pairwise[a]), a, b, c, len + 1, pairwise}
+          end
+
+        new_row = Nx.stack([a, b, pairwise[[a, b]]]) |> Nx.new_axis(0)
+        dendrogram = Nx.put_slice(dendrogram, [n, 0], new_row)
+        {pairwise, labels} = merge(pairwise, labels, a, b, inf_row)
+
+        {dendrogram, pairwise, labels, n + 1, num_obs, d, len, inf_row}
+      end
+
+    dendrogram
+  end
+
+  deftransform my_inspect(x), do: IO.inspect(x)
+
+  # @infinite_index represents an removed label.
+  # Can't use :infinity because we need integers.
+  @infinite_index Nx.Constants.max_finite(:u32)
+  defn find_pair(labels) do
+    a = Nx.argmin(labels)
+    b = labels |> Nx.indexed_put(Nx.new_axis(a, 0), @infinite_index) |> Nx.argmin()
+    {a, b}
+  end
+
+  defn merge(pairwise, labels, a, b, inf_row) do
+    {pairwise, _, _, _} =
+      while {pairwise, a, b, inf = @infinite_index}, c <- labels do
+        if c == a or c == b or c == inf do
+          {pairwise, a, b, inf}
+        else
+          # TODO: generalize updates (hardcoded for single linkage)
+          update = Nx.min(pairwise[[a, c]], pairwise[[b, c]])
+
+          # TODO: tensor-ify?
+          pairwise =
+            pairwise
+            |> Nx.indexed_put(Nx.stack([a, c]), update)
+            |> Nx.indexed_put(Nx.stack([c, a]), update)
+            |> Nx.indexed_put(Nx.stack([b, c]), update)
+            |> Nx.indexed_put(Nx.stack([c, b]), update)
+
+          {pairwise, a, b, inf}
+        end
+      end
+
+    # Drop the greater of a and b (by convention, a < b)
+    pairwise =
+      pairwise
+      |> Nx.put_slice([b, 0], inf_row)
+      |> Nx.put_slice([0, b], Nx.reshape(inf_row, {:auto, 1}))
+
+    labels =
+      labels
+      |> Nx.indexed_put(Nx.new_axis(a, 0), @infinite_index)
+      |> Nx.indexed_put(Nx.new_axis(b, 0), @infinite_index)
+
+    {pairwise, labels}
   end
 end
