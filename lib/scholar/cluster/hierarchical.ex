@@ -286,12 +286,11 @@ defmodule Scholar.Cluster.Hierarchical do
     dendrogram
   end
 
-  deftransform my_inspect(x), do: IO.inspect(x)
-
   # @infinite_index represents an removed label.
   # Can't use :infinity because we need integers.
   @infinite_index Nx.Constants.max_finite(:u32)
   defn find_pair(labels) do
+    # Choose the earliest two not-yet-removed labels.
     a = Nx.argmin(labels)
     b = labels |> Nx.indexed_put(Nx.new_axis(a, 0), @infinite_index) |> Nx.argmin()
     {a, b}
