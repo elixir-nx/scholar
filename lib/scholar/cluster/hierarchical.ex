@@ -271,6 +271,8 @@ defmodule Scholar.Cluster.Hierarchical do
       while {dendrogram, pairwise, labels, len = 3}, n <- 0..(num_obs - 2) do
         {{a0, b0}, len} = if len >= 3, do: {find_pair(labels), 2}, else: {{-1, -1}, len - 3}
 
+        # The key idea is that we recursively ask for the argmin of a row.
+        # When we find an a-b-a cycle in the argmin chain, it means a and b are a pair.
         {a, b, _, len, _} =
           while {a = a0, b = b0, c = -1, len, pairwise}, not (len >= 3 and a == c) do
             {Nx.argmin(pairwise[a]), a, b, len + 1, pairwise}
