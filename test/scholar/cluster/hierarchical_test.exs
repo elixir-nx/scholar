@@ -70,23 +70,13 @@ defmodule Scholar.Cluster.HierarchicalTest do
 
   describe "experiments" do
     test "nearest neighbor chain" do
-      # data = Nx.tensor([[1, 5], [2, 5], [1, 4], [4, 5], [5, 5], [5, 4], [1, 2], [1, 1], [2, 1]])
       data = Nx.tensor([[2], [7], [9], [0], [3]])
-      # data = Nx.tensor([[1], [1], [1], [1], [1], [1], [1], [10], [50]])
-      # {n_row, _} = Nx.shape(data)
-      # nan_diag = Nx.Constants.nan() |> Nx.broadcast({n_row}) |> Nx.make_diagonal()
-      # pairwise = data |> Hierarchical.pairwise_euclidean() |> Nx.add(nan_diag) |> IO.inspect()
-
-      # Hierarchical.link(pairwise)
-      # |> IO.inspect()
 
       Hierarchical.fit(data,
         dissimilarity: :euclidean,
-        # group_by: [num_clusters: 3],
-        # group_by: [height: 2.0],
         linkage: :single
       )
-      |> IO.inspect(charlists: :as_list)
+      |> IO.inspect()
     end
   end
 
