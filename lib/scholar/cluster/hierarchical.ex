@@ -261,14 +261,23 @@ defmodule Scholar.Cluster.Hierarchical do
     |> Nx.tensor()
   end
 
-  defn nearest_neighbor_chain(pairwise, _update_fun) do
+  defn nearest_neighbor_chain(pairwise, update_fun) do
+    {clusters, distances} = nearest_neighbor_core(pairwise, update_fun)
+    permutation = Nx.argsort(distances)
+    clusters = Nx.take(clusters, permutation)
+    distances = Nx.take(distances, permutation)
+    {relabel(clusters), distances}
+  end
+
+  defn nearest_neighbor_core(pairwise, _update_fun) do
     {num_obs, _} = Nx.shape(pairwise)
-    dendrogram = Nx.broadcast(-1.0, {num_obs - 1, 3})
+    clusters = Nx.broadcast(Nx.s64(0), {num_obs - 1, 2})
+    distances = Nx.broadcast(Nx.Constants.nan(Nx.type(pairwise)), {num_obs - 1})
     pairwise = :infinity |> Nx.broadcast({num_obs}) |> Nx.make_diagonal() |> Nx.add(pairwise)
     labels = Nx.iota({num_obs})
 
-    {dendrogram, _, _, _} =
-      while {dendrogram, pairwise, labels, len = 3}, n <- 0..(num_obs - 2) do
+    {clusters, distances, _, _, _} =
+      while {clusters, distances, pairwise, labels, len = 3}, n <- 0..(num_obs - 2) do
         {{a0, b0}, len} = if len >= 3, do: {find_pair(labels), 2}, else: {{-1, -1}, len - 3}
 
         # The key idea is that we recursively ask for the argmin of a row.
@@ -278,14 +287,14 @@ defmodule Scholar.Cluster.Hierarchical do
             {Nx.argmin(pairwise[a]), a, b, len + 1, pairwise}
           end
 
-        new_row = Nx.stack([a, b, pairwise[[a, b]]]) |> Nx.new_axis(0)
-        dendrogram = Nx.put_slice(dendrogram, [n, 0], new_row)
+        clusters = Nx.put_slice(clusters, [n, 0], [a, b] |> Nx.stack() |> Nx.new_axis(0))
+        distances = Nx.indexed_put(distances, Nx.stack([n]), pairwise[[a, b]])
         {pairwise, labels} = merge(pairwise, labels, a, b)
 
-        {dendrogram, pairwise, labels, len}
+        {clusters, distances, pairwise, labels, len}
       end
 
-    dendrogram
+    {clusters, distances}
   end
 
   # @infinite_index represents an removed label.
@@ -335,5 +344,26 @@ defmodule Scholar.Cluster.Hierarchical do
       |> Nx.indexed_put(Nx.new_axis(b, 0), @infinite_index)
 
     {pairwise, labels}
+  end
+
+  defn relabel(clusters) do
+    {num_obs, 2} = Nx.shape(clusters)
+    num_obs = num_obs + 1
+    parent = Nx.iota({num_obs})
+    labels = Nx.broadcast(-1, {num_obs - 1, 3})
+
+    {labels, _, _} =
+      while {labels, parent, clusters}, i <- 0..(num_obs - 2) do
+        a = clusters[[i, 0]]
+        b = clusters[[i, 1]]
+        x = parent[a]
+        y = parent[b]
+        labels = Nx.put_slice(labels, [i, 0], [i + num_obs, x, y] |> Nx.stack() |> Nx.new_axis(0))
+        parent = Nx.indexed_put(parent, Nx.stack([a]), i + num_obs)
+        parent = Nx.indexed_put(parent, Nx.stack([b]), i + num_obs)
+        {labels, parent, clusters}
+      end
+
+    labels
   end
 end
