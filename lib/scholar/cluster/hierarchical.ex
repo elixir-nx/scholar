@@ -347,20 +347,21 @@ defmodule Scholar.Cluster.Hierarchical do
   end
 
   defn relabel(clusters) do
-    {num_obs, 2} = Nx.shape(clusters)
-    num_obs = num_obs + 1
-    parent = Nx.iota({num_obs})
-    labels = Nx.broadcast(-1, {num_obs - 1, 3})
+    {n, 2} = Nx.shape(clusters)
+    n = n + 1
+    parent = Nx.iota({n})
+    new_clusters = Nx.linspace(n, 2 * n - 2, n: n - 1, type: :s64)
+
+    labels =
+      Nx.broadcast(-1, {n - 1, 3})
+      |> Nx.put_slice([0, 0], Nx.reshape(new_clusters, {n - 1, 1}))
 
     {labels, _, _} =
-      while {labels, parent, clusters}, i <- 0..(num_obs - 2) do
-        a = clusters[[i, 0]]
-        b = clusters[[i, 1]]
-        x = parent[a]
-        y = parent[b]
-        labels = Nx.put_slice(labels, [i, 0], [i + num_obs, x, y] |> Nx.stack() |> Nx.new_axis(0))
-        parent = Nx.indexed_put(parent, Nx.stack([a]), i + num_obs)
-        parent = Nx.indexed_put(parent, Nx.stack([b]), i + num_obs)
+      while {labels, parent, clusters}, i <- 0..(n - 2) do
+        cluster = clusters[i]
+        indices = Nx.stack([Nx.take(parent, cluster)])
+        labels = Nx.put_slice(labels, [i, 1], indices)
+        parent = Nx.indexed_put(parent, Nx.reshape(cluster, {2, 1}), Nx.tile(i + n, [2]))
         {labels, parent, clusters}
       end
 
