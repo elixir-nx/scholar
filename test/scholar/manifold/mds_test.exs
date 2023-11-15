@@ -4,7 +4,7 @@ defmodule Scholar.Manifold.MDSTest do
   doctest MDS
 
   def x() do
-    Nx.iota({10, 50})
+    Nx.iota({10,50})
   end
 
   def key() do
@@ -12,7 +12,7 @@ defmodule Scholar.Manifold.MDSTest do
   end
 
   test "all default" do
-    model = EXLA.jit_apply(&MDS.fit(&1, key: &2), [x(), key()])
+    model = MDS.fit(x(), key: key())
 
     assert_all_close(
       model.embedding,
@@ -35,7 +35,7 @@ defmodule Scholar.Manifold.MDSTest do
   end
 
   test "non-default num_components" do
-    model = EXLA.jit_apply(&MDS.fit(&1, num_components: 5, key: &2), [x(), key()])
+    model = MDS.fit(x(), num_components: 5, key: key())
 
     assert_all_close(
       model.embedding,
@@ -118,86 +118,78 @@ defmodule Scholar.Manifold.MDSTest do
   end
 
   test "non-default metric" do
-    model = EXLA.jit_apply(&MDS.fit(&1, metric: false, key: &2), [x(), key()])
+    model = MDS.fit(x(), metric: false, key: key())
 
     assert_all_close(
       model.embedding,
       Nx.tensor([
-        [-0.4574202001094818, 0.43711262941360474],
-        [0.5131282210350037, -0.2326662540435791],
-        [-0.3391505777835846, -0.44985219836235046],
-        [-0.4774346351623535, 0.056608833372592926],
-        [0.24871373176574707, 0.2837387025356293],
-        [0.2930290699005127, 0.026153063401579857],
-        [0.10025614500045776, 0.5481869578361511],
-        [-0.012855583801865578, -0.14186446368694305],
-        [-0.2434394210577011, -0.12836961448192596],
-        [0.16366195678710938, -0.4129194915294647]
+        [0.4611709713935852, -0.2790529131889343],
+        [0.10750522464513779, 0.3869015574455261],
+        [0.10845339298248291, -0.619588315486908],
+        [-0.3274216949939728, -0.2036580592393875],
+        [0.432122141122818, 0.4288368821144104],
+        [-0.2664470970630646, 0.1712798774242401],
+        [-0.46502357721328735, 0.015750018879771233],
+        [0.35657963156700134, 0.028018075972795486],
+        [-0.11095760017633438, -0.3872125744819641],
+        [-0.20736312866210938, 0.41101184487342834]
       ])
     )
 
-    assert_all_close(model.stress, 1.3884981870651245)
-    assert_all_close(model.n_iter, Nx.tensor(16))
+    assert_all_close(model.stress, 1.2879878282546997)
+    assert_all_close(model.n_iter, Nx.tensor(18))
   end
 
   test "option normalized_stress with metric set to false" do
     model =
-      EXLA.jit_apply(&MDS.fit(&1, metric: false, key: &2, normalized_stress: true), [x(), key()])
+      MDS.fit(x(), metric: false, key: key(), normalized_stress: true)
 
     assert_all_close(
       model.embedding,
       Nx.tensor([
-        [0.5613928437232971, 0.0015262559754773974],
-        [-0.1498950868844986, 0.07842765003442764],
-        [-0.03082980029284954, -0.4600554406642914],
-        [-0.38331490755081177, 0.4493577182292938],
-        [-0.519985556602478, -0.25569814443588257],
-        [0.31080374121665955, -0.3486037254333496],
-        [0.18066535890102386, 0.33618786931037903],
-        [0.06271502375602722, -0.4786646068096161],
-        [0.31948113441467285, 0.38379359245300293],
-        [-0.31831350922584534, 0.17909257113933563]
+        [-0.5107499957084656, -0.5828369855880737],
+        [-0.008806264027953148, -0.4549526870250702],
+        [-0.5534653663635254, -0.02513509802520275],
+        [0.11427811533212662, 0.17350295186042786],
+        [0.45669451355934143, 0.20050597190856934],
+        [0.010616336017847061, -0.09705149382352829],
+        [-0.27859434485435486, 0.3822994530200958],
+        [0.353694885969162, -0.17320780456066132],
+        [0.49716615676879883, -0.10724353790283203],
+        [-0.12109922617673874, 0.4835425913333893]
       ])
     )
 
-    assert_all_close(model.stress, 0.2579502761363983)
-    assert_all_close(model.n_iter, Nx.tensor(4))
+    assert_all_close(model.stress, 0.24878354370594025)
+    assert_all_close(model.n_iter, Nx.tensor(8))
   end
 
   test "epsilon set to a smaller then default value" do
-    model =
-      EXLA.jit_apply(&MDS.fit(&1, key: &2, eps: 1.0e-4), [
-        x(),
-        key()
-      ])
+    model = MDS.fit(x(), key: key(), eps: 1.0e-4)
 
     assert_all_close(
       model.embedding,
       Nx.tensor([
-        [-1210.033203125, -1031.856689453125],
-        [-975.5969848632812, -761.9794921875],
-        [-702.4647827148438, -536.8274536132812],
-        [-407.57183837890625, -339.2957458496094],
-        [-155.5349884033203, -88.32337951660156],
-        [139.15322875976562, 109.224853515625],
-        [439.394287109375, 299.4696960449219],
-        [705.2318725585938, 533.9306030273438],
-        [944.5399780273438, 798.44189453125],
-        [1222.882568359375, 1017.2158203125]
+        [-1210.0882568359375, -1031.7977294921875],
+        [-975.5465087890625, -762.0400390625],
+        [-702.4406127929688, -536.8583984375],
+        [-407.59564208984375, -339.2669372558594],
+        [-155.48812866210938, -88.38337707519531],
+        [139.16014099121094, 109.21498107910156],
+        [439.32861328125, 299.55438232421875],
+        [705.1881713867188, 533.9835205078125],
+        [944.5883178710938, 798.3893432617188],
+        [1222.8939208984375, 1017.2042846679688]
       ])
     )
 
     # as expected smaller value of stress (loss) and bigger number of iterations that all default
-    assert_all_close(model.stress, 87.6345443725586)
-    assert_all_close(model.n_iter, Nx.tensor(196))
+    assert_all_close(model.stress, 86.7530288696289)
+    assert_all_close(model.n_iter, Nx.tensor(197))
   end
 
   test "smaller max_iter value (100)" do
-    model =
-      EXLA.jit_apply(
-        &MDS.fit(&1, key: &2, eps: 1.0e-4, max_iter: 100),
-        [x(), key()]
-      )
+    model = MDS.fit(x(), key: key(), eps: 1.0e-4, max_iter: 100)
 
     assert_all_close(
       model.embedding,
