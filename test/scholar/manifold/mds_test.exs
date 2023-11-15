@@ -4,7 +4,7 @@ defmodule Scholar.Manifold.MDSTest do
   doctest MDS
 
   def x() do
-    Nx.iota({10,50})
+    Nx.iota({10, 50})
   end
 
   def key() do
