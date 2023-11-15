@@ -598,7 +598,8 @@ defmodule Scholar.Metrics.Distance do
   """
   defn pairwise_squared_euclidean(x) do
     x_norm = Nx.sum(x * x, axes: [1], keep_axes: true)
-    Nx.max(0, x_norm + Nx.transpose(x_norm) - 2 * Nx.dot(x, [-1], x, [-1]))
+    dist = Nx.max(0, x_norm + Nx.transpose(x_norm) - 2 * Nx.dot(x, [-1], x, [-1]))
+    Nx.put_diagonal(dist, Nx.broadcast(Nx.tensor(0, type: Nx.type(dist)), {Nx.axis_size(x, 0)}))
   end
 
   @doc """
@@ -688,8 +689,8 @@ defmodule Scholar.Metrics.Distance do
         [
           [0.0, 0.0793418288230896, 0.1139642596244812, 0.13029760122299194, 0.1397092342376709, 0.14581435918807983],
           [0.0793418288230896, 0.0, 0.0032819509506225586, 0.006624102592468262, 0.008954286575317383, 0.01060718297958374],
-          [0.1139642596244812, 0.0032819509506225586, 1.1920928955078125e-7, 5.82277774810791e-4, 0.0013980269432067871, 0.0020949840545654297],
-          [0.13029760122299194, 0.006624102592468262, 5.82277774810791e-4, 5.960464477539063e-8, 1.7595291137695312e-4, 4.686713218688965e-4],
+          [0.1139642596244812, 0.0032819509506225586, 0.0, 5.82277774810791e-4, 0.0013980269432067871, 0.0020949840545654297],
+          [0.13029760122299194, 0.006624102592468262, 5.82277774810791e-4, 0.0, 1.7595291137695312e-4, 4.686713218688965e-4],
           [0.1397092342376709, 0.008954286575317383, 0.0013980269432067871, 1.7595291137695312e-4, 0.0, 7.027387619018555e-5],
           [0.14581435918807983, 0.01060718297958374, 0.0020949840545654297, 4.686713218688965e-4, 7.027387619018555e-5, 0.0]
         ]
@@ -697,6 +698,7 @@ defmodule Scholar.Metrics.Distance do
   """
   defn pairwise_cosine(x) do
     x_normalized = Scholar.Preprocessing.normalize(x, axes: [1])
-    Nx.max(0, 1 - Nx.dot(x_normalized, [-1], x_normalized, [-1]))
+    dist = Nx.max(0, 1 - Nx.dot(x_normalized, [-1], x_normalized, [-1]))
+    Nx.put_diagonal(dist, Nx.broadcast(Nx.tensor(0, type: Nx.type(dist)), {Nx.axis_size(x, 0)}))
   end
 end
