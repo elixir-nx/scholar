@@ -18,9 +18,9 @@ defmodule Scholar.Cluster.HierarchicalTest do
       data = Nx.tensor([[1, 5], [2, 5], [1, 4], [4, 5], [5, 5], [5, 4], [1, 2], [1, 1], [2, 1]])
 
       # This diagram represents the sequence of expected merges. The data starts off with all
-      # points as singleton clusters. The first step of the algorithm merges singleton clusters
-      # 0: [0] and 1: [1] to form cluster 9: [0, 1]. This process continues until all clusters have
-      # been merged into a single cluster with all points.
+      # points as singleton clades. The first step of the algorithm merges singleton clades
+      # 0: [0] and 1: [1] to form clade 9: [0, 1]. This process continues until all clades have
+      # been merged into a single clade with all points.
       #
       #       0   1   2   3   4   5   6   7   8
       #    8: [0] [1] [2] [3] [4] [5] [6] [7] [8]
@@ -55,9 +55,9 @@ defmodule Scholar.Cluster.HierarchicalTest do
           linkage: :single
         )
 
-      # The dendrogram formation part of the algorithm should've formed the following clusters,
+      # The dendrogram formation part of the algorithm should've formed the following clades,
       # dissimilarities, and sizes (which collectively form the dendrogram).
-      assert result.clusters ==
+      assert result.dendrogram.clades ==
                Nx.tensor([
                  [0, 1],
                  [3, 4],
@@ -69,13 +69,27 @@ defmodule Scholar.Cluster.HierarchicalTest do
                  [14, 15]
                ])
 
-      assert result.dissimilarities == Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
-      assert result.sizes == Nx.tensor([2, 2, 2, 3, 3, 3, 6, 9])
+      assert result.dendrogram.dissimilarities ==
+               Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
+
+      assert result.dendrogram.sizes == Nx.tensor([2, 2, 2, 3, 3, 3, 6, 9])
 
       # The clustering part of the algorithm uses the `group_by: [num_clusters: 3]` option to take
       # the dendrogram and form 3 clusters. This should result in each datum having the following
       # cluster labels.
-      assert result.labels == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+      assert result.cluster_labels == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+    end
+
+    test "group by height works" do
+      data = Nx.tensor([[2], [7], [9], [0], [3]])
+      result = Hierarchical.fit(data, group_by: [height: 2.5])
+      assert result.cluster_labels == Nx.tensor([0, 1, 1, 0, 0])
+    end
+
+    test "group by number of clusters works" do
+      data = Nx.tensor([[2], [7], [9], [0], [3]])
+      result = Hierarchical.fit(data, group_by: [num_clusters: 3])
+      assert result.cluster_labels == Nx.tensor([0, 1, 1, 2, 0])
     end
 
     test "group_by option not required" do
@@ -85,12 +99,12 @@ defmodule Scholar.Cluster.HierarchicalTest do
           linkage: :single
         )
 
-      assert result.clusters == Nx.tensor([[0, 4], [1, 2], [3, 5], [6, 7]])
-      assert result.dissimilarities == Nx.tensor([1.0, 2.0, 2.0, 4.0])
-      assert result.sizes == Nx.tensor([2, 2, 3, 5])
+      assert result.dendrogram.clades == Nx.tensor([[0, 4], [1, 2], [3, 5], [6, 7]])
+      assert result.dendrogram.dissimilarities == Nx.tensor([1.0, 2.0, 2.0, 4.0])
+      assert result.dendrogram.sizes == Nx.tensor([2, 2, 3, 5])
 
-      # Not providing the `group_by` option results in no labels.
-      assert result.labels == nil
+      # Not providing the `group_by` option results in no clusters.
+      assert result.cluster_labels == nil
     end
   end
 
