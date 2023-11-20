@@ -84,25 +84,26 @@ defmodule Scholar.Cluster.Hierarchical do
 
     pairwise = dissimilarity_fun.(data)
 
-    if not match?({n, n}, Nx.shape(pairwise)) do
-      raise ArgumentError, "pairwise must be a symmetric matrix"
-    end
+    n =
+      case Nx.shape(pairwise) do
+        {n, n} -> n
+        _ -> raise ArgumentError, "pairwise must be a symmetric matrix"
+      end
 
     {clusters, diss, sizes} = cluster_fun.(pairwise, update_fun)
 
     labels =
       if group_by do
-        # groups =
-        #   case group_by do
-        #     [height: height] ->
-        #       group_by_height(clusters, diss, height)
-        #
-        #     [num_clusters: num_clusters] ->
-        #       group_by_num_clusters(clusters, diss, num_clusters)
-        #   end
+        groups =
+          case group_by do
+            [height: height] ->
+              group_by_height(clusters, diss, n, height)
 
-        # groups_to_labels(groups)
-        nil
+            [num_clusters: num_clusters] ->
+              group_by_num_clusters(clusters, n, num_clusters)
+          end
+
+        groups_to_labels(groups)
       else
         nil
       end
@@ -265,41 +266,41 @@ defmodule Scholar.Cluster.Hierarchical do
 
   # Grouping functions
 
-  defp group_by_height([{count, _, _} | _] = dendrogram, height_cutoff) do
-    clusters = Map.new(0..(count - 1), &{&1, [&1]})
+  deftransformp group_by_height(clusters, diss, n, height_cutoff) do
+    groups = Map.new(0..(n - 1), &{&1, [&1]})
 
-    Enum.reduce_while(dendrogram, clusters, fn {c, [a, b], height}, clusters ->
+    Enum.zip(Nx.to_list(clusters), Nx.to_list(diss))
+    |> Enum.with_index(n)
+    |> Enum.reduce_while(groups, fn {{[a, b], height}, c}, groups ->
       if height >= height_cutoff do
-        {:halt, clusters}
+        {:halt, groups}
       else
-        clusters =
-          clusters
-          |> Map.put(c, clusters[a] ++ clusters[b])
-          |> Map.drop([a, b])
-
-        {:cont, clusters}
+        {:cont, merge_groups(groups, a, b, c)}
       end
     end)
   end
 
-  defp group_by_num_clusters([{count, _, _} | _] = dendrogram, num_clusters) do
-    clusters = Map.new(0..(count - 1), &{&1, [&1]})
+  deftransformp group_by_num_clusters(clusters, n, num_clusters) do
+    groups = Map.new(0..(n - 1), &{&1, [&1]})
 
-    Enum.reduce_while(dendrogram, {clusters, count}, fn {c, [a, b], _}, {clusters, count} ->
-      if count == num_clusters do
-        {:halt, clusters}
+    Nx.to_list(clusters)
+    |> Enum.with_index(n)
+    |> Enum.reduce_while(groups, fn {[a, b], c}, groups ->
+      if c + num_clusters == 2 * n do
+        {:halt, groups}
       else
-        clusters =
-          clusters
-          |> Map.put(c, clusters[a] ++ clusters[b])
-          |> Map.drop([a, b])
-
-        {:cont, {clusters, count - 1}}
+        {:cont, merge_groups(groups, a, b, c)}
       end
     end)
   end
 
-  defp groups_to_labels(groups) do
+  deftransformp merge_groups(groups, a, b, c) do
+    groups
+    |> Map.put(c, groups[a] ++ groups[b])
+    |> Map.drop([a, b])
+  end
+
+  deftransformp groups_to_labels(groups) do
     groups
     |> Enum.sort_by(fn {_label, group} -> Enum.min(group) end)
     |> Enum.with_index()

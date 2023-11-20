@@ -17,8 +17,7 @@ defmodule Scholar.Cluster.HierarchicalTest do
       result =
         Hierarchical.fit(data,
           dissimilarity: :euclidean,
-          # group_by: [num_clusters: 3],
-          # group_by: [height: 2.0],
+          group_by: [num_clusters: 3],
           linkage: :single
         )
 
@@ -35,7 +34,7 @@ defmodule Scholar.Cluster.HierarchicalTest do
                ])
 
       assert result.dissimilarities == Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
-      # assert result.labels == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+      assert result.labels == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
       assert result.sizes == Nx.tensor([2, 2, 2, 3, 3, 3, 6, 9])
 
       #  8: [0] [1] [2] [3] [4] [5] [6] [7] [8]
