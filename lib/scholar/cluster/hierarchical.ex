@@ -4,18 +4,18 @@ defmodule Scholar.Cluster.Hierarchical do
   """
   import Nx.Defn
 
-  alias Scholar.Cluster.Hierarchical.CondensedMatrix
+  defstruct [:clusters, :dissimilarities, :labels, :sizes]
 
   @dissimilarity_types [
-    :euclidean,
-    :precomputed
+    :euclidean
+    # :precomputed
   ]
 
   @linkage_types [
     :average,
-    :centroid,
+    # :centroid,
     :complete,
-    :median,
+    # :median,
     :single,
     :ward,
     :weighted
@@ -60,16 +60,16 @@ defmodule Scholar.Cluster.Hierarchical do
 
     dissimilarity_fun =
       case dissimilarity do
+        # :precomputed -> &Function.identity/1
         :euclidean -> &pairwise_euclidean/1
-        :precomputed -> &Function.identity/1
       end
 
     update_fun =
       case linkage do
         :average -> &average/6
-        :centroid -> &centroid/6
+        # :centroid -> &centroid/6
         :complete -> &complete/6
-        :median -> &median/6
+        # :median -> &median/6
         :single -> &single/6
         :ward -> &ward/6
         :weighted -> &weighted/6
@@ -77,113 +77,159 @@ defmodule Scholar.Cluster.Hierarchical do
 
     cluster_fun =
       case linkage do
-        # TODO: change to `mst`
-        # :single -> &primitive/2
-        :single -> &nearest_neighbor_chain/2
-        # TODO: change to `nn_chain`
-        l when l in [:average, :complete, :ward, :weighted] -> &primitive/2
-        # TODO: change to `generic`
-        l when l in [:centroid, :median] -> &primitive/2
+        # TODO: :centroid, :median
+        l when l in [:average, :complete, :single, :ward, :weighted] ->
+          &parallel_nearest_neighbor/2
       end
 
-    dendrogram =
-      data
-      |> dissimilarity_fun.()
-      |> cluster_fun.(update_fun)
+    pairwise = dissimilarity_fun.(data)
+
+    if not match?({n, n}, Nx.shape(pairwise)) do
+      raise ArgumentError, "pairwise must be a symmetric matrix"
+    end
+
+    {clusters, diss, sizes} = cluster_fun.(pairwise, update_fun)
 
     labels =
       if group_by do
-        group_fun =
-          case group_by do
-            [height: height] -> &group_by_height(&1, height)
-            [num_clusters: num_clusters] -> &group_by_num_clusters(&1, num_clusters)
-          end
+        # groups =
+        #   case group_by do
+        #     [height: height] ->
+        #       group_by_height(clusters, diss, height)
+        #
+        #     [num_clusters: num_clusters] ->
+        #       group_by_num_clusters(clusters, diss, num_clusters)
+        #   end
 
-        dendrogram |> group_fun.() |> groups_to_labels()
+        # groups_to_labels(groups)
+        nil
       else
         nil
       end
 
-    %{
-      dendrogram: dendrogram,
-      labels: labels
+    %__MODULE__{
+      clusters: clusters,
+      dissimilarities: diss,
+      labels: labels,
+      sizes: sizes
     }
   end
 
   # Cluster functions
 
-  @doc """
-  The "primitive" clustering procedure.
+  defnp parallel_nearest_neighbor(pairwise, update_fun) do
+    {n, _} = Nx.shape(pairwise)
+    pairwise = Nx.broadcast(:infinity, {n}) |> Nx.make_diagonal() |> Nx.add(pairwise)
+    clusters = Nx.broadcast(-1, {n - 1, 2})
+    sizes = Nx.broadcast(1, {2 * n - 1})
+    pointers = Nx.broadcast(-1, {2 * n - 2})
+    diss = Nx.tensor(:infinity, type: Nx.type(pairwise)) |> Nx.broadcast({n - 1})
 
-  This is figure 1 of the paper (p. 6). It serves as the baseline for the other algorithms.
+    {clusters, _count, _pointers, _pairwise, diss, sizes} =
+      while {clusters, count = 0, pointers, pairwise, diss, sizes}, count < n - 1 do
+        # Indexes of who I am nearest to
+        nearest = Nx.argmin(pairwise, axis: 1, type: :u32)
 
-  It has a best case complexity of O(n^3) and shouldn't be used in practice.
-  """
-  def primitive(%Nx.Tensor{} = pd, update_fun) do
-    {n_row, n_row} = Nx.shape(pd)
+        # Take who I am nearest to is nearest to
+        nearest_of_nearest = Nx.take(nearest, nearest)
 
-    # Cluster labels.
-    labels = MapSet.new(0..(n_row - 1))
+        # If the entry is pointing back at me, then we are a cluster
+        clusters_selector = Nx.equal(nearest_of_nearest, Nx.iota({n}))
 
-    # Cluster sizes.
-    size = Map.new(0..(n_row - 1), &{&1, 1})
+        # Now let's get the links that form clusters.
+        # They are bidirectional but let's keep only one side.
+        links = Nx.select(clusters_selector and nearest > nearest_of_nearest, nearest, n)
 
-    # Dissimilarities between each pair of data points.
-    # Map of %{[i, j] => dissimiliarity} where i, j are the indices of the two data.
-    ci = n_row |> CondensedMatrix.pairwise_indices() |> Nx.to_list()
-    cd = pd |> CondensedMatrix.condense_pairwise() |> Nx.to_list()
-    d = [ci, cd] |> Enum.zip() |> Map.new()
+        {clusters, count, pointers, pairwise, diss, sizes} =
+          merge_clusters(clusters, count, pointers, pairwise, diss, sizes, links, n, update_fun)
 
-    {output, _size, _labels, _d, _n} =
-      for _ <- 0..(n_row - 2), reduce: {[], size, labels, d, n_row - 1} do
-        {output, size, labels, d, n_old} ->
-          # Create a new cluster label n.
-          n = n_old + 1
-
-          # Find the closest pair of old clusters.
-          # This pair will be merged to form cluster n.
-          {[a, b], dab} = Enum.min_by(d, fn {i, d} -> {d, i} end)
-
-          # Add new cluster to output.
-          output = [{n, [a, b], dab} | output]
-
-          # Remove old cluster labels.
-          labels = Enum.reduce([a, b], labels, &MapSet.delete(&2, &1))
-
-          # Update dissimilarities.
-          d =
-            for c <- labels, reduce: d do
-              d ->
-                [ac, bc] = [[a, c], [b, c]] |> Enum.map(&Enum.sort(&1, :desc))
-                update = update_fun.(d[ac], d[bc], d[[a, b]], size[a], size[b], size[c])
-
-                d
-                # [n, c] is ordered correctly because n > c always.
-                |> Map.put([n, c], update)
-                |> Map.drop([ac, bc])
-            end
-
-          d = Map.delete(d, [a, b])
-
-          # Update sizes.
-          size = Map.put(size, n, size[a] + size[b])
-
-          # Add n to the labels.
-          labels = MapSet.put(labels, n)
-
-          {output, size, labels, d, n}
+        {clusters, count, pointers, pairwise, diss, sizes}
       end
 
-    Enum.reverse(output)
+    {clusters, diss, sizes[n..(2 * n - 2)]}
   end
 
-  def mst(%Nx.Tensor{} = _pd, _update_fun), do: raise("not yet implemented")
-  def nn_chain(%Nx.Tensor{} = _pd, _update_fun), do: raise("not yet implemented")
-  def generic(%Nx.Tensor{} = _pd, _update_fun), do: raise("not yet implemented")
+  defnp merge_clusters(clusters, count, pointers, pairwise, diss, sizes, links, n, update_fun) do
+    {clusters, count, pointers, pairwise, diss, sizes, _links} =
+      while {clusters, count, pointers, pairwise, diss, sizes, links},
+            i <- 0..(Nx.size(links) - 1) do
+        # i < j because of how links is formed.
+        # i will become the new cluster index and we "infinity-out" j.
+        j = links[i]
+
+        if j == n do
+          {clusters, count, pointers, pairwise, diss, sizes, links}
+        else
+          # Clusters a and b (i and j of pairwise) are being merged into c.
+          a = find_cluster(pointers, i)
+          b = find_cluster(pointers, j)
+          c = count + n
+
+          # Update clusters
+          new_cluster = Nx.stack([a, b]) |> Nx.sort() |> Nx.new_axis(0)
+          clusters = Nx.put_slice(clusters, [count, 0], new_cluster)
+
+          # Update sizes
+          sc = sizes[i] + sizes[j]
+          sizes = Nx.indexed_put(sizes, Nx.stack([i, c]) |> Nx.new_axis(-1), Nx.stack([sc, sc]))
+
+          # Update dissimilarities
+          diss = Nx.indexed_put(diss, Nx.stack([count]), pairwise[i][j])
+
+          # Update pairwise
+          {pairwise, _, _, _, _, _} =
+            while {pairwise, x = i, y = j, sa = sizes[i], sb = sizes[j], sc = sc},
+                  z <- 0..(n - 1) do
+              if z == x or z == y or Nx.is_infinity(pairwise[[0, z]]) do
+                {pairwise, x, y, sa, sb, sc}
+              else
+                dac = pairwise[[x, z]]
+                dbc = pairwise[[y, z]]
+                dab = pairwise[[x, y]]
+                update = update_fun.(dac, dbc, dab, sa, sb, sc)
+
+                # TODO: do this in a single call?
+                pairwise =
+                  pairwise
+                  |> Nx.indexed_put(Nx.stack([x, z]), update)
+                  |> Nx.indexed_put(Nx.stack([z, x]), update)
+                  |> Nx.indexed_put(Nx.stack([y, z]), update)
+                  |> Nx.indexed_put(Nx.stack([z, y]), update)
+
+                {pairwise, x, y, sa, sb, sc}
+              end
+            end
+
+          infinities = Nx.take_diagonal(pairwise)
+
+          pairwise =
+            pairwise
+            |> Nx.put_slice([j, 0], Nx.reshape(infinities, {1, n}))
+            |> Nx.put_slice([0, j], Nx.reshape(infinities, {n, 1}))
+
+          # Update pointers
+          indices = [i, j] |> Nx.stack() |> Nx.new_axis(-1)
+          pointers = Nx.indexed_put(pointers, indices, Nx.stack([c, c]))
+
+          {clusters, count + 1, pointers, pairwise, diss, sizes, links}
+        end
+      end
+
+    {clusters, count, pointers, pairwise, diss, sizes}
+  end
+
+  defnp find_cluster(pointers, i) do
+    {i, _, _} =
+      while {_current = i, next = pointers[i], pointers}, next != -1 do
+        {next, pointers[next], pointers}
+      end
+
+    i
+  end
 
   # Dissimilarity functions
 
-  def pairwise_euclidean(%Nx.Tensor{} = x) do
+  defn pairwise_euclidean(%Nx.Tensor{} = x) do
     x |> pairwise_euclidean_sq() |> Nx.sqrt()
   end
 
@@ -194,25 +240,25 @@ defmodule Scholar.Cluster.Hierarchical do
 
   # Dissimilarity update functions
 
-  def average(dac, dbc, _dab, na, nb, _nc),
-    do: (na * dac + nb * dbc) / (na + nb)
+  defn average(dac, dbc, _dab, sa, sb, _sc),
+    do: (sa * dac + sb * dbc) / (sa + sb)
 
-  def centroid(dac, dbc, dab, na, nb, _nc),
-    do: Nx.sqrt((na * dac + nb * dbc) / (na + nb) - na * nb * dab / (na + nb) ** 2)
+  # defn centroid(dac, dbc, dab, sa, sb, _sc),
+  #   do: Nx.sqrt((sa * dac + sb * dbc) / (sa + sb) - sa * sb * dab / (sa + sb) ** 2)
 
-  def complete(dac, dbc, _dab, _na, _nb, _nc),
-    do: max(dac, dbc)
+  defn complete(dac, dbc, _dab, _sa, _sb, _sc),
+    do: Nx.max(dac, dbc)
 
-  def median(dac, dbc, dab, _na, _nb, _nc),
-    do: Nx.sqrt(dac / 2 + dbc / 2 - dab / 4)
+  # defn median(dac, dbc, dab, _sa, _sb, _sc),
+  #   do: Nx.sqrt(dac / 2 + dbc / 2 - dab / 4)
 
-  def single(dac, dbc, _dab, _na, _nb, _nc),
-    do: min(dac, dbc)
+  defn single(dac, dbc, _dab, _sa, _sb, _sc),
+    do: Nx.min(dac, dbc)
 
-  def ward(dac, dbc, dab, na, nb, nc),
-    do: Nx.sqrt(((na + nc) * dac + (nb + nc) * dbc - nc * dab) / (na + nb + nc))
+  defn ward(dac, dbc, dab, sa, sb, sc),
+    do: Nx.sqrt(((sa + sc) * dac + (sb + sc) * dbc - sc * dab) / (sa + sb + sc))
 
-  def weighted(dac, dbc, _dab, _na, _nb, _nc),
+  defn weighted(dac, dbc, _dab, _sa, _sb, _sc),
     do: (dac + dbc) / 2
 
   # Grouping functions
@@ -259,112 +305,5 @@ defmodule Scholar.Cluster.Hierarchical do
     |> Enum.sort()
     |> Enum.map(fn {_, label} -> label end)
     |> Nx.tensor()
-  end
-
-  defn nearest_neighbor_chain(pairwise, update_fun) do
-    {clusters, distances} = nearest_neighbor_core(pairwise, update_fun)
-    permutation = Nx.argsort(distances)
-    clusters = Nx.take(clusters, permutation)
-    distances = Nx.take(distances, permutation)
-    {relabel(clusters), distances}
-  end
-
-  defn nearest_neighbor_core(pairwise, _update_fun) do
-    {num_obs, _} = Nx.shape(pairwise)
-    clusters = Nx.broadcast(Nx.s64(0), {num_obs - 1, 2})
-    distances = Nx.broadcast(Nx.Constants.nan(Nx.type(pairwise)), {num_obs - 1})
-    pairwise = :infinity |> Nx.broadcast({num_obs}) |> Nx.make_diagonal() |> Nx.add(pairwise)
-    labels = Nx.iota({num_obs})
-
-    {clusters, distances, _, _, _} =
-      while {clusters, distances, pairwise, labels, len = 3}, n <- 0..(num_obs - 2) do
-        {{a0, b0}, len} = if len >= 3, do: {find_pair(labels), 2}, else: {{-1, -1}, len - 3}
-
-        # The key idea is that we recursively ask for the argmin of a row.
-        # When we find an a-b-a cycle in the argmin chain, it means a and b are a pair.
-        {a, b, _, len, _} =
-          while {a = a0, b = b0, c = -1, len, pairwise}, not (len >= 3 and a == c) do
-            {Nx.argmin(pairwise[a]), a, b, len + 1, pairwise}
-          end
-
-        clusters = Nx.put_slice(clusters, [n, 0], [a, b] |> Nx.stack() |> Nx.new_axis(0))
-        distances = Nx.indexed_put(distances, Nx.stack([n]), pairwise[[a, b]])
-        {pairwise, labels} = merge(pairwise, labels, a, b)
-
-        {clusters, distances, pairwise, labels, len}
-      end
-
-    {clusters, distances}
-  end
-
-  # @infinite_index represents an removed label.
-  # Can't use :infinity because we need integers.
-  @infinite_index Nx.Constants.max_finite(:u32)
-  defn find_pair(labels) do
-    # Choose the earliest two not-yet-removed labels.
-    a = Nx.argmin(labels)
-    b = labels |> Nx.indexed_put(Nx.new_axis(a, 0), @infinite_index) |> Nx.argmin()
-    {a, b}
-  end
-
-  defn merge(pairwise, labels, label_1, label_2) do
-    {num_obs, _} = Nx.shape(pairwise)
-    a = Nx.min(label_1, label_2)
-    b = Nx.max(label_1, label_2)
-
-    {pairwise, _, _, _} =
-      while {pairwise, a, b, inf = @infinite_index}, c <- labels do
-        if c == a or c == b or c == inf do
-          {pairwise, a, b, inf}
-        else
-          # TODO: generalize updates (hardcoded for single linkage)
-          update = Nx.min(pairwise[[a, c]], pairwise[[b, c]])
-
-          # TODO: tensor-ify?
-          pairwise =
-            pairwise
-            |> Nx.indexed_put(Nx.stack([a, c]), update)
-            |> Nx.indexed_put(Nx.stack([c, a]), update)
-            |> Nx.indexed_put(Nx.stack([b, c]), update)
-            |> Nx.indexed_put(Nx.stack([c, b]), update)
-
-          {pairwise, a, b, inf}
-        end
-      end
-
-    # Drop the greater of a and b (by convention, a < b)
-    pairwise =
-      pairwise
-      |> Nx.put_slice([b, 0], Nx.broadcast(:infinity, {1, num_obs}))
-      |> Nx.put_slice([0, b], Nx.broadcast(:infinity, {num_obs, 1}))
-
-    labels =
-      labels
-      |> Nx.indexed_put(Nx.new_axis(a, 0), @infinite_index)
-      |> Nx.indexed_put(Nx.new_axis(b, 0), @infinite_index)
-
-    {pairwise, labels}
-  end
-
-  defn relabel(clusters) do
-    {n, 2} = Nx.shape(clusters)
-    n = n + 1
-    parent = Nx.iota({n})
-    new_clusters = Nx.linspace(n, 2 * n - 2, n: n - 1, type: :s64)
-
-    labels =
-      Nx.broadcast(-1, {n - 1, 3})
-      |> Nx.put_slice([0, 0], Nx.reshape(new_clusters, {n - 1, 1}))
-
-    {labels, _, _} =
-      while {labels, parent, clusters}, i <- 0..(n - 2) do
-        cluster = clusters[i]
-        indices = Nx.stack([Nx.take(parent, cluster)])
-        labels = Nx.put_slice(labels, [i, 1], indices)
-        parent = Nx.indexed_put(parent, Nx.reshape(cluster, {2, 1}), Nx.tile(i + n, [2]))
-        {labels, parent, clusters}
-      end
-
-    labels
   end
 end

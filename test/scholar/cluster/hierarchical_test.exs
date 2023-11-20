@@ -18,22 +18,25 @@ defmodule Scholar.Cluster.HierarchicalTest do
         Hierarchical.fit(data,
           dissimilarity: :euclidean,
           # group_by: [num_clusters: 3],
-          group_by: [height: 2.0],
+          # group_by: [height: 2.0],
           linkage: :single
         )
 
-      assert result.dendrogram == [
-               {9, [1, 0], 1.0},
-               {10, [4, 3], 1.0},
-               {11, [7, 6], 1.0},
-               {12, [9, 2], 1.0},
-               {13, [10, 5], 1.0},
-               {14, [11, 8], 1.0},
-               {15, [13, 12], 2.0},
-               {16, [15, 14], 2.0}
-             ]
+      assert result.clusters ==
+               Nx.tensor([
+                 [0, 1],
+                 [3, 4],
+                 [6, 7],
+                 [2, 9],
+                 [5, 10],
+                 [8, 11],
+                 [12, 13],
+                 [14, 15]
+               ])
 
-      assert result.labels == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+      assert result.dissimilarities == Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
+      # assert result.labels == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+      assert result.sizes == Nx.tensor([2, 2, 2, 3, 3, 3, 6, 9])
 
       #  8: [0] [1] [2] [3] [4] [5] [6] [7] [8]
       #  9: [01] [2] [3] [4] [5] [6] [7] [8]
@@ -60,7 +63,7 @@ defmodule Scholar.Cluster.HierarchicalTest do
       %{dendrogram: dendrogram} =
         Hierarchical.fit(data,
           dissimilarity: :euclidean,
-          linkage: :centroid
+          linkage: :single
         )
 
       dendrogram
@@ -77,29 +80,6 @@ defmodule Scholar.Cluster.HierarchicalTest do
         linkage: :single
       )
       |> IO.inspect()
-    end
-  end
-
-  describe "condensed matrix" do
-    test "has the correct size" do
-      for n <- 2..10 do
-        size =
-          {n, n}
-          |> Nx.iota()
-          |> Hierarchical.CondensedMatrix.condense_pairwise()
-          |> Nx.size()
-          |> Nx.tensor()
-
-        assert size == Hierarchical.CondensedMatrix.tri(n - 1)
-      end
-    end
-
-    test "can be indexed correctly" do
-      for n <- 2..10 do
-        rcs = Hierarchical.CondensedMatrix.pairwise_indices(n)
-        is = Hierarchical.CondensedMatrix.rc_to_i(rcs)
-        assert is == Nx.iota({Nx.to_number(Hierarchical.CondensedMatrix.tri(n - 1))})
-      end
     end
   end
 end
