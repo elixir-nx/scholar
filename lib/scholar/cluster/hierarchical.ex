@@ -1,5 +1,7 @@
 defmodule Scholar.Cluster.Hierarchical do
   @moduledoc """
+  Performs [agglomerative clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering#Agglomerative_clustering_example).
+
   https://arxiv.org/abs/1109.2378
   """
   import Nx.Defn
@@ -100,7 +102,16 @@ defmodule Scholar.Cluster.Hierarchical do
               group_by_height(clusters, diss, n, height)
 
             [num_clusters: num_clusters] ->
-              group_by_num_clusters(clusters, n, num_clusters)
+              cond do
+                num_clusters > n ->
+                  raise ArgumentError, "`num_clusters` may not exceed number of data points"
+
+                num_clusters == n ->
+                  Nx.broadcast(Nx.as_type(0, Nx.type(pairwise)), {n})
+
+                true ->
+                  group_by_num_clusters(clusters, n, num_clusters)
+              end
           end
 
         groups_to_labels(groups)
