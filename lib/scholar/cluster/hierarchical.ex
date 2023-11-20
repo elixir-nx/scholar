@@ -146,7 +146,9 @@ defmodule Scholar.Cluster.Hierarchical do
         {clusters, count, pointers, pairwise, diss, sizes}
       end
 
-    {clusters, diss, sizes[n..(2 * n - 2)]}
+    sizes = sizes[n..(2 * n - 2)]
+    perm = Nx.argsort(diss)
+    {clusters[perm], diss[perm], sizes[perm]}
   end
 
   defnp merge_clusters(clusters, count, pointers, pairwise, diss, sizes, links, n, update_fun) do
