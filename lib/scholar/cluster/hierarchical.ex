@@ -8,6 +8,15 @@ defmodule Scholar.Cluster.Hierarchical do
   (regardless of the dimensionality of the dataset) which can be used to select the number of
   clusters in a post-processing step.
 
+  <!-- (This isn't ready yet.)
+
+  ## Examples
+
+  See the [_Hierarchical Clustering_](./doc/notebooks/hierarchical_clustering.livemd) Livebook for
+  a worked example with a dendrogram plot.
+
+  -->
+
   ## Limitations
 
   Due to the requirements of the current implementation, only these options are supported:

@@ -54,6 +54,7 @@ defmodule Scholar.MixProject do
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [
+        # "notebooks/hierarchical_clustering.livemd",
         "notebooks/linear_regression.livemd",
         "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd",

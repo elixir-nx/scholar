@@ -48,7 +48,7 @@ defmodule Kino.CanvasDendrogram do
 
       let clades = dendrogram.clades
       let dissimilarities = dendrogram.dissimilarities
-      let num_leaves = clades.length + 1
+      let num_leaves = dendrogram.num_points
       let max_dissimilarity = dissimilarities[dissimilarities.length - 1];
 
       let x_min = 0;
@@ -200,14 +200,17 @@ end
 # Tensor form of the data sketched above
 data = Nx.tensor([[1, 5], [2, 5], [1, 4], [4, 5], [5, 5], [5, 4], [1, 2], [1, 1], [2, 1]])
 
-# Build dendrogram from data
-result = Scholar.Cluster.Hierarchical.fit(data, dissimilarity: :euclidean, linkage: :average)
+# Build model from data
+model = Scholar.Cluster.Hierarchical.fit(data, dissimilarity: :euclidean, linkage: :average)
 
-# Make dendrogram JSON-serializable
+# Make a JSON-serializable "dendrogram"
 dendrogram =
-  result.dendrogram
+  model
   |> Map.from_struct()
-  |> Map.new(fn {k, v} -> {k, Nx.to_list(v)} end)
+  |> Map.new(fn
+    {k, %Nx.Tensor{} = v} -> {k, Nx.to_list(v)}
+    {k, v} -> {k, v}
+  end)
 
 # Plot
 Kino.CanvasDendrogram.new(%{dendrogram: dendrogram, canvas: %{width: 400, height: 400}})
