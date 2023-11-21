@@ -1,48 +1,16 @@
 defmodule Scholar.Cluster.Hierarchical do
   @moduledoc """
-  Performs [agglomerative clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering#Agglomerative_clustering_example).
-
-  ## Result shape
-
-  Calling `Hierarchical.fit/2` on a `data` tensor will return a `%Hierarchical{}` struct.
-  It has the following fields:
-
-    * `cluster_labels` - a `{n}` shaped tensor.
-      Contains cluster labels (`0..(num_clusters - 1)`) of the clusters formed from the dendrogram
-      with the `cluster_by` option.
-      If `cluster_by` is not provided, `cluster_labels` is `nil`.
-
-    * `dendrogram` - a `%Hierarchical.Dendrogram{}` struct.
-      Represents all steps of the agglomerative clustering process.
-      Can be used to create a dendrogram plot.
-      See the _Hierarchical Clustering_ Livebook for an example.
-
-  The `%Hierarchical.Dendrogram{}` struct has the following fields:
-
-    * `clades` - a `{n - 1, 2}` shaped tensor.
-      Agglomerative clustering starts by considering each datum in `data` its own singleton group
-      or ["clade"](https://en.wikipedia.org/wiki/Clade).
-      It then picks two clades to merge into a new clade containing the data from both.
-      It does this until there is a single clade remaining.
-
-      The `clades` tensor contains the indices of the pair of clades merged at each step.
-      Since each datum starts as its own clade, e.g. `data[0]` is clade `0`, indexing of new clades
-      starts at `n` where `n` is the size of the original `data` tensor.
-      If `clades[k] == [i, j]`, then clades `i` and `j` were merged to form `k + n`.
-
-    * `dissimilarities` - a `{n - 1}` shaped tensor.
-      Contains a metric that measures the intra-clade closeness of the newly formed clade.
-      Represented by the heights of each clade in a dendrogram plot.
-      Determined by both the `:dissimilarity` and `:linkage` options.
-
-    * `sizes` - a `{n - 1}` shaped tensor.
-      `sizes[i]` is the size of clade `i`.
-      If clade `k` was created by merging clades `i` and `j`, `sizes[k] == sizes[i] + sizes[j]`.
+  Performs [hierarchical, agglomerative clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering#Agglomerative_clustering_example)
+  on a dataset.
   """
   import Nx.Defn
 
   defstruct [:cluster_labels, :dendrogram]
-  defmodule Dendrogram, do: defstruct([:clades, :dissimilarities, :sizes])
+
+  defmodule Dendrogram do
+    @moduledoc false
+    defstruct([:clades, :dissimilarities, :sizes])
+  end
 
   @dissimilarity_types [
     :euclidean
@@ -63,8 +31,10 @@ defmodule Scholar.Cluster.Hierarchical do
     dissimilarity: [
       type: {:in, @dissimilarity_types},
       default: :euclidean,
-      doc:
-        "Pairwise dissimilarity function: computes the 'dissimilarity' between each pair of data points."
+      doc: """
+      Pairwise dissimilarity function: computes the 'dissimilarity' between each pair of data points.
+      Used to build an `{n, n}` shaped, symmetric `Nx.Tensor`.
+      """
     ],
     cluster_by: [
       type: :non_empty_keyword_list,
@@ -90,6 +60,51 @@ defmodule Scholar.Cluster.Hierarchical do
         "Linkage function: how to compute the dissimilarity between a newly formed clade and the others."
     ]
   ]
+  @doc """
+  Cluster the dataset using hierarchical clustering.
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
+
+  ## Return values
+
+  Returns a `Scholar.Cluster.Hierarchical` struct with the following fields:
+
+    * `cluster_labels` (`{n}` shaped `Nx.Tensor`) -
+      Contains cluster labels (`0..(num_clusters - 1)`) of the clusters formed from the dendrogram
+      with the `cluster_by` option.
+      If `cluster_by` is not provided, `cluster_labels` is `nil`.
+
+    * `dendrogram` (`Scholar.Cluster.Hierarchical.Dendrogram` struct) -
+      Represents all steps of the agglomerative clustering process.
+      Can be used to create a dendrogram plot.
+      See the _Hierarchical Clustering_ Livebook for an example.
+
+      The `%Hierarchical.Dendrogram{}` struct has the following fields:
+
+        * `clades` (`{n - 1, 2}` shaped `Nx.Tensor`) -
+          Agglomerative clustering starts by considering each datum in `data` its own singleton group
+          or ["clade"](https://en.wikipedia.org/wiki/Clade).
+          It then picks two clades to merge into a new clade containing the data from both.
+          It does this until there is a single clade remaining.
+
+          The `clades` tensor contains the indices of the pair of clades merged at each step.
+          Since each datum starts as its own clade, e.g. `data[0]` is clade `0`, indexing of new clades
+          starts at `n` where `n` is the size of the original `data` tensor.
+          If `clades[k] == [i, j]`, then clades `i` and `j` were merged to form `k + n`.
+
+        * `dissimilarities` (`{n - 1}` shaped `Nx.Tensor`) -
+          Contains a metric that measures the intra-clade closeness of each newly formed clade.
+          Represented by the heights of each clade in a dendrogram plot.
+          Determined by both the `:dissimilarity` and `:linkage` options.
+
+        * `sizes` (`{n - 1}` shaped `Nx.Tensor`) -
+          `sizes[i]` is the size of clade `i`.
+          If clade `k` was created by merging clades `i` and `j`, then
+          `sizes[k] == sizes[i] + sizes[j]`.
+
+  """
   deftransform fit(data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     cluster_by = opts[:cluster_by]
@@ -278,36 +293,36 @@ defmodule Scholar.Cluster.Hierarchical do
 
   # Dissimilarity functions
 
-  defn pairwise_euclidean(%Nx.Tensor{} = x) do
+  defnp pairwise_euclidean(%Nx.Tensor{} = x) do
     x |> pairwise_euclidean_sq() |> Nx.sqrt()
   end
 
-  defn pairwise_euclidean_sq(%Nx.Tensor{} = x) do
+  defnp pairwise_euclidean_sq(%Nx.Tensor{} = x) do
     sq = Nx.sum(x ** 2, axes: [1], keep_axes: true)
     sq + Nx.transpose(sq) - 2 * Nx.dot(x, [1], x, [1])
   end
 
   # Dissimilarity update functions
 
-  defn average(dac, dbc, _dab, sa, sb, _sc),
+  defnp average(dac, dbc, _dab, sa, sb, _sc),
     do: (sa * dac + sb * dbc) / (sa + sb)
 
-  # defn centroid(dac, dbc, dab, sa, sb, _sc),
+  # defnp centroid(dac, dbc, dab, sa, sb, _sc),
   #   do: Nx.sqrt((sa * dac + sb * dbc) / (sa + sb) - sa * sb * dab / (sa + sb) ** 2)
 
-  defn complete(dac, dbc, _dab, _sa, _sb, _sc),
+  defnp complete(dac, dbc, _dab, _sa, _sb, _sc),
     do: Nx.max(dac, dbc)
 
-  # defn median(dac, dbc, dab, _sa, _sb, _sc),
+  # defnp median(dac, dbc, dab, _sa, _sb, _sc),
   #   do: Nx.sqrt(dac / 2 + dbc / 2 - dab / 4)
 
-  defn single(dac, dbc, _dab, _sa, _sb, _sc),
+  defnp single(dac, dbc, _dab, _sa, _sb, _sc),
     do: Nx.min(dac, dbc)
 
-  defn ward(dac, dbc, dab, sa, sb, sc),
+  defnp ward(dac, dbc, dab, sa, sb, sc),
     do: Nx.sqrt(((sa + sc) * dac + (sb + sc) * dbc - sc * dab) / (sa + sb + sc))
 
-  defn weighted(dac, dbc, _dab, _sa, _sb, _sc),
+  defnp weighted(dac, dbc, _dab, _sa, _sb, _sc),
     do: (dac + dbc) / 2
 
   # Clustering functions
