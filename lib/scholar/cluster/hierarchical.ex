@@ -89,7 +89,7 @@ defmodule Scholar.Cluster.Hierarchical do
       type: {:in, @linkage_types},
       default: :single,
       doc:
-        "Linkage function: how to compute the dissimilarity between a newly formed cluster and the others."
+        "Linkage function: how to compute the dissimilarity between a newly formed clade and the others."
     ]
   ]
   deftransform fit(data, opts \\ []) do
@@ -164,7 +164,7 @@ defmodule Scholar.Cluster.Hierarchical do
     }
   end
 
-  # Cluster functions
+  # Clade functions
 
   defnp parallel_nearest_neighbor(pairwise, update_fun) do
     {n, _} = Nx.shape(pairwise)
@@ -211,7 +211,7 @@ defmodule Scholar.Cluster.Hierarchical do
         if j == n do
           {clades, count, pointers, pairwise, diss, sizes, links}
         else
-          # Clusters a and b (i and j of pairwise) are being merged into c.
+          # Clades a and b (i and j of pairwise) are being merged into c.
           a = find_clade(pointers, i)
           b = find_clade(pointers, j)
           c = count + n
