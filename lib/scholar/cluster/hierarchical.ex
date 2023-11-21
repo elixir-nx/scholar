@@ -177,7 +177,7 @@ defmodule Scholar.Cluster.Hierarchical do
     {clades, _count, _pointers, _pairwise, diss, sizes} =
       while {clades, count = 0, pointers, pairwise, diss, sizes}, count < n - 1 do
         # Indexes of who I am nearest to
-        nearest = Nx.argmin(pairwise, axis: 1, type: :u32)
+        nearest = Nx.argmin(pairwise, axis: 1)
 
         # Take who I am nearest to is nearest to
         nearest_of_nearest = Nx.take(nearest, nearest)
