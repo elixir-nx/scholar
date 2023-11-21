@@ -2,6 +2,29 @@ defmodule Scholar.Cluster.Hierarchical do
   @moduledoc """
   Performs [hierarchical, agglomerative clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering#Agglomerative_clustering_example)
   on a dataset.
+
+  Hierarchical clustering is good for when the number of clusters is not known ahead of time.
+  It also allows for the creation of a [dendrogram plot](https://en.wikipedia.org/wiki/Dendrogram)
+  (regardless of the dimensionality of the dataset) which can be used to select the number of
+  clusters in a post-processing step.
+
+  ## Limitations
+
+  Due to the requirements of the current implementation, only these options are supported:
+
+    * `dissimilarity: :euclidean`
+    * `linkage: :average | :complete | :single | :ward | :weighted`
+
+  Our current algorithm is $O(\\frac{n^2}{p})$ where $n$ is the number of data points
+  and $p$ is the number of processors.
+  This is better than the generic algorithm which is $O(n^3)$ and even other specialized algorithms
+  like SLINK (see [here](https://en.wikipedia.org/wiki/Single-linkage_clustering)) which are
+  $O(n^2)$.
+  However, it requires certain theoretical properties of the dissimilarities and linkages.
+  As such, we've restricted the options to only those combinations with the correct properties.
+
+  In the future, we plan to add additional algorithms which will be slower but won't have the
+  same restrictions.
   """
   import Nx.Defn
 
@@ -28,14 +51,36 @@ defmodule Scholar.Cluster.Hierarchical do
       default: :euclidean,
       doc: """
       Pairwise dissimilarity function: computes the 'dissimilarity' between each pair of data points.
-      Used to build an `{n, n}` shaped, symmetric `Nx.Tensor`.
+      Dissimilarity is analogous to distance, but without the expectation that the triangle
+      inequality holds.
+
+      Choices:
+
+        * `:euclidean` - L2 norm.
+
+      See "Limitations" in the moduledoc for an explanation of the lack of choices.
       """
     ],
     linkage: [
       type: {:in, @linkage_types},
       default: :single,
-      doc:
-        "Linkage function: how to compute the dissimilarity between a newly formed clade and the others."
+      doc: ~S"""
+      Linkage function: how to compute the intra-clade dissimilarity of two clades if they were
+      merged.
+
+      Choices:
+
+        * `:average` - The unweighted average dissimilarity across all pairs of points.
+
+        * `:complete` - (Historic name) The maximum dissimilarity across all pairs of points.
+
+        * `:single` - (Historic name) The minimum dissimilarity across all pairs of points.
+
+        * `:ward` - (Named for [Ward's method](https://en.wikipedia.org/wiki/Ward%27s_method))
+          The minimum increase in sum of squares (MISSQ) of dissimilarities.
+
+        * `:weighted` - The weighted average dissimilarity across all pairs of points.
+      """
     ]
   ]
   @doc """
@@ -302,8 +347,10 @@ defmodule Scholar.Cluster.Hierarchical do
 
   ## Return values
 
-  Returns a `Nx.Tensor` with shape `{n}` and values `0..(n - 1)` where `n == model.num_points`.
-  The `i`th element of the result tensor is the index of that data point's cluster.
+  Returns a `Nx.Tensor` with shape `{model.num_points}` and values `0..(k - 1)` where `k` is the
+  number of clusters formed.
+  The `i`th element of the result tensor is the label of the `i`th data point's cluster.
+  (Cluster labels are arbitrary, but deterministic.)
   """
   deftransform cluster(%__MODULE__{} = model, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @cluster_opts_schema)
