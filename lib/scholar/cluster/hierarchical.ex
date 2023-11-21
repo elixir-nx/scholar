@@ -5,12 +5,7 @@ defmodule Scholar.Cluster.Hierarchical do
   """
   import Nx.Defn
 
-  defstruct [:cluster_labels, :dendrogram]
-
-  defmodule Dendrogram do
-    @moduledoc false
-    defstruct([:clades, :dissimilarities, :sizes])
-  end
+  defstruct [:clades, :dissimilarities, :num_points, :sizes]
 
   @dissimilarity_types [
     :euclidean
@@ -27,30 +22,13 @@ defmodule Scholar.Cluster.Hierarchical do
     :weighted
   ]
 
-  @opts_schema [
+  @fit_opts_schema [
     dissimilarity: [
       type: {:in, @dissimilarity_types},
       default: :euclidean,
       doc: """
       Pairwise dissimilarity function: computes the 'dissimilarity' between each pair of data points.
       Used to build an `{n, n}` shaped, symmetric `Nx.Tensor`.
-      """
-    ],
-    cluster_by: [
-      type: :non_empty_keyword_list,
-      keys: [
-        height: [
-          type: :float,
-          doc: "Height of the dendrogram to use as the split point for clusters."
-        ],
-        num_clusters: [
-          type: :pos_integer,
-          doc: "Number of clusters to form."
-        ]
-      ],
-      doc: """
-      How to select which clades from the dendrogram should form the final clusters.
-      Must provide either a height or a number of clusters.
       """
     ],
     linkage: [
@@ -61,53 +39,45 @@ defmodule Scholar.Cluster.Hierarchical do
     ]
   ]
   @doc """
-  Cluster the dataset using hierarchical clustering.
+  Use hierarchical clustering to form the initial clades to be clustered using `cluster/2`.
 
   ## Options
 
-  #{NimbleOptions.docs(@opts_schema)}
+  #{NimbleOptions.docs(@fit_opts_schema)}
 
   ## Return values
 
   Returns a `Scholar.Cluster.Hierarchical` struct with the following fields:
 
-    * `cluster_labels` (`{n}` shaped `Nx.Tensor`) -
-      Contains cluster labels (`0..(num_clusters - 1)`) of the clusters formed from the dendrogram
-      with the `cluster_by` option.
-      If `cluster_by` is not provided, `cluster_labels` is `nil`.
+    * `clades` (`Nx.Tensor` with shape `{n - 1, 2}`) -
+      Contains the indices of the pair of clades merged at each step of the agglomerative
+      clustering process.
 
-    * `dendrogram` (`Scholar.Cluster.Hierarchical.Dendrogram` struct) -
-      Represents all steps of the agglomerative clustering process.
-      Can be used to create a dendrogram plot.
-      See the _Hierarchical Clustering_ Livebook for an example.
+      Agglomerative clustering starts by considering each datum in `data` its own singleton group
+      or ["clade"](https://en.wikipedia.org/wiki/Clade).
+      It then picks two clades to merge into a new clade containing the data from both.
+      It does this until there is a single clade remaining.
 
-      The `%Hierarchical.Dendrogram{}` struct has the following fields:
+      Since each datum starts as its own clade, e.g. `data[0]` is clade `0`, indexing of new clades
+      starts at `n` where `n` is the size of the original `data` tensor.
+      If `clades[k] == [i, j]`, then clades `i` and `j` were merged to form `k + n`.
 
-        * `clades` (`{n - 1, 2}` shaped `Nx.Tensor`) -
-          Agglomerative clustering starts by considering each datum in `data` its own singleton group
-          or ["clade"](https://en.wikipedia.org/wiki/Clade).
-          It then picks two clades to merge into a new clade containing the data from both.
-          It does this until there is a single clade remaining.
+    * `dissimilarities` (`Nx.Tensor` with shape `{n - 1}`) -
+      Contains a metric that measures the intra-clade closeness of each newly formed clade.
+      Represented by the heights of each clade in a dendrogram plot.
+      Determined by both the `:dissimilarity` and `:linkage` options.
 
-          The `clades` tensor contains the indices of the pair of clades merged at each step.
-          Since each datum starts as its own clade, e.g. `data[0]` is clade `0`, indexing of new clades
-          starts at `n` where `n` is the size of the original `data` tensor.
-          If `clades[k] == [i, j]`, then clades `i` and `j` were merged to form `k + n`.
+    * `num_points` (`pos_integer/0`) -
+      Number of points in the dataset.
+      Must be $\\geq 3$.
 
-        * `dissimilarities` (`{n - 1}` shaped `Nx.Tensor`) -
-          Contains a metric that measures the intra-clade closeness of each newly formed clade.
-          Represented by the heights of each clade in a dendrogram plot.
-          Determined by both the `:dissimilarity` and `:linkage` options.
-
-        * `sizes` (`{n - 1}` shaped `Nx.Tensor`) -
-          `sizes[i]` is the size of clade `i`.
-          If clade `k` was created by merging clades `i` and `j`, then
-          `sizes[k] == sizes[i] + sizes[j]`.
-
+    * `sizes` (`Nx.Tensor` with shape `{n - 1}`) -
+      `sizes[i]` is the size of clade `i`.
+      If clade `k` was created by merging clades `i` and `j`, then
+      `sizes[k] == sizes[i] + sizes[j]`.
   """
   deftransform fit(data, opts \\ []) do
-    opts = NimbleOptions.validate!(opts, @opts_schema)
-    cluster_by = opts[:cluster_by]
+    opts = NimbleOptions.validate!(opts, @fit_opts_schema)
     dissimilarity = opts[:dissimilarity]
     linkage = opts[:linkage]
 
@@ -144,36 +114,12 @@ defmodule Scholar.Cluster.Hierarchical do
       end
 
     {clades, diss, sizes} = dendrogram_fun.(pairwise, update_fun)
-    dendrogram = %Dendrogram{clades: clades, dissimilarities: diss, sizes: sizes}
-
-    labels =
-      if cluster_by do
-        clusters =
-          case cluster_by do
-            [height: height] ->
-              cluster_by_height(dendrogram, n, height)
-
-            [num_clusters: num_clusters] ->
-              cond do
-                num_clusters > n ->
-                  raise ArgumentError, "`num_clusters` may not exceed number of data points"
-
-                num_clusters == n ->
-                  Nx.broadcast(Nx.as_type(0, Nx.type(pairwise)), {n})
-
-                true ->
-                  cluster_by_num_clusters(dendrogram, n, num_clusters)
-              end
-          end
-
-        clusters_to_labels(clusters)
-      else
-        nil
-      end
 
     %__MODULE__{
-      cluster_labels: labels,
-      dendrogram: dendrogram
+      clades: clades,
+      dissimilarities: diss,
+      num_points: n,
+      sizes: sizes
     }
   end
 
@@ -325,13 +271,70 @@ defmodule Scholar.Cluster.Hierarchical do
   defnp weighted(dac, dbc, _dab, _sa, _sb, _sc),
     do: (dac + dbc) / 2
 
-  # Clustering functions
+  # Cluster functions
 
-  deftransformp cluster_by_height(dendrogram, n, height_cutoff) do
-    clusters = Map.new(0..(n - 1), &{&1, [&1]})
+  @cluster_opts_schema [
+    by: [
+      type: :non_empty_keyword_list,
+      required: true,
+      keys: [
+        height: [
+          type: :float,
+          doc: "Height of the dendrogram to use as the split point for clusters."
+        ],
+        num_clusters: [
+          type: :pos_integer,
+          doc: "Number of clusters to form."
+        ]
+      ],
+      doc: """
+      How to select which clades from the dendrogram should form the final clusters.
+      Must provide either a height or a number of clusters.
+      """
+    ]
+  ]
+  @doc """
+  Cluster the dataset using the clades formed by `fit/2`.
 
-    Enum.zip(Nx.to_list(dendrogram.clades), Nx.to_list(dendrogram.dissimilarities))
-    |> Enum.with_index(n)
+  ## Options
+
+  #{NimbleOptions.docs(@cluster_opts_schema)}
+
+  ## Return values
+
+  Returns a `Nx.Tensor` with shape `{n}` and values `0..(n - 1)` where `n == model.num_points`.
+  The `i`th element of the result tensor is the index of that data point's cluster.
+  """
+  deftransform cluster(%__MODULE__{} = model, opts \\ []) do
+    opts = NimbleOptions.validate!(opts, @cluster_opts_schema)
+
+    clusters =
+      case opts[:by] do
+        [height: height] ->
+          cluster_by_height(model, height)
+
+        [num_clusters: num_clusters] ->
+          cond do
+            num_clusters > model.num_points ->
+              raise ArgumentError, "`num_clusters` may not exceed number of data points"
+
+            num_clusters == model.num_points ->
+              Nx.broadcast(0, {model.num_points})
+
+            # The other cases are validated by NimbleOptions.
+            true ->
+              cluster_by_num_clusters(model, num_clusters)
+          end
+      end
+
+    clusters_to_labels(clusters)
+  end
+
+  deftransformp cluster_by_height(model, height_cutoff) do
+    clusters = Map.new(0..(model.num_points - 1), &{&1, [&1]})
+
+    Enum.zip(Nx.to_list(model.clades), Nx.to_list(model.dissimilarities))
+    |> Enum.with_index(model.num_points)
     |> Enum.reduce_while(clusters, fn {{[a, b], height}, c}, clusters ->
       if height >= height_cutoff do
         {:halt, clusters}
@@ -341,13 +344,13 @@ defmodule Scholar.Cluster.Hierarchical do
     end)
   end
 
-  deftransformp cluster_by_num_clusters(dendrogram, n, num_clusters) do
-    clusters = Map.new(0..(n - 1), &{&1, [&1]})
+  deftransformp cluster_by_num_clusters(model, num_clusters) do
+    clusters = Map.new(0..(model.num_points - 1), &{&1, [&1]})
 
-    Nx.to_list(dendrogram.clades)
-    |> Enum.with_index(n)
+    Nx.to_list(model.clades)
+    |> Enum.with_index(model.num_points)
     |> Enum.reduce_while(clusters, fn {[a, b], c}, clusters ->
-      if c + num_clusters == 2 * n do
+      if c + num_clusters == 2 * model.num_points do
         {:halt, clusters}
       else
         {:cont, merge_clusters(clusters, a, b, c)}

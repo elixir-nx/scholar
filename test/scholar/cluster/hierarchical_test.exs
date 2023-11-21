@@ -3,8 +3,8 @@ defmodule Scholar.Cluster.HierarchicalTest do
   alias Scholar.Cluster.Hierarchical
   # doctest Hierarchical
 
-  describe "fit" do
-    test "a basic example" do
+  describe "basic example" do
+    test "works" do
       # This diagram represents data. `0` appears at the coordinates (1, 5). The 0th entry of data
       # is `[1, 5]`. Same for 1, etc.
       #
@@ -48,16 +48,11 @@ defmodule Scholar.Cluster.HierarchicalTest do
       #       16
       #   16: [012345678]
       #       -----------
-      result =
-        Hierarchical.fit(data,
-          dissimilarity: :euclidean,
-          cluster_by: [num_clusters: 3],
-          linkage: :single
-        )
+      model = Hierarchical.fit(data, dissimilarity: :euclidean, linkage: :single)
 
       # The dendrogram formation part of the algorithm should've formed the following clades,
       # dissimilarities, and sizes (which collectively form the dendrogram).
-      assert result.dendrogram.clades ==
+      assert model.clades ==
                Nx.tensor([
                  [0, 1],
                  [3, 4],
@@ -69,53 +64,43 @@ defmodule Scholar.Cluster.HierarchicalTest do
                  [14, 15]
                ])
 
-      assert result.dendrogram.dissimilarities ==
+      assert model.dissimilarities ==
                Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
 
-      assert result.dendrogram.sizes == Nx.tensor([2, 2, 2, 3, 3, 3, 6, 9])
+      assert model.sizes == Nx.tensor([2, 2, 2, 3, 3, 3, 6, 9])
 
       # The clustering part of the algorithm uses the `cluster_by: [num_clusters: 3]` option to
-      # take the dendrogram and form 3 clusters. This should result in each datum having the
-      # following cluster labels.
-      assert result.cluster_labels == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+      # take the model and form 3 clusters. This should result in each datum having the following
+      # cluster labels.
+      clusters = Hierarchical.cluster(model, by: [num_clusters: 3])
+      assert clusters == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+    end
+  end
+
+  @data Nx.tensor([[2], [7], [9], [0], [3]])
+
+  describe "cluster" do
+    setup do
+      %{model: Hierarchical.fit(@data)}
     end
 
-    test "cluster by height works" do
-      data = Nx.tensor([[2], [7], [9], [0], [3]])
-      result = Hierarchical.fit(data, cluster_by: [height: 2.5])
-      assert result.cluster_labels == Nx.tensor([0, 1, 1, 0, 0])
+    test "cluster by height works", %{model: model} do
+      clusters = Hierarchical.cluster(model, by: [height: 2.5])
+      assert clusters == Nx.tensor([0, 1, 1, 0, 0])
     end
 
-    test "cluster by number of clusters works" do
-      data = Nx.tensor([[2], [7], [9], [0], [3]])
-      result = Hierarchical.fit(data, cluster_by: [num_clusters: 3])
-      assert result.cluster_labels == Nx.tensor([0, 1, 1, 2, 0])
-    end
-
-    test "`:cluster_by` option not required" do
-      result =
-        Hierarchical.fit(Nx.tensor([[2], [7], [9], [0], [3]]),
-          dissimilarity: :euclidean,
-          linkage: :single
-        )
-
-      assert result.dendrogram.clades == Nx.tensor([[0, 4], [1, 2], [3, 5], [6, 7]])
-      assert result.dendrogram.dissimilarities == Nx.tensor([1.0, 2.0, 2.0, 4.0])
-      assert result.dendrogram.sizes == Nx.tensor([2, 2, 3, 5])
-
-      # Not providing the `:cluster_by` option results in no clusters.
-      assert result.cluster_labels == nil
+    test "cluster by number of clusters works", %{model: model} do
+      clusters = Hierarchical.cluster(model, by: [num_clusters: 3])
+      assert clusters == Nx.tensor([0, 1, 1, 2, 0])
     end
   end
 
   describe "errors" do
     test "num_clusters may not exceed number of datapoints" do
+      model = Hierarchical.fit(@data)
+
       assert_raise(ArgumentError, "`num_clusters` may not exceed number of data points", fn ->
-        Hierarchical.fit(Nx.tensor([[2], [7], [9], [0], [3]]),
-          dissimilarity: :euclidean,
-          cluster_by: [num_clusters: 6],
-          linkage: :single
-        )
+        Hierarchical.cluster(model, by: [num_clusters: 6])
       end)
     end
   end
