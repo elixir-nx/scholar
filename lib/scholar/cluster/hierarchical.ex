@@ -15,18 +15,18 @@ defmodule Scholar.Cluster.Hierarchical do
     * `dendrogram` - a `%Hierarchical.Dendrogram{}` struct.
       Represents all steps of the agglomerative clustering process.
       Can be used to create a dendrogram plot.
-      See the _Hierarchical Clustering_ Livebook an example.
+      See the _Hierarchical Clustering_ Livebook for an example.
 
   The `%Hierarchical.Dendrogram{}` struct has the following fields:
 
     * `clades` - a `{n - 1, 2}` shaped tensor.
       Agglomerative clustering starts by considering each datum in `data` its own singleton group
-      or "clade".
+      or ["clade"](https://en.wikipedia.org/wiki/Clade).
       It then picks two clades to merge into a new clade containing the data from both.
       It does this until there is a single clade remaining.
 
       The `clades` tensor contains the indices of the pair of clades merged at each step.
-      Since each datum starts as its own clade, e.g. `data[0]` is clade 0, indexing of new clades
+      Since each datum starts as its own clade, e.g. `data[0]` is clade `0`, indexing of new clades
       starts at `n` where `n` is the size of the original `data` tensor.
       If `clades[k] == [i, j]`, then clades `i` and `j` were merged to form `k + n`.
 
@@ -38,8 +38,6 @@ defmodule Scholar.Cluster.Hierarchical do
     * `sizes` - a `{n - 1}` shaped tensor.
       `sizes[i]` is the size of clade `i`.
       If clade `k` was created by merging clades `i` and `j`, `sizes[k] == sizes[i] + sizes[j]`.
-
-  https://arxiv.org/abs/1109.2378
   """
   import Nx.Defn
 
