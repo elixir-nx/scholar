@@ -9,8 +9,8 @@ defmodule Scholar.Cluster.Hierarchical do
 
     * `cluster_labels` - a `{n}` shaped tensor.
       Contains cluster labels (`0..(num_clusters - 1)`) of the clusters formed from the dendrogram
-      and the `group_by` option.
-      If `group_by` is not provided, `cluster_labels` is `nil`.
+      with the `cluster_by` option.
+      If `cluster_by` is not provided, `cluster_labels` is `nil`.
 
     * `dendrogram` - a `%Hierarchical.Dendrogram{}` struct.
       Represents all steps of the agglomerative clustering process.
@@ -32,7 +32,7 @@ defmodule Scholar.Cluster.Hierarchical do
 
     * `dissimilarities` - a `{n - 1}` shaped tensor.
       Contains a metric that measures the intra-clade closeness of the newly formed clade.
-      Represented by the height of the newly formed clade in a dendrogram plot.
+      Represented by the heights of each clade in a dendrogram plot.
       Determined by both the `:dissimilarity` and `:linkage` options.
 
     * `sizes` - a `{n - 1}` shaped tensor.
@@ -66,7 +66,7 @@ defmodule Scholar.Cluster.Hierarchical do
       doc:
         "Pairwise dissimilarity function: computes the 'dissimilarity' between each pair of data points."
     ],
-    group_by: [
+    cluster_by: [
       type: :non_empty_keyword_list,
       keys: [
         height: [
@@ -79,7 +79,7 @@ defmodule Scholar.Cluster.Hierarchical do
         ]
       ],
       doc: """
-      How to group the dendrogram into clusters.
+      How to select which clades from the dendrogram should form the final clusters.
       Must provide either a height or a number of clusters.
       """
     ],
@@ -92,8 +92,8 @@ defmodule Scholar.Cluster.Hierarchical do
   ]
   deftransform fit(data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
+    cluster_by = opts[:cluster_by]
     dissimilarity = opts[:dissimilarity]
-    group_by = opts[:group_by]
     linkage = opts[:linkage]
 
     dissimilarity_fun =
@@ -132,11 +132,11 @@ defmodule Scholar.Cluster.Hierarchical do
     dendrogram = %Dendrogram{clades: clades, dissimilarities: diss, sizes: sizes}
 
     labels =
-      if group_by do
-        groups =
-          case group_by do
+      if cluster_by do
+        clusters =
+          case cluster_by do
             [height: height] ->
-              group_by_height(dendrogram, n, height)
+              cluster_by_height(dendrogram, n, height)
 
             [num_clusters: num_clusters] ->
               cond do
@@ -147,11 +147,11 @@ defmodule Scholar.Cluster.Hierarchical do
                   Nx.broadcast(Nx.as_type(0, Nx.type(pairwise)), {n})
 
                 true ->
-                  group_by_num_clusters(dendrogram, n, num_clusters)
+                  cluster_by_num_clusters(dendrogram, n, num_clusters)
               end
           end
 
-        groups_to_labels(groups)
+        clusters_to_labels(clusters)
       else
         nil
       end
@@ -310,45 +310,45 @@ defmodule Scholar.Cluster.Hierarchical do
   defn weighted(dac, dbc, _dab, _sa, _sb, _sc),
     do: (dac + dbc) / 2
 
-  # Grouping functions
+  # Clustering functions
 
-  deftransformp group_by_height(dendrogram, n, height_cutoff) do
-    groups = Map.new(0..(n - 1), &{&1, [&1]})
+  deftransformp cluster_by_height(dendrogram, n, height_cutoff) do
+    clusters = Map.new(0..(n - 1), &{&1, [&1]})
 
     Enum.zip(Nx.to_list(dendrogram.clades), Nx.to_list(dendrogram.dissimilarities))
     |> Enum.with_index(n)
-    |> Enum.reduce_while(groups, fn {{[a, b], height}, c}, groups ->
+    |> Enum.reduce_while(clusters, fn {{[a, b], height}, c}, clusters ->
       if height >= height_cutoff do
-        {:halt, groups}
+        {:halt, clusters}
       else
-        {:cont, merge_groups(groups, a, b, c)}
+        {:cont, merge_clusters(clusters, a, b, c)}
       end
     end)
   end
 
-  deftransformp group_by_num_clusters(dendrogram, n, num_clusters) do
-    groups = Map.new(0..(n - 1), &{&1, [&1]})
+  deftransformp cluster_by_num_clusters(dendrogram, n, num_clusters) do
+    clusters = Map.new(0..(n - 1), &{&1, [&1]})
 
     Nx.to_list(dendrogram.clades)
     |> Enum.with_index(n)
-    |> Enum.reduce_while(groups, fn {[a, b], c}, groups ->
+    |> Enum.reduce_while(clusters, fn {[a, b], c}, clusters ->
       if c + num_clusters == 2 * n do
-        {:halt, groups}
+        {:halt, clusters}
       else
-        {:cont, merge_groups(groups, a, b, c)}
+        {:cont, merge_clusters(clusters, a, b, c)}
       end
     end)
   end
 
-  deftransformp merge_groups(groups, a, b, c) do
-    groups
-    |> Map.put(c, groups[a] ++ groups[b])
+  deftransformp merge_clusters(clusters, a, b, c) do
+    clusters
+    |> Map.put(c, clusters[a] ++ clusters[b])
     |> Map.drop([a, b])
   end
 
-  deftransformp groups_to_labels(groups) do
-    groups
-    |> Enum.sort_by(fn {_label, group} -> Enum.min(group) end)
+  deftransformp clusters_to_labels(clusters) do
+    clusters
+    |> Enum.sort_by(fn {_label, cluster} -> Enum.min(cluster) end)
     |> Enum.with_index()
     |> Enum.flat_map(fn {{_, v}, i} -> v |> Enum.sort() |> Enum.map(&{&1, i}) end)
     |> Enum.sort()

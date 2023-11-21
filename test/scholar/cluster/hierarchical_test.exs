@@ -51,7 +51,7 @@ defmodule Scholar.Cluster.HierarchicalTest do
       result =
         Hierarchical.fit(data,
           dissimilarity: :euclidean,
-          group_by: [num_clusters: 3],
+          cluster_by: [num_clusters: 3],
           linkage: :single
         )
 
@@ -74,25 +74,25 @@ defmodule Scholar.Cluster.HierarchicalTest do
 
       assert result.dendrogram.sizes == Nx.tensor([2, 2, 2, 3, 3, 3, 6, 9])
 
-      # The clustering part of the algorithm uses the `group_by: [num_clusters: 3]` option to take
-      # the dendrogram and form 3 clusters. This should result in each datum having the following
-      # cluster labels.
+      # The clustering part of the algorithm uses the `cluster_by: [num_clusters: 3]` option to
+      # take the dendrogram and form 3 clusters. This should result in each datum having the
+      # following cluster labels.
       assert result.cluster_labels == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
     end
 
-    test "group by height works" do
+    test "cluster by height works" do
       data = Nx.tensor([[2], [7], [9], [0], [3]])
-      result = Hierarchical.fit(data, group_by: [height: 2.5])
+      result = Hierarchical.fit(data, cluster_by: [height: 2.5])
       assert result.cluster_labels == Nx.tensor([0, 1, 1, 0, 0])
     end
 
-    test "group by number of clusters works" do
+    test "cluster by number of clusters works" do
       data = Nx.tensor([[2], [7], [9], [0], [3]])
-      result = Hierarchical.fit(data, group_by: [num_clusters: 3])
+      result = Hierarchical.fit(data, cluster_by: [num_clusters: 3])
       assert result.cluster_labels == Nx.tensor([0, 1, 1, 2, 0])
     end
 
-    test "group_by option not required" do
+    test "`:cluster_by` option not required" do
       result =
         Hierarchical.fit(Nx.tensor([[2], [7], [9], [0], [3]]),
           dissimilarity: :euclidean,
@@ -103,7 +103,7 @@ defmodule Scholar.Cluster.HierarchicalTest do
       assert result.dendrogram.dissimilarities == Nx.tensor([1.0, 2.0, 2.0, 4.0])
       assert result.dendrogram.sizes == Nx.tensor([2, 2, 3, 5])
 
-      # Not providing the `group_by` option results in no clusters.
+      # Not providing the `:cluster_by` option results in no clusters.
       assert result.cluster_labels == nil
     end
   end
@@ -113,7 +113,7 @@ defmodule Scholar.Cluster.HierarchicalTest do
       assert_raise(ArgumentError, "`num_clusters` may not exceed number of data points", fn ->
         Hierarchical.fit(Nx.tensor([[2], [7], [9], [0], [3]]),
           dissimilarity: :euclidean,
-          group_by: [num_clusters: 6],
+          cluster_by: [num_clusters: 6],
           linkage: :single
         )
       end)
