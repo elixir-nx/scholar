@@ -120,6 +120,17 @@ defmodule Scholar.Cluster.Hierarchical do
       `sizes[i]` is the size of clade `i`.
       If clade `k` was created by merging clades `i` and `j`, then
       `sizes[k] == sizes[i] + sizes[j]`.
+
+  ## Examples
+
+      iex> data = Nx.tensor([[2], [7], [9], [0], [3]])
+      iex> Hierarchical.fit(data)
+      %Scholar.Cluster.Hierarchical{
+        clades: Nx.tensor([[0, 4], [1, 2], [3, 5], [6, 7]]),
+        dissimilarities: Nx.tensor([1.0, 2.0, 2.0, 4.0]),
+        num_points: 5,
+        sizes: Nx.tensor([2, 2, 3, 5])
+      }
   """
   deftransform fit(data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @fit_opts_schema)
@@ -351,6 +362,13 @@ defmodule Scholar.Cluster.Hierarchical do
   number of clusters formed.
   The `i`th element of the result tensor is the label of the `i`th data point's cluster.
   (Cluster labels are arbitrary, but deterministic.)
+
+  ## Examples
+
+      iex> data = Nx.tensor([[2], [7], [9], [0], [3]])
+      iex> model = Hierarchical.fit(data)
+      iex> Hierarchical.cluster(model, by: [num_clusters: 3])
+      Nx.tensor([0, 1, 1, 2, 0])
   """
   deftransform cluster(%__MODULE__{} = model, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @cluster_opts_schema)

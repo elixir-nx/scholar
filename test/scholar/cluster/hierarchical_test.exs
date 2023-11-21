@@ -1,7 +1,9 @@
 defmodule Scholar.Cluster.HierarchicalTest do
   use Scholar.Case, async: true
+
   alias Scholar.Cluster.Hierarchical
-  # doctest Hierarchical
+
+  doctest Hierarchical
 
   describe "basic example" do
     test "works" do
