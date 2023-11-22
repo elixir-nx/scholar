@@ -283,7 +283,7 @@ defmodule Scholar.Cluster.Hierarchical do
                   |> Nx.indexed_put(Nx.stack([y, z]), update)
                   |> Nx.indexed_put(Nx.stack([z, y]), update)
 
-                {pairwise, x, y, sa, sb, sc}
+                {pairwise, {x, y, sa, sb, sc}}
               end
             end
 
