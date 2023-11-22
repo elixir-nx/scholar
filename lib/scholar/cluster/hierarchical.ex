@@ -93,7 +93,7 @@ defmodule Scholar.Cluster.Hierarchical do
     ]
   ]
   @doc """
-  Use hierarchical clustering to form the initial clades to be clustered using `fit_predict/2`.
+  Use hierarchical clustering to form the initial model to be clustered using `fit_predict/2`.
 
   ## Options
 
@@ -371,11 +371,15 @@ defmodule Scholar.Cluster.Hierarchical do
     ]
   ]
   @doc """
-  Cluster the dataset using the clades formed by `fit/2`.
+  Cluster the dataset using hierarchical clustering or cluster the model built by `fit/2`.
 
   ## Options
 
+  If the input is a `Scholar.Cluster.Hierarchical` struct, only these options are required:
+
   #{NimbleOptions.docs(@predict_opts_schema)}
+
+  If the input is a `Nx.Tensor`, you must also pass the options required by `fit/2`.
 
   ## Return values
 
