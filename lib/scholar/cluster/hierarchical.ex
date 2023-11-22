@@ -210,8 +210,8 @@ defmodule Scholar.Cluster.Hierarchical do
     pointers = Nx.broadcast(-1, {2 * n - 2})
     diss = Nx.tensor(:infinity, type: Nx.type(pairwise)) |> Nx.broadcast({n - 1})
 
-    {clades, _count, _pointers, _pairwise, diss, sizes} =
-      while {clades, count = 0, pointers, pairwise, diss, sizes}, count < n - 1 do
+    {clades, _} =
+      while {clades, {count = 0, pointers, pairwise, diss, sizes}}, count < n - 1 do
         # Indexes of who I am nearest to
         nearest = Nx.argmin(pairwise, axis: 1)
 
