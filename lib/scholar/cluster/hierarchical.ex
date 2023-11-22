@@ -298,7 +298,7 @@ defmodule Scholar.Cluster.Hierarchical do
           indices = [i, j] |> Nx.stack() |> Nx.new_axis(-1)
           pointers = Nx.indexed_put(pointers, indices, Nx.stack([c, c]))
 
-          {clades, count + 1, pointers, pairwise, diss, sizes, links}
+          {{clades, count + 1, pointers, pairwise, diss, sizes}, links}
         end
       end
 
