@@ -17,7 +17,7 @@ Mix.install(
 ## Introduction
 
 ```elixir
-defmodule Kino.CanvasDendrogram do
+defmodule Scholar.Kino.CanvasDendrogram do
   use Kino.JS
 
   def new(graph), do: Kino.JS.new(__MODULE__, graph)
@@ -213,5 +213,5 @@ dendrogram =
   end)
 
 # Plot
-Kino.CanvasDendrogram.new(%{dendrogram: dendrogram, canvas: %{width: 400, height: 400}})
+Scholar.Kino.CanvasDendrogram.new(%{dendrogram: dendrogram, canvas: %{width: 400, height: 400}})
 ```
