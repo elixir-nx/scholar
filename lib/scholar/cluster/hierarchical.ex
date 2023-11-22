@@ -264,7 +264,7 @@ defmodule Scholar.Cluster.Hierarchical do
           diss = Nx.indexed_put(diss, Nx.stack([count]), pairwise[i][j])
 
           # Update pairwise
-          {pairwise, _, _, _, _, _} =
+          {pairwise, _} =
             while {pairwise, x = i, y = j, sa = sizes[i], sb = sizes[j], sc = sc},
                   z <- 0..(n - 1) do
               if z == x or z == y or Nx.is_infinity(pairwise[[0, z]]) do
