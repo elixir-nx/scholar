@@ -237,8 +237,8 @@ defmodule Scholar.Cluster.Hierarchical do
   end
 
   defnp merge_clades(clades, count, pointers, pairwise, diss, sizes, links, n, update_fun) do
-    {clades, count, pointers, pairwise, diss, sizes, _links} =
-      while {clades, count, pointers, pairwise, diss, sizes, links},
+    {{clades, count, pointers, pairwise, diss, sizes}, _} =
+      while {{clades, count, pointers, pairwise, diss, sizes}, links},
             i <- 0..(Nx.size(links) - 1) do
         # i < j because of how links is formed.
         # i will become the new clade index and we "infinity-out" j.
