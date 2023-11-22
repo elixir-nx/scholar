@@ -210,8 +210,8 @@ defmodule Scholar.Cluster.Hierarchical do
     pointers = Nx.broadcast(-1, {2 * n - 2})
     diss = Nx.tensor(:infinity, type: Nx.type(pairwise)) |> Nx.broadcast({n - 1})
 
-    {clades, _} =
-      while {clades, {count = 0, pointers, pairwise, diss, sizes}}, count < n - 1 do
+    {{clades, diss, sizes}, _} =
+      while {{clades, diss, sizes}, {count = 0, pointers, pairwise}}, count < n - 1 do
         # Indexes of who I am nearest to
         nearest = Nx.argmin(pairwise, axis: 1)
 
@@ -228,7 +228,7 @@ defmodule Scholar.Cluster.Hierarchical do
         {clades, count, pointers, pairwise, diss, sizes} =
           merge_clades(clades, count, pointers, pairwise, diss, sizes, links, n, update_fun)
 
-        {clades, {count, pointers, pairwise, diss, sizes}}
+        {{clades, diss, sizes}, {count, pointers, pairwise}}
       end
 
     sizes = sizes[n..(2 * n - 2)]
@@ -268,7 +268,7 @@ defmodule Scholar.Cluster.Hierarchical do
             while {pairwise, {x = i, y = j, sa = sizes[i], sb = sizes[j], sc = sc}},
                   z <- 0..(n - 1) do
               if z == x or z == y or Nx.is_infinity(pairwise[[0, z]]) do
-                {pairwise, x, y, sa, sb, sc}
+                {pairwise, {x, y, sa, sb, sc}}
               else
                 dac = pairwise[[x, z]]
                 dbc = pairwise[[y, z]]
