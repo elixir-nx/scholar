@@ -265,7 +265,7 @@ defmodule Scholar.Cluster.Hierarchical do
 
           # Update pairwise
           {pairwise, _} =
-            while {pairwise, x = i, y = j, sa = sizes[i], sb = sizes[j], sc = sc},
+            while {pairwise, {x = i, y = j, sa = sizes[i], sb = sizes[j], sc = sc}},
                   z <- 0..(n - 1) do
               if z == x or z == y or Nx.is_infinity(pairwise[[0, z]]) do
                 {pairwise, x, y, sa, sb, sc}
