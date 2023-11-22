@@ -62,7 +62,11 @@ defmodule Scholar.MixProject do
       ],
       groups_for_modules: [
         Models: [
-          ~r/Scholar.Cluster/,
+          Scholar.Cluster.AffinityPropagation,
+          Scholar.Cluster.DBSCAN,
+          Scholar.Cluster.GaussianMixture,
+          Scholar.Cluster.Hierarchical,
+          Scholar.Cluster.KMeans,
           Scholar.Decomposition.PCA,
           Scholar.Integrate,
           Scholar.Interpolation.BezierSpline,
