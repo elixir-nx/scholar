@@ -245,7 +245,7 @@ defmodule Scholar.Cluster.Hierarchical do
         j = links[i]
 
         if j == n do
-          {clades, count, pointers, pairwise, diss, sizes, links}
+          {{clades, count, pointers, pairwise, diss, sizes}, links}
         else
           # Clades a and b (i and j of pairwise) are being merged into c.
           a = find_clade(pointers, i)
