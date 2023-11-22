@@ -93,7 +93,7 @@ defmodule Scholar.Cluster.Hierarchical do
     ]
   ]
   @doc """
-  Use hierarchical clustering to form the initial clades to be clustered using `cluster/2`.
+  Use hierarchical clustering to form the initial clades to be clustered using `fit_predict/2`.
 
   ## Options
 
@@ -141,7 +141,7 @@ defmodule Scholar.Cluster.Hierarchical do
         sizes: Nx.tensor([2, 2, 3, 5])
       }
   """
-  deftransform fit(data, opts \\ []) do
+  deftransform fit(%Nx.Tensor{} = data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @fit_opts_schema)
     dissimilarity = opts[:dissimilarity]
     linkage = opts[:linkage]
@@ -170,13 +170,25 @@ defmodule Scholar.Cluster.Hierarchical do
           &parallel_nearest_neighbor/2
       end
 
+    n =
+      case Nx.shape(data) do
+        {n, _num_features} ->
+          n
+
+        other ->
+          raise ArgumentError,
+                "Expected a rank 2 (`{num_obs, num_features}`) tensor, found shape: #{inspect(other)}."
+      end
+
+    if n < 3 do
+      raise ArgumentError, "Must have a minimum of 3 data points, found: #{n}."
+    end
+
     pairwise = dissimilarity_fun.(data)
 
-    n =
-      case Nx.shape(pairwise) do
-        {n, n} -> n
-        _ -> raise ArgumentError, "pairwise must be a symmetric matrix"
-      end
+    if Nx.shape(pairwise) != {n, n} do
+      raise ArgumentError, "Pairwise must be a symmetric matrix."
+    end
 
     {clades, diss, sizes} = dendrogram_fun.(pairwise, update_fun)
 
@@ -336,10 +348,10 @@ defmodule Scholar.Cluster.Hierarchical do
   defnp weighted(dac, dbc, _dab, _sa, _sb, _sc),
     do: (dac + dbc) / 2
 
-  # Cluster functions
+  # Predict functions
 
-  @cluster_opts_schema [
-    by: [
+  @predict_opts_schema [
+    cluster_by: [
       type: :non_empty_keyword_list,
       required: true,
       keys: [
@@ -363,7 +375,7 @@ defmodule Scholar.Cluster.Hierarchical do
 
   ## Options
 
-  #{NimbleOptions.docs(@cluster_opts_schema)}
+  #{NimbleOptions.docs(@predict_opts_schema)}
 
   ## Return values
 
@@ -376,21 +388,31 @@ defmodule Scholar.Cluster.Hierarchical do
 
       iex> data = Nx.tensor([[2], [7], [9], [0], [3]])
       iex> model = Hierarchical.fit(data)
-      iex> Hierarchical.cluster(model, by: [num_clusters: 3])
+      iex> Hierarchical.fit_predict(model, cluster_by: [num_clusters: 3])
       Nx.tensor([0, 1, 1, 2, 0])
   """
-  deftransform cluster(%__MODULE__{} = model, opts \\ []) do
-    opts = NimbleOptions.validate!(opts, @cluster_opts_schema)
+  deftransform fit_predict(data_or_model, opts \\ [])
+
+  deftransform fit_predict(%Nx.Tensor{} = data, opts) do
+    {fit_opts, predict_opts} = Enum.split_with(opts, &(&1 in @fit_opts_schema))
+
+    data
+    |> fit(fit_opts)
+    |> fit_predict(predict_opts)
+  end
+
+  deftransform fit_predict(%__MODULE__{} = model, opts) do
+    opts = NimbleOptions.validate!(opts, @predict_opts_schema)
 
     clusters =
-      case opts[:by] do
+      case opts[:cluster_by] do
         [height: height] ->
           cluster_by_height(model, height)
 
         [num_clusters: num_clusters] ->
           cond do
             num_clusters > model.num_points ->
-              raise ArgumentError, "`num_clusters` may not exceed number of data points"
+              raise ArgumentError, "`num_clusters` may not exceed number of data points."
 
             num_clusters == model.num_points ->
               Nx.broadcast(0, {model.num_points})

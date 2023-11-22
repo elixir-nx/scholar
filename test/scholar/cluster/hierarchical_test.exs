@@ -74,35 +74,53 @@ defmodule Scholar.Cluster.HierarchicalTest do
       # The clustering part of the algorithm uses the `cluster_by: [num_clusters: 3]` option to
       # take the model and form 3 clusters. This should result in each datum having the following
       # cluster labels.
-      clusters = Hierarchical.cluster(model, by: [num_clusters: 3])
+      clusters = Hierarchical.fit_predict(model, cluster_by: [num_clusters: 3])
       assert clusters == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
     end
   end
 
   @data Nx.tensor([[2], [7], [9], [0], [3]])
 
-  describe "cluster" do
-    setup do
-      %{model: Hierarchical.fit(@data)}
-    end
-
-    test "cluster by height works", %{model: model} do
-      clusters = Hierarchical.cluster(model, by: [height: 2.5])
+  describe "fit_predict" do
+    test "cluster by height" do
+      clusters = Hierarchical.fit_predict(@data, cluster_by: [height: 2.5])
       assert clusters == Nx.tensor([0, 1, 1, 0, 0])
     end
 
-    test "cluster by number of clusters works", %{model: model} do
-      clusters = Hierarchical.cluster(model, by: [num_clusters: 3])
+    test "cluster by number of clusters" do
+      clusters = Hierarchical.fit_predict(@data, cluster_by: [num_clusters: 3])
       assert clusters == Nx.tensor([0, 1, 1, 2, 0])
+    end
+
+    test "works with model" do
+      model = Hierarchical.fit(@data)
+      clusters = Hierarchical.fit_predict(model, cluster_by: [height: 2.5])
+      assert clusters == Nx.tensor([0, 1, 1, 0, 0])
     end
   end
 
   describe "errors" do
-    test "num_clusters may not exceed number of datapoints" do
+    test "need a rank 2 tensor" do
+      assert_raise(
+        ArgumentError,
+        "Expected a rank 2 (`{num_obs, num_features}`) tensor, found shape: {3}.",
+        fn ->
+          Hierarchical.fit(Nx.tensor([1, 2, 3]))
+        end
+      )
+    end
+
+    test "need at least 3 data points" do
+      assert_raise(ArgumentError, "Must have a minimum of 3 data points, found: 2.", fn ->
+        Hierarchical.fit(Nx.tensor([[1], [2]]))
+      end)
+    end
+
+    test "num_clusters may not exceed number of data points" do
       model = Hierarchical.fit(@data)
 
-      assert_raise(ArgumentError, "`num_clusters` may not exceed number of data points", fn ->
-        Hierarchical.cluster(model, by: [num_clusters: 6])
+      assert_raise(ArgumentError, "`num_clusters` may not exceed number of data points.", fn ->
+        Hierarchical.fit_predict(model, cluster_by: [num_clusters: 6])
       end)
     end
   end
