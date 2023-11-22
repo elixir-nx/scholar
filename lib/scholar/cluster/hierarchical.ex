@@ -228,7 +228,7 @@ defmodule Scholar.Cluster.Hierarchical do
         {clades, count, pointers, pairwise, diss, sizes} =
           merge_clades(clades, count, pointers, pairwise, diss, sizes, links, n, update_fun)
 
-        {clades, count, pointers, pairwise, diss, sizes}
+        {clades, {count, pointers, pairwise, diss, sizes}}
       end
 
     sizes = sizes[n..(2 * n - 2)]
