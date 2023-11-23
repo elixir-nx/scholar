@@ -461,7 +461,16 @@ defmodule Scholar.Neighbors.KDTree do
                     (left_child(node) < size and visited[indices[left_child(node)]] and
                        right_child(node) >= size) ->
                   {visited, {distances, nearest_neighbors}} =
-                    update_visited(node, visited, distances, nearest_neighbors, data, indices, point, k)
+                    update_visited(
+                      node,
+                      visited,
+                      distances,
+                      nearest_neighbors,
+                      data,
+                      indices,
+                      point,
+                      k
+                    )
 
                   {parent(node), i - 1, visited, nearest_neighbors, distances, up}
 
@@ -469,7 +478,16 @@ defmodule Scholar.Neighbors.KDTree do
                   right_child(node) < size and
                     not visited[indices[right_child(node)]] ->
                   {visited, {distances, nearest_neighbors}} =
-                    update_visited(node, visited, distances, nearest_neighbors, data, indices, point, k)
+                    update_visited(
+                      node,
+                      visited,
+                      distances,
+                      nearest_neighbors,
+                      data,
+                      indices,
+                      point,
+                      k
+                    )
 
                   if Nx.any(
                        Scholar.Metrics.Distance.squared_euclidean(
@@ -487,7 +505,16 @@ defmodule Scholar.Neighbors.KDTree do
                    right_child(node) == size) and
                     not visited[indices[left_child(node)]] ->
                   {visited, {distances, nearest_neighbors}} =
-                    update_visited(node, visited, distances, nearest_neighbors, data, indices, point, k)
+                    update_visited(
+                      node,
+                      visited,
+                      distances,
+                      nearest_neighbors,
+                      data,
+                      indices,
+                      point,
+                      k
+                    )
 
                   if Nx.any(
                        Scholar.Metrics.Distance.squared_euclidean(
@@ -508,7 +535,7 @@ defmodule Scholar.Neighbors.KDTree do
 
             # Should be not reachable
             true ->
-              {node, i , visited, nearest_neighbors, distances, mode}
+              {node, i, visited, nearest_neighbors, distances, mode}
           end
 
         {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}}
