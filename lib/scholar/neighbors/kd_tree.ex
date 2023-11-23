@@ -29,9 +29,9 @@ defmodule Scholar.Neighbors.KDTree do
 
   import Nx.Defn
 
-  @derive {Nx.Container, keep: [:levels], containers: [:indexes, :data]}
-  @enforce_keys [:levels, :indexes, :data]
-  defstruct [:levels, :indexes, :data]
+  @derive {Nx.Container, keep: [:levels], containers: [:indices, :data]}
+  @enforce_keys [:levels, :indices, :data]
+  defstruct [:levels, :indices, :data]
 
   opts = [
     k: [
@@ -60,7 +60,7 @@ defmodule Scholar.Neighbors.KDTree do
       %Scholar.Neighbors.KDTree{
         data: Nx.iota({5, 2}),
         levels: 3,
-        indexes: Nx.u32([3, 1, 4, 0, 2])
+        indices: Nx.u32([3, 1, 4, 0, 2])
       }
 
   """
@@ -68,7 +68,7 @@ defmodule Scholar.Neighbors.KDTree do
     levels = levels(tensor)
     {size, _dims} = Nx.shape(tensor)
 
-    indexes =
+    indices =
       if size > 2 do
         subtree_size = unbounded_subtree_size(1, levels, size)
         {left, mid, right} = Nx.Defn.jit_apply(&root_slice(&1, subtree_size), [tensor], opts)
@@ -80,7 +80,7 @@ defmodule Scholar.Neighbors.KDTree do
         Nx.argsort(tensor[[.., 0]], direction: :desc, type: :u32)
       end
 
-    %__MODULE__{levels: levels, indexes: indexes, data: tensor}
+    %__MODULE__{levels: levels, indices: indices, data: tensor}
   end
 
   defp recur([{_i, %Nx.Tensor{shape: {1}} = leaf} | rest], next, acc, tensor, level, levels, opts) do
@@ -117,18 +117,18 @@ defmodule Scholar.Neighbors.KDTree do
   end
 
   defp root_slice(tensor, subtree_size) do
-    indexes = Nx.argsort(tensor[[.., 0]], type: :u32)
+    indices = Nx.argsort(tensor[[.., 0]], type: :u32)
 
-    {Nx.slice(indexes, [0], [subtree_size]), indexes[subtree_size],
-     Nx.slice(indexes, [subtree_size + 1], [Nx.size(indexes) - subtree_size - 1])}
+    {Nx.slice(indices, [0], [subtree_size]), indices[subtree_size],
+     Nx.slice(indices, [subtree_size + 1], [Nx.size(indices) - subtree_size - 1])}
   end
 
-  defp recur_slice(tensor, indexes, k, subtree_size) do
-    sorted = Nx.argsort(Nx.take(tensor, indexes)[[.., k]], type: :u32)
-    indexes = Nx.take(indexes, sorted)
+  defp recur_slice(tensor, indices, k, subtree_size) do
+    sorted = Nx.argsort(Nx.take(tensor, indices)[[.., k]], type: :u32)
+    indices = Nx.take(indices, sorted)
 
-    {Nx.slice(indexes, [0], [subtree_size]), indexes[subtree_size],
-     Nx.slice(indexes, [subtree_size + 1], [Nx.size(indexes) - subtree_size - 1])}
+    {Nx.slice(indices, [0], [subtree_size]), indices[subtree_size],
+     Nx.slice(indices, [subtree_size + 1], [Nx.size(indices) - subtree_size - 1])}
   end
 
   defp unbounded_subtree_size(i, levels, size) do
@@ -159,11 +159,11 @@ defmodule Scholar.Neighbors.KDTree do
       %Scholar.Neighbors.KDTree{
         data: Nx.iota({5, 2}),
         levels: 3,
-        indexes: Nx.u32([3, 1, 4, 0, 2])
+        indices: Nx.u32([3, 1, 4, 0, 2])
       }
   """
   deftransform bounded(tensor, amplitude) do
-    %__MODULE__{levels: levels(tensor), indexes: bounded_n(tensor, amplitude), data: tensor}
+    %__MODULE__{levels: levels(tensor), indices: bounded_n(tensor, amplitude), data: tensor}
   end
 
   defnp bounded_n(tensor, amplitude) do
@@ -175,17 +175,17 @@ defmodule Scholar.Neighbors.KDTree do
     {level, tags, _tensor, _band} =
       while {level = Nx.u32(0), tags, tensor, band}, level < levels - 1 do
         k = rem(level, dims)
-        indexes = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
-        tags = update_tags(tags, indexes, level, levels, size)
+        indices = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
+        tags = update_tags(tags, indices, level, levels, size)
         {level + 1, tags, tensor, band}
       end
 
     k = rem(level, dims)
-    Nx.argsort(tensor[[.., k]] + band * tags, type: :u32) |> Nx.as_type(:s64)
+    Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
   end
 
-  defnp update_tags(tags, indexes, level, levels, size) do
-    pos = Nx.argsort(indexes, type: :u32)
+  defnp update_tags(tags, indices, level, levels, size) do
+    pos = Nx.argsort(indices, type: :u32)
 
     pivot =
       bounded_segment_begin(tags, levels, size) +
@@ -387,13 +387,13 @@ defmodule Scholar.Neighbors.KDTree do
     {Nx.take(distances, indices), Nx.take(point_indices, indices)}
   end
 
-  defnp update_knn(nearest_neighbors, distances, tree, curr_node, point, k) do
+  defnp update_knn(nearest_neighbors, distances, data, indices, curr_node, point, k) do
     curr_dist =
-      Scholar.Metrics.Distance.squared_euclidean(tree.data[[tree.indexes[curr_node]]], point)
+      Scholar.Metrics.Distance.squared_euclidean(data[[indices[curr_node]]], point)
 
     if curr_dist < distances[[-1]] do
       nearest_neighbors =
-        Nx.indexed_put(nearest_neighbors, Nx.new_axis(k - 1, 0), tree.indexes[curr_node])
+        Nx.indexed_put(nearest_neighbors, Nx.new_axis(k - 1, 0), indices[curr_node])
 
       distances = Nx.indexed_put(distances, Nx.new_axis(k - 1, 0), curr_dist)
       sort_by_distances(distances, nearest_neighbors)
@@ -402,14 +402,14 @@ defmodule Scholar.Neighbors.KDTree do
     end
   end
 
-  defnp update_visited(node, visited, distances, nearest_neighbors, tree, point, k) do
-    if visited[tree.indexes[node]] do
+  defnp update_visited(node, visited, distances, nearest_neighbors, data, indices, point, k) do
+    if visited[indices[node]] do
       {visited, {distances, nearest_neighbors}}
     else
-      visited = Nx.indexed_put(visited, Nx.new_axis(tree.indexes[node], 0), Nx.u8(1))
+      visited = Nx.indexed_put(visited, Nx.new_axis(indices[node], 0), Nx.u8(1))
 
       {distances, nearest_neighbors} =
-        update_knn(nearest_neighbors, distances, tree, node, point, k)
+        update_knn(nearest_neighbors, distances, data, indices, node, point, k)
 
       {visited, {distances, nearest_neighbors}}
     end
@@ -422,14 +422,17 @@ defmodule Scholar.Neighbors.KDTree do
     nearest_neighbors = Nx.broadcast(Nx.s64(0), {k})
     distances = Nx.broadcast(Nx.Constants.infinity(), {k})
     visited = Nx.broadcast(Nx.u8(0), {size})
+
+    indices = tree.indexes |> Nx.as_type(:s64)
+    data = tree.data
+
     down = 0
     up = 1
     mode = down
-    cnt = 0
 
     {nearest_neighbors, _} =
       while {nearest_neighbors,
-             {node, tree, point, distances, visited, i = Nx.s64(0), mode, cnt}},
+             {node, data, indices, point, distances, visited, i = Nx.s64(0), mode}},
             node != -1 and i >= 0 do
         coord_indicator = rem(i, dims)
 
@@ -439,39 +442,39 @@ defmodule Scholar.Neighbors.KDTree do
               {parent(node), i - 1, visited, nearest_neighbors, distances, up}
 
             mode == down and
-                point[[coord_indicator]] < tree.data[[tree.indexes[node], coord_indicator]] ->
+                point[[coord_indicator]] < data[[indices[node], coord_indicator]] ->
               {left_child(node), i + 1, visited, nearest_neighbors, distances, down}
 
             mode == down and
-                point[[coord_indicator]] >= tree.data[[tree.indexes[node], coord_indicator]] ->
+                point[[coord_indicator]] >= data[[indices[node], coord_indicator]] ->
               {right_child(node), i + 1, visited, nearest_neighbors, distances, down}
 
             mode == up ->
               cond do
-                visited[tree.indexes[node]] ->
+                visited[indices[node]] ->
                   {parent(node), i - 1, visited, nearest_neighbors, distances, up}
 
                 (left_child(node) >= size and right_child(node) >= size) or
-                  (left_child(node) < size and visited[tree.indexes[left_child(node)]] and
+                  (left_child(node) < size and visited[indices[left_child(node)]] and
                      right_child(node) < size and
-                     visited[tree.indexes[right_child(node)]]) or
-                    (left_child(node) < size and visited[tree.indexes[left_child(node)]] and
+                     visited[indices[right_child(node)]]) or
+                    (left_child(node) < size and visited[indices[left_child(node)]] and
                        right_child(node) >= size) ->
                   {visited, {distances, nearest_neighbors}} =
-                    update_visited(node, visited, distances, nearest_neighbors, tree, point, k)
+                    update_visited(node, visited, distances, nearest_neighbors, data, indices, point, k)
 
                   {parent(node), i - 1, visited, nearest_neighbors, distances, up}
 
-                left_child(node) < size and visited[tree.indexes[left_child(node)]] and
+                left_child(node) < size and visited[indices[left_child(node)]] and
                   right_child(node) < size and
-                    not visited[tree.indexes[right_child(node)]] ->
+                    not visited[indices[right_child(node)]] ->
                   {visited, {distances, nearest_neighbors}} =
-                    update_visited(node, visited, distances, nearest_neighbors, tree, point, k)
+                    update_visited(node, visited, distances, nearest_neighbors, data, indices, point, k)
 
                   if Nx.any(
                        Scholar.Metrics.Distance.squared_euclidean(
                          point[[coord_indicator]],
-                         tree.data[[tree.indexes[right_child(node)], coord_indicator]]
+                         data[[indices[right_child(node)], coord_indicator]]
                        ) <
                          distances
                      ) do
@@ -480,16 +483,16 @@ defmodule Scholar.Neighbors.KDTree do
                     {parent(node), i - 1, visited, nearest_neighbors, distances, up}
                   end
 
-                ((right_child(node) < size and visited[tree.indexes[right_child(node)]]) or
+                ((right_child(node) < size and visited[indices[right_child(node)]]) or
                    right_child(node) == size) and
-                    not visited[tree.indexes[left_child(node)]] ->
+                    not visited[indices[left_child(node)]] ->
                   {visited, {distances, nearest_neighbors}} =
-                    update_visited(node, visited, distances, nearest_neighbors, tree, point, k)
+                    update_visited(node, visited, distances, nearest_neighbors, data, indices, point, k)
 
                   if Nx.any(
                        Scholar.Metrics.Distance.squared_euclidean(
                          point[[coord_indicator]],
-                         tree.data[[tree.indexes[left_child(node)], coord_indicator]]
+                         data[[indices[left_child(node)], coord_indicator]]
                        ) <
                          distances
                      ) do
@@ -508,7 +511,7 @@ defmodule Scholar.Neighbors.KDTree do
               {node, i + 1, visited, nearest_neighbors, distances, down}
           end
 
-        {nearest_neighbors, {node, tree, point, distances, visited, i, mode, cnt + 1}}
+        {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}}
       end
 
     nearest_neighbors
