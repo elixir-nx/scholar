@@ -366,12 +366,6 @@ defmodule Scholar.Neighbors.KDTree do
     query_n(tree, data, NimbleOptions.validate!(opts, @query_schema))
   end
 
-  # deftransformp get_knn_shape(data, k) do
-  #   data_shape = Nx.shape(data)
-  #   data_shape_list = Tuple.to_list(data_shape)
-  #   List.to_tuple([hd(data_shape_list)] ++ [k] ++ tl(data_shape_list))
-  # end
-
   defnp query_n(tree, data, opts) do
     k = opts[:k]
     num_samples = Nx.axis_size(data, 0)
