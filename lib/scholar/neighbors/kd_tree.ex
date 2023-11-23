@@ -505,7 +505,7 @@ defmodule Scholar.Neighbors.KDTree do
 
             # Should be not reachable
             true ->
-              {node, i + 1, visited, nearest_neighbors, distances, down}
+              {node, i , visited, nearest_neighbors, distances, mode}
           end
 
         {nearest_neighbors, {node, tree, point, distances, visited, i, mode, cnt + 1}}
