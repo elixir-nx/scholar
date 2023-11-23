@@ -77,6 +77,7 @@ defmodule Scholar.MixProject do
           Scholar.Linear.PolynomialRegression,
           Scholar.Linear.RidgeRegression,
           Scholar.Linear.SVM,
+          Scholar.Manifold.MDS,
           Scholar.Manifold.TSNE,
           Scholar.NaiveBayes.Complement,
           Scholar.NaiveBayes.Gaussian,
@@ -86,7 +87,6 @@ defmodule Scholar.MixProject do
           Scholar.Neighbors.RadiusNearestNeighbors
         ],
         Utilities: [
-          Scholar.Covariance,
           Scholar.Impute.SimpleImputer,
           Scholar.Metrics.Classification,
           Scholar.Metrics.Clustering,
