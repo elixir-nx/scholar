@@ -516,7 +516,8 @@ defmodule Scholar.Neighbors.KDTree do
                       data,
                       indices,
                       point,
-                      k, opts
+                      k,
+                      opts
                     )
 
                   {parent(node), i - 1, visited, nearest_neighbors, distances, up}
@@ -533,7 +534,8 @@ defmodule Scholar.Neighbors.KDTree do
                       data,
                       indices,
                       point,
-                      k, opts
+                      k,
+                      opts
                     )
 
                   if Nx.any(
@@ -561,7 +563,8 @@ defmodule Scholar.Neighbors.KDTree do
                       data,
                       indices,
                       point,
-                      k, opts
+                      k,
+                      opts
                     )
 
                   if Nx.any(
