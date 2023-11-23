@@ -95,13 +95,13 @@ defmodule Scholar.Neighbors.KDTree do
     recur(rest, next, acc, tensor, level, levels, opts)
   end
 
-  defp recur([{i, indexes} | rest], next, acc, tensor, level, levels, opts) do
+  defp recur([{i, indices} | rest], next, acc, tensor, level, levels, opts) do
     %Nx.Tensor{shape: {size, dims}} = tensor
     k = rem(level, dims)
     subtree_size = unbounded_subtree_size(left_child(i), levels, size)
 
     {left, mid, right} =
-      Nx.Defn.jit_apply(&recur_slice(&1, &2, &3, subtree_size), [tensor, indexes, k], opts)
+      Nx.Defn.jit_apply(&recur_slice(&1, &2, &3, subtree_size), [tensor, indices, k], opts)
 
     next = [{right_child(i), right}, {left_child(i), left} | next]
     acc = <<acc::binary, Nx.to_number(mid)::32-unsigned-native-integer>>
@@ -423,7 +423,7 @@ defmodule Scholar.Neighbors.KDTree do
     distances = Nx.broadcast(Nx.Constants.infinity(), {k})
     visited = Nx.broadcast(Nx.u8(0), {size})
 
-    indices = tree.indexes |> Nx.as_type(:s64)
+    indices = tree.indices |> Nx.as_type(:s64)
     data = tree.data
 
     down = 0
