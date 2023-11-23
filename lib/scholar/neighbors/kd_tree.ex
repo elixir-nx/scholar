@@ -28,6 +28,7 @@ defmodule Scholar.Neighbors.KDTree do
   """
 
   import Nx.Defn
+  alias Scholar.Metrics.Distance
 
   @derive {Nx.Container, keep: [:levels], containers: [:indices, :data]}
   @enforce_keys [:levels, :indices, :data]
@@ -38,6 +39,18 @@ defmodule Scholar.Neighbors.KDTree do
       type: :pos_integer,
       default: 3,
       doc: "The number of neighbors to use by default for `k_neighbors` queries"
+    ],
+    metric: [
+      type: {:custom, Scholar.Options, :metric, []},
+      default: {:minkowski, 2},
+      doc: ~S"""
+      Name of the metric. Possible values:
+
+      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
+        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
+
+      * `:cosine` - Cosine metric.
+      """
     ]
   ]
 
@@ -362,6 +375,33 @@ defmodule Scholar.Neighbors.KDTree do
   deftransform right_child(i) when is_integer(i), do: 2 * i + 2
   deftransform right_child(%Nx.Tensor{} = t), do: Nx.add(Nx.multiply(2, t), 2)
 
+  @doc """
+  Query the tree for the k nearest neighbors
+
+  ## Examples
+
+      iex> x = Nx.iota({10, 2})
+      iex> x_query = Nx.tensor([[2, 5], [1, 9], [6, 4]])
+      iex> kdtree = Scholar.Neighbors.KDTree.bounded(x, 20)
+      iex> Scholar.Neighbors.KDTree.query(kdtree, x_query, k: 3)
+      #Nx.Tensor<
+        s64[3][3]
+        [
+          [2, 1, 0],
+          [2, 3, 1],
+          [2, 3, 1]
+        ]
+      >
+      iex> Scholar.Neighbors.KDTree.query(kdtree, x_query, k: 3, metric: {:minkowski, 1})
+      #Nx.Tensor<
+        s64[3][3]
+        [
+          [2, 1, 0],
+          [4, 3, 1],
+          [2, 3, 1]
+        ]
+      >
+  """
   deftransform query(tree, data, opts \\ []) do
     query_n(tree, data, NimbleOptions.validate!(opts, @query_schema))
   end
@@ -374,7 +414,7 @@ defmodule Scholar.Neighbors.KDTree do
     {knn, _} =
       while {knn, {tree, data, i = Nx.s64(0)}}, i < num_samples do
         curr_point = data[[i]]
-        k_neighbors = query_one_point(curr_point, tree, k: k)
+        k_neighbors = query_one_point(curr_point, tree, opts)
         knn = Nx.put_slice(knn, [i, 0], Nx.new_axis(k_neighbors, 0))
         {knn, {tree, data, i + 1}}
       end
@@ -387,9 +427,16 @@ defmodule Scholar.Neighbors.KDTree do
     {Nx.take(distances, indices), Nx.take(point_indices, indices)}
   end
 
-  defnp update_knn(nearest_neighbors, distances, data, indices, curr_node, point, k) do
-    curr_dist =
-      Scholar.Metrics.Distance.squared_euclidean(data[[indices[curr_node]]], point)
+  defnp compute_distance(x1, x2, opts) do
+    case opts[:metric] do
+      {:minkowski, 2} -> Distance.squared_euclidean(x1, x2)
+      {:minkowski, p} -> Distance.minkowski(x1, x2, p: p)
+      :cosine -> Distance.cosine(x1, x2)
+    end
+  end
+
+  defnp update_knn(nearest_neighbors, distances, data, indices, curr_node, point, k, opts) do
+    curr_dist = compute_distance(data[[indices[curr_node]]], point, opts)
 
     if curr_dist < distances[[-1]] do
       nearest_neighbors =
@@ -402,14 +449,14 @@ defmodule Scholar.Neighbors.KDTree do
     end
   end
 
-  defnp update_visited(node, visited, distances, nearest_neighbors, data, indices, point, k) do
+  defnp update_visited(node, visited, distances, nearest_neighbors, data, indices, point, k, opts) do
     if visited[indices[node]] do
       {visited, {distances, nearest_neighbors}}
     else
       visited = Nx.indexed_put(visited, Nx.new_axis(indices[node], 0), Nx.u8(1))
 
       {distances, nearest_neighbors} =
-        update_knn(nearest_neighbors, distances, data, indices, node, point, k)
+        update_knn(nearest_neighbors, distances, data, indices, node, point, k, opts)
 
       {visited, {distances, nearest_neighbors}}
     end
@@ -469,7 +516,7 @@ defmodule Scholar.Neighbors.KDTree do
                       data,
                       indices,
                       point,
-                      k
+                      k, opts
                     )
 
                   {parent(node), i - 1, visited, nearest_neighbors, distances, up}
@@ -486,13 +533,14 @@ defmodule Scholar.Neighbors.KDTree do
                       data,
                       indices,
                       point,
-                      k
+                      k, opts
                     )
 
                   if Nx.any(
-                       Scholar.Metrics.Distance.squared_euclidean(
+                       compute_distance(
                          point[[coord_indicator]],
-                         data[[indices[right_child(node)], coord_indicator]]
+                         data[[indices[right_child(node)], coord_indicator]],
+                         opts
                        ) <
                          distances
                      ) do
@@ -513,13 +561,14 @@ defmodule Scholar.Neighbors.KDTree do
                       data,
                       indices,
                       point,
-                      k
+                      k, opts
                     )
 
                   if Nx.any(
-                       Scholar.Metrics.Distance.squared_euclidean(
+                       compute_distance(
                          point[[coord_indicator]],
-                         data[[indices[left_child(node)], coord_indicator]]
+                         data[[indices[left_child(node)], coord_indicator]],
+                         opts
                        ) <
                          distances
                      ) do
