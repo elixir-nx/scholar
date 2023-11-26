@@ -49,16 +49,18 @@ defmodule Scholar.MixProject do
 
   defp docs do
     [
-      main: "Scholar",
+      main: "readme",
       source_url: @source_url,
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [
         # "notebooks/hierarchical_clustering.livemd",
+        "README.md",
         "notebooks/linear_regression.livemd",
         "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd",
-        "notebooks/cv_gradient_boosting_tree.livemd"
+        "notebooks/cv_gradient_boosting_tree.livemd",
+        "notebooks/mds.livemd"
       ],
       groups_for_modules: [
         Models: [
@@ -78,19 +80,21 @@ defmodule Scholar.MixProject do
           Scholar.Linear.PolynomialRegression,
           Scholar.Linear.RidgeRegression,
           Scholar.Linear.SVM,
+          Scholar.Manifold.MDS,
           Scholar.Manifold.TSNE,
           Scholar.NaiveBayes.Complement,
           Scholar.NaiveBayes.Gaussian,
           Scholar.NaiveBayes.Multinomial,
+          Scholar.Neighbors.KDTree,
           Scholar.Neighbors.KNearestNeighbors,
           Scholar.Neighbors.RadiusNearestNeighbors
         ],
         Utilities: [
-          Scholar.Covariance,
           Scholar.Impute.SimpleImputer,
           Scholar.Metrics.Classification,
           Scholar.Metrics.Clustering,
           Scholar.Metrics.Distance,
+          Scholar.Metrics.Ranking,
           Scholar.Metrics.Regression,
           Scholar.Metrics.Similarity,
           Scholar.ModelSelection,

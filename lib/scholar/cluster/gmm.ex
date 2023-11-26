@@ -12,6 +12,8 @@ defmodule Scholar.Cluster.GaussianMixture do
   the parameters. Thus the procedure consists of repeating the algorithm several times
   and taking the best obtained result.
 
+  Time complexity is $O(NKD^3)$ for $N$ data points, $K$ Gaussian components and $D$ dimensions
+
   References:
 
   * [1] - Mixtures of Gaussians and the EM algorithm https://cs229.stanford.edu/notes2020spring/cs229-notes7b.pdf

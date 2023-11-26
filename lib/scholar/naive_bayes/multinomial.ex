@@ -1,6 +1,9 @@
 defmodule Scholar.NaiveBayes.Multinomial do
   @moduledoc """
   Naive Bayes classifier for multinomial models.
+
+  Time complexity is $O(K * N * C)$ where $N$ is the number of samples and $K$ is the number of features,
+  and $C$ is the number of classes.
   """
   import Nx.Defn
   import Scholar.Shared

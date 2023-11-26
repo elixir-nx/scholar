@@ -100,4 +100,12 @@ defmodule Scholar.Options do
     {:error,
      "expected metric to be a :cosine or tuple {:minkowski, p} where p is a positive number or :infinity, got: #{inspect(metric)}"}
   end
+
+  def beta(beta) do
+    if (is_number(beta) and beta >= 0) or (Nx.is_tensor(beta) and Nx.rank(beta) == 0) do
+      {:ok, beta}
+    else
+      {:error, "expect 'beta' to be in the range [0, inf]"}
+    end
+  end
 end

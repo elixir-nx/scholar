@@ -6,9 +6,12 @@ defmodule Scholar.NaiveBayes.Complement do
   that each class has roughly the same representation. It is particularly
   suited for imbalanced data sets.
 
+  Time complexity is $O(K * N * C)$ where $N$ is the number of samples and $K$ is the number of features,
+  and $C$ is the number of classes.
+
   Reference:
 
-  * [1] - [Paper about Complement Naive Bayes Algorithm](https://www.aaai.org/Papers/ICML/2003/ICML03-081.pdf?ref=https://githubhelp.com)
+  * [1] - [Paper about Complement Naive Bayes Algorithm](https://cdn.aaai.org/ICML/2003/ICML03-081.pdf)
   """
   import Nx.Defn
   import Scholar.Shared

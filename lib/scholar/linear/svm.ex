@@ -1,13 +1,17 @@
 defmodule Scholar.Linear.SVM do
   @moduledoc """
-  SVM classifier
+  Support Vector Machine linear classifier.
 
-  It uses the OvR strategy to handle both binary and multinomial classification.
+  It uses the One-vs-Rest strategy to handle both binary and multinomial classification.
   This implementation uses stochastic gradient descent from default or any other optimizer
   available in `Polaris`. This makes it similar to a sklearn SGDClassifier [1].
-  It means that on average it will work slower than algorithms that use QP and kernel trick (LIBSVM [2]) or
-  Coordinate Descent Algorithm (LIBLINEAR [3]). It also cannot use different kernels like in LIBSVM,
-  but you can use any type of optimizer available in `Polaris`.
+
+  On average it is slower than algorithms that use QP and kernel trick (LIBSVM [2]) or
+  Coordinate Descent Algorithm (LIBLINEAR [3]). It also cannot use different kernels
+  like in LIBSVM, but you can use any type of optimizer available in `Polaris`.
+
+  Time complexity is $O(N * K * I * C)$ where $N$ is the number of samples, $K$ is the
+  number of features $I$ is the number of iterations and $C$ is the number of classes.
 
   [1] - https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.SGDClassifier.html
   [2] - https://www.csie.ntu.edu.tw/~cjlin/libsvm/

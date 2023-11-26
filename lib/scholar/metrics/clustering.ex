@@ -26,6 +26,8 @@ defmodule Scholar.Metrics.Clustering do
   clustering configuration is appropriate. If many points have a low or negative
   value, then the clustering configuration may have too many or too few clusters.
 
+  Time complexity of silhouette score is $O(N^2)$ where $N$ is the number of samples.
+
   ## Options
 
   #{NimbleOptions.docs(@opts_schema)}
@@ -45,7 +47,7 @@ defmodule Scholar.Metrics.Clustering do
       iex> Scholar.Metrics.Clustering.silhouette_samples(x, labels, num_clusters: 3)
       #Nx.Tensor<
         f32[5]
-        [0.0, -0.9782054424285889, 0.0, -0.18546819686889648, -0.5929657816886902]
+        [0.0, -0.9782054424285889, 0.0, -0.18546827137470245, -0.5929659008979797]
       >
   """
   deftransform silhouette_samples(x, labels, opts \\ []) do
@@ -81,7 +83,7 @@ defmodule Scholar.Metrics.Clustering do
       iex> Scholar.Metrics.Clustering.silhouette_score(x, labels, num_clusters: 3)
       #Nx.Tensor<
         f32
-        -0.35132789611816406
+        -0.35132792592048645
       >
   """
   deftransform silhouette_score(x, labels, opts \\ []) do
@@ -94,21 +96,9 @@ defmodule Scholar.Metrics.Clustering do
 
   defnp inner_and_outer_dist(x, labels, opts) do
     num_clusters = opts[:num_clusters]
-    {num_samples, num_features} = Nx.shape(x)
+    num_samples = Nx.axis_size(x, 0)
     inf = Nx.Constants.infinity(to_float_type(x))
-    broadcast_shape = {num_samples, num_samples, num_features}
-
-    x_a =
-      x
-      |> Nx.new_axis(0)
-      |> Nx.broadcast(broadcast_shape)
-
-    x_b =
-      x
-      |> Nx.new_axis(1)
-      |> Nx.broadcast(broadcast_shape)
-
-    pairwise_dist = Scholar.Metrics.Distance.euclidean(x_a, x_b, axes: [2])
+    pairwise_dist = Scholar.Metrics.Distance.pairwise_euclidean(x)
     membership_mask = Nx.reshape(labels, {num_samples, 1}) == Nx.iota({1, num_clusters})
     cluster_size = membership_mask |> Nx.sum(axes: [0]) |> Nx.reshape({1, num_clusters})
     dist_in_cluster = Nx.dot(pairwise_dist, membership_mask)

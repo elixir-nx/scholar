@@ -7,6 +7,9 @@ defmodule Scholar.NaiveBayes.Gaussian do
 
   The parameters $\sigma\_{y}$ and $\mu\_{y}$ are estimated using maximum likelihood.
 
+  Time complexity is $O(K * N * C)$ where $N$ is the number of samples and $K$ is the number of features,
+  and $C$ is the number of classes.
+
   Reference:
 
   * [1] - [Detailed explanation of algorithm used to update feature means and variance online by Chan, Golub, and LaVeque](http://i.stanford.edu/pub/cstr/reports/cs/tr/79/773/CS-TR-79-773.pdf)

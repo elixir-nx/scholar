@@ -11,6 +11,10 @@ defmodule Scholar.Cluster.KMeans do
   converges. Since some initializations are unfortunate and converge to sub-optimal results
   we need repeat the whole procedure a few times and take the best result.
 
+  Average time complexity is $O(CKNI)$, where $C$ is the number of clusters, $N$ is the number of samples,
+  $I$ is the number of iterations until convergence, and $K$ is the number of features. Space
+  complexity is $O(K*(N+C))$.
+
   Reference:
 
   * [1] - [K-Means Algorithm](https://cs.nyu.edu/~roweis/csc2515-2006/readings/lloyd57.pdf)
@@ -300,24 +304,8 @@ defmodule Scholar.Cluster.KMeans do
   """
   defn predict(%__MODULE__{clusters: clusters} = _model, x) do
     assert_same_shape!(x[0], clusters[0])
-    {num_clusters, _} = Nx.shape(clusters)
-    {num_samples, num_features} = Nx.shape(x)
 
-    clusters =
-      clusters
-      |> Nx.new_axis(1)
-      |> Nx.broadcast({num_clusters, num_samples, num_features})
-      |> Nx.reshape({num_clusters * num_samples, num_features})
-
-    inertia_for_centroids =
-      Scholar.Metrics.Distance.squared_euclidean(
-        Nx.tile(x, [num_clusters, 1]),
-        clusters,
-        axes: [1]
-      )
-      |> Nx.reshape({num_clusters, num_samples})
-
-    inertia_for_centroids |> Nx.argmin(axis: 0)
+    Scholar.Metrics.Distance.pairwise_squared_euclidean(clusters, x) |> Nx.argmin(axis: 0)
   end
 
   @doc """
@@ -343,14 +331,6 @@ defmodule Scholar.Cluster.KMeans do
       )
   """
   defn transform(%__MODULE__{clusters: clusters} = _model, x) do
-    {num_clusters, num_features} = Nx.shape(clusters)
-    {num_samples, _} = Nx.shape(x)
-    broadcast_shape = {num_samples, num_clusters, num_features}
-
-    Scholar.Metrics.Distance.euclidean(
-      Nx.new_axis(x, 1) |> Nx.broadcast(broadcast_shape),
-      Nx.new_axis(clusters, 0) |> Nx.broadcast(broadcast_shape),
-      axes: [-1]
-    )
+    Scholar.Metrics.Distance.pairwise_euclidean(x, clusters)
   end
 end

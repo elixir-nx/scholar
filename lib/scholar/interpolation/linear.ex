@@ -14,12 +14,31 @@ defmodule Scholar.Interpolation.Linear do
   b = y_1 - ax_1 = y_0 - ax_0
   \end{cases}
   $$
+
+  Linear interpolation has $O(N)$ time and space complexity where $N$ is the number of points.
   """
   import Nx.Defn
+  import Scholar.Shared
 
   @derive {Nx.Container, containers: [:coefficients, :x]}
   defstruct [:coefficients, :x]
 
+  @type t :: %Scholar.Interpolation.Linear{}
+
+  opts_schema = [
+    left: [
+      type: {:or, [:float, :integer]},
+      doc:
+        "Value to return for values in `target_x` smaller that the smallest value in training set"
+    ],
+    right: [
+      type: {:or, [:float, :integer]},
+      doc:
+        "Value to return for values in `target_x` greater that the greatest value in training set"
+    ]
+  ]
+
+  @opts_schema NimbleOptions.new!(opts_schema)
   @doc """
   Fits a linear interpolation of the given `(x, y)` points
 
@@ -39,7 +58,7 @@ defmodule Scholar.Interpolation.Linear do
           ]
         ),
         x: Nx.tensor(
-          [0, 1]
+          [0, 1, 2]
         )
       }
   """
@@ -77,7 +96,7 @@ defmodule Scholar.Interpolation.Linear do
 
     coefficients = Nx.stack([a, b], axis: 1)
 
-    %__MODULE__{coefficients: coefficients, x: x0}
+    %__MODULE__{coefficients: coefficients, x: x}
   end
 
   @doc """
@@ -95,24 +114,120 @@ defmodule Scholar.Interpolation.Linear do
           [2.0, 6.0]
         ]
       )
+
+      iex> x = Nx.iota({5})
+      iex> y = Nx.tensor([2.0, 0.0, 1.0, 3.0, 4.0])
+      iex> model = Scholar.Interpolation.Linear.fit(x, y)
+      iex> target_x = Nx.tensor([-2, -1, 1.25, 3, 3.25, 5.0])
+      iex> Scholar.Interpolation.Linear.predict(model, target_x, left: 0.0, right: 10.0)
+      #Nx.Tensor<
+        f32[6]
+        [0.0, 0.0, 0.25, 3.0, 3.25, 10.0]
+      >
   """
-  defn predict(%__MODULE__{x: x, coefficients: coefficients} = _model, target_x) do
-    original_shape = Nx.shape(target_x)
+  deftransform predict(model, target_x, opts \\ []) do
+    predict_n(model, target_x, NimbleOptions.validate!(opts, @opts_schema))
+  end
+
+  defnp predict_n(%__MODULE__{x: x, coefficients: coefficients} = _model, target_x, opts) do
+    shape = Nx.shape(target_x)
 
     target_x = Nx.flatten(target_x)
 
-    idx_selector = Nx.new_axis(target_x, 1) >= x
+    indices = Nx.argsort(target_x)
 
-    idx_poly = Nx.argmax(idx_selector, axis: 1, tie_break: :high)
+    left_bound = x[0]
+    right_bound = x[-1]
 
-    idx_poly = Nx.select(Nx.all(idx_selector == 0, axes: [1]), 0, idx_poly)
+    target_x = Nx.sort(target_x)
+    res = Nx.broadcast(Nx.tensor(0, type: to_float_type(target_x)), {Nx.axis_size(target_x, 0)})
 
-    coef_poly = Nx.take(coefficients, idx_poly)
+    # while with smaller than left_bound
+    {{res, i}, _} =
+      while {{res, i = 0}, {x, coefficients, left_bound, target_x}},
+            check_cond_left(target_x, i, left_bound) do
+        val =
+          case opts[:left] do
+            nil ->
+              coefficients[0][0] * Nx.take(target_x, i) + coefficients[0][1]
 
-    x_poly = Nx.stack([target_x, Nx.broadcast(1, target_x)], axis: 1)
+            _ ->
+              opts[:left]
+          end
 
-    result = Nx.dot(x_poly, [1], [0], coef_poly, [1], [0])
+        res = Nx.indexed_put(res, Nx.new_axis(i, -1), val)
+        {{res, i + 1}, {x, coefficients, left_bound, target_x}}
+      end
 
-    Nx.reshape(result, original_shape)
+    {{res, i}, _} =
+      while {{res, i}, {x, right_bound, coefficients, target_x, j = 0}},
+            check_cond_right(target_x, i, right_bound) do
+        {j, _} =
+          while {j, {i, x, target_x}},
+                j < Nx.axis_size(x, 0) and Nx.take(x, j) < Nx.take(target_x, i) do
+            {j + 1, {i, x, target_x}}
+          end
+
+        res =
+          Nx.indexed_put(
+            res,
+            Nx.new_axis(i, -1),
+            coefficients[Nx.max(j - 1, 0)][0] * Nx.take(target_x, i) +
+              coefficients[Nx.max(j - 1, 0)][1]
+          )
+
+        i = i + 1
+
+        {{res, i}, {x, right_bound, coefficients, target_x, j}}
+      end
+
+    {res, i}
+
+    # while with bigger than right_bound
+
+    {res, _} =
+      while {res, {x, coefficients, target_x, i}},
+            i < Nx.axis_size(target_x, 0) do
+        val =
+          case opts[:right] do
+            nil ->
+              coefficients[-1][0] * Nx.take(target_x, i) + coefficients[-1][1]
+
+            _ ->
+              opts[:right]
+          end
+
+        res = Nx.indexed_put(res, Nx.new_axis(i, -1), val)
+        {res, {x, coefficients, target_x, i + 1}}
+      end
+
+    res = Nx.take(res, indices)
+    Nx.reshape(res, shape)
+  end
+
+  defnp check_cond_left(target_x, i, left_bound) do
+    cond do
+      i >= Nx.axis_size(target_x, 0) ->
+        Nx.u8(0)
+
+      Nx.take(target_x, i) >= left_bound ->
+        Nx.u8(0)
+
+      true ->
+        Nx.u8(1)
+    end
+  end
+
+  defnp check_cond_right(target_x, i, right_bound) do
+    cond do
+      i >= Nx.axis_size(target_x, 0) ->
+        Nx.u8(0)
+
+      Nx.take(target_x, i) > right_bound ->
+        Nx.u8(0)
+
+      true ->
+        Nx.u8(1)
+    end
   end
 end

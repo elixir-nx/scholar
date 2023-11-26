@@ -4,6 +4,9 @@ defmodule Scholar.Linear.IsotonicRegression do
   observations by solving a convex optimization problem. It is a form of
   regression analysis that can be used as an alternative to polynomial
   regression to fit nonlinear data.
+
+  Time complexity of isotonic regression is $O(N^2)$ where $N$ is the
+  number of points.
   """
   require Nx
   import Nx.Defn, except: [transform: 2]
@@ -38,7 +41,7 @@ defmodule Scholar.Linear.IsotonicRegression do
           y_thresholds: Nx.Tensor.t(),
           increasing: Nx.Tensor.t(),
           cutoff_index: Nx.Tensor.t(),
-          preprocess: Tuple.t() | Scholar.Interpolation.Linear.t()
+          preprocess: tuple() | Scholar.Interpolation.Linear.t()
         }
 
   opts = [
@@ -204,7 +207,7 @@ defmodule Scholar.Linear.IsotonicRegression do
       iex> Scholar.Linear.IsotonicRegression.predict(model, to_predict)
       #Nx.Tensor<
         f32[10]
-        [1.0, 1.6666667461395264, 2.3333334922790527, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+        [1.0, 1.6666667461395264, 2.3333332538604736, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
       >
   """
   defn predict(model, x) do
@@ -259,7 +262,7 @@ defmodule Scholar.Linear.IsotonicRegression do
             ]
           ),
           x: Nx.tensor(
-            [1.0, 4.0, 7.0, 9.0, 10.0]
+            [1.0, 4.0, 7.0, 9.0, 10.0, 11.0]
           )
         }
       }

@@ -1,6 +1,9 @@
 defmodule Scholar.Linear.LinearRegression do
   @moduledoc """
   Ordinary least squares linear regression.
+
+  Time complexity of linear regression is $O((K^2) * (K+N))$ where $N$ is the number of samples
+  and $K$ is the number of features.
   """
   require Nx
   import Nx.Defn

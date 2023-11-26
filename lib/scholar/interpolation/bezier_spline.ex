@@ -15,6 +15,8 @@ defmodule Scholar.Interpolation.BezierSpline do
   or `Scholar.Interpolation.Linear` algorithms, will only affect
   the segments right next to it, instead of affecting the curve as a whole.
 
+  Computing Bezier curve is $O(N^2)$ where $N$ is the number of points.
+
   Reference:
 
     * [1] - [Bezier theory](https://en.wikipedia.org/wiki/B%C3%A9zier_curve)

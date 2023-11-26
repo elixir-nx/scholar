@@ -1,6 +1,8 @@
 defmodule Scholar.Linear.LogisticRegression do
   @moduledoc """
   Logistic regression in both binary and multinomial variants.
+
+  Time complexity is $O(N * K * I)$ where $N$ is the number of samples, $K$ is the number of features, and $I$ is the number of iterations.
   """
   import Nx.Defn
   import Scholar.Shared

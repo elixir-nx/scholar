@@ -1,4 +1,4 @@
-name: Test
+name: CI
 on:
   pull_request:
   push:
@@ -11,11 +11,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: "1.14.5"
-            otp: "24.3"
-          - elixir: "1.15.4"
-            otp: "25.3"
+          - elixir: "1.15.6"
+            otp: "26.1"
             lint: true
+          - elixir: "1.14.5"
+            otp: "25.3"
     steps:
       - uses: actions/checkout@v2
 
