@@ -275,13 +275,22 @@ defmodule Scholar.Cluster.Hierarchical do
                 dab = pairwise[[x, y]]
                 update = update_fun.(dac, dbc, dab, sa, sb, sc)
 
-                # TODO: do this in a single call?
+                indices = [
+                  Nx.stack([x, z]) |> Nx.new_axis(0),
+                  Nx.stack([z, x]) |> Nx.new_axis(0),
+                  Nx.stack([y, z]) |> Nx.new_axis(0),
+                  Nx.stack([z, y]) |> Nx.new_axis(0)
+                ]
+
+                updates = [
+                  Nx.stack([update]),
+                  Nx.stack([update]),
+                  Nx.stack([update]),
+                  Nx.stack([update])
+                ]
+
                 pairwise =
-                  pairwise
-                  |> Nx.indexed_put(Nx.stack([x, z]), update)
-                  |> Nx.indexed_put(Nx.stack([z, x]), update)
-                  |> Nx.indexed_put(Nx.stack([y, z]), update)
-                  |> Nx.indexed_put(Nx.stack([z, y]), update)
+                  Nx.indexed_put(pairwise, Nx.concatenate(indices), Nx.concatenate(updates))
 
                 {pairwise, {x, y, sa, sb, sc}}
               end
