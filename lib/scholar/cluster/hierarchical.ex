@@ -167,7 +167,7 @@ defmodule Scholar.Cluster.Hierarchical do
       case linkage do
         # TODO: :centroid, :median
         l when l in [:average, :complete, :single, :ward, :weighted] ->
-          &parallel_nearest_neighbor/2
+          &parallel_nearest_neighbor/3
       end
 
     n =
@@ -184,13 +184,7 @@ defmodule Scholar.Cluster.Hierarchical do
       raise ArgumentError, "Must have a minimum of 3 data points, found: #{n}."
     end
 
-    pairwise = dissimilarity_fun.(data)
-
-    if Nx.shape(pairwise) != {n, n} do
-      raise ArgumentError, "Pairwise must be a symmetric matrix."
-    end
-
-    {clades, diss, sizes} = dendrogram_fun.(pairwise, update_fun)
+    {clades, diss, sizes} = dendrogram_fun.(data, dissimilarity_fun, update_fun)
 
     %__MODULE__{
       clades: clades,
@@ -202,7 +196,8 @@ defmodule Scholar.Cluster.Hierarchical do
 
   # Clade functions
 
-  defnp parallel_nearest_neighbor(pairwise, update_fun) do
+  defnp parallel_nearest_neighbor(data, dissimilarity_fun, update_fun) do
+    pairwise = dissimilarity_fun.(data)
     {n, _} = Nx.shape(pairwise)
     pairwise = Nx.broadcast(:infinity, {n}) |> Nx.make_diagonal() |> Nx.add(pairwise)
     clades = Nx.broadcast(-1, {n - 1, 2})
