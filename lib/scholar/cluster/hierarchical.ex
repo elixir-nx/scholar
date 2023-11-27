@@ -150,7 +150,7 @@ defmodule Scholar.Cluster.Hierarchical do
     dissimilarity_fun =
       case dissimilarity do
         # :precomputed -> &Function.identity/1
-        :euclidean -> &pairwise_euclidean/1
+        :euclidean -> &Scholar.Metrics.Distance.pairwise_euclidean/1
       end
 
     update_fun =
@@ -307,12 +307,6 @@ defmodule Scholar.Cluster.Hierarchical do
       end
 
     i
-  end
-
-  # Dissimilarity functions
-
-  defnp pairwise_euclidean(%Nx.Tensor{} = x) do
-    Scholar.Metrics.Distance.pairwise_euclidean(x, x)
   end
 
   # Dissimilarity update functions
