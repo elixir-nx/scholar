@@ -30,7 +30,7 @@ defmodule Scholar.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.30", only: :docs},
-      {:nx, "~> 0.6.3 or ~> 0.7", override: true},
+      {:nx, "~> 0.6.4 or ~> 0.7", override: true},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, "~> 0.6.3 or ~> 0.7", optional: true},
       {:polaris, "~> 0.1"},
