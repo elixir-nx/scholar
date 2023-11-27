@@ -72,30 +72,33 @@ defmodule Scholar.Cluster.HierarchicalTest do
       assert model.sizes == Nx.tensor([2, 2, 2, 3, 3, 3, 6, 9])
 
       # The clustering part of the algorithm uses the `cluster_by: [num_clusters: 3]` option to
-      # take the model and form 3 clusters. This should result in each datum having the following
-      # cluster labels.
-      clusters = Hierarchical.fit_predict(model, cluster_by: [num_clusters: 3])
-      assert clusters == Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+      # take the model and form 3 clusters.
+      labels_map = Hierarchical.labels_map(model, cluster_by: [num_clusters: 3])
+      assert labels_map == %{0 => [0, 1, 2], 1 => [3, 4, 5], 2 => [6, 7, 8]}
+
+      # We can also return a list of each datum's cluster label.
+      labels_list = Hierarchical.labels_list(model, cluster_by: [num_clusters: 3])
+      assert labels_list == [0, 0, 0, 1, 1, 1, 2, 2, 2]
     end
   end
 
-  @data Nx.tensor([[2], [7], [9], [0], [3]])
-
-  describe "fit_predict" do
-    test "cluster by height" do
-      clusters = Hierarchical.fit_predict(@data, cluster_by: [height: 2.5])
-      assert clusters == Nx.tensor([0, 1, 1, 0, 0])
+  describe "cluster labels" do
+    setup do
+      %{model: Hierarchical.fit(Nx.tensor([[2], [7], [9], [0], [3]]))}
     end
 
-    test "cluster by number of clusters" do
-      clusters = Hierarchical.fit_predict(@data, cluster_by: [num_clusters: 3])
-      assert clusters == Nx.tensor([0, 1, 1, 2, 0])
+    test "cluster by height", %{model: model} do
+      labels_map = Hierarchical.labels_map(model, cluster_by: [height: 2.5])
+      assert labels_map == %{0 => [0, 3, 4], 1 => [1, 2]}
+      labels_list = Hierarchical.labels_list(model, cluster_by: [height: 2.5])
+      assert labels_list == [0, 1, 1, 0, 0]
     end
 
-    test "works with model" do
-      model = Hierarchical.fit(@data)
-      clusters = Hierarchical.fit_predict(model, cluster_by: [height: 2.5])
-      assert clusters == Nx.tensor([0, 1, 1, 0, 0])
+    test "cluster by number of clusters", %{model: model} do
+      labels_map = Hierarchical.labels_map(model, cluster_by: [num_clusters: 3])
+      assert labels_map == %{0 => [0, 4], 1 => [1, 2], 2 => [3]}
+      labels_list = Hierarchical.labels_list(model, cluster_by: [num_clusters: 3])
+      assert labels_list == [0, 1, 1, 2, 0]
     end
   end
 
@@ -117,10 +120,10 @@ defmodule Scholar.Cluster.HierarchicalTest do
     end
 
     test "num_clusters may not exceed number of data points" do
-      model = Hierarchical.fit(@data)
+      model = Hierarchical.fit(Nx.tensor([[1], [2], [3]]))
 
       assert_raise(ArgumentError, "`num_clusters` may not exceed number of data points.", fn ->
-        Hierarchical.fit_predict(model, cluster_by: [num_clusters: 6])
+        Hierarchical.labels_list(model, cluster_by: [num_clusters: 4])
       end)
     end
   end

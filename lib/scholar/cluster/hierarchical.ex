@@ -93,7 +93,8 @@ defmodule Scholar.Cluster.Hierarchical do
     ]
   ]
   @doc """
-  Use hierarchical clustering to form the initial model to be clustered using `fit_predict/2`.
+  Use hierarchical clustering to form the initial model to be clustered with `labels_list/2` or
+  `labels_map/2`.
 
   ## Options
 
@@ -337,9 +338,9 @@ defmodule Scholar.Cluster.Hierarchical do
   defnp weighted(dac, dbc, _dab, _sa, _sb, _sc),
     do: (dac + dbc) / 2
 
-  # Predict functions
+  # Cluster label functions
 
-  @predict_opts_schema [
+  @label_opts_schema [
     cluster_by: [
       type: :non_empty_keyword_list,
       required: true,
@@ -360,44 +361,32 @@ defmodule Scholar.Cluster.Hierarchical do
     ]
   ]
   @doc """
-  Cluster the dataset using hierarchical clustering or cluster the model built by `fit/2`.
+  Cluster a `Scholar.Cluster.Hierarchical` struct into a map of cluster labels to member indices.
 
   ## Options
 
-  If the input is a `Scholar.Cluster.Hierarchical` struct, only these options are required:
-
-  #{NimbleOptions.docs(@predict_opts_schema)}
-
-  If the input is a `Nx.Tensor`, you must also pass the options required by `fit/2`.
+  #{NimbleOptions.docs(@label_opts_schema)}
 
   ## Return values
 
-  Returns a `Nx.Tensor` with shape `{model.num_points}` and values `0..(k - 1)` where `k` is the
-  number of clusters formed.
-  The `i`th element of the result tensor is the label of the `i`th data point's cluster.
-  (Cluster labels are arbitrary, but deterministic.)
+  Returns a map where the keys are integers from `0..(k - 1)` where `k` is the number of clusters.
+  Each value is a cluster represented by a list of member indices.
+  E.g. if the result map was `%{0 => [0, 1], 1 => [2]}`, then elements `[0, 1]` of the data would
+  be in cluster `0` and the singleton element `[2]` would be in cluster `1`.
+
+  Cluster labels are arbitrary, but deterministic.
 
   ## Examples
 
-      iex> data = Nx.tensor([[2], [7], [9], [0], [3]])
+      iex> data = Nx.tensor([[5], [5], [5], [10], [10]])
       iex> model = Hierarchical.fit(data)
-      iex> Hierarchical.fit_predict(model, cluster_by: [num_clusters: 3])
-      Nx.tensor([0, 1, 1, 2, 0])
+      iex> Hierarchical.labels_map(model, cluster_by: [num_clusters: 2])
+      %{0 => [0, 1, 2], 1 => [3, 4]}
   """
-  deftransform fit_predict(data_or_model, opts \\ [])
+  def labels_map(%__MODULE__{} = model, opts) do
+    opts = NimbleOptions.validate!(opts, @label_opts_schema)
 
-  deftransform fit_predict(%Nx.Tensor{} = data, opts) do
-    {fit_opts, predict_opts} = Enum.split_with(opts, &(&1 in @fit_opts_schema))
-
-    data
-    |> fit(fit_opts)
-    |> fit_predict(predict_opts)
-  end
-
-  deftransform fit_predict(%__MODULE__{} = model, opts) do
-    opts = NimbleOptions.validate!(opts, @predict_opts_schema)
-
-    clusters =
+    raw_clusters =
       case opts[:cluster_by] do
         [height: height] ->
           cluster_by_height(model, height)
@@ -416,10 +405,46 @@ defmodule Scholar.Cluster.Hierarchical do
           end
       end
 
-    clusters_to_labels(clusters)
+    # Give the clusters labels 0..(k - 1) and ensure those labels are deterministic by sorting by
+    # the minimum element.
+    raw_clusters
+    |> Enum.sort_by(fn {_label, cluster} -> Enum.min(cluster) end)
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {{_, v}, i} -> v |> Enum.sort() |> Enum.map(&{&1, i}) end)
+    |> Enum.group_by(fn {_, v} -> v end, fn {k, _} -> k end)
   end
 
-  deftransformp cluster_by_height(model, height_cutoff) do
+  @doc """
+  Cluster a `Scholar.Cluster.Hierarchical` struct into a list of cluster labels.
+
+  ## Options
+
+  #{NimbleOptions.docs(@label_opts_schema)}
+
+  ## Return values
+
+  Returns a list of length `n` and values `0..(k - 1)` where `n` is the number of data points and
+  `k` is the number of clusters formed.
+  The `i`th element of the result list is the label of the `i`th data point's cluster.
+
+  Cluster labels are arbitrary, but deterministic.
+
+  ## Examples
+
+      iex> data = Nx.tensor([[5], [5], [5], [10], [10]])
+      iex> model = Hierarchical.fit(data)
+      iex> Hierarchical.labels_list(model, cluster_by: [num_clusters: 2])
+      [0, 0, 0, 1, 1]
+  """
+  def labels_list(%__MODULE__{} = model, opts) do
+    model
+    |> labels_map(opts)
+    |> Enum.flat_map(fn {k, vs} -> Enum.map(vs, &{&1, k}) end)
+    |> Enum.sort()
+    |> Enum.map(fn {_, v} -> v end)
+  end
+
+  defp cluster_by_height(model, height_cutoff) do
     clusters = Map.new(0..(model.num_points - 1), &{&1, [&1]})
 
     Enum.zip(Nx.to_list(model.clades), Nx.to_list(model.dissimilarities))
@@ -433,7 +458,7 @@ defmodule Scholar.Cluster.Hierarchical do
     end)
   end
 
-  deftransformp cluster_by_num_clusters(model, num_clusters) do
+  defp cluster_by_num_clusters(model, num_clusters) do
     clusters = Map.new(0..(model.num_points - 1), &{&1, [&1]})
 
     Nx.to_list(model.clades)
@@ -447,19 +472,9 @@ defmodule Scholar.Cluster.Hierarchical do
     end)
   end
 
-  deftransformp merge_clusters(clusters, a, b, c) do
+  defp merge_clusters(clusters, a, b, c) do
     clusters
     |> Map.put(c, clusters[a] ++ clusters[b])
     |> Map.drop([a, b])
-  end
-
-  deftransformp clusters_to_labels(clusters) do
-    clusters
-    |> Enum.sort_by(fn {_label, cluster} -> Enum.min(cluster) end)
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {{_, v}, i} -> v |> Enum.sort() |> Enum.map(&{&1, i}) end)
-    |> Enum.sort()
-    |> Enum.map(fn {_, label} -> label end)
-    |> Nx.tensor()
   end
 end
