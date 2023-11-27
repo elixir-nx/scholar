@@ -126,5 +126,13 @@ defmodule Scholar.Cluster.HierarchicalTest do
         Hierarchical.labels_list(model, cluster_by: [num_clusters: 4])
       end)
     end
+
+    test "additional option validations" do
+      model = Hierarchical.fit(Nx.tensor([[1], [2], [3]]))
+
+      assert_raise(ArgumentError, "Must pass exactly one of `:height` or `:num_clusters`", fn ->
+        Hierarchical.labels_list(model, cluster_by: [num_clusters: 2, height: 1.0])
+      end)
+    end
   end
 end

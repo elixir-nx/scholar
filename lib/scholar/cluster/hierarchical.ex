@@ -403,6 +403,9 @@ defmodule Scholar.Cluster.Hierarchical do
             true ->
               cluster_by_num_clusters(model, num_clusters)
           end
+
+        _ ->
+          raise ArgumentError, "Must pass exactly one of `:height` or `:num_clusters`"
       end
 
     # Give the clusters labels 0..(k - 1) and ensure those labels are deterministic by sorting by
