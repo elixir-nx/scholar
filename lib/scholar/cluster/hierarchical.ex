@@ -228,7 +228,7 @@ defmodule Scholar.Cluster.Hierarchical do
       end
 
     sizes = sizes[n..(2 * n - 2)]
-    perm = Nx.argsort(diss, type: :u32)
+    perm = Nx.argsort(diss, stable: false, type: :u32)
     {clades[perm], diss[perm], sizes[perm]}
   end
 
