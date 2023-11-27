@@ -321,12 +321,7 @@ defmodule Scholar.Cluster.Hierarchical do
   # Dissimilarity functions
 
   defnp pairwise_euclidean(%Nx.Tensor{} = x) do
-    x |> pairwise_euclidean_sq() |> Nx.sqrt()
-  end
-
-  defnp pairwise_euclidean_sq(%Nx.Tensor{} = x) do
-    sq = Nx.sum(x ** 2, axes: [1], keep_axes: true)
-    sq + Nx.transpose(sq) - 2 * Nx.dot(x, [1], x, [1])
+    Scholar.Metrics.Distance.pairwise_euclidean(x, x)
   end
 
   # Dissimilarity update functions
