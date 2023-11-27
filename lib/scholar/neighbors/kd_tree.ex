@@ -9,13 +9,13 @@ defmodule Scholar.Neighbors.KDTree do
 
   Two construction modes are available:
 
-    * `bounded/2` - the tensor has min and max values with an amplitude given by `max - min`.
+    * `fit_bounded/2` - the tensor has min and max values with an amplitude given by `max - min`.
       It is also guaranteed that the `amplitude * levels(tensor) + 1` does not overflow
       the tensor. See `amplitude/1` to verify if this holds. This implementation happens
       fully within `defn`. This version is orders of magnitude faster than the `unbounded/2`
       one.
 
-    * `unbounded/2` - there are no known bounds (min and max values) to the tensor.
+    * `fit_unbounded/2` - there are no known bounds (min and max values) to the tensor.
       This implementation is recursive and goes in and out of the `defn`, therefore
       it cannot be called inside `defn`.
 
@@ -54,7 +54,7 @@ defmodule Scholar.Neighbors.KDTree do
     ]
   ]
 
-  @query_schema NimbleOptions.new!(opts)
+  @predict_schema NimbleOptions.new!(opts)
 
   @doc """
   Builds a KDTree without known min-max bounds.
@@ -69,7 +69,7 @@ defmodule Scholar.Neighbors.KDTree do
 
   ## Examples
 
-      iex> Scholar.Neighbors.KDTree.unbounded(Nx.iota({5, 2}), compiler: EXLA)
+      iex> Scholar.Neighbors.KDTree.fit_unbounded(Nx.iota({5, 2}), compiler: EXLA)
       %Scholar.Neighbors.KDTree{
         data: Nx.iota({5, 2}),
         levels: 3,
@@ -77,7 +77,7 @@ defmodule Scholar.Neighbors.KDTree do
       }
 
   """
-  def unbounded(tensor, opts \\ []) do
+  def fit_unbounded(tensor, opts \\ []) do
     levels = levels(tensor)
     {size, _dims} = Nx.shape(tensor)
 
@@ -168,18 +168,18 @@ defmodule Scholar.Neighbors.KDTree do
 
   ## Examples
 
-      iex> Scholar.Neighbors.KDTree.bounded(Nx.iota({5, 2}), 10)
+      iex> Scholar.Neighbors.KDTree.fit_bounded(Nx.iota({5, 2}), 10)
       %Scholar.Neighbors.KDTree{
         data: Nx.iota({5, 2}),
         levels: 3,
         indices: Nx.u32([3, 1, 4, 0, 2])
       }
   """
-  deftransform bounded(tensor, amplitude) do
-    %__MODULE__{levels: levels(tensor), indices: bounded_n(tensor, amplitude), data: tensor}
+  deftransform fit_bounded(tensor, amplitude) do
+    %__MODULE__{levels: levels(tensor), indices: fit_bounded_n(tensor, amplitude), data: tensor}
   end
 
-  defnp bounded_n(tensor, amplitude) do
+  defnp fit_bounded_n(tensor, amplitude) do
     levels = levels(tensor)
     {size, dims} = Nx.shape(tensor)
     band = amplitude + 1
@@ -247,8 +247,8 @@ defmodule Scholar.Neighbors.KDTree do
   @doc """
   Returns the amplitude of a bounded tensor.
 
-  If -1 is returned, it means the tensor cannot use the `bounded` algorithm
-  to generate a KDTree and `unbounded/2` must be used instead.
+  If -1 is returned, it means the tensor cannot use the `fit_bounded` algorithm
+  to generate a KDTree and `fit_unbounded/2` must be used instead.
 
   This cannot be invoked inside a `defn`.
 
@@ -376,14 +376,14 @@ defmodule Scholar.Neighbors.KDTree do
   deftransform right_child(%Nx.Tensor{} = t), do: Nx.add(Nx.multiply(2, t), 2)
 
   @doc """
-  Query the tree for the k nearest neighbors
+  Predict the K nearest neighbors of `x_predict` in KDTree.
 
   ## Examples
 
       iex> x = Nx.iota({10, 2})
-      iex> x_query = Nx.tensor([[2, 5], [1, 9], [6, 4]])
-      iex> kdtree = Scholar.Neighbors.KDTree.bounded(x, 20)
-      iex> Scholar.Neighbors.KDTree.query(kdtree, x_query, k: 3)
+      iex> x_predict = Nx.tensor([[2, 5], [1, 9], [6, 4]])
+      iex> kdtree = Scholar.Neighbors.KDTree.fit_bounded(x, 20)
+      iex> Scholar.Neighbors.KDTree.predict(kdtree, x_predict, k: 3)
       #Nx.Tensor<
         s64[3][3]
         [
@@ -392,7 +392,7 @@ defmodule Scholar.Neighbors.KDTree do
           [2, 3, 1]
         ]
       >
-      iex> Scholar.Neighbors.KDTree.query(kdtree, x_query, k: 3, metric: {:minkowski, 1})
+      iex> Scholar.Neighbors.KDTree.predict(kdtree, x_predict, k: 3, metric: {:minkowski, 1})
       #Nx.Tensor<
         s64[3][3]
         [
@@ -402,11 +402,11 @@ defmodule Scholar.Neighbors.KDTree do
         ]
       >
   """
-  deftransform query(tree, data, opts \\ []) do
-    query_n(tree, data, NimbleOptions.validate!(opts, @query_schema))
+  deftransform predict(tree, data, opts \\ []) do
+    predict_n(tree, data, NimbleOptions.validate!(opts, @predict_schema))
   end
 
-  defnp query_n(tree, data, opts) do
+  defnp predict_n(tree, data, opts) do
     k = opts[:k]
     num_samples = Nx.axis_size(data, 0)
     knn = Nx.broadcast(Nx.s64(0), {num_samples, k})
