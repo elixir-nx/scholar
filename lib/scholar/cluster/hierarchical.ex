@@ -215,7 +215,7 @@ defmodule Scholar.Cluster.Hierarchical do
         nearest_of_nearest = Nx.take(nearest, nearest)
 
         # If the entry is pointing back at me, then we are a clade
-        clades_selector = Nx.equal(nearest_of_nearest, Nx.iota({n}))
+        clades_selector = nearest_of_nearest == Nx.iota({n})
 
         # Now let's get the links that form clades.
         # They are bidirectional but let's keep only one side.
