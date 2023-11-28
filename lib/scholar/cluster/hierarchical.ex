@@ -246,7 +246,9 @@ defmodule Scholar.Cluster.Hierarchical do
           clades = Nx.put_slice(clades, [count, 0], new_clade)
 
           # Update sizes
-          sc = sizes[i] + sizes[j]
+          sa = sizes[i]
+          sb = sizes[j]
+          sc = sa + sb
           sizes = Nx.indexed_put(sizes, Nx.stack([i, c]) |> Nx.new_axis(-1), Nx.stack([sc, sc]))
 
           # Update dissimilarities
@@ -257,7 +259,7 @@ defmodule Scholar.Cluster.Hierarchical do
 
           # Update pairwise
           updates =
-            update_fun.(pairwise[i], pairwise[j], pairwise[i][j], sizes[i], sizes[j], sc)
+            update_fun.(pairwise[i], pairwise[j], pairwise[i][j], sa, sb, sc)
             |> Nx.indexed_put(indices, Nx.broadcast(:infinity, {2}))
 
           pairwise =
