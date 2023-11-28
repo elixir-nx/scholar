@@ -244,6 +244,7 @@ defmodule Scholar.Cluster.Hierarchical do
           {{clades, count, pointers, pairwise, diss, sizes}, links}
         else
           # Clades a and b (i and j of pairwise) are being merged into c.
+          indices = [i, j] |> Nx.stack() |> Nx.new_axis(-1)
           a = find_clade(pointers, i)
           b = find_clade(pointers, j)
           c = count + n
@@ -259,39 +260,20 @@ defmodule Scholar.Cluster.Hierarchical do
           # Update dissimilarities
           diss = Nx.indexed_put(diss, Nx.stack([count]), pairwise[i][j])
 
+          # Update pointers
+          pointers = Nx.indexed_put(pointers, indices, Nx.stack([c, c]))
+
           # Update pairwise
-          {pairwise, _} =
-            while {pairwise, {x = i, y = j, sa = sizes[i], sb = sizes[j], sc = sc}},
-                  z <- 0..(n - 1) do
-              if z == x or z == y or Nx.is_infinity(pairwise[[0, z]]) do
-                {pairwise, {x, y, sa, sb, sc}}
-              else
-                dac = pairwise[[x, z]]
-                dbc = pairwise[[y, z]]
-                dab = pairwise[[x, y]]
-                update = update_fun.(dac, dbc, dab, sa, sb, sc)
-
-                pairwise =
-                  pairwise
-                  |> Nx.indexed_put(Nx.stack([x, z]), update)
-                  |> Nx.indexed_put(Nx.stack([z, x]), update)
-                  |> Nx.indexed_put(Nx.stack([y, z]), update)
-                  |> Nx.indexed_put(Nx.stack([z, y]), update)
-
-                {pairwise, {x, y, sa, sb, sc}}
-              end
-            end
-
-          infinities = Nx.take_diagonal(pairwise)
+          updates =
+            update_fun.(pairwise[i], pairwise[j], pairwise[i][j], sizes[i], sizes[j], sc)
+            |> Nx.indexed_put(indices, Nx.broadcast(:infinity, {2}))
 
           pairwise =
             pairwise
-            |> Nx.put_slice([j, 0], Nx.reshape(infinities, {1, n}))
-            |> Nx.put_slice([0, j], Nx.reshape(infinities, {n, 1}))
-
-          # Update pointers
-          indices = [i, j] |> Nx.stack() |> Nx.new_axis(-1)
-          pointers = Nx.indexed_put(pointers, indices, Nx.stack([c, c]))
+            |> Nx.put_slice([i, 0], Nx.reshape(updates, {1, n}))
+            |> Nx.put_slice([0, i], Nx.reshape(updates, {n, 1}))
+            |> Nx.put_slice([j, 0], Nx.broadcast(:infinity, {1, n}))
+            |> Nx.put_slice([0, j], Nx.broadcast(:infinity, {n, 1}))
 
           {{clades, count + 1, pointers, pairwise, diss, sizes}, links}
         end
