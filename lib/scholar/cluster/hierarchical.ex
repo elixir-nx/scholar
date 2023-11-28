@@ -24,16 +24,17 @@ defmodule Scholar.Cluster.Hierarchical do
     * `dissimilarity: :euclidean`
     * `linkage: :average | :complete | :single | :ward | :weighted`
 
-  Our current algorithm is $O(\\frac{n^2}{p})$ where $n$ is the number of data points
+  Our current algorithm is $O(\\frac{n^2}{p} \\cdot \\log(n))$ where $n$ is the number of data points
   and $p$ is the number of processors.
-  This is better than the generic algorithm which is $O(n^3)$ and even other specialized algorithms
-  like SLINK (see [here](https://en.wikipedia.org/wiki/Single-linkage_clustering)) which are
-  $O(n^2)$.
-  However, it requires certain theoretical properties of the dissimilarities and linkages.
+  This is better than the generic algorithm which is $O(n^3)$.
+  It is also parallel, which means that runtime decreases in direct proportion to the number of
+  processors.
+
+  However, the implementation requires certain theoretical properties of the dissimilarities and
+  linkages.
   As such, we've restricted the options to only those combinations with the correct properties.
 
-  In the future, we plan to add additional algorithms which will be slower but won't have the
-  same restrictions.
+  In the future, we plan to add additional algorithms which won't have the same restrictions.
   """
   import Nx.Defn
 
