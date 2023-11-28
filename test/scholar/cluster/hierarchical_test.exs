@@ -82,6 +82,86 @@ defmodule Scholar.Cluster.HierarchicalTest do
     end
   end
 
+  describe "linkages" do
+    setup do
+      %{data: Nx.tensor([[1, 5], [2, 5], [1, 4], [4, 5], [5, 5], [5, 4], [1, 2], [1, 1], [2, 1]])}
+    end
+
+    test "average", %{data: data} do
+      model = Hierarchical.fit(data, linkage: :average)
+
+      assert model.dissimilarities ==
+               Nx.tensor([
+                 1.0,
+                 1.0,
+                 1.0,
+                 1.2071068286895752,
+                 1.2071068286895752,
+                 1.2071068286895752,
+                 3.396751642227173,
+                 4.092065334320068
+               ])
+    end
+
+    test "complete", %{data: data} do
+      model = Hierarchical.fit(data, linkage: :complete)
+
+      assert model.dissimilarities ==
+               Nx.tensor([
+                 1.0,
+                 1.0,
+                 1.0,
+                 # sqrt(2)
+                 1.4142135381698608,
+                 1.4142135381698608,
+                 1.4142135381698608,
+                 # sqrt(17)
+                 4.123105525970459,
+                 # 4 * sqrt(2)
+                 5.656854152679443
+               ])
+    end
+
+    test "single", %{data: data} do
+      model = Hierarchical.fit(data, linkage: :single)
+      assert model.dissimilarities == Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
+    end
+
+    @tag :skip
+    test "ward", %{data: data} do
+      model = Hierarchical.fit(data, linkage: :ward)
+
+      # (Approximately, from Scipy)
+      assert model.dissimilarities ==
+               Nx.tensor([
+                 1.0,
+                 1.0,
+                 1.0,
+                 1.29099445,
+                 1.29099445,
+                 1.29099445,
+                 5.77350269,
+                 7.45355992
+               ])
+    end
+
+    test "weighted", %{data: data} do
+      model = Hierarchical.fit(data, linkage: :weighted)
+
+      assert model.dissimilarities ==
+               Nx.tensor([
+                 1.0,
+                 1.0,
+                 1.0,
+                 1.2071068286895752,
+                 1.2071068286895752,
+                 1.2071068286895752,
+                 3.32379412651062,
+                 4.1218791007995605
+               ])
+    end
+  end
+
   describe "cluster labels" do
     setup do
       %{model: Hierarchical.fit(Nx.tensor([[2], [7], [9], [0], [3]]))}
