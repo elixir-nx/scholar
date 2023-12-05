@@ -595,19 +595,4 @@ defmodule Scholar.Neighbors.KDTree do
 
     nearest_neighbors
   end
-
-  defn factorial(n) do
-    {_, res, _} =
-      while {i = 1, res = 1, n}, i < n do
-        res = res * i
-        {i + 1, res, n}
-      end
-
-    res
-  end
-
-  defn general_factorial(x) do
-    x = Nx.vectorize(x, :x)
-    factorial(x)
-  end
 end
