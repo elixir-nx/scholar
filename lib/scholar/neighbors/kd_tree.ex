@@ -407,7 +407,7 @@ defmodule Scholar.Neighbors.KDTree do
   end
 
   defnp predict_n(tree, data, opts) do
-    query_points(data, tree, opts) |> Nx.devectorize(keep_names: false)
+    query_points(data, tree, opts)
   end
 
   defnp sort_by_distances(distances, point_indices) do
@@ -457,7 +457,7 @@ defmodule Scholar.Neighbors.KDTree do
     {size, dims} = Nx.shape(tree.data)
     nearest_neighbors = Nx.broadcast(Nx.s64(0), {k})
     distances = Nx.broadcast(Nx.Constants.infinity(), {k})
-    visited = Nx.broadcast(Nx.s64(0), {size})
+    visited = Nx.broadcast(Nx.u8(0), {size})
 
     indices = tree.indices |> Nx.as_type(:s64)
     data = tree.data
@@ -593,6 +593,6 @@ defmodule Scholar.Neighbors.KDTree do
         {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}}
       end
 
-    nearest_neighbors
+    nearest_neighbors |> Nx.devectorize(keep_names: false)
   end
 end
