@@ -453,11 +453,13 @@ defmodule Scholar.Neighbors.KDTree do
   defnp query_points(point, tree, opts) do
     k = opts[:k]
     node = Nx.as_type(root(), :s64)
-    point = if Nx.flat_size(point) == Nx.size(point) do
-      Nx.vectorize(point, :x)
-    else
-      point
-    end
+
+    point =
+      if Nx.flat_size(point) == Nx.size(point) do
+        Nx.vectorize(point, :x)
+      else
+        point
+      end
 
     {size, dims} = Nx.shape(tree.data)
     nearest_neighbors = Nx.broadcast(Nx.s64(0), {k})
