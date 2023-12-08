@@ -13,10 +13,10 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   require Nx
 
   @derive {Nx.Container,
-           keep: [:height, :num_trees, :leaf_size],
+           keep: [:depth, :num_trees, :leaf_size],
            containers: [:indices, :data, :hyperplanes, :medians]}
-  @enforce_keys [:height, :num_trees, :leaf_size, :indices, :data, :hyperplanes, :medians]
-  defstruct [:height, :num_trees, :leaf_size, :indices, :data, :hyperplanes, :medians]
+  @enforce_keys [:depth, :num_trees, :leaf_size, :indices, :data, :hyperplanes, :medians]
+  defstruct [:depth, :num_trees, :leaf_size, :indices, :data, :hyperplanes, :medians]
 
   def grow(tensor, num_trees, min_leaf_size) do
     key = Nx.Random.key(System.system_time())
@@ -26,23 +26,25 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   def grow(tensor, num_trees, min_leaf_size, key) do
     tensor = to_float(tensor)
     {size, dim} = Nx.shape(tensor)
-    {height, leaf_size} = compute_height_and_leaf_size(size, min_leaf_size, 0)
-    num_nodes = 2 ** height - 1
+    {depth, leaf_size} = compute_depth_and_leaf_size(size, min_leaf_size, 0)
+    num_nodes = 2 ** depth - 1
 
     {hyperplanes, _key} =
-      Nx.Random.normal(key, type: Nx.type(tensor), shape: {num_trees, num_nodes, dim})
+      Nx.Random.normal(key, type: Nx.type(tensor), shape: {num_trees, depth, dim})
 
     medians = Nx.broadcast(:nan, {num_trees, num_nodes})
+    # TODO: Make acc unsigned int
+    # TODO: Maybe rename acc to indices
     acc = Nx.broadcast(-1, {num_trees, size})
     root = 0
     start_index = 0
     indices = Nx.iota({size}) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
 
     {indices, medians} =
-      recur([{root, start_index, indices}], [], acc, leaf_size, tensor, hyperplanes, medians)
+      recur([{root, start_index, indices}], [], acc, leaf_size, 0, tensor, hyperplanes, medians)
 
     %__MODULE__{
-      height: height,
+      depth: depth,
       num_trees: num_trees,
       leaf_size: leaf_size,
       indices: indices,
@@ -52,12 +54,12 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     }
   end
 
-  defp recur([], [], acc, _, _, _, medians) do
+  defp recur([], [], acc, _, _, _, _, medians) do
     {acc, medians}
   end
 
-  defp recur([], next, acc, leaf_size, tensor, hyperplanes, medians) do
-    recur(next, [], acc, leaf_size, tensor, hyperplanes, medians)
+  defp recur([], next, acc, leaf_size, level, tensor, hyperplanes, medians) do
+    recur(next, [], acc, leaf_size, level + 1, tensor, hyperplanes, medians)
   end
 
   defp recur(
@@ -65,6 +67,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
          next,
          acc,
          leaf_size,
+         level,
          tensor,
          hyperplanes,
          medians
@@ -72,7 +75,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     size = Nx.axis_size(indices, 1)
 
     if size > leaf_size do
-      hyperplane = hyperplanes[[.., node]]
+      hyperplane = hyperplanes[[.., level]]
 
       {median, left_indices, right_indices} =
         Nx.Defn.jit_apply(&split(&1, &2, &3), [tensor, indices, hyperplane])
@@ -82,10 +85,10 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       next = [{left_child(node), child_start_index, left_indices} | next]
       child_start_index = start_index + div(size, 2) + rem(size, 2)
       next = [{right_child(node), child_start_index, right_indices} | next]
-      recur(rest, next, acc, leaf_size, tensor, hyperplanes, medians)
+      recur(rest, next, acc, leaf_size, level, tensor, hyperplanes, medians)
     else
       acc = Nx.put_slice(acc, [0, start_index], indices)
-      recur(rest, next, acc, leaf_size, tensor, hyperplanes, medians)
+      recur(rest, next, acc, leaf_size, level, tensor, hyperplanes, medians)
     end
   end
 
@@ -113,11 +116,11 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     {median, left_indices, right_indices}
   end
 
-  defp compute_height_and_leaf_size(size, min_leaf_size, height) do
+  defp compute_depth_and_leaf_size(size, min_leaf_size, depth) do
     if div(size, 2) < min_leaf_size do
-      {height, size}
+      {depth, size}
     else
-      compute_height_and_leaf_size(div(size, 2) + rem(size, 2), min_leaf_size, height + 1)
+      compute_depth_and_leaf_size(div(size, 2) + rem(size, 2), min_leaf_size, depth + 1)
     end
   end
 
