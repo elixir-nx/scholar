@@ -2,7 +2,15 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   @moduledoc """
   Random Projection Forest.
 
-  ...
+  Each tree in a forest is constructed using a divide and conquer approach.
+  We start with the entire dataset and at every node we project the data onto a random
+  hyperplane and split it in the following way: the points with the projection smaller
+  than or equal to the median are put into the left subtree and the points with projection
+  greater than the median are put into the right subtree. We then proceed
+  recursively with the left and right subtree.
+  In this implementation the trees are complete, i.e. there are 2^l nodes at level l.
+  The leaves of the trees are arranged as blocks in the field `indices`. We use the same
+  hyperplane for all nodes on the same level as in [2].
 
   * [1] - Random projection trees and low dimensional manifolds
   * [2] - Fast Nearest Neighbor Search through Sparse Random Projections and Voting
@@ -16,7 +24,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
            keep: [:depth, :num_trees, :leaf_size],
            containers: [:indices, :data, :hyperplanes, :medians]}
   @enforce_keys [:depth, :num_trees, :leaf_size, :indices, :data, :hyperplanes, :medians]
-  defstruct [:depth, :num_trees, :leaf_size, :indices, :data, :hyperplanes, :medians]
+  defstruct [:depth, :leaf_size, :num_trees, :indices, :data, :hyperplanes, :medians]
 
   def grow(tensor, num_trees, min_leaf_size) do
     key = Nx.Random.key(System.system_time())
@@ -24,29 +32,27 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   end
 
   def grow(tensor, num_trees, min_leaf_size, key) do
-    tensor = to_float(tensor)
     {size, dim} = Nx.shape(tensor)
     {depth, leaf_size} = compute_depth_and_leaf_size(size, min_leaf_size, 0)
     num_nodes = 2 ** depth - 1
 
     {hyperplanes, _key} =
-      Nx.Random.normal(key, type: Nx.type(tensor), shape: {num_trees, depth, dim})
+      Nx.Random.normal(key, type: to_float_type(tensor), shape: {num_trees, depth, dim})
 
     medians = Nx.broadcast(:nan, {num_trees, num_nodes})
-    # TODO: Make acc unsigned int
     # TODO: Maybe rename acc to indices
-    acc = Nx.broadcast(-1, {num_trees, size})
+    acc = Nx.broadcast(Nx.u32(0), {num_trees, size})
     root = 0
     start_index = 0
-    indices = Nx.iota({size}) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
+    indices = Nx.iota({size}, type: :u32) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
 
     {indices, medians} =
       recur([{root, start_index, indices}], [], acc, leaf_size, 0, tensor, hyperplanes, medians)
 
     %__MODULE__{
       depth: depth,
-      num_trees: num_trees,
       leaf_size: leaf_size,
+      num_trees: num_trees,
       indices: indices,
       data: tensor,
       hyperplanes: hyperplanes,
@@ -103,8 +109,8 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       if rem(size, 2) == 1 do
         proj[[.., div(size, 2)]]
       else
-        # TODO: Maybe rewrite this!
-        Nx.mean(Nx.slice_along_axis(proj, div(size, 2) - 1, 2, axis: 1), axes: [1])
+        mid = Nx.slice_along_axis(proj, div(size, 2) - 1, 2, axis: 1)
+        Nx.mean(mid, axes: [1])
       end
 
     indices = Nx.take_along_axis(indices, sorted_indices, axis: 1)
