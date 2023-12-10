@@ -19,6 +19,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   import Nx.Defn
   import Scholar.Shared
   require Nx
+  alias Scholar.Neighbors.Utils
 
   @derive {Nx.Container,
            keep: [:depth, :num_trees, :leaf_size],
@@ -26,15 +27,82 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   @enforce_keys [:depth, :num_trees, :leaf_size, :indices, :data, :hyperplanes, :medians]
   defstruct [:depth, :leaf_size, :num_trees, :indices, :data, :hyperplanes, :medians]
 
-  def grow(tensor, num_trees, min_leaf_size) do
-    key = Nx.Random.key(System.system_time())
-    grow(tensor, num_trees, min_leaf_size, key)
-  end
+  opts = [
+    num_trees: [
+      required: true,
+      type: :pos_integer,
+      doc: "The number of trees in the forest."
+    ],
+    min_leaf_size: [
+      required: true,
+      type: :pos_integer,
+      doc: "The minumum number of points in the leaf."
+    ],
+    key: [
+      type: {:custom, Scholar.Options, :key, []},
+      doc: """
+      Used for random number generation in hyperplane initialization.
+      If the key is not provided, it is set to `Nx.Random.key(System.system_time())`.
+      """
+    ]
+  ]
 
-  def grow(tensor, num_trees, min_leaf_size, key) do
+  @opts_schema NimbleOptions.new!(opts)
+
+  @doc """
+  Grows a random projection forest.
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
+
+  ## Examples
+
+    iex> key = Nx.Random.key(12)
+    iex> tensor = Nx.iota({5, 2})
+    iex> Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_trees: 3, min_leaf_size: 2, key: key).indices
+    #Nx.Tensor<
+      u32[3][5]
+      [
+        [0, 1, 2, 3, 4],
+        [0, 1, 2, 3, 4],
+        [4, 3, 2, 1, 0]
+      ]
+    >
+  """
+  def fit(tensor, opts) do
+    if Nx.rank(tensor) != 2 do
+      raise ArgumentError,
+            """
+            expected input tensor to have shape {num_samples, num_features}, \
+            got tensor with shape: #{inspect(Nx.shape(tensor))}\
+            """
+    end
+
+    opts = NimbleOptions.validate!(opts, @opts_schema)
+    min_leaf_size = opts[:min_leaf_size]
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
+
+    if min_leaf_size == 1 do
+      raise ArgumentError,
+            """
+            expected min_leaf_size to be at least 2, got 1
+            """
+    end
+
     {size, dim} = Nx.shape(tensor)
     {depth, leaf_size} = compute_depth_and_leaf_size(size, min_leaf_size, 0)
+
+    if depth == 0 do
+      raise ArgumentError,
+            """
+            expected num_samples to be at least twice \
+            min_leaf_size = #{inspect(min_leaf_size)}, got #{inspect(size)}
+            """
+    end
+
     num_nodes = 2 ** depth - 1
+    num_trees = opts[:num_trees]
 
     {hyperplanes, _key} =
       Nx.Random.normal(key, type: to_float_type(tensor), shape: {num_trees, depth, dim})
@@ -44,7 +112,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     acc = Nx.broadcast(Nx.u32(0), {num_trees, size})
     root = 0
     start_index = 0
-    indices = Nx.iota({size}, type: :u32) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
+    indices = Nx.iota({1, size}, type: :u32) |> Nx.broadcast({num_trees, size})
 
     {indices, medians} =
       recur([{root, start_index, indices}], [], acc, leaf_size, 0, tensor, hyperplanes, medians)
@@ -105,17 +173,20 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     sorted_indices = Nx.argsort(proj, axis: 1)
     proj = Nx.take_along_axis(proj, sorted_indices, axis: 1)
 
+    mid = div(size, 2)
+    odd_size? = rem(size, 2)
+
     median =
-      if rem(size, 2) == 1 do
-        proj[[.., div(size, 2)]]
+      if odd_size? do
+        proj[[.., mid]]
       else
-        mid = Nx.slice_along_axis(proj, div(size, 2) - 1, 2, axis: 1)
-        Nx.mean(mid, axes: [1])
+        two_mid_elems = Nx.slice_along_axis(proj, mid - 1, 2, axis: 1)
+        Nx.mean(two_mid_elems, axes: [1])
       end
 
     indices = Nx.take_along_axis(indices, sorted_indices, axis: 1)
-    left_size = div(size, 2) + rem(size, 2)
-    right_size = div(size, 2)
+    left_size = mid + odd_size?
+    right_size = mid
     left_indices = Nx.slice_along_axis(indices, 0, left_size, axis: 1)
     right_indices = Nx.slice_along_axis(indices, left_size, right_size, axis: 1)
 
@@ -123,10 +194,12 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   end
 
   defp compute_depth_and_leaf_size(size, min_leaf_size, depth) do
-    if div(size, 2) < min_leaf_size do
+    mid = div(size, 2)
+
+    if mid < min_leaf_size do
       {depth, size}
     else
-      compute_depth_and_leaf_size(div(size, 2) + rem(size, 2), min_leaf_size, depth + 1)
+      compute_depth_and_leaf_size(mid + rem(size, 2), min_leaf_size, depth + 1)
     end
   end
 

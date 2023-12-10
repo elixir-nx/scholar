@@ -18,9 +18,9 @@ defmodule Scholar.Neighbors.RandomProjectionForestTest do
     ])
   end
 
-  describe "grow" do
+  describe "fit" do
     test "shape" do
-      forest = RandomProjectionForest.grow(example(), 4, 3)
+      forest = RandomProjectionForest.fit(example(), num_trees: 4, min_leaf_size: 3)
       assert forest.depth == 1
       assert forest.leaf_size == 5
       assert forest.num_trees == 4
