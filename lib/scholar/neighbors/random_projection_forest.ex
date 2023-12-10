@@ -44,7 +44,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     acc = Nx.broadcast(Nx.u32(0), {num_trees, size})
     root = 0
     start_index = 0
-    indices = Nx.iota({size}, type: :u32) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
+    indices = Nx.iota({1, size}, type: :u32) |> Nx.broadcast({num_trees, size})
 
     {indices, medians} =
       recur([{root, start_index, indices}], [], acc, leaf_size, 0, tensor, hyperplanes, medians)
