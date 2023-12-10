@@ -454,12 +454,13 @@ defmodule Scholar.Neighbors.KDTree do
     k = opts[:k]
     node = Nx.as_type(root(), :s64)
 
+    input_vectorized_axes = point.vectorized_axes
+    num_points = Nx.axis_size(point, 0)
+
     point =
-      if Nx.flat_size(point) == Nx.size(point) do
-        Nx.vectorize(point, :x)
-      else
-        point
-      end
+      Nx.revectorize(point, [collapsed_axes: :auto, x: Nx.axis_size(point, -2)],
+        target_shape: {Nx.axis_size(point, -1)}
+      )
 
     {size, dims} = Nx.shape(tree.data)
     nearest_neighbors = Nx.broadcast(Nx.s64(0), {k})
@@ -600,6 +601,6 @@ defmodule Scholar.Neighbors.KDTree do
         {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}}
       end
 
-    nearest_neighbors |> Nx.devectorize(keep_names: false)
+    Nx.revectorize(nearest_neighbors, input_vectorized_axes, target_shape: {num_points, k})
   end
 end
