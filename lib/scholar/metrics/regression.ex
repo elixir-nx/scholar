@@ -523,4 +523,67 @@ defmodule Scholar.Metrics.Regression do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_true, y_pred)
   end
+
+  @doc ~S"""
+  Calculates the mean pinball loss.
+
+  The mean pinball loss is defined as L(y, ŷ, α) = α * max(y - ŷ, 0) + (1 - α) * max(ŷ - y, 0)
+
+  The pinball loss output is a non-negative floating point. The best value is 0.0.
+   
+  ## Examples
+
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> y_pred = Nx.tensor([0, 2, 3])
+      iex> alpha = 0.1
+      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred, alpha)
+      #Nx.Tensor<
+        f32
+        0.03333333507180214
+      >
+
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> y_pred = Nx.tensor([1, 2, 4])
+      iex> alpha = 0.1
+      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred, alpha)
+      #Nx.Tensor<
+        f32
+        0.29999998211860657
+      >
+
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> y_pred = Nx.tensor([1, 2, 4])
+      iex> alpha = 0.9
+      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred, alpha)
+      #Nx.Tensor<
+        f32
+        0.033333342522382736
+      >
+
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> alpha = 0.1
+      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_true, alpha)
+      #Nx.Tensor<
+        f32
+        0.0
+      >
+
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> alpha = 0.9
+      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_true, alpha)
+      #Nx.Tensor<
+        f32
+        0.0
+      >
+  """
+
+  defn mean_pinball_loss(y_true, y_pred, alpha) do
+    assert_same_shape!(y_true, y_pred)
+    
+    y_diff = y_true - y_pred
+
+    alpha * Nx.max(y_diff, 0) + (1 - alpha) * Nx.max(-1*y_diff, 0)
+      |> Nx.mean()
+
+  end
 end
