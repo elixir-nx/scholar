@@ -4,7 +4,7 @@ Nx.Defn.global_default_options(compiler: EXLA)
 
 key = Nx.Random.key(System.os_time())
 
-inputs_knn = %{
+inputs_k_smallest = %{
   "10" => elem(Nx.Random.shuffle(key, Nx.iota({10})), 0),
   "100" => elem(Nx.Random.shuffle(key, Nx.iota({100})), 0),
   "1000" => elem(Nx.Random.shuffle(key, Nx.iota({1000})), 0),
@@ -23,7 +23,7 @@ Benchee.run(
   },
   time: 10,
   memory_time: 2,
-  inputs: inputs_knn
+  inputs: inputs_k_smallest
 )
 
 
