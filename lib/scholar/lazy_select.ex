@@ -50,7 +50,8 @@ defmodule Scholar.LazySelect do
         indices_to_append = tensor >= low and tensor <= high
 
         {agg_index, agg, _} =
-          while {curr_agg_index = Nx.tensor([0]), agg = Nx.broadcast(max_val, {Kernel.min(4 * selection_len + 2, len)}),
+          while {curr_agg_index = Nx.tensor([0]),
+                 agg = Nx.broadcast(max_val, {Kernel.min(4 * selection_len + 2, len)}),
                  {tensor, indices_to_append, i = 0}},
                 i < len and Nx.reshape(curr_agg_index != 4 * selection_len + 2, {}) do
             if indices_to_append[i] == Nx.u8(1) do
