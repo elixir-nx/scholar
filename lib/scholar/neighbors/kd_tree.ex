@@ -188,13 +188,13 @@ defmodule Scholar.Neighbors.KDTree do
     {level, tags, _tensor, _band} =
       while {level = Nx.u32(0), tags, tensor, band}, level < levels - 1 do
         k = rem(level, dims)
-        indices = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
+        indices = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32, stable: true)
         tags = update_tags(tags, indices, level, levels, size)
         {level + 1, tags, tensor, band}
       end
 
     k = rem(level, dims)
-    Nx.argsort(tensor[[.., k]] + band * tags, type: :u32)
+    Nx.argsort(tensor[[.., k]] + band * tags, type: :u32, stable: true)
   end
 
   defnp update_tags(tags, indices, level, levels, size) do
