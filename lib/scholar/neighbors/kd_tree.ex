@@ -407,19 +407,7 @@ defmodule Scholar.Neighbors.KDTree do
   end
 
   defnp predict_n(tree, data, opts) do
-    k = opts[:k]
-    num_samples = Nx.axis_size(data, 0)
-    knn = Nx.broadcast(Nx.s64(0), {num_samples, k})
-
-    {knn, _} =
-      while {knn, {tree, data, i = Nx.s64(0)}}, i < num_samples do
-        curr_point = data[[i]]
-        k_neighbors = query_one_point(curr_point, tree, opts)
-        knn = Nx.put_slice(knn, [i, 0], Nx.new_axis(k_neighbors, 0))
-        {knn, {tree, data, i + 1}}
-      end
-
-    knn
+    query_points(data, tree, opts)
   end
 
   defnp sort_by_distances(distances, point_indices) do
@@ -462,9 +450,18 @@ defmodule Scholar.Neighbors.KDTree do
     end
   end
 
-  defnp query_one_point(point, tree, opts) do
+  defnp query_points(point, tree, opts) do
     k = opts[:k]
     node = Nx.as_type(root(), :s64)
+
+    input_vectorized_axes = point.vectorized_axes
+    num_points = Nx.axis_size(point, 0)
+
+    point =
+      Nx.revectorize(point, [collapsed_axes: :auto, x: Nx.axis_size(point, -2)],
+        target_shape: {Nx.axis_size(point, -1)}
+      )
+
     {size, dims} = Nx.shape(tree.data)
     nearest_neighbors = Nx.broadcast(Nx.s64(0), {k})
     distances = Nx.broadcast(Nx.Constants.infinity(), {k})
@@ -476,10 +473,21 @@ defmodule Scholar.Neighbors.KDTree do
     down = 0
     up = 1
     mode = down
+    i = Nx.s64(0)
+
+    [nearest_neighbors, node, distances, visited, i, mode, point] =
+      Nx.broadcast_vectors([
+        nearest_neighbors,
+        node,
+        distances,
+        visited,
+        i,
+        mode,
+        point
+      ])
 
     {nearest_neighbors, _} =
-      while {nearest_neighbors,
-             {node, data, indices, point, distances, visited, i = Nx.s64(0), mode}},
+      while {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}},
             node != -1 and i >= 0 do
         coord_indicator = rem(i, dims)
 
@@ -593,6 +601,6 @@ defmodule Scholar.Neighbors.KDTree do
         {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}}
       end
 
-    nearest_neighbors
+    Nx.revectorize(nearest_neighbors, input_vectorized_axes, target_shape: {num_points, k})
   end
 end
