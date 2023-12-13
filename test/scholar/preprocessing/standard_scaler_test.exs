@@ -1,6 +1,6 @@
 defmodule StandardScalerTest do
   use Scholar.Case, async: true
-  alias Scholar.Scaler.StandardScaler
+  alias Scholar.Preprocessing.StandardScaler
 
   describe "fit_transform/2" do
     test "applies standard scaling to data" do
