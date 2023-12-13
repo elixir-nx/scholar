@@ -88,7 +88,6 @@ defmodule Scholar.Interpolation.CubicSpline do
               "expected y to have shape #{inspect(x_shape)}, got: #{inspect(y_shape)}"
     end
 
-
     sort_idx = Nx.argsort(x)
     x = Nx.take(x, sort_idx)
     y = Nx.take(y, sort_idx)
