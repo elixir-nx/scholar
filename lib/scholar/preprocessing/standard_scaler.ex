@@ -53,12 +53,12 @@ defmodule Scholar.Preprocessing.StandardScaler do
 
       iex> Scholar.Preprocessing.StandardScaler.fit(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]))
       %Scholar.Preprocessing.StandardScaler{
-        standard_deviation: Nx.Tensor(
+        standard_deviation: Nx.tensor(
           [
             [1.0657403469085693]
           ]
         ),
-        mean: Nx.Tensor(
+        mean: Nx.tensor(
           [
             [0.4444444477558136]
           ]
@@ -88,12 +88,12 @@ defmodule Scholar.Preprocessing.StandardScaler do
       iex> t = Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]])
       iex> scaler = Scholar.Preprocessing.StandardScaler.fit(t)
       %Scholar.Preprocessing.StandardScaler{
-        standard_deviation: Nx.Tensor(
+        standard_deviation: Nx.tensor(
           [
             [1.0657403469085693]
           ]
         ),
-        mean: Nx.Tensor(
+        mean: Nx.tensor(
           [
             [0.4444444477558136]
           ]
