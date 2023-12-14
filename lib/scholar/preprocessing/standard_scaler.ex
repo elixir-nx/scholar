@@ -1,16 +1,16 @@
 defmodule Scholar.Preprocessing.StandardScaler do
-  @moduledoc """
+  @moduledoc ~S"""
   Standardizes the tensor by removing the mean and scaling to unit variance.
 
-  #{~S'''
   Formula for input tensor $x$:
+  
   $$
   z = \frac{x - \mu}{\sigma}
   $$
+
   Where $\mu$ is the mean of the samples, and $\sigma$ is the standard deviation.
   Standardization can be helpful in cases where the data follows
   a Gaussian distribution (or Normal distribution) without outliers.
-  '''}
 
   Centering and scaling happen independently on each feature by computing the relevant
   statistics on the samples in the training set. Mean and standard deviation are then
