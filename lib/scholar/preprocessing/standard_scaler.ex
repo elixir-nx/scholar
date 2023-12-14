@@ -3,7 +3,7 @@ defmodule Scholar.Preprocessing.StandardScaler do
   Standardizes the tensor by removing the mean and scaling to unit variance.
 
   Formula for input tensor $x$:
-  
+
   $$
   z = \frac{x - \mu}{\sigma}
   $$
