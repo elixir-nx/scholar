@@ -273,7 +273,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
     num_classes = opts[:num_classes]
     priors_flag = opts[:priors_flag]
 
-    classes = Nx.iota({num_classes}) |> Nx.sort()
+    classes = Nx.iota({num_classes})
 
     class_priors =
       case Nx.shape(class_priors) do
