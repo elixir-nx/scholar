@@ -43,7 +43,7 @@ defmodule Scholar.Preprocessing.StandardScaler do
 
   ## Return values
 
-    Returns a struct with the following parameters:
+  Returns a struct with the following parameters:
 
     * `standard_deviation`: the calculated standard deviation of samples.
 
