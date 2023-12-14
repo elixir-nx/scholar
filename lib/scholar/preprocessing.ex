@@ -133,14 +133,8 @@ defmodule Scholar.Preprocessing do
       >
   """
   deftransform standard_scale(tensor, opts \\ []) do
-    standard_scale_n(tensor, NimbleOptions.validate!(opts, @general_schema))
-  end
-
-  defnp standard_scale_n(tensor, opts) do
-    std = Nx.standard_deviation(tensor, axes: opts[:axes], keep_axes: true)
-    mean_reduced = Nx.mean(tensor, axes: opts[:axes], keep_axes: true)
-    mean_reduced = Nx.select(std == 0, 0.0, mean_reduced)
-    (tensor - mean_reduced) / Nx.select(std == 0, 1.0, std)
+    opts = NimbleOptions.validate!(opts, @general_schema)
+    Scholar.Preprocessing.StandardScaler.fit_transform(tensor, opts)
   end
 
   @doc """
