@@ -331,22 +331,4 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
     {leaf_size, indices, hyperplanes, medians}
   end
-
-  @doc """
-  """
-  defn predict(forest, x) do
-    num_trees = forest.num_trees
-    leaf_size = forest.leaf_size
-    indices = forest.indices |> Nx.vectorize(:trees)
-    start_indices = compute_start_indices(forest, x) |> Nx.new_axis(1)
-    size = Nx.axis_size(x, 0)
-
-    range =
-      Nx.iota({1, 1, leaf_size})
-      |> Nx.broadcast({num_trees, size, leaf_size})
-      |> Nx.vectorize(:trees)
-
-    cell_indices =
-      Nx.take(indices, Nx.add(start_indices, range)) |> Nx.devectorize() |> Nx.rename(nil)
-  end
 end
