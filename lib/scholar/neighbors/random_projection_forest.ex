@@ -21,9 +21,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   require Nx
 
   @derive {Nx.Container,
-           keep: [:depth, :num_trees, :leaf_size],
+           keep: [:depth, :leaf_size, :num_trees],
            containers: [:indices, :data, :hyperplanes, :medians]}
-  @enforce_keys [:depth, :num_trees, :leaf_size, :indices, :data, :hyperplanes, :medians]
+  @enforce_keys [:depth, :leaf_size, :num_trees, :indices, :data, :hyperplanes, :medians]
   defstruct [:depth, :leaf_size, :num_trees, :indices, :data, :hyperplanes, :medians]
 
   opts = [
@@ -57,19 +57,19 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
   ## Examples
 
-    iex> key = Nx.Random.key(12)
-    iex> tensor = Nx.iota({5, 2})
-    iex> Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_trees: 3, min_leaf_size: 2, key: key).indices
-    #Nx.Tensor<
-      u32[3][5]
-      [
-        [0, 1, 2, 3, 4],
-        [0, 1, 2, 3, 4],
-        [4, 3, 2, 1, 0]
-      ]
-    >
+      iex> key = Nx.Random.key(12)
+      iex> tensor = Nx.iota({5, 2})
+      iex> Scholar.Neighbors.RandomProjectionForest.fit_unbounded(tensor, num_trees: 3, min_leaf_size: 2, key: key).indices
+      #Nx.Tensor<
+        u32[3][5]
+        [
+          [0, 1, 2, 3, 4],
+          [0, 1, 2, 3, 4],
+          [4, 3, 2, 1, 0]
+        ]
+      >
   """
-  def fit(tensor, opts) do
+  def fit_unbounded(tensor, opts) do
     if Nx.rank(tensor) != 2 do
       raise ArgumentError,
             """
@@ -82,12 +82,12 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     min_leaf_size = opts[:min_leaf_size]
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
 
-    if min_leaf_size == 1 do
-      raise ArgumentError,
-            """
-            expected min_leaf_size to be at least 2, got 1
-            """
-    end
+    # if min_leaf_size == 1 do
+    #   raise ArgumentError,
+    #         """
+    #         expected min_leaf_size to be at least 2, got 1
+    #         """
+    # end
 
     {size, dim} = Nx.shape(tensor)
     {depth, leaf_size} = compute_depth_and_leaf_size(size, min_leaf_size, 0)
@@ -100,8 +100,8 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
             """
     end
 
-    num_nodes = 2 ** depth - 1
     num_trees = opts[:num_trees]
+    num_nodes = 2 ** depth - 1
 
     {hyperplanes, _key} =
       Nx.Random.normal(key, type: to_float_type(tensor), shape: {num_trees, depth, dim})
@@ -114,7 +114,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     indices = Nx.iota({1, size}, type: :u32) |> Nx.broadcast({num_trees, size})
 
     {indices, medians} =
-      recur([{root, start_index, indices}], [], acc, leaf_size, 0, tensor, hyperplanes, medians)
+      recur([{root, start_index, indices}], [], acc, depth, 0, tensor, hyperplanes, medians)
 
     %__MODULE__{
       depth: depth,
@@ -131,15 +131,15 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     {acc, medians}
   end
 
-  defp recur([], next, acc, leaf_size, level, tensor, hyperplanes, medians) do
-    recur(next, [], acc, leaf_size, level + 1, tensor, hyperplanes, medians)
+  defp recur([], next, acc, depth, level, tensor, hyperplanes, medians) do
+    recur(next, [], acc, depth, level + 1, tensor, hyperplanes, medians)
   end
 
   defp recur(
          [{node, start_index, indices} | rest],
          next,
          acc,
-         leaf_size,
+         depth,
          level,
          tensor,
          hyperplanes,
@@ -147,7 +147,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
        ) do
     size = Nx.axis_size(indices, 1)
 
-    if size > leaf_size do
+    if level < depth do
       hyperplane = hyperplanes[[.., level]]
 
       {median, left_indices, right_indices} =
@@ -158,10 +158,10 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       next = [{left_child(node), child_start_index, left_indices} | next]
       child_start_index = start_index + div(size, 2) + rem(size, 2)
       next = [{right_child(node), child_start_index, right_indices} | next]
-      recur(rest, next, acc, leaf_size, level, tensor, hyperplanes, medians)
+      recur(rest, next, acc, depth, level, tensor, hyperplanes, medians)
     else
       acc = Nx.put_slice(acc, [0, start_index], indices)
-      recur(rest, next, acc, leaf_size, level, tensor, hyperplanes, medians)
+      recur(rest, next, acc, depth, level, tensor, hyperplanes, medians)
     end
   end
 
@@ -169,23 +169,21 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     size = Nx.axis_size(indices, 1)
     slice = Nx.take(tensor, indices)
     proj = Nx.dot(slice, [2], [0], hyperplane, [1], [0])
-    sorted_indices = Nx.argsort(proj, axis: 1)
+    sorted_indices = Nx.argsort(proj, axis: 1, type: :u32)
     proj = Nx.take_along_axis(proj, sorted_indices, axis: 1)
 
-    mid = div(size, 2)
-    odd_size? = rem(size, 2)
+    right_size = div(size, 2)
+    left_size = right_size + rem(size, 2)
 
     median =
-      if odd_size? do
-        proj[[.., mid]]
+      if left_size > right_size do
+        proj[[.., right_size]]
       else
-        two_mid_elems = Nx.slice_along_axis(proj, mid - 1, 2, axis: 1)
+        two_mid_elems = Nx.slice_along_axis(proj, right_size - 1, 2, axis: 1)
         Nx.mean(two_mid_elems, axes: [1])
       end
 
     indices = Nx.take_along_axis(indices, sorted_indices, axis: 1)
-    left_size = mid + odd_size?
-    right_size = mid
     left_indices = Nx.slice_along_axis(indices, 0, left_size, axis: 1)
     right_indices = Nx.slice_along_axis(indices, left_size, right_size, axis: 1)
 
@@ -193,12 +191,13 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   end
 
   defp compute_depth_and_leaf_size(size, min_leaf_size, depth) do
-    mid = div(size, 2)
+    right_size = div(size, 2)
+    left_size = right_size + rem(size, 2)
 
-    if mid < min_leaf_size do
-      {depth, size}
-    else
-      compute_depth_and_leaf_size(mid + rem(size, 2), min_leaf_size, depth + 1)
+    cond do
+      right_size < min_leaf_size -> {depth, size}
+      right_size == min_leaf_size -> {depth + 1, left_size}
+      true -> compute_depth_and_leaf_size(left_size, min_leaf_size, depth + 1)
     end
   end
 
@@ -208,5 +207,191 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
   defn right_child(node) do
     2 * node + 2
+  end
+
+  @doc """
+  """
+  deftransform fit_bounded(tensor, opts) do
+    num_trees = opts[:num_trees]
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
+    size = Nx.axis_size(tensor, 0)
+    # TODO: Calculate depth from tensor
+    # floor(log2(size / min_leaf_size)) might do the job!
+    {depth, leaf_size} = compute_depth_and_leaf_size(size, opts[:min_leaf_size], 0)
+
+    {_leaf_size, indices, hyperplanes, medians} =
+      fit_bounded_n(tensor, key, depth: depth, num_trees: num_trees)
+
+    %__MODULE__{
+      depth: depth,
+      leaf_size: leaf_size,
+      num_trees: num_trees,
+      indices: indices,
+      data: tensor,
+      hyperplanes: hyperplanes,
+      medians: medians
+    }
+  end
+
+  defn fit_bounded_n(tensor, key, opts) do
+    depth = opts[:depth]
+    num_trees = opts[:num_trees]
+    {size, dim} = Nx.shape(tensor)
+
+    {hyperplanes, _key} =
+      Nx.Random.normal(key, type: to_float_type(tensor), shape: {num_trees, depth, dim})
+
+    num_nodes = 2 ** depth - 1
+
+    {indices, medians, leaf_size, _} =
+      while {
+              indices = Nx.iota({1, size}, type: :u32) |> Nx.broadcast({num_trees, size}),
+              # TODO: Add type for medians!
+              medians = Nx.broadcast(:nan, {num_trees, num_nodes}),
+              leaf_size = Nx.u32(size),
+              {
+                tensor,
+                hyperplanes,
+                level = 0,
+                pos = Nx.iota({size}, type: :u32),
+                tree_sizes = Nx.broadcast(Nx.u32(size), {size}),
+                tags = Nx.broadcast(Nx.u32(0), {size}),
+                nodes = Nx.iota({num_nodes}),
+                width = Nx.u32(1),
+                median_offset = Nx.u32(0)
+              }
+            },
+            level < depth do
+        h = hyperplanes[[.., level]]
+        proj = Nx.dot(h, [1], tensor, [1]) |> Nx.take_along_axis(indices, axis: 1)
+
+        min = Nx.reduce_min(proj, axes: [1], keep_axes: true)
+        max = Nx.reduce_max(proj, axes: [1], keep_axes: true)
+        amplitude = Nx.abs(max - min)
+        band = amplitude + 1
+
+        sorted_indices = Nx.argsort(band * tags + proj, axis: 1, type: :u32)
+        indices = Nx.take_along_axis(indices, sorted_indices, axis: 1)
+        proj = Nx.take_along_axis(proj, sorted_indices, axis: 1)
+
+        right_sizes = Nx.quotient(tree_sizes, 2)
+        left_sizes = right_sizes + Nx.remainder(tree_sizes, 2)
+        tree_sizes = Nx.select(pos < left_sizes, left_sizes, right_sizes)
+        tags = 2 * tags + (pos >= tree_sizes)
+
+        leaf_size = Nx.quotient(leaf_size, 2) + Nx.remainder(leaf_size, 2)
+
+        left_mask = (pos == left_sizes - 1) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
+        left_or_inf = Nx.select(left_mask, proj, :infinity)
+
+        sorted_indices =
+          Nx.argsort(band * tags + left_or_inf, axis: 1, type: :u32)
+          |> Nx.slice_along_axis(0, num_nodes, axis: 1)
+
+        left_first = Nx.take_along_axis(left_or_inf, sorted_indices, axis: 1)
+
+        right_mask = (pos == right_sizes) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
+        right_or_inf = Nx.select(right_mask, proj, :infinity)
+
+        sorted_indices =
+          Nx.argsort(band * tags + right_or_inf, axis: 1, type: :u32)
+          |> Nx.slice_along_axis(0, num_nodes, axis: 1)
+
+        right_first = Nx.take_along_axis(right_or_inf, sorted_indices, axis: 1)
+
+        medians_first = (left_first + right_first) / 2
+
+        # TODO: Can this be done in a simpler way?
+
+        # TODO: Write this in a different way so that nodes can be u32
+        median_pos =
+          Nx.select(width <= nodes and nodes < width + median_offset, -nodes, nodes)
+          |> Nx.argsort(type: :u32)
+
+        median_slice = Nx.take(medians_first, median_pos, axis: 1)
+        tree_nodes = nodes |> Nx.new_axis(0) |> Nx.broadcast({num_trees, num_nodes})
+
+        medians =
+          Nx.select(
+            median_offset <= tree_nodes and tree_nodes < median_offset + width,
+            median_slice,
+            medians
+          )
+
+        pos = Nx.remainder(pos, left_sizes)
+
+        {
+          indices,
+          medians,
+          leaf_size,
+          {tensor, hyperplanes, level + 1, pos, tree_sizes, tags, nodes, 2 * width,
+           2 * median_offset + 1}
+        }
+      end
+
+    {leaf_size, indices, hyperplanes, medians}
+  end
+
+  @doc """
+  """
+  defn predict(forest, x) do
+    num_trees = forest.num_trees
+    leaf_size = forest.leaf_size
+    indices = forest.indices |> Nx.vectorize(:trees)
+    start_indices = compute_start_indices(forest, x) |> Nx.new_axis(1)
+    size = Nx.axis_size(x, 0)
+
+    range =
+      Nx.iota({1, 1, leaf_size})
+      |> Nx.broadcast({num_trees, size, leaf_size})
+      |> Nx.vectorize(:trees)
+
+    cell_indices =
+      Nx.take(indices, Nx.add(start_indices, range)) |> Nx.devectorize() |> Nx.rename(nil)
+  end
+
+  defnp compute_start_indices(forest, x) do
+    size = Nx.axis_size(x, 0)
+    depth = forest.depth
+    num_trees = forest.num_trees
+    hyperplanes = forest.hyperplanes |> Nx.vectorize(:trees)
+    medians = forest.medians |> Nx.vectorize(:trees)
+
+    {start_indices, _} =
+      while {
+              start_indices = Nx.broadcast(0, {num_trees, size}) |> Nx.vectorize(:trees),
+              {
+                x,
+                hyperplanes,
+                medians,
+                level = 0,
+                nodes = Nx.broadcast(Nx.u32(0), {num_trees, size}) |> Nx.vectorize(:trees),
+                cell_size = Nx.u32(size)
+              }
+            },
+            level < depth do
+        h = hyperplanes[level]
+        median = Nx.take(medians, nodes)
+        proj = Nx.dot(x, h)
+        pred = proj <= median
+
+        nodes =
+          Nx.select(
+            pred,
+            left_child(nodes),
+            right_child(nodes)
+          )
+
+        offset = Nx.floor(cell_size / 2) |> Nx.as_type(:u32)
+        start_indices = Nx.select(pred, start_indices, start_indices + offset)
+        cell_size = Nx.ceil(cell_size / 2) |> Nx.as_type(:u32)
+
+        {
+          start_indices,
+          {x, hyperplanes, medians, level + 1, nodes, cell_size}
+        }
+      end
+
+    start_indices
   end
 end
