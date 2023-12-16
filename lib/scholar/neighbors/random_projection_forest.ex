@@ -349,49 +349,4 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     cell_indices =
       Nx.take(indices, Nx.add(start_indices, range)) |> Nx.devectorize() |> Nx.rename(nil)
   end
-
-  defnp compute_start_indices(forest, x) do
-    size = Nx.axis_size(x, 0)
-    depth = forest.depth
-    num_trees = forest.num_trees
-    hyperplanes = forest.hyperplanes |> Nx.vectorize(:trees)
-    medians = forest.medians |> Nx.vectorize(:trees)
-
-    {start_indices, _} =
-      while {
-              start_indices = Nx.broadcast(0, {num_trees, size}) |> Nx.vectorize(:trees),
-              {
-                x,
-                hyperplanes,
-                medians,
-                level = 0,
-                nodes = Nx.broadcast(Nx.u32(0), {num_trees, size}) |> Nx.vectorize(:trees),
-                cell_size = Nx.u32(size)
-              }
-            },
-            level < depth do
-        h = hyperplanes[level]
-        median = Nx.take(medians, nodes)
-        proj = Nx.dot(x, h)
-        pred = proj <= median
-
-        nodes =
-          Nx.select(
-            pred,
-            left_child(nodes),
-            right_child(nodes)
-          )
-
-        offset = Nx.floor(cell_size / 2) |> Nx.as_type(:u32)
-        start_indices = Nx.select(pred, start_indices, start_indices + offset)
-        cell_size = Nx.ceil(cell_size / 2) |> Nx.as_type(:u32)
-
-        {
-          start_indices,
-          {x, hyperplanes, medians, level + 1, nodes, cell_size}
-        }
-      end
-
-    start_indices
-  end
 end
