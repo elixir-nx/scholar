@@ -197,8 +197,12 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     left_size = right_size + rem(size, 2)
 
     cond do
-      right_size < min_leaf_size -> {depth, size}
-      right_size == min_leaf_size -> {depth + 1, left_size}
+      right_size < min_leaf_size ->
+        {depth, size}
+
+      right_size == min_leaf_size ->
+        {depth + 1, left_size}
+
       true ->
         new_size = if rem(left_size, 2) == 1, do: left_size, else: right_size
         compute_depth_and_leaf_size(new_size, min_leaf_size, depth + 1)
