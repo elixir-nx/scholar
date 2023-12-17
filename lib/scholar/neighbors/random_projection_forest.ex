@@ -91,6 +91,8 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
     {size, dim} = Nx.shape(tensor)
     {depth, leaf_size} = compute_depth_and_leaf_size(size, min_leaf_size, 0)
+    IO.inspect(depth)
+    IO.inspect(leaf_size)
 
     if depth == 0 do
       raise ArgumentError,
@@ -197,7 +199,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     cond do
       right_size < min_leaf_size -> {depth, size}
       right_size == min_leaf_size -> {depth + 1, left_size}
-      true -> compute_depth_and_leaf_size(left_size, min_leaf_size, depth + 1)
+      true ->
+        new_size = if rem(left_size, 2) == 1, do: left_size, else: right_size
+        compute_depth_and_leaf_size(new_size, min_leaf_size, depth + 1)
     end
   end
 
@@ -265,6 +269,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
         h = hyperplanes[[.., level]]
         proj = Nx.dot(h, [1], tensor, [1]) |> Nx.take_along_axis(indices, axis: 1)
 
+        # TODO: Make amplitude an argument to fit_bounded
         min = Nx.reduce_min(proj, axes: [1], keep_axes: true)
         max = Nx.reduce_max(proj, axes: [1], keep_axes: true)
         amplitude = Nx.abs(max - min)
@@ -309,6 +314,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
           |> Nx.argsort(type: :u32)
 
         median_slice = Nx.take(medians_first, median_pos, axis: 1)
+        # TODO: Use a different name
         tree_nodes = nodes |> Nx.new_axis(0) |> Nx.broadcast({num_trees, num_nodes})
 
         medians =
