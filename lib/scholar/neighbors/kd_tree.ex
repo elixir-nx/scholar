@@ -104,10 +104,13 @@ defmodule Scholar.Neighbors.KDTree do
   end
 
   defnp inverse_permutation(indices) do
+    shape = Nx.shape(indices)
+    type = Nx.type(indices)
+
     Nx.indexed_put(
-      Nx.broadcast(Nx.tensor(0, type: :u32), indices),
+      Nx.broadcast(Nx.tensor(0, type: type), shape),
       Nx.new_axis(indices, -1),
-      Nx.iota(Nx.shape(indices))
+      Nx.iota(shape, type: type)
     )
   end
 
