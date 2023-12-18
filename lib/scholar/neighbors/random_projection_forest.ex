@@ -244,27 +244,27 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   defn fit_bounded_n(tensor, key, opts) do
     depth = opts[:depth]
     num_trees = opts[:num_trees]
+    type = to_float_type(tensor)
     {size, dim} = Nx.shape(tensor)
 
     {hyperplanes, _key} =
-      Nx.Random.normal(key, type: to_float_type(tensor), shape: {num_trees, depth, dim})
+      Nx.Random.normal(key, type: type, shape: {num_trees, depth, dim})
 
     num_nodes = 2 ** depth - 1
 
     {indices, medians, leaf_size, _} =
       while {
               indices = Nx.iota({1, size}, type: :u32) |> Nx.broadcast({num_trees, size}),
-              # TODO: Add type for medians!
-              medians = Nx.broadcast(:nan, {num_trees, num_nodes}),
+              medians = Nx.broadcast(Nx.tensor(:nan, type: type), {num_trees, num_nodes}),
               leaf_size = Nx.u32(size),
               {
                 tensor,
                 hyperplanes,
-                level = 0,
+                level = Nx.u32(0),
                 pos = Nx.iota({size}, type: :u32),
                 tree_sizes = Nx.broadcast(Nx.u32(size), {size}),
                 tags = Nx.broadcast(Nx.u32(0), {size}),
-                nodes = Nx.iota({num_nodes}),
+                nodes = Nx.iota({num_nodes}, type: :u32),
                 width = Nx.u32(1),
                 median_offset = Nx.u32(0)
               }
@@ -272,14 +272,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
             level < depth do
         h = hyperplanes[[.., level]]
         proj = Nx.dot(h, [1], tensor, [1]) |> Nx.take_along_axis(indices, axis: 1)
-
-        # TODO: Make amplitude an argument to fit_bounded
-        min = Nx.reduce_min(proj, axes: [1], keep_axes: true)
-        max = Nx.reduce_max(proj, axes: [1], keep_axes: true)
-        amplitude = Nx.abs(max - min)
-        band = amplitude + 1
-
-        sorted_indices = Nx.argsort(band * tags + proj, axis: 1, type: :u32)
+        sorted_indices = Nx.argsort(proj, axis: 1, type: :u32, stable: true)
+        orders = Nx.argsort(tags[sorted_indices], axis: 1, type: :u32, stable: true)
+        sorted_indices = Nx.take_along_axis(sorted_indices, orders, axis: 1)
         indices = Nx.take_along_axis(indices, sorted_indices, axis: 1)
         proj = Nx.take_along_axis(proj, sorted_indices, axis: 1)
 
@@ -291,30 +286,18 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
         leaf_size = Nx.quotient(leaf_size, 2) + Nx.remainder(leaf_size, 2)
 
         left_mask = (pos == left_sizes - 1) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
-        left_or_inf = Nx.select(left_mask, proj, :infinity)
-
-        sorted_indices =
-          Nx.argsort(band * tags + left_or_inf, axis: 1, type: :u32)
-          |> Nx.slice_along_axis(0, num_nodes, axis: 1)
-
-        left_first = Nx.take_along_axis(left_or_inf, sorted_indices, axis: 1)
+        sorted_indices = Nx.argsort(left_mask, axis: 1, direction: :desc, stable: true, type: :u32)
+        left_first = Nx.take_along_axis(proj, sorted_indices, axis: 1)
 
         right_mask = (pos == right_sizes) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
-        right_or_inf = Nx.select(right_mask, proj, :infinity)
-
-        sorted_indices =
-          Nx.argsort(band * tags + right_or_inf, axis: 1, type: :u32)
-          |> Nx.slice_along_axis(0, num_nodes, axis: 1)
-
-        right_first = Nx.take_along_axis(right_or_inf, sorted_indices, axis: 1)
+        sorted_indices = Nx.argsort(right_mask, axis: 1, direction: :desc, stable: true, type: :u32)
+        right_first = Nx.take_along_axis(proj, sorted_indices, axis: 1)
 
         medians_first = (left_first + right_first) / 2
 
-        # TODO: Can this be done in a simpler way?
-
-        # TODO: Write this in a different way so that nodes can be u32
+        # TODO: Can this be done in a simpler way
         median_pos =
-          Nx.select(width <= nodes and nodes < width + median_offset, -nodes, nodes)
+          Nx.select(width <= nodes and nodes < width + median_offset, 0, nodes + 1)
           |> Nx.argsort(type: :u32)
 
         median_slice = Nx.take(medians_first, median_pos, axis: 1)
