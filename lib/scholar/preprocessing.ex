@@ -84,19 +84,8 @@ defmodule Scholar.Preprocessing do
   @doc """
   Standardizes the tensor by removing the mean and scaling to unit variance.
 
-  #{~S'''
-  Formula for input tensor $x$:
-  $$
-  z = \frac{x - \mu}{\sigma}
-  $$
-  Where $\mu$ is the mean of the samples, and $\sigma$ is the standard deviation.
-  Standardization can be helpful in cases where the data follows
-  a Gaussian distribution (or Normal distribution) without outliers.
-  '''}
-
-  ## Options
-
-  #{NimbleOptions.docs(@general_schema)}
+  It is a shortcut for `Scholar.Preprocessing.StandardScale.fit_transform/3`.
+  See `Scholar.Preprocessing.StandardScale` for more information.
 
   ## Examples
 
@@ -106,41 +95,9 @@ defmodule Scholar.Preprocessing do
         [-1.2247447967529297, 0.0, 1.2247447967529297]
       >
 
-      iex> Scholar.Preprocessing.standard_scale(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]))
-      #Nx.Tensor<
-        f32[3][3]
-        [
-          [0.5212860703468323, -1.3553436994552612, 1.4596009254455566],
-          [1.4596009254455566, -0.4170288145542145, -0.4170288145542145],
-          [-0.4170288145542145, 0.5212860703468323, -1.3553436994552612]
-        ]
-      >
-
-      iex> Scholar.Preprocessing.standard_scale(Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]]), axes: [1])
-      #Nx.Tensor<
-        f32[3][3]
-        [
-          [0.26726120710372925, -1.3363062143325806, 1.069044828414917],
-          [1.4142135381698608, -0.7071068286895752, -0.7071068286895752],
-          [0.0, 1.2247447967529297, -1.2247447967529297]
-        ]
-      >
-
-      iex> Scholar.Preprocessing.standard_scale(42)
-      #Nx.Tensor<
-        f32
-        42.0
-      >
   """
   deftransform standard_scale(tensor, opts \\ []) do
-    standard_scale_n(tensor, NimbleOptions.validate!(opts, @general_schema))
-  end
-
-  defnp standard_scale_n(tensor, opts) do
-    std = Nx.standard_deviation(tensor, axes: opts[:axes], keep_axes: true)
-    mean_reduced = Nx.mean(tensor, axes: opts[:axes], keep_axes: true)
-    mean_reduced = Nx.select(std == 0, 0.0, mean_reduced)
-    (tensor - mean_reduced) / Nx.select(std == 0, 1.0, std)
+    Scholar.Preprocessing.StandardScaler.fit_transform(tensor, opts)
   end
 
   @doc """

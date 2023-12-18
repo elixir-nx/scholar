@@ -328,7 +328,6 @@ defmodule Scholar.Manifold.MDS do
   ## Examples
 
       iex> x = Nx.iota({4,5})
-      iex> key = Nx.Random.key(42)
       iex> init = Nx.reverse(Nx.iota({4,2}))
       iex> Scholar.Manifold.MDS.fit(x, init)
       %Scholar.Manifold.MDS{

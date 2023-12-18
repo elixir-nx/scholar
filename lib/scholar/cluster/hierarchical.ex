@@ -13,7 +13,7 @@ defmodule Scholar.Cluster.Hierarchical do
   Due to the requirements of the current implementation, only these options are supported:
 
     * `dissimilarity: :euclidean`
-    * `linkage: :average | :complete | :single | :ward | :weighted`
+    * `linkage: :average | :complete | :single | :weighted`
 
   Our current algorithm is $O(\\frac{n^2}{p} \\cdot \\log(n))$ where $n$ is the number of data points
   and $p$ is the number of processors.
@@ -152,14 +152,15 @@ defmodule Scholar.Cluster.Hierarchical do
         :complete -> &complete/6
         # :median -> &median/6
         :single -> &single/6
-        :ward -> &ward/6
+        # :ward -> &ward/6
         :weighted -> &weighted/6
       end
 
     dendrogram_fun =
       case linkage do
         # TODO: :centroid, :median
-        l when l in [:average, :complete, :single, :ward, :weighted] ->
+        # TODO: :ward
+        l when l in [:average, :complete, :single, :weighted] ->
           &parallel_nearest_neighbor/3
       end
 
@@ -302,8 +303,8 @@ defmodule Scholar.Cluster.Hierarchical do
   defnp single(dac, dbc, _dab, _sa, _sb, _sc),
     do: Nx.min(dac, dbc)
 
-  defnp ward(dac, dbc, dab, sa, sb, sc),
-    do: Nx.sqrt(((sa + sc) * dac + (sb + sc) * dbc - sc * dab) / (sa + sb + sc))
+  # defnp ward(dac, dbc, dab, sa, sb, sc),
+  #   do: Nx.sqrt(((sa + sc) * dac + (sb + sc) * dbc - sc * dab) / (sa + sb + sc))
 
   defnp weighted(dac, dbc, _dab, _sa, _sb, _sc),
     do: (dac + dbc) / 2

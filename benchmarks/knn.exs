@@ -13,11 +13,16 @@ inputs_knn = %{
 Benchee.run(
   %{
     "kdtree" => fn x ->
-      kdtree = Scholar.Neighbors.KDTree.fit_bounded(x, Nx.axis_size(x, 0))
+      kdtree = Scholar.Neighbors.KDTree.fit(x)
       Scholar.Neighbors.KDTree.predict(kdtree, x, k: 4)
     end,
     "brute force knn" => fn x ->
-      model = Scholar.Neighbors.KNearestNeighbors.fit(x, Nx.broadcast(1, {Nx.axis_size(x, 0)}), num_classes: 2, num_neighbors: 4)
+      model =
+        Scholar.Neighbors.KNearestNeighbors.fit(x, Nx.broadcast(1, {Nx.axis_size(x, 0)}),
+          num_classes: 2,
+          num_neighbors: 4
+        )
+
       Scholar.Neighbors.KNearestNeighbors.k_neighbors(model, x)
     end
   },
