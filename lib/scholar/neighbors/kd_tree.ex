@@ -82,7 +82,7 @@ defmodule Scholar.Neighbors.KDTree do
   end
 
   defnp update_tags(tags, indices, level, levels, size) do
-    pos = Nx.argsort(indices, type: :u32)
+    pos = inverse_permutation(indices)
 
     pivot =
       bounded_segment_begin(tags, levels, size) +
@@ -100,6 +100,14 @@ defmodule Scholar.Neighbors.KDTree do
           tags
         )
       )
+    )
+  end
+
+  defnp inverse_permutation(indices) do
+    Nx.indexed_put(
+      Nx.broadcast(Nx.tensor(0, type: :u32), indices),
+      Nx.new_axis(indices, -1),
+      Nx.iota(Nx.shape(indices))
     )
   end
 
