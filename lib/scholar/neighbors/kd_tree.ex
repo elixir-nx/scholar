@@ -7,18 +7,6 @@ defmodule Scholar.Neighbors.KDTree do
   dimension of the given tensor. Traversal starts by calling `root/0` and then
   accessing the `left_child/1` and `right_child/1`. The tree is left-balanced.
 
-  Two construction modes are available:
-
-    * `fit_bounded/2` - the tensor has min and max values with an amplitude given by `max - min`.
-      It is also guaranteed that the `amplitude * levels(tensor) + 1` does not overflow
-      the tensor. See `amplitude/1` to verify if this holds. This implementation happens
-      fully within `defn`. This version is orders of magnitude faster than the `unbounded/2`
-      one.
-
-    * `fit_unbounded/2` - there are no known bounds (min and max values) to the tensor.
-      This implementation is recursive and goes in and out of the `defn`, therefore
-      it cannot be called inside `defn`.
-
   Each level traverses over the last axis of tensor, the index for a level can be
   computed as: `rem(level, Nx.axis_size(tensor, -1))`.
 
@@ -57,144 +45,40 @@ defmodule Scholar.Neighbors.KDTree do
   @predict_schema NimbleOptions.new!(opts)
 
   @doc """
-  Builds a KDTree without known min-max bounds.
-
-  If your tensor has known bounds (for example, -1 and 1),
-  consider using the `bounded/2` version which is often orders of
-  magnitude more efficient.
-
-  ## Options
-
-    * `:compiler` - the default compiler to use for internal defn operations
+  Builds a KDTree.
 
   ## Examples
 
-      iex> Scholar.Neighbors.KDTree.fit_unbounded(Nx.iota({5, 2}), compiler: EXLA)
-      %Scholar.Neighbors.KDTree{
-        data: Nx.iota({5, 2}),
-        levels: 3,
-        indices: Nx.u32([3, 1, 4, 0, 2])
-      }
-
-  """
-  def fit_unbounded(tensor, opts \\ []) do
-    levels = levels(tensor)
-    {size, _dims} = Nx.shape(tensor)
-
-    indices =
-      if size > 2 do
-        subtree_size = unbounded_subtree_size(1, levels, size)
-        {left, mid, right} = Nx.Defn.jit_apply(&root_slice(&1, subtree_size), [tensor], opts)
-
-        acc = <<Nx.to_number(mid)::32-unsigned-native-integer>>
-        acc = recur([{1, left}, {2, right}], [], acc, tensor, 1, levels, opts)
-        Nx.from_binary(acc, :u32)
-      else
-        Nx.argsort(tensor[[.., 0]], direction: :desc, type: :u32)
-      end
-
-    %__MODULE__{levels: levels, indices: indices, data: tensor}
-  end
-
-  defp recur([{_i, %Nx.Tensor{shape: {1}} = leaf} | rest], next, acc, tensor, level, levels, opts) do
-    [leaf] = Nx.to_flat_list(leaf)
-    acc = <<acc::binary, leaf::32-unsigned-native-integer>>
-    recur(rest, next, acc, tensor, level, levels, opts)
-  end
-
-  defp recur([{i, %Nx.Tensor{shape: {2}} = node} | rest], next, acc, tensor, level, levels, opts) do
-    acc = <<acc::binary, Nx.to_number(node[1])::32-unsigned-native-integer>>
-    next = [{left_child(i), Nx.slice(node, [0], [1])} | next]
-    recur(rest, next, acc, tensor, level, levels, opts)
-  end
-
-  defp recur([{i, indices} | rest], next, acc, tensor, level, levels, opts) do
-    %Nx.Tensor{shape: {size, dims}} = tensor
-    k = rem(level, dims)
-    subtree_size = unbounded_subtree_size(left_child(i), levels, size)
-
-    {left, mid, right} =
-      Nx.Defn.jit_apply(&recur_slice(&1, &2, &3, subtree_size), [tensor, indices, k], opts)
-
-    next = [{right_child(i), right}, {left_child(i), left} | next]
-    acc = <<acc::binary, Nx.to_number(mid)::32-unsigned-native-integer>>
-    recur(rest, next, acc, tensor, level, levels, opts)
-  end
-
-  defp recur([], [], acc, _tensor, _level, _levels, _opts) do
-    acc
-  end
-
-  defp recur([], next, acc, tensor, level, levels, opts) do
-    recur(Enum.reverse(next), [], acc, tensor, level + 1, levels, opts)
-  end
-
-  defp root_slice(tensor, subtree_size) do
-    indices = Nx.argsort(tensor[[.., 0]], type: :u32)
-
-    {Nx.slice(indices, [0], [subtree_size]), indices[subtree_size],
-     Nx.slice(indices, [subtree_size + 1], [Nx.size(indices) - subtree_size - 1])}
-  end
-
-  defp recur_slice(tensor, indices, k, subtree_size) do
-    sorted = Nx.argsort(Nx.take(tensor, indices)[[.., k]], type: :u32)
-    indices = Nx.take(indices, sorted)
-
-    {Nx.slice(indices, [0], [subtree_size]), indices[subtree_size],
-     Nx.slice(indices, [subtree_size + 1], [Nx.size(indices) - subtree_size - 1])}
-  end
-
-  defp unbounded_subtree_size(i, levels, size) do
-    import Bitwise
-    diff = levels - unbounded_level(i) - 1
-    shifted = 1 <<< diff
-    fllc_s = (i <<< diff) + shifted - 1
-    shifted - 1 + min(max(0, size - fllc_s), shifted)
-  end
-
-  defp unbounded_level(i) when is_integer(i), do: floor(:math.log2(i + 1))
-
-  @doc """
-  Builds a KDTree with known min-max bounds entirely within `defn`.
-
-  This requires the amplitude `|max - min|` of the tensor to be given
-  such that `max + (amplitude + 1) * (size - 1)` does not overflow the
-  maximum tensor type.
-
-  For example, a tensor where all values are between 0 and 1 has amplitude
-  1. Values between -1 and 1 has amplitude 2. If your tensor is normalized
-  to floating points, then it is most likely bounded (given their high
-  precision). You can use `amplitude/1` to check your assumptions.
-
-  ## Examples
-
-      iex> Scholar.Neighbors.KDTree.fit_bounded(Nx.iota({5, 2}), 10)
+      iex> Scholar.Neighbors.KDTree.fit(Nx.iota({5, 2}), 10)
       %Scholar.Neighbors.KDTree{
         data: Nx.iota({5, 2}),
         levels: 3,
         indices: Nx.u32([3, 1, 4, 0, 2])
       }
   """
-  deftransform fit_bounded(tensor, amplitude) do
-    %__MODULE__{levels: levels(tensor), indices: fit_bounded_n(tensor, amplitude), data: tensor}
+  deftransform fit(tensor, _opts \\ []) do
+    %__MODULE__{levels: levels(tensor), indices: fit_n(tensor), data: tensor}
   end
 
-  defnp fit_bounded_n(tensor, amplitude) do
+  defnp fit_n(tensor) do
     levels = levels(tensor)
     {size, dims} = Nx.shape(tensor)
-    band = amplitude + 1
     tags = Nx.broadcast(Nx.u32(0), {size})
+    tensor = Nx.argsort(tensor, type: :u32, stable: true)
 
-    {level, tags, _tensor, _band} =
-      while {level = Nx.u32(0), tags, tensor, band}, level < levels - 1 do
+    {level, tags, _tensor} =
+      while {level = Nx.u32(0), tags, tensor}, level < levels - 1 do
         k = rem(level, dims)
-        indices = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32, stable: true)
-        tags = update_tags(tags, indices, level, levels, size)
-        {level + 1, tags, tensor, band}
+        indices = tensor[[.., k]]
+        order = Nx.argsort(tags[indices], type: :u32, stable: true)
+        tags = update_tags(tags, indices[order], level, levels, size)
+        {level + 1, tags, tensor}
       end
 
     k = rem(level, dims)
-    Nx.argsort(tensor[[.., k]] + band * tags, type: :u32, stable: true)
+    indices = tensor[[.., k]]
+    order = Nx.argsort(tags[indices], type: :u32, stable: true)
+    indices[order]
   end
 
   defnp update_tags(tags, indices, level, levels, size) do
@@ -242,39 +126,6 @@ defmodule Scholar.Neighbors.KDTree do
   # Since this property relies on u32, let's check the tensor type.
   deftransformp bounded_level(%Nx.Tensor{type: {:u, 32}} = i) do
     Nx.subtract(31, Nx.count_leading_zeros(Nx.add(i, 1)))
-  end
-
-  @doc """
-  Returns the amplitude of a bounded tensor.
-
-  If -1 is returned, it means the tensor cannot use the `fit_bounded` algorithm
-  to generate a KDTree and `fit_unbounded/2` must be used instead.
-
-  This cannot be invoked inside a `defn`.
-
-  ## Examples
-
-      iex> Scholar.Neighbors.KDTree.amplitude(Nx.iota({10, 2}))
-      19
-      iex> Scholar.Neighbors.KDTree.amplitude(Nx.iota({20, 2}, type: :f32))
-      39.0
-      iex> Scholar.Neighbors.KDTree.amplitude(Nx.iota({20, 2}, type: :u8))
-      -1
-      iex> Scholar.Neighbors.KDTree.amplitude(Nx.negate(Nx.iota({10, 2})))
-      19
-
-  """
-  def amplitude(tensor) do
-    max = tensor |> Nx.reduce_max() |> Nx.to_number()
-    min = tensor |> Nx.reduce_min() |> Nx.to_number()
-    amplitude = abs(max - min)
-    limit = tensor.type |> Nx.Constants.max_finite() |> Nx.to_number()
-
-    if max + (amplitude + 1) * (Nx.axis_size(tensor, 0) - 1) > limit do
-      -1
-    else
-      amplitude
-    end
   end
 
   @doc """
@@ -382,7 +233,7 @@ defmodule Scholar.Neighbors.KDTree do
 
       iex> x = Nx.iota({10, 2})
       iex> x_predict = Nx.tensor([[2, 5], [1, 9], [6, 4]])
-      iex> kdtree = Scholar.Neighbors.KDTree.fit_bounded(x, 20)
+      iex> kdtree = Scholar.Neighbors.KDTree.fit(x, 20)
       iex> Scholar.Neighbors.KDTree.predict(kdtree, x_predict, k: 3)
       #Nx.Tensor<
         s64[3][3]

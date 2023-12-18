@@ -18,55 +18,19 @@ defmodule Scholar.Neighbors.KDTreeTest do
     ])
   end
 
-  describe "unbounded" do
-    test "sample" do
-      assert %KDTree{levels: 4, indices: indices} =
-               KDTree.fit_unbounded(example(), compiler: EXLA)
-
-      assert Nx.to_flat_list(indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
-    end
-
-    test "float" do
-      assert %KDTree{levels: 4, indices: indices} =
-               KDTree.fit_unbounded(example() |> Nx.as_type(:f32),
-                 compiler: EXLA
-               )
-
-      assert Nx.to_flat_list(indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
-    end
-
-    test "corner cases" do
-      assert %KDTree{levels: 1, indices: indices} =
-               KDTree.fit_unbounded(Nx.iota({1, 2}), compiler: EXLA)
-
-      assert indices == Nx.u32([0])
-
-      assert %KDTree{levels: 2, indices: indices} =
-               KDTree.fit_unbounded(Nx.iota({2, 2}), compiler: EXLA)
-
-      assert indices == Nx.u32([1, 0])
-    end
-  end
-
-  describe "bounded" do
+  describe "fit" do
     test "iota" do
-      assert %KDTree{levels: 3, indices: indices} =
-               KDTree.fit_bounded(Nx.iota({5, 2}), 10)
-
+      assert %KDTree{levels: 3, indices: indices} = KDTree.fit(Nx.iota({5, 2}))
       assert indices == Nx.u32([3, 1, 4, 0, 2])
     end
 
     test "float" do
-      assert %KDTree{levels: 4, indices: indices} =
-               KDTree.fit_bounded(example() |> Nx.as_type(:f32), 100)
-
+      assert %KDTree{levels: 4, indices: indices} = KDTree.fit(example() |> Nx.as_type(:f32))
       assert Nx.to_flat_list(indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
     end
 
     test "sample" do
-      assert %KDTree{levels: 4, indices: indices} =
-               KDTree.fit_bounded(example(), 100)
-
+      assert %KDTree{levels: 4, indices: indices} = KDTree.fit(example())
       assert Nx.to_flat_list(indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
     end
   end
@@ -92,21 +56,21 @@ defmodule Scholar.Neighbors.KDTreeTest do
 
   describe "predict knn" do
     test "all defaults" do
-      kdtree = KDTree.fit_bounded(x(), 10)
+      kdtree = KDTree.fit(x(), 10)
 
       assert KDTree.predict(kdtree, x_pred()) ==
                Nx.tensor([[0, 6, 4], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
     end
 
     test "metric set to {:minkowski, 1.5}" do
-      kdtree = KDTree.fit_bounded(x(), 10)
+      kdtree = KDTree.fit(x(), 10)
 
       assert KDTree.predict(kdtree, x_pred(), metric: {:minkowski, 1.5}) ==
                Nx.tensor([[0, 6, 2], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
     end
 
     test "k set to 4" do
-      kdtree = KDTree.fit_bounded(x(), 10)
+      kdtree = KDTree.fit(x(), 10)
 
       assert KDTree.predict(kdtree, x_pred(), k: 4) ==
                Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
