@@ -49,7 +49,7 @@ defmodule Scholar.Neighbors.KDTree do
 
   ## Examples
 
-      iex> Scholar.Neighbors.KDTree.fit(Nx.iota({5, 2}), 10)
+      iex> Scholar.Neighbors.KDTree.fit(Nx.iota({5, 2}))
       %Scholar.Neighbors.KDTree{
         data: Nx.iota({5, 2}),
         levels: 3,
@@ -233,7 +233,7 @@ defmodule Scholar.Neighbors.KDTree do
 
       iex> x = Nx.iota({10, 2})
       iex> x_predict = Nx.tensor([[2, 5], [1, 9], [6, 4]])
-      iex> kdtree = Scholar.Neighbors.KDTree.fit(x, 20)
+      iex> kdtree = Scholar.Neighbors.KDTree.fit(x)
       iex> Scholar.Neighbors.KDTree.predict(kdtree, x_predict, k: 3)
       #Nx.Tensor<
         s64[3][3]

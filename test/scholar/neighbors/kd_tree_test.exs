@@ -56,21 +56,21 @@ defmodule Scholar.Neighbors.KDTreeTest do
 
   describe "predict knn" do
     test "all defaults" do
-      kdtree = KDTree.fit(x(), 10)
+      kdtree = KDTree.fit(x())
 
       assert KDTree.predict(kdtree, x_pred()) ==
                Nx.tensor([[0, 6, 4], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
     end
 
     test "metric set to {:minkowski, 1.5}" do
-      kdtree = KDTree.fit(x(), 10)
+      kdtree = KDTree.fit(x())
 
       assert KDTree.predict(kdtree, x_pred(), metric: {:minkowski, 1.5}) ==
                Nx.tensor([[0, 6, 2], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
     end
 
     test "k set to 4" do
-      kdtree = KDTree.fit(x(), 10)
+      kdtree = KDTree.fit(x())
 
       assert KDTree.predict(kdtree, x_pred(), k: 4) ==
                Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
