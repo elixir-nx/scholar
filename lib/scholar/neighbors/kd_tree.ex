@@ -77,7 +77,7 @@ defmodule Scholar.Neighbors.KDTree do
 
     k = rem(level, dims)
     indices = tensor[[.., k]]
-    order = Nx.argsort(tags[indices], type: :u32, stable: true)
+    order = Nx.argsort(tags[indices], type: :u32)
     indices[order]
   end
 
