@@ -298,19 +298,20 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
         medians_first = (left_first + right_first) / 2
 
-        # TODO: Can this be done in a simpler way
-        median_pos =
-          Nx.select(width <= nodes and nodes < width + median_offset, 0, nodes + 1)
-          |> Nx.argsort(type: :u32)
+        # TODO: Can this be done in a simpler way?
+        median_mask = nodes < width or nodes >= width + median_offset
+        median_pos = Nx.argsort(median_mask, stable: true, type: :u32)
+        level_medians = Nx.take(medians_first, median_pos, axis: 1)
 
-        median_slice = Nx.take(medians_first, median_pos, axis: 1)
-        # TODO: Use a different name
-        tree_nodes = nodes |> Nx.new_axis(0) |> Nx.broadcast({num_trees, num_nodes})
+        level_mask =
+          (median_offset <= nodes and nodes < median_offset + width)
+          |> Nx.new_axis(0)
+          |> Nx.broadcast({num_trees, num_nodes})
 
         medians =
           Nx.select(
-            median_offset <= tree_nodes and tree_nodes < median_offset + width,
-            median_slice,
+            level_mask,
+            level_medians,
             medians
           )
 
@@ -326,5 +327,23 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       end
 
     {leaf_size, indices, hyperplanes, medians}
+  end
+
+  @doc """
+  """
+  defn predict_n(forest, x) do
+    num_trees = forest.num_trees
+    leaf_size = forest.leaf_size
+    indices = forest.indices |> Nx.vectorize(:trees)
+    start_indices = compute_start_indices(forest, x, leaf_size: leaf_size) |> Nx.new_axis(1)
+    size = Nx.axis_size(x, 0)
+
+    range =
+      Nx.iota({1, 1, leaf_size})
+      |> Nx.broadcast({num_trees, size, leaf_size})
+      |> Nx.vectorize(:trees)
+
+    leaf_indices =
+      Nx.take(indices, Nx.add(start_indices, range)) |> Nx.devectorize() |> Nx.rename(nil)
   end
 end
