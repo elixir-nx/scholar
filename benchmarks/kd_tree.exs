@@ -7,8 +7,8 @@ key = Nx.Random.key(System.os_time())
 
 Benchee.run(
   %{
-    "unbounded" => fn -> Scholar.Neighbors.KDTree.unbounded(uniform) end,
-    "bounded" => fn -> Scholar.Neighbors.KDTree.bounded(uniform, 2) end
+    "unbounded" => fn -> Scholar.Neighbors.KDTree.fit_unbounded(uniform) end,
+    "bounded" => fn -> Scholar.Neighbors.KDTree.fit_bounded(uniform, 2) end
   },
   time: 10,
   memory_time: 2
