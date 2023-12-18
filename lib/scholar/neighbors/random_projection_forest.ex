@@ -278,18 +278,18 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
         leaf_size = Nx.quotient(leaf_size, 2) + Nx.remainder(leaf_size, 2)
 
-        left_mask = (pos == left_sizes - 1) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
-
+        left_mask = pos == left_sizes - 1
         sorted_indices =
-          Nx.argsort(left_mask, axis: 1, direction: :desc, stable: true, type: :u32)
-
+          Nx.argsort(left_mask, direction: :desc, stable: true, type: :u32)
+          |> Nx.new_axis(0)
+          |> Nx.broadcast({num_trees, size})
         left_first = Nx.take_along_axis(proj, sorted_indices, axis: 1)
 
-        right_mask = (pos == right_sizes) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
-
+        right_mask = pos == right_sizes
         sorted_indices =
-          Nx.argsort(right_mask, axis: 1, direction: :desc, stable: true, type: :u32)
-
+          Nx.argsort(right_mask, direction: :desc, stable: true, type: :u32)
+          |> Nx.new_axis(0)
+          |> Nx.broadcast({num_trees, size})
         right_first = Nx.take_along_axis(proj, sorted_indices, axis: 1)
 
         medians_first = (left_first + right_first) / 2
@@ -322,5 +322,69 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       end
 
     {leaf_size, indices, hyperplanes, medians}
+  end
+
+  @doc """
+  """
+  defn predict_n(forest, x) do
+    num_trees = forest.num_trees
+    leaf_size = forest.leaf_size
+    indices = forest.indices |> Nx.vectorize(:trees)
+    start_indices = compute_start_indices(forest, x, leaf_size: leaf_size) |> Nx.new_axis(1)
+    size = Nx.axis_size(x, 0)
+
+    range =
+      Nx.iota({1, 1, leaf_size})
+      |> Nx.broadcast({num_trees, size, leaf_size})
+      |> Nx.vectorize(:trees)
+
+    leaf_indices =
+      Nx.take(indices, Nx.add(start_indices, range)) |> Nx.devectorize() |> Nx.rename(nil)
+  end
+
+  defnp compute_start_indices(forest, x, opts) do
+    leaf_size = opts[:leaf_size]
+    size = Nx.axis_size(x, 0)
+    depth = forest.depth
+    num_trees = forest.num_trees
+    hyperplanes = forest.hyperplanes |> Nx.vectorize(:trees)
+    medians = forest.medians |> Nx.vectorize(:trees)
+
+    {start_indices, _} =
+      while {
+              start_indices = Nx.broadcast(0, {num_trees, size}) |> Nx.vectorize(:trees),
+              {
+                x,
+                hyperplanes,
+                medians,
+                level = 0,
+                nodes = Nx.broadcast(Nx.u32(0), {num_trees, size}) |> Nx.vectorize(:trees),
+                cell_size = Nx.u32(size)
+              }
+            },
+            level < depth do
+        h = hyperplanes[level]
+        median = Nx.take(medians, nodes)
+        proj = Nx.dot(x, h)
+        pred = proj <= median
+
+        nodes =
+          Nx.select(
+            pred,
+            left_child(nodes),
+            right_child(nodes)
+          )
+
+        offset = Nx.floor(cell_size / 2) |> Nx.as_type(:u32)
+        start_indices = Nx.select(pred, start_indices, start_indices + offset)
+        cell_size = Nx.ceil(cell_size / 2) |> Nx.as_type(:u32)
+
+        {
+          start_indices,
+          {x, hyperplanes, medians, level + 1, nodes, cell_size}
+        }
+      end
+
+    start_indices
   end
 end
