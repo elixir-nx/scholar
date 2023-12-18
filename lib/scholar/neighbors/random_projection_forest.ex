@@ -82,13 +82,6 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     min_leaf_size = opts[:min_leaf_size]
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
 
-    # if min_leaf_size == 1 do
-    #   raise ArgumentError,
-    #         """
-    #         expected min_leaf_size to be at least 2, got 1
-    #         """
-    # end
-
     {size, dim} = Nx.shape(tensor)
     {depth, leaf_size} = compute_depth_and_leaf_size(size, min_leaf_size, 0)
     IO.inspect(depth)
@@ -286,11 +279,17 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
         leaf_size = Nx.quotient(leaf_size, 2) + Nx.remainder(leaf_size, 2)
 
         left_mask = (pos == left_sizes - 1) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
-        sorted_indices = Nx.argsort(left_mask, axis: 1, direction: :desc, stable: true, type: :u32)
+
+        sorted_indices =
+          Nx.argsort(left_mask, axis: 1, direction: :desc, stable: true, type: :u32)
+
         left_first = Nx.take_along_axis(proj, sorted_indices, axis: 1)
 
         right_mask = (pos == right_sizes) |> Nx.new_axis(0) |> Nx.broadcast({num_trees, size})
-        sorted_indices = Nx.argsort(right_mask, axis: 1, direction: :desc, stable: true, type: :u32)
+
+        sorted_indices =
+          Nx.argsort(right_mask, axis: 1, direction: :desc, stable: true, type: :u32)
+
         right_first = Nx.take_along_axis(proj, sorted_indices, axis: 1)
 
         medians_first = (left_first + right_first) / 2
