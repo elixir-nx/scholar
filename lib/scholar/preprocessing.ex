@@ -56,7 +56,6 @@ defmodule Scholar.Preprocessing do
     ]
   ]
 
-  @general_schema NimbleOptions.new!(general_schema)
   @normalize_schema NimbleOptions.new!(normalize_schema)
   @binarize_schema NimbleOptions.new!(binarize_schema)
   @encode_schema NimbleOptions.new!(encode_schema)
