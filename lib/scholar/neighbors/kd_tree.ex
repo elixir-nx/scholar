@@ -149,22 +149,19 @@ defmodule Scholar.Neighbors.KDTree do
   ## Examples
 
       iex> Scholar.Neighbors.KDTree.root()
-      0
-
+      #Nx.Tensor<
+        u32
+        0
+      >
   """
-  deftransform root, do: 0
+  defn root, do: Nx.u32(0)
 
   @doc """
-  Returns the parent of child `i`.
+  Returns the parent of a node.
 
   It is your responsibility to guarantee the result is positive.
 
   ## Examples
-
-      iex> Scholar.Neighbors.KDTree.parent(1)
-      0
-      iex> Scholar.Neighbors.KDTree.parent(2)
-      0
 
       iex> Scholar.Neighbors.KDTree.parent(Nx.u32(3))
       #Nx.Tensor<
@@ -173,25 +170,15 @@ defmodule Scholar.Neighbors.KDTree do
       >
 
   """
-  deftransform parent(0) do
-    -1
-  end
-
-  deftransform parent(i) when is_integer(i), do: div(i - 1, 2)
-  deftransform parent(%Nx.Tensor{} = t), do: Nx.quotient(Nx.subtract(t, 1), 2)
+  defn parent(node), do: Nx.quotient(node - 1, 2)
 
   @doc """
-  Returns the index of the left child of i.
+  Returns the index of the left child of a node.
 
   It is your responsibility to guarantee the result
   is not greater than the leading axis of the tensor.
 
   ## Examples
-
-      iex> Scholar.Neighbors.KDTree.left_child(0)
-      1
-      iex> Scholar.Neighbors.KDTree.left_child(1)
-      3
 
       iex> Scholar.Neighbors.KDTree.left_child(Nx.u32(3))
       #Nx.Tensor<
@@ -200,21 +187,15 @@ defmodule Scholar.Neighbors.KDTree do
       >
 
   """
-  deftransform left_child(i) when is_integer(i), do: 2 * i + 1
-  deftransform left_child(%Nx.Tensor{} = t), do: Nx.add(Nx.multiply(2, t), 1)
+  defn left_child(node), do: 2 * node + 1
 
   @doc """
-  Returns the index of the right child of i.
+  Returns the index of the right child of a node.
 
   It is your responsibility to guarantee the result
   is not greater than the leading axis of the tensor.
 
   ## Examples
-
-      iex> Scholar.Neighbors.KDTree.right_child(0)
-      2
-      iex> Scholar.Neighbors.KDTree.right_child(1)
-      4
 
       iex> Scholar.Neighbors.KDTree.right_child(Nx.u32(3))
       #Nx.Tensor<
@@ -223,8 +204,7 @@ defmodule Scholar.Neighbors.KDTree do
       >
 
   """
-  deftransform right_child(i) when is_integer(i), do: 2 * i + 2
-  deftransform right_child(%Nx.Tensor{} = t), do: Nx.add(Nx.multiply(2, t), 2)
+  defn right_child(node), do: 2 * node + 2
 
   @doc """
   Predict the K nearest neighbors of `x_predict` in KDTree.
