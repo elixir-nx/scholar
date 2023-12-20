@@ -80,9 +80,10 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
+  Scales a tensor by dividing each sample in batch by maximum absolute value in the batch.
+
   It is a shortcut for `Scholar.Preprocessing.MaxAbsScaler.fit_transform/2`.
   See `Scholar.Preprocessing.MaxAbsScaler` for more information.
-
 
   ## Examples
 
@@ -114,6 +115,8 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
+  Scales a tensor by a given range.
+
   It is a shortcut for `Scholar.Preprocessing.MinMaxScaler.fit_transform/2`.
   See `Scholar.Preprocessing.MinMaxScaler` for more information.
 
