@@ -26,25 +26,6 @@ defmodule Scholar.Preprocessing do
     ]
   ]
 
-  min_max_schema =
-    general_schema ++
-      [
-        min: [
-          type: {:or, [:integer, :float]},
-          default: 0,
-          doc: """
-          The lower boundary of the desired range of transformed data.
-          """
-        ],
-        max: [
-          type: {:or, [:integer, :float]},
-          default: 1,
-          doc: """
-          The upper boundary of the desired range of transformed data.
-          """
-        ]
-      ]
-
   normalize_schema =
     general_schema ++
       [
@@ -75,8 +56,6 @@ defmodule Scholar.Preprocessing do
     ]
   ]
 
-  @general_schema NimbleOptions.new!(general_schema)
-  @min_max_schema NimbleOptions.new!(min_max_schema)
   @normalize_schema NimbleOptions.new!(normalize_schema)
   @binarize_schema NimbleOptions.new!(binarize_schema)
   @encode_schema NimbleOptions.new!(encode_schema)
@@ -101,11 +80,9 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  Scales a tensor by dividing each sample in batch by maximum absolute value in the batch
+  It is a shortcut for `Scholar.Preprocessing.MaxAbsScaler.fit_transform/2`.
+  See `Scholar.Preprocessing.MaxAbsScaler` for more information.
 
-  ## Options
-
-  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -133,20 +110,12 @@ defmodule Scholar.Preprocessing do
       >
   """
   deftransform max_abs_scale(tensor, opts \\ []) do
-    max_abs_scale_n(tensor, NimbleOptions.validate!(opts, @general_schema))
-  end
-
-  defnp max_abs_scale_n(tensor, opts) do
-    max_abs = Nx.abs(tensor) |> Nx.reduce_max(axes: opts[:axes], keep_axes: true)
-    tensor / Nx.select(max_abs == 0, 1, max_abs)
+    Scholar.Preprocessing.MaxAbsScaler.fit_transform(tensor, opts)
   end
 
   @doc """
-  Transform a tensor by scaling each batch to the given range.
-
-  ## Options
-
-  #{NimbleOptions.docs(@min_max_schema)}
+  It is a shortcut for `Scholar.Preprocessing.MinMaxScaler.fit_transform/2`.
+  See `Scholar.Preprocessing.MinMaxScaler` for more information.
 
   ## Examples
 
@@ -156,28 +125,6 @@ defmodule Scholar.Preprocessing do
         [0.0, 0.5, 1.0]
       >
 
-      iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0])
-      #Nx.Tensor<
-        f32[4][3]
-        [
-          [0.3333333432674408, 0.0, 1.0],
-          [1.0, 0.25, 0.3333333432674408],
-          [0.0, 0.5, 0.0],
-          [0.6666666865348816, 1.0, 0.6666666865348816]
-        ]
-      >
-
-      iex> Scholar.Preprocessing.min_max_scale(Nx.tensor([[1, -1, 2], [3, 0, 0], [0, 1, -1], [2, 3, 1]]), axes: [0], min: 1, max: 3)
-      #Nx.Tensor<
-        f32[4][3]
-        [
-          [1.6666667461395264, 1.0, 3.0],
-          [3.0, 1.5, 1.6666667461395264],
-          [1.0, 2.0, 1.0],
-          [2.3333334922790527, 3.0, 2.3333334922790527]
-        ]
-      >
-
       iex> Scholar.Preprocessing.min_max_scale(42)
       #Nx.Tensor<
         f32
@@ -185,21 +132,7 @@ defmodule Scholar.Preprocessing do
       >
   """
   deftransform min_max_scale(tensor, opts \\ []) do
-    min_max_scale_n(tensor, NimbleOptions.validate!(opts, @min_max_schema))
-  end
-
-  defnp min_max_scale_n(tensor, opts) do
-    if opts[:max] <= opts[:min] do
-      raise ArgumentError,
-            "expected :max to be greater than :min"
-    else
-      reduced_max = Nx.reduce_max(tensor, axes: opts[:axes], keep_axes: true)
-      reduced_min = Nx.reduce_min(tensor, axes: opts[:axes], keep_axes: true)
-      denominator = reduced_max - reduced_min
-      denominator = Nx.select(denominator == 0, 1, denominator)
-      x_std = (tensor - reduced_min) / denominator
-      x_std * (opts[:max] - opts[:min]) + opts[:min]
-    end
+    Scholar.Preprocessing.MinMaxScaler.fit_transform(tensor, opts)
   end
 
   @doc """
