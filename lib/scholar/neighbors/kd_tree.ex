@@ -3,6 +3,8 @@ defmodule Scholar.Neighbors.KDTree do
   Implements a kd-tree, a space-partitioning data structure for organizing points
   in a k-dimensional space.
 
+  It can be used to predict the K-Nearest Neighbors of a given input.
+
   This is implemented as one-dimensional tensor with indices pointed to highest
   dimension of the given tensor. Traversal starts by calling `root/0` and then
   accessing the `left_child/1` and `right_child/1`. The tree is left-balanced.

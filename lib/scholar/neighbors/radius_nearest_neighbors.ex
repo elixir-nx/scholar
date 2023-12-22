@@ -163,7 +163,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
 
   ## Return Values
 
-    It returns a tensor with predicted class labels
+  It returns a tensor with predicted class labels.
 
   ## Examples
 
@@ -258,7 +258,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
 
   ## Return Values
 
-    Returns indices of the selected neighbor points as a mask  (1 if a point is a neighbor, 0 otherwise) and their respective distances.
+  Returns indices of the selected neighbor points as a mask  (1 if a point is a neighbor, 0 otherwise) and their respective distances.
 
   ## Examples
 
