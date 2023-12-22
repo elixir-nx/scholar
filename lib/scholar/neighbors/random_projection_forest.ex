@@ -147,7 +147,6 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
                 sorted_indices,
                 level = Nx.u32(0),
                 pos = Nx.iota({size}, type: :u32),
-                # TODO: Rename to cell sizes
                 cell_sizes = Nx.broadcast(Nx.u32(size), {size}),
                 tags = Nx.broadcast(Nx.u32(0), {size}),
                 nodes = Nx.iota({num_nodes}, type: :u32),
