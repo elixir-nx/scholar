@@ -314,7 +314,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     {start_indices, left?, cell_sizes, _} =
       while {
               start_indices = Nx.broadcast(Nx.u32(0), {num_trees, size}) |> Nx.vectorize(:trees),
-              left? = Nx.broadcast(Nx.u8(0), {num_trees, size}) |> Nx.vectorize(:trees),
+              _left? = Nx.broadcast(Nx.u8(0), {num_trees, size}) |> Nx.vectorize(:trees),
               cell_sizes = Nx.broadcast(Nx.u32(size), {num_trees, size}) |> Nx.vectorize(:trees),
               {
                 x,
