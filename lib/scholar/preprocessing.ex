@@ -64,7 +64,7 @@ defmodule Scholar.Preprocessing do
       >
 
   """
-  deftransform standard_scale(tensor, opts \\ []) do
+  defn standard_scale(tensor, opts \\ []) do
     Scholar.Preprocessing.StandardScaler.fit_transform(tensor, opts)
   end
 
@@ -98,7 +98,7 @@ defmodule Scholar.Preprocessing do
         1.0
       >
   """
-  deftransform max_abs_scale(tensor, opts \\ []) do
+  defn max_abs_scale(tensor, opts \\ []) do
     Scholar.Preprocessing.MaxAbsScaler.fit_transform(tensor, opts)
   end
 
@@ -120,7 +120,7 @@ defmodule Scholar.Preprocessing do
         0.0
       >
   """
-  deftransform min_max_scale(tensor, opts \\ []) do
+  defn min_max_scale(tensor, opts \\ []) do
     Scholar.Preprocessing.MinMaxScaler.fit_transform(tensor, opts)
   end
 
