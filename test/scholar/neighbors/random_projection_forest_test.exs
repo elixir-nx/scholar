@@ -48,7 +48,7 @@ defmodule Scholar.Neighbors.RandomProjectionForestTest do
     test "every point is its own leaf when leaf_size is 1" do
       key = Nx.Random.key(12)
       tensor = x()
-      forest = RandomProjectionForest.fit(tensor, num_trees: 1, min_leaf_size: 1)
+      forest = RandomProjectionForest.fit(tensor, num_trees: 1, min_leaf_size: 1, key: key)
       leaf_indices = RandomProjectionForest.predict(forest, tensor)
       assert Nx.flatten(leaf_indices) == Nx.iota({Nx.axis_size(tensor, 0)}, type: :u32)
     end
