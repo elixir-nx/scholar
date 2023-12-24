@@ -3,6 +3,27 @@ defmodule Scholar.Metrics.Neighbors do
 
   deftransform recall(graph_true, graph_pred) do
     # TODO: Validate graph_true and graph_pred
+    if Nx.rank(graph_true) != 2 do
+      raise ArgumentError,
+            """
+            expected true graph to have shape {num_samples, num_neighbors}, \
+            got tensor with shape: #{inspect(Nx.shape(graph_true))}\
+            """
+    end
+    if Nx.rank(graph_pred) != 2 do
+      raise ArgumentError,
+            """
+            expected predicted graph to have shape {num_samples, num_neighbors}, \
+            got tensor with shape: #{inspect(Nx.shape(graph_pred))}\
+            """
+    end
+    if Nx.shape(graph_true) != Nx.shape(graph_pred) do
+      raise ArgumentError,
+            """
+            expected true and predicted graph to have the same shape, \
+            got #{inspect(Nx.shape(graph_true))} and #{inspect(Nx.shape(graph_pred))}\
+            """
+    end
     recall_n(graph_true, graph_pred)
   end
 
