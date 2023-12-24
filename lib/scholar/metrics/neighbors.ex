@@ -2,7 +2,6 @@ defmodule Scholar.Metrics.Neighbors do
   import Nx.Defn
 
   deftransform recall(graph_true, graph_pred) do
-    # TODO: Validate graph_true and graph_pred
     if Nx.rank(graph_true) != 2 do
       raise ArgumentError,
             """
