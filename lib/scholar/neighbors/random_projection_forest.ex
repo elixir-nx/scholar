@@ -8,6 +8,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   than or equal to the median are put into the left subtree and the points with projection
   greater than the median are put into the right subtree. We then proceed
   recursively with the left and right subtree.
+
   In this implementation the trees are complete, i.e. there are 2^l nodes at level l.
   The leaves of the trees are arranged as blocks in the field `indices`. We use the same
   hyperplane for all nodes on the same level as in [2].
