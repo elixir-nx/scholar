@@ -264,7 +264,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
         ]
       >
   """
-  deftransform predict(forest, x) do
+  deftransform predict(%__MODULE__{} = forest, x) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             """
