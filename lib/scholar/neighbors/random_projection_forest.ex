@@ -60,7 +60,8 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
       iex> key = Nx.Random.key(12)
       iex> tensor = Nx.iota({5, 2})
-      iex> Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_trees: 3, min_leaf_size: 2, key: key).indices
+      iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_trees: 3, min_leaf_size: 2, key: key)
+      iex> forest.indices
       #Nx.Tensor<
         u32[3][5]
         [
