@@ -88,8 +88,6 @@ defmodule Scholar.Neighbors.Graph do
     num_iters = opts[:num_iters]
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     forest = Forest.fit(x, num_trees: num_trees, min_leaf_size: min_leaf_size, key: key)
-    IO.inspect(forest.leaf_size)
-    IO.inspect(num_trees)
     leaves = Forest.predict(forest, x) |> Nx.reshape({size, num_trees * forest.leaf_size})
     graph = make_graph(leaves, x, k: k)
     expand(graph, x, num_iters: num_iters)
