@@ -1,4 +1,11 @@
 defmodule Scholar.Preprocessing.OrdinalEncoder do
+  @moduledoc """
+  Implements encoder that converts integer value (substitute of categorical data in tensors) into other integer value.
+  The values assigned starts from `0` and go up to `num_classes - 1`.They are maintained in sorted manner.
+  This means that for x < y => encoded_value(x) < encoded_value(y).
+
+  Currently the module supports only 1D tensors.
+  """
   import Nx.Defn
 
   @derive {Nx.Container, containers: [:encoding_tensor]}

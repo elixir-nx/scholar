@@ -1,4 +1,10 @@
 defmodule Scholar.Preprocessing.OneHotEncoder do
+  @moduledoc """
+  Implements encoder that converts integer value (substitute of categorical data in tensors) into 0-1 vector.
+  The index of 1 in the vector is aranged in sorted manner. This means that for x < y => one_index(x) < one_index(y).
+
+  Currently the module supports only 1D tensors.
+  """
   import Nx.Defn
 
   @derive {Nx.Container, containers: [:encoder, :one_hot]}
