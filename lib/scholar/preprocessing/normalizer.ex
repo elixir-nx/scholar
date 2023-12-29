@@ -1,9 +1,6 @@
 defmodule Scholar.Preprocessing.Normalizer do
   @moduledoc """
-  Implements encoder that converts integer value (substitute of categorical data in tensors) into 0-1 vector.
-  The index of 1 in the vector is aranged in sorted manner. This means that for x < y => one_index(x) < one_index(y).
-
-  Currently the module supports only 1D tensors.
+  Implements functionality for rescaling tensor to unit norm. It enables to apply normalization along any combination of axes.
   """
   import Nx.Defn
   import Scholar.Shared
