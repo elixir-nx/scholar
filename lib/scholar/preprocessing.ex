@@ -16,16 +16,6 @@ defmodule Scholar.Preprocessing do
     ]
   ]
 
-  encode_schema = [
-    num_classes: [
-      required: true,
-      type: :pos_integer,
-      doc: """
-      Number of classes to be encoded.
-      """
-    ]
-  ]
-
   normalize_schema =
     general_schema ++
       [
@@ -58,7 +48,6 @@ defmodule Scholar.Preprocessing do
 
   @normalize_schema NimbleOptions.new!(normalize_schema)
   @binarize_schema NimbleOptions.new!(binarize_schema)
-  @encode_schema NimbleOptions.new!(encode_schema)
 
   @doc """
   Standardizes the tensor by removing the mean and scaling to unit variance.
@@ -75,7 +64,7 @@ defmodule Scholar.Preprocessing do
       >
 
   """
-  deftransform standard_scale(tensor, opts \\ []) do
+  defn standard_scale(tensor, opts \\ []) do
     Scholar.Preprocessing.StandardScaler.fit_transform(tensor, opts)
   end
 
@@ -110,7 +99,7 @@ defmodule Scholar.Preprocessing do
         1.0
       >
   """
-  deftransform max_abs_scale(tensor, opts \\ []) do
+  defn max_abs_scale(tensor, opts \\ []) do
     Scholar.Preprocessing.MaxAbsScaler.fit_transform(tensor, opts)
   end
 
@@ -134,7 +123,7 @@ defmodule Scholar.Preprocessing do
         0.0
       >
   """
-  deftransform min_max_scale(tensor, opts \\ []) do
+  defn min_max_scale(tensor, opts \\ []) do
     Scholar.Preprocessing.MinMaxScaler.fit_transform(tensor, opts)
   end
 
@@ -176,11 +165,8 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  Encodes a tensor's values into integers from range 0 to `:num_classes - 1`.
-
-  ## Options
-
-  #{NimbleOptions.docs(@encode_schema)}
+  It is a shortcut for `Scholar.Preprocessing.OrdinalEncoder.fit_transform/2`.
+  See `Scholar.Preprocessing.OrdinalEncoder` for more information.
 
   ## Examples
 
@@ -190,42 +176,13 @@ defmodule Scholar.Preprocessing do
         [1, 0, 2, 3, 0, 2, 0]
       >
   """
-  deftransform ordinal_encode(tensor, opts \\ []) do
-    ordinal_encode_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
-  end
-
-  defnp ordinal_encode_n(tensor, opts) do
-    sorted = Nx.sort(tensor)
-    num_classes = opts[:num_classes]
-
-    # A mask with a single 1 in every group of equal values
-    representative_mask =
-      Nx.concatenate([
-        sorted[0..-2//1] != sorted[1..-1//1],
-        Nx.tensor([1])
-      ])
-
-    representative_indices =
-      representative_mask
-      |> Nx.argsort(direction: :desc)
-      |> Nx.slice_along_axis(0, num_classes)
-
-    representative_values = Nx.take(sorted, representative_indices)
-
-    (Nx.new_axis(tensor, 1) ==
-       Nx.new_axis(representative_values, 0))
-    |> Nx.argmax(axis: 1)
+  defn ordinal_encode(tensor, opts \\ []) do
+    Scholar.Preprocessing.OrdinalEncoder.fit_transform(tensor, opts)
   end
 
   @doc """
-  Encode labels as a one-hot numeric tensor.
-
-  Labels must be integers from 0 to `:num_classes - 1`. If the data does
-  not meet the condition, please use `ordinal_encoding/2` first.
-
-  ## Options
-
-  #{NimbleOptions.docs(@encode_schema)}
+  It is a shortcut for `Scholar.Preprocessing.OneHotEncoder.fit_transform/2`.
+  See `Scholar.Preprocessing.OneHotEncoder` for more information.
 
   ## Examples
 
@@ -243,19 +200,8 @@ defmodule Scholar.Preprocessing do
         ]
       >
   """
-  deftransform one_hot_encode(tensor, opts \\ []) do
-    one_hot_encode_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
-  end
-
-  defnp one_hot_encode_n(tensor, opts) do
-    {len} = Nx.shape(tensor)
-
-    if opts[:num_classes] > len do
-      raise ArgumentError,
-            "expected :num_classes to be at most as length of label vector"
-    end
-
-    Nx.new_axis(tensor, -1) == Nx.iota({1, opts[:num_classes]})
+  defn one_hot_encode(tensor, opts \\ []) do
+    Scholar.Preprocessing.OneHotEncoder.fit_transform(tensor, opts)
   end
 
   @doc """
