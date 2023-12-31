@@ -148,7 +148,6 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
                 pos = Nx.iota({size}, type: :u32),
                 cell_sizes = Nx.broadcast(Nx.u32(size), {size}),
                 tags = Nx.broadcast(Nx.u32(0), {size}),
-                nodes = Nx.iota({num_nodes}, type: :u32),
                 width = Nx.u32(1),
                 median_offset = Nx.u32(0)
               }
@@ -175,7 +174,6 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
             left_sizes,
             right_sizes,
             level_proj,
-            nodes,
             width,
             median_offset,
             medians
@@ -186,7 +184,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
         {
           indices,
           medians,
-          {tensor, hyperplanes, level + 1, pos, cell_sizes, tags, nodes, 2 * width,
+          {tensor, hyperplanes, level + 1, pos, cell_sizes, tags, 2 * width,
            2 * median_offset + 1}
         }
       end
@@ -194,16 +192,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     {indices, hyperplanes, medians}
   end
 
-  defnp update_medians(
-          pos,
-          left_sizes,
-          right_sizes,
-          level_proj,
-          nodes,
-          width,
-          median_offset,
-          medians
-        ) do
+  defnp update_medians(pos, left_sizes, right_sizes, level_proj, width, median_offset, medians) do
     size = Nx.size(pos)
     {num_trees, num_nodes} = Nx.shape(medians)
 
@@ -225,6 +214,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
     right_first = Nx.take_along_axis(level_proj, right_indices, axis: 1)
 
+    nodes = Nx.iota({num_nodes}, type: :u32)
     medians_first = (left_first + right_first) / 2
 
     median_mask = width <= nodes and nodes < width + median_offset
