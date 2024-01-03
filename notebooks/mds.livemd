@@ -6,9 +6,10 @@ Mix.install([
   {:kino, "~> 0.11.3", override: true},
   {:kino_vega_lite, "~> 0.1.9"},
   {:exla, "~> 0.6.4"},
-  {:tucan, "~> 0.2.1"},
+  {:tucan, "~> 0.3.0"},
   {:explorer, "~> 0.7.1"},
-  {:req, "~> 0.4.5"}
+  {:req, "~> 0.4.5"},
+  {:nx, git: "https://github.com/elixir-nx/nx.git", sparse: "nx", override: true}
 ])
 ```
 
@@ -1097,7 +1098,11 @@ labels
 Let's look how one of the images look like
 
 ```elixir
-digits_data[[1234, ..]] |> Nx.reshape({image_height, image_width}) |> Nx.to_heatmap()
+image = 
+  Nx.reshape(digits_data[[1234, ..]], {image_height, image_width})
+  |> Nx.as_type({:u, 8})
+
+Tucan.imshow(image, width: 200, height: 200, color_scheme: :greys, reverse: true)
 ```
 
 ```elixir
