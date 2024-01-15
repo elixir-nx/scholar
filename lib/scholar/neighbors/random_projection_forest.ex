@@ -49,11 +49,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     num_neighbors: [
       required: true,
       type: :pos_integer,
-<<<<<<< HEAD
-      doc: "The number of nearest neighbors ..."
-=======
       doc: "The number of nearest neighbors."
->>>>>>> knn-graph
     ],
     min_leaf_size: [
       type: :pos_integer,
@@ -85,11 +81,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   ## Examples
 
       iex> key = Nx.Random.key(12)
-<<<<<<< HEAD
-      iex> tensor = Nx.iota({5, 3})
-=======
       iex> tensor = Nx.iota({5, 2})
->>>>>>> knn-graph
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
       iex> forest.indices
       #Nx.Tensor<
@@ -288,36 +280,22 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   ## Examples
 
       iex> key = Nx.Random.key(12)
-<<<<<<< HEAD
-      iex> tensor = Nx.iota({5, 3})
-      iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
-      iex> query = Nx.tensor([[5, 6, 7]])
-=======
       iex> tensor = Nx.iota({5, 2})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
       iex> query = Nx.tensor([[3, 4]])
->>>>>>> knn-graph
       iex> {neighbors, distances} = Scholar.Neighbors.RandomProjectionForest.predict(forest, query)
       iex> neighbors
       #Nx.Tensor<
         u32[1][2]
         [
-<<<<<<< HEAD
-          [2, 1]
-=======
           [1, 2]
->>>>>>> knn-graph
         ]
       >
       iex> distances
       #Nx.Tensor<
         f32[1][2]
         [
-<<<<<<< HEAD
-          [3.0, 12.0]
-=======
           [2.0, 2.0]
->>>>>>> knn-graph
         ]
       >
   """
@@ -363,11 +341,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       |> Nx.transpose(axes: [1, 0, 2])
       |> Nx.reshape({query_size, num_trees * leaf_size})
 
-<<<<<<< HEAD
-    find_neighbors(query, forest.data, candidate_indices, num_neighbors: k)
-=======
     Utils.find_neighbors(query, forest.data, candidate_indices, num_neighbors: k)
->>>>>>> knn-graph
   end
 
   defnp compute_start_indices(forest, query) do
@@ -423,71 +397,6 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   end
 
   defnp left_child(nodes), do: 2 * nodes + 1
-<<<<<<< HEAD
 
   defnp right_child(nodes), do: 2 * nodes + 2
-
-  defnp find_neighbors(query, data, candidate_indices, opts) do
-    k = opts[:num_neighbors]
-    {size, length} = Nx.shape(candidate_indices)
-
-    distances =
-      query
-      |> Nx.new_axis(1)
-      |> Nx.subtract(Nx.take(data, candidate_indices))
-      |> Nx.pow(2)
-      |> Nx.sum(axes: [2])
-
-    distances =
-      if length > 1 do
-        sorted_indices = Nx.argsort(candidate_indices, axis: 1, stable: true)
-        inverse = inverse_permutation(sorted_indices)
-        sorted = Nx.take_along_axis(candidate_indices, sorted_indices, axis: 1)
-
-        duplicate_mask =
-          Nx.concatenate(
-            [
-              Nx.broadcast(0, {size, 1}),
-              Nx.equal(sorted[[.., 0..-2//1]], sorted[[.., 1..-1//1]])
-            ],
-            axis: 1
-          )
-          |> Nx.take_along_axis(inverse, axis: 1)
-
-        Nx.select(duplicate_mask, :infinity, distances)
-      else
-        distances
-      end
-
-    indices = Nx.argsort(distances, axis: 1) |> Nx.slice_along_axis(0, k, axis: 1)
-
-    neighbor_indices =
-      Nx.take(
-        Nx.vectorize(candidate_indices, :samples),
-        Nx.vectorize(indices, :samples)
-      )
-      |> Nx.devectorize()
-      |> Nx.rename(nil)
-
-    neighbor_distances = Nx.take_along_axis(distances, indices, axis: 1)
-
-    {neighbor_indices, neighbor_distances}
-  end
-
-  defnp inverse_permutation(indices) do
-    {size, length} = Nx.shape(indices)
-    target = Nx.broadcast(Nx.u32(0), {size, length})
-    samples = Nx.iota({size, length, 1}, axis: 0)
-
-    indices =
-      Nx.concatenate([samples, Nx.new_axis(indices, 2)], axis: 2)
-      |> Nx.reshape({size * length, 2})
-
-    updates = Nx.iota({size, length}, axis: 1) |> Nx.reshape({size * length})
-    Nx.indexed_add(target, indices, updates)
-  end
-=======
-
-  defnp right_child(nodes), do: 2 * nodes + 2
->>>>>>> knn-graph
 end

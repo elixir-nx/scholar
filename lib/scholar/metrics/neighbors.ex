@@ -9,6 +9,7 @@ defmodule Scholar.Metrics.Neighbors do
             got tensor with shape: #{inspect(Nx.shape(graph_true))}\
             """
     end
+
     if Nx.rank(graph_pred) != 2 do
       raise ArgumentError,
             """
@@ -16,6 +17,7 @@ defmodule Scholar.Metrics.Neighbors do
             got tensor with shape: #{inspect(Nx.shape(graph_pred))}\
             """
     end
+
     if Nx.shape(graph_true) != Nx.shape(graph_pred) do
       raise ArgumentError,
             """
@@ -23,6 +25,7 @@ defmodule Scholar.Metrics.Neighbors do
             got #{inspect(Nx.shape(graph_true))} and #{inspect(Nx.shape(graph_pred))}\
             """
     end
+
     recall_n(graph_true, graph_pred)
   end
 

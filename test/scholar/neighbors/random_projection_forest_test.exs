@@ -36,14 +36,6 @@ defmodule Scholar.Neighbors.RandomProjectionForestTest do
     end
   end
 
-<<<<<<< HEAD
-  defp x do
-    key = Nx.Random.key(12)
-    Nx.Random.uniform(key, shape: {1000, 10}) |> elem(0)
-  end
-
-=======
->>>>>>> knn-graph
   describe "predict" do
     test "shape" do
       tensor = example()
@@ -51,22 +43,15 @@ defmodule Scholar.Neighbors.RandomProjectionForestTest do
       forest =
         RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 4, min_leaf_size: 3)
 
-<<<<<<< HEAD
-      {neighbor_indices, neighbor_distances} = RandomProjectionForest.predict(forest, Nx.tensor([[20, 30], [30, 50]]))
-=======
       {neighbor_indices, neighbor_distances} =
         RandomProjectionForest.predict(forest, Nx.tensor([[20, 30], [30, 50]]))
 
->>>>>>> knn-graph
       assert Nx.shape(neighbor_indices) == {2, 2}
       assert Nx.shape(neighbor_distances) == {2, 2}
     end
 
     test "every point is its own neighbor when num_neighbors is 1" do
       key = Nx.Random.key(12)
-<<<<<<< HEAD
-      tensor = x()
-=======
       {tensor, key} = Nx.Random.uniform(key, shape: {1000, 10})
       size = Nx.axis_size(tensor, 0)
 
@@ -86,7 +71,6 @@ defmodule Scholar.Neighbors.RandomProjectionForestTest do
     test "every point is its own neighbor when num_neighbors is 1 and size is power of two" do
       key = Nx.Random.key(12)
       {tensor, key} = Nx.Random.uniform(key, shape: {1024, 10})
->>>>>>> knn-graph
       size = Nx.axis_size(tensor, 0)
 
       forest =
