@@ -253,9 +253,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
     right_first = Nx.take_along_axis(level_proj, right_indices, axis: 1)
 
-    nodes = Nx.iota({num_nodes}, type: :u32)
     medians_first = (left_first + right_first) / 2
 
+    nodes = Nx.iota({num_nodes}, type: :u32)
     median_mask = width <= nodes and nodes < width + median_offset
     median_pos = Nx.argsort(median_mask, direction: :desc, stable: true, type: :u32)
     level_medians = Nx.take(medians_first, median_pos, axis: 1)

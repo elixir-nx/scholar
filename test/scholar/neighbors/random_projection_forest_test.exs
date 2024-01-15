@@ -48,7 +48,9 @@ defmodule Scholar.Neighbors.RandomProjectionForestTest do
       forest =
         RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 4, min_leaf_size: 3)
 
-      {neighbor_indices, neighbor_distances} = RandomProjectionForest.predict(forest, Nx.tensor([[20, 30], [30, 50]]))
+      {neighbor_indices, neighbor_distances} =
+        RandomProjectionForest.predict(forest, Nx.tensor([[20, 30], [30, 50]]))
+
       assert Nx.shape(neighbor_indices) == {2, 2}
       assert Nx.shape(neighbor_distances) == {2, 2}
     end
