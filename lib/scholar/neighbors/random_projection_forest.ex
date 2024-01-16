@@ -18,6 +18,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   """
 
   import Nx.Defn
+  import Scholar.Shared
   require Nx
 
   @derive {Nx.Container,
@@ -80,13 +81,13 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   ## Examples
 
       iex> key = Nx.Random.key(12)
-      iex> tensor = Nx.iota({5, 3})
+      iex> tensor = Nx.iota({5, 2})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
       iex> forest.indices
       #Nx.Tensor<
         u32[3][5]
         [
-          [4, 3, 2, 1, 0],
+          [0, 1, 2, 3, 4],
           [0, 1, 2, 3, 4],
           [4, 3, 2, 1, 0]
         ]
@@ -170,16 +171,17 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   defn fit_n(tensor, key, opts) do
     depth = opts[:depth]
     num_trees = opts[:num_trees]
+    type = to_float_type(tensor)
     {size, dim} = Nx.shape(tensor)
     num_nodes = 2 ** depth - 1
 
     {hyperplanes, _key} =
-      Nx.Random.normal(key, type: :f64, shape: {num_trees, depth, dim})
+      Nx.Random.normal(key, type: type, shape: {num_trees, depth, dim})
 
     {indices, medians, _} =
       while {
               indices = Nx.iota({num_trees, size}, axis: 1, type: :u32),
-              medians = Nx.broadcast(Nx.tensor(:nan, type: :f64), {num_trees, num_nodes}),
+              medians = Nx.broadcast(Nx.tensor(:nan, type: type), {num_trees, num_nodes}),
               {
                 tensor,
                 hyperplanes,
@@ -279,22 +281,22 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   ## Examples
 
       iex> key = Nx.Random.key(12)
-      iex> tensor = Nx.iota({5, 3})
+      iex> tensor = Nx.iota({5, 2})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
-      iex> query = Nx.tensor([[5, 6, 7]])
+      iex> query = Nx.tensor([[3, 4]])
       iex> {neighbors, distances} = Scholar.Neighbors.RandomProjectionForest.predict(forest, query)
       iex> neighbors
       #Nx.Tensor<
         u32[1][2]
         [
-          [2, 1]
+          [1, 2]
         ]
       >
       iex> distances
       #Nx.Tensor<
         f32[1][2]
         [
-          [3.0, 12.0]
+          [2.0, 2.0]
         ]
       >
   """
