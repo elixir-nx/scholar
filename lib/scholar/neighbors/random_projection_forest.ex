@@ -18,6 +18,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   """
 
   import Nx.Defn
+  import Scholar.Shared
   require Nx
   alias Scholar.Neighbors.Utils
 
@@ -87,7 +88,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       #Nx.Tensor<
         u32[3][5]
         [
-          [4, 3, 2, 1, 0],
+          [0, 1, 2, 3, 4],
           [0, 1, 2, 3, 4],
           [4, 3, 2, 1, 0]
         ]
@@ -171,16 +172,17 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   defn fit_n(tensor, key, opts) do
     depth = opts[:depth]
     num_trees = opts[:num_trees]
+    type = to_float_type(tensor)
     {size, dim} = Nx.shape(tensor)
     num_nodes = 2 ** depth - 1
 
     {hyperplanes, _key} =
-      Nx.Random.normal(key, type: :f64, shape: {num_trees, depth, dim})
+      Nx.Random.normal(key, type: type, shape: {num_trees, depth, dim})
 
     {indices, medians, _} =
       while {
               indices = Nx.iota({num_trees, size}, axis: 1, type: :u32),
-              medians = Nx.broadcast(Nx.tensor(:nan, type: :f64), {num_trees, num_nodes}),
+              medians = Nx.broadcast(Nx.tensor(:nan, type: type), {num_trees, num_nodes}),
               {
                 tensor,
                 hyperplanes,
