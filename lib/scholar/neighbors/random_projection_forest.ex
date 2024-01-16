@@ -48,7 +48,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     num_neighbors: [
       required: true,
       type: :pos_integer,
-      doc: "The number of nearest neighbors ..."
+      doc: "The number of nearest neighbors."
     ],
     min_leaf_size: [
       type: :pos_integer,
