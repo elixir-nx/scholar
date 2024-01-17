@@ -4,40 +4,6 @@ defmodule Scholar.Preprocessing do
   """
 
   import Nx.Defn
-  import Scholar.Shared
-
-  general_schema = [
-    axes: [
-      type: {:custom, Scholar.Options, :axes, []},
-      doc: """
-      Axes to calculate the distance over. By default the distance
-      is calculated between the whole tensors.
-      """
-    ]
-  ]
-
-  encode_schema = [
-    num_classes: [
-      required: true,
-      type: :pos_integer,
-      doc: """
-      Number of classes to be encoded.
-      """
-    ]
-  ]
-
-  normalize_schema =
-    general_schema ++
-      [
-        norm: [
-          type: {:in, [:euclidean, :chebyshev, :manhattan]},
-          default: :euclidean,
-          doc: """
-          The norm to use to normalize each non zero sample.
-          Possible options are `:euclidean`, `:manhattan`, and `:chebyshev`
-          """
-        ]
-      ]
 
   binarize_schema = [
     type: [
@@ -56,9 +22,7 @@ defmodule Scholar.Preprocessing do
     ]
   ]
 
-  @normalize_schema NimbleOptions.new!(normalize_schema)
   @binarize_schema NimbleOptions.new!(binarize_schema)
-  @encode_schema NimbleOptions.new!(encode_schema)
 
   @doc """
   Standardizes the tensor by removing the mean and scaling to unit variance.
@@ -75,7 +39,7 @@ defmodule Scholar.Preprocessing do
       >
 
   """
-  deftransform standard_scale(tensor, opts \\ []) do
+  defn standard_scale(tensor, opts \\ []) do
     Scholar.Preprocessing.StandardScaler.fit_transform(tensor, opts)
   end
 
@@ -110,7 +74,7 @@ defmodule Scholar.Preprocessing do
         1.0
       >
   """
-  deftransform max_abs_scale(tensor, opts \\ []) do
+  defn max_abs_scale(tensor, opts \\ []) do
     Scholar.Preprocessing.MaxAbsScaler.fit_transform(tensor, opts)
   end
 
@@ -134,7 +98,7 @@ defmodule Scholar.Preprocessing do
         0.0
       >
   """
-  deftransform min_max_scale(tensor, opts \\ []) do
+  defn min_max_scale(tensor, opts \\ []) do
     Scholar.Preprocessing.MinMaxScaler.fit_transform(tensor, opts)
   end
 
@@ -176,11 +140,8 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  Encodes a tensor's values into integers from range 0 to `:num_classes - 1`.
-
-  ## Options
-
-  #{NimbleOptions.docs(@encode_schema)}
+  It is a shortcut for `Scholar.Preprocessing.OrdinalEncoder.fit_transform/2`.
+  See `Scholar.Preprocessing.OrdinalEncoder` for more information.
 
   ## Examples
 
@@ -190,42 +151,13 @@ defmodule Scholar.Preprocessing do
         [1, 0, 2, 3, 0, 2, 0]
       >
   """
-  deftransform ordinal_encode(tensor, opts \\ []) do
-    ordinal_encode_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
-  end
-
-  defnp ordinal_encode_n(tensor, opts) do
-    sorted = Nx.sort(tensor)
-    num_classes = opts[:num_classes]
-
-    # A mask with a single 1 in every group of equal values
-    representative_mask =
-      Nx.concatenate([
-        sorted[0..-2//1] != sorted[1..-1//1],
-        Nx.tensor([1])
-      ])
-
-    representative_indices =
-      representative_mask
-      |> Nx.argsort(direction: :desc)
-      |> Nx.slice_along_axis(0, num_classes)
-
-    representative_values = Nx.take(sorted, representative_indices)
-
-    (Nx.new_axis(tensor, 1) ==
-       Nx.new_axis(representative_values, 0))
-    |> Nx.argmax(axis: 1)
+  defn ordinal_encode(tensor, opts \\ []) do
+    Scholar.Preprocessing.OrdinalEncoder.fit_transform(tensor, opts)
   end
 
   @doc """
-  Encode labels as a one-hot numeric tensor.
-
-  Labels must be integers from 0 to `:num_classes - 1`. If the data does
-  not meet the condition, please use `ordinal_encoding/2` first.
-
-  ## Options
-
-  #{NimbleOptions.docs(@encode_schema)}
+  It is a shortcut for `Scholar.Preprocessing.OneHotEncoder.fit_transform/2`.
+  See `Scholar.Preprocessing.OneHotEncoder` for more information.
 
   ## Examples
 
@@ -243,19 +175,8 @@ defmodule Scholar.Preprocessing do
         ]
       >
   """
-  deftransform one_hot_encode(tensor, opts \\ []) do
-    one_hot_encode_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
-  end
-
-  defnp one_hot_encode_n(tensor, opts) do
-    {len} = Nx.shape(tensor)
-
-    if opts[:num_classes] > len do
-      raise ArgumentError,
-            "expected :num_classes to be at most as length of label vector"
-    end
-
-    Nx.new_axis(tensor, -1) == Nx.iota({1, opts[:num_classes]})
+  defn one_hot_encode(tensor, opts \\ []) do
+    Scholar.Preprocessing.OneHotEncoder.fit_transform(tensor, opts)
   end
 
   @doc """
@@ -264,9 +185,8 @@ defmodule Scholar.Preprocessing do
   The zero-tensors cannot be normalized and they stay the same
   after normalization.
 
-  ## Options
-
-  #{NimbleOptions.docs(@normalize_schema)}
+  It is a shortcut for `Scholar.Preprocessing.Normalizer.fit_transform/2`.
+  See `Scholar.Preprocessing.Normalizer` for more information.
 
   ## Examples
 
@@ -291,43 +211,6 @@ defmodule Scholar.Preprocessing do
       >
   """
   deftransform normalize(tensor, opts \\ []) do
-    normalize_n(tensor, NimbleOptions.validate!(opts, @normalize_schema))
-  end
-
-  defnp normalize_n(tensor, opts) do
-    shape = Nx.shape(tensor)
-    type = to_float_type(tensor)
-    zeros = Nx.broadcast(Nx.tensor(0.0, type: type), shape)
-
-    norm =
-      case opts[:norm] do
-        :euclidean ->
-          Scholar.Metrics.Distance.euclidean(tensor, zeros, axes: opts[:axes])
-
-        :manhattan ->
-          Scholar.Metrics.Distance.manhattan(tensor, zeros, axes: opts[:axes])
-
-        :chebyshev ->
-          Scholar.Metrics.Distance.chebyshev(tensor, zeros, axes: opts[:axes])
-
-        other ->
-          raise ArgumentError,
-                "expected :norm to be one of: :euclidean, :manhattan, and :chebyshev, got: #{inspect(other)}"
-      end
-
-    shape_to_broadcast = unsqueezed_reduced_shape(shape, opts[:axes])
-
-    norm =
-      Nx.select(norm == 0.0, Nx.tensor(1.0, type: type), norm) |> Nx.reshape(shape_to_broadcast)
-
-    tensor / norm
-  end
-
-  deftransformp unsqueezed_reduced_shape(shape, axes) do
-    if axes != nil do
-      Enum.reduce(axes, shape, &put_elem(&2, &1, 1))
-    else
-      Tuple.duplicate(1, Nx.rank(shape))
-    end
+    Scholar.Preprocessing.Normalizer.fit_transform(tensor, opts)
   end
 end

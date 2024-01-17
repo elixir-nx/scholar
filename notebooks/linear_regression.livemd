@@ -12,7 +12,7 @@ Mix.install([
   {:kino_vega_lite, "~> 0.1.9"},
   {:kino, "~> 0.10.0"},
   {:kino_explorer, "~> 0.1.7"},
-  {:tucan, "~> 0.2.1"}
+  {:tucan, "~> 0.3.0"}
 ])
 ```
 
@@ -474,13 +474,11 @@ sample = DF.sample(df, 0.2, seed: seed)
 
 histograms =
   for name <- List.delete(df.names, "ocean_proximity") do
-    Tucan.new()
-    |> Tucan.histogram(name, maxbins: 50, fill_opacity: 1.0)
+    Tucan.histogram(sample, name, maxbins: 50, fill_opacity: 1.0, only: [name])
     |> Tucan.Axes.put_options(:x, ticks: false)
   end
 
-Tucan.new(sample, columns: 3)
-|> Tucan.concat(histograms)
+Tucan.concat(histograms, columns: 3)
 |> Tucan.set_title("Univariate Histograms of all features", anchor: :middle)
 |> Tucan.set_size(500, 500)
 ```

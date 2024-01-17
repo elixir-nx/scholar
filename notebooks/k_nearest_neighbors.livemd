@@ -13,7 +13,7 @@ Mix.install([
   {:kino, "~> 0.10.0"},
   {:scidata, "~> 0.1.10"},
   {:kino_explorer, "~> 0.1.7"},
-  {:tucan, "~> 0.2.1"}
+  {:tucan, "~> 0.3.0"}
 ])
 ```
 
@@ -104,8 +104,8 @@ Tucan.layers([
     point_shape: "triangle-up",
     filled: true
   ),
-  Tucan.circle(Tucan.new(), {0, 0}, radius.(0.2, 0.4), line_color: "brown", stroke_width: 2),
-  Tucan.circle(Tucan.new(), {0, 0}, radius.(-1, 0.1), line_color: "blue", stroke_width: 2),
+  Tucan.Geometry.circle({0, 0}, radius.(0.2, 0.4), line_color: "brown", stroke_width: 2),
+  Tucan.Geometry.circle({0, 0}, radius.(-1, 0.1), line_color: "blue", stroke_width: 2),
   Tucan.annotate(Tucan.new(), 0.42, 0.42, "k = 3", color: "brown", size: 20),
   Tucan.annotate(Tucan.new(), 0.81, 0.81, "k = 5", color: "blue", size: 20)
 ])
@@ -264,11 +264,11 @@ Almost all features have positive kurtosis (they are leptokurtic). `alcohol` has
 sample = DF.sample(df_data, 0.5, seed: seed)
 
 Tucan.hconcat([
-  Tucan.density(sample, "alcohol", only: ["alcohol"], area_color: "lightblue")
+  Tucan.density(sample, "alcohol", only: ["alcohol"], fill_color: "lightblue")
   |> Tucan.Axes.set_x_title("% of alcohol")
   |> Tucan.set_size(350, 300)
   |> Tucan.set_title("KDE plot of alcohol feature", offset: 20),
-  Tucan.density(sample, "pH", only: ["pH"], area_color: "lightgreen")
+  Tucan.density(sample, "pH", only: ["pH"], fill_color: "lightgreen")
   |> Tucan.set_size(350, 300)
   |> Tucan.set_title("KDE plot of pH feature", offset: 20)
 ])
@@ -604,25 +604,33 @@ data = DF.discard(dataset_df, "scaled_sound_pressure_level")
 Below are the KDE plots of the dataset's features. We will analyze them in the next step.
 
 ```elixir
-Tucan.new(data, columns: 2)
-|> Tucan.concat([
-  Tucan.density(Tucan.new(), "frequency", area_color: "lightblue")
-  |> Tucan.Axes.set_x_title("Frequency (Hz)")
-  |> Tucan.set_size(350, 300)
-  |> Tucan.set_title("KDE plot of Frequency feature", offset: 20),
-  Tucan.density(Tucan.new(), "free_stream_velocity", area_color: "purple")
-  |> Tucan.Axes.set_x_title("Angle of attack")
-  |> Tucan.set_size(350, 300)
-  |> Tucan.set_title("KDE plot of Angle of Attack feature", offset: 20),
-  Tucan.density(Tucan.new(), "angle_of_attack", area_color: "lightgreen")
-  |> Tucan.Axes.set_x_title("Angle of attack")
-  |> Tucan.set_size(350, 300)
-  |> Tucan.set_title("KDE plot of Angle of Attack feature", offset: 20),
-  Tucan.density(Tucan.new(), "suction_side_displacement_thickness", area_color: "red")
-  |> Tucan.Axes.set_x_title("Suction Side Displacement Thickness")
-  |> Tucan.set_size(350, 300)
-  |> Tucan.set_title("KDE plot of Suction Side Displacement\nThickness feature", offset: 20)
-])
+Tucan.concat(
+  [
+    Tucan.density(data, "frequency", fill_color: "lightblue", only: ["frequency"])
+    |> Tucan.Axes.set_x_title("Frequency (Hz)")
+    |> Tucan.set_size(350, 300)
+    |> Tucan.set_title("KDE plot of Frequency feature", offset: 20),
+    Tucan.density(data, "free_stream_velocity",
+      fill_color: "purple",
+      only: ["free_stream_velocity"]
+    )
+    |> Tucan.Axes.set_x_title("Angle of attack")
+    |> Tucan.set_size(350, 300)
+    |> Tucan.set_title("KDE plot of Angle of Attack feature", offset: 20),
+    Tucan.density(data, "angle_of_attack", fill_color: "lightgreen", only: ["angle_of_attack"])
+    |> Tucan.Axes.set_x_title("Angle of attack")
+    |> Tucan.set_size(350, 300)
+    |> Tucan.set_title("KDE plot of Angle of Attack feature", offset: 20),
+    Tucan.density(data, "suction_side_displacement_thickness",
+      fill_color: "red",
+      only: ["suction_side_displacement_thickness"]
+    )
+    |> Tucan.Axes.set_x_title("Suction Side Displacement Thickness")
+    |> Tucan.set_size(350, 300)
+    |> Tucan.set_title("KDE plot of Suction Side Displacement\nThickness feature", offset: 20)
+  ],
+  columns: 2
+)
 |> Tucan.set_title("KDE plots of Features", anchor: :middle, offset: 20)
 ```
 
