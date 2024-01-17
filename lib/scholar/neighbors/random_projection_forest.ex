@@ -18,7 +18,6 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   """
 
   import Nx.Defn
-  import Scholar.Shared
   require Nx
 
   @derive {Nx.Container,
@@ -49,7 +48,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     num_neighbors: [
       required: true,
       type: :pos_integer,
-      doc: "The number of nearest neighbors."
+      doc: "The number of nearest neighbors ..."
     ],
     min_leaf_size: [
       type: :pos_integer,
@@ -81,13 +80,13 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   ## Examples
 
       iex> key = Nx.Random.key(12)
-      iex> tensor = Nx.iota({5, 2})
+      iex> tensor = Nx.iota({5, 3})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
       iex> forest.indices
       #Nx.Tensor<
         u32[3][5]
         [
-          [0, 1, 2, 3, 4],
+          [4, 3, 2, 1, 0],
           [0, 1, 2, 3, 4],
           [4, 3, 2, 1, 0]
         ]
@@ -171,17 +170,16 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   defn fit_n(tensor, key, opts) do
     depth = opts[:depth]
     num_trees = opts[:num_trees]
-    type = to_float_type(tensor)
     {size, dim} = Nx.shape(tensor)
     num_nodes = 2 ** depth - 1
 
     {hyperplanes, _key} =
-      Nx.Random.normal(key, type: type, shape: {num_trees, depth, dim})
+      Nx.Random.normal(key, type: :f64, shape: {num_trees, depth, dim})
 
     {indices, medians, _} =
       while {
               indices = Nx.iota({num_trees, size}, axis: 1, type: :u32),
-              medians = Nx.broadcast(Nx.tensor(:nan, type: type), {num_trees, num_nodes}),
+              medians = Nx.broadcast(Nx.tensor(:nan, type: :f64), {num_trees, num_nodes}),
               {
                 tensor,
                 hyperplanes,
@@ -255,9 +253,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
     right_first = Nx.take_along_axis(level_proj, right_indices, axis: 1)
 
+    nodes = Nx.iota({num_nodes}, type: :u32)
     medians_first = (left_first + right_first) / 2
 
-    nodes = Nx.iota({num_nodes}, type: :u32)
     median_mask = width <= nodes and nodes < width + median_offset
     median_pos = Nx.argsort(median_mask, direction: :desc, stable: true, type: :u32)
     level_medians = Nx.take(medians_first, median_pos, axis: 1)
@@ -281,22 +279,22 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   ## Examples
 
       iex> key = Nx.Random.key(12)
-      iex> tensor = Nx.iota({5, 2})
+      iex> tensor = Nx.iota({5, 3})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
-      iex> query = Nx.tensor([[3, 4]])
+      iex> query = Nx.tensor([[5, 6, 7]])
       iex> {neighbors, distances} = Scholar.Neighbors.RandomProjectionForest.predict(forest, query)
       iex> neighbors
       #Nx.Tensor<
         u32[1][2]
         [
-          [1, 2]
+          [2, 1]
         ]
       >
       iex> distances
       #Nx.Tensor<
         f32[1][2]
         [
-          [2.0, 2.0]
+          [3.0, 12.0]
         ]
       >
   """

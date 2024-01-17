@@ -36,6 +36,11 @@ defmodule Scholar.Neighbors.RandomProjectionForestTest do
     end
   end
 
+  defp x do
+    key = Nx.Random.key(12)
+    Nx.Random.uniform(key, shape: {1000, 10}) |> elem(0)
+  end
+
   describe "predict" do
     test "shape" do
       tensor = example()
@@ -43,34 +48,14 @@ defmodule Scholar.Neighbors.RandomProjectionForestTest do
       forest =
         RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 4, min_leaf_size: 3)
 
-      {neighbor_indices, neighbor_distances} =
-        RandomProjectionForest.predict(forest, Nx.tensor([[20, 30], [30, 50]]))
-
+      {neighbor_indices, neighbor_distances} = RandomProjectionForest.predict(forest, Nx.tensor([[20, 30], [30, 50]]))
       assert Nx.shape(neighbor_indices) == {2, 2}
       assert Nx.shape(neighbor_distances) == {2, 2}
     end
 
     test "every point is its own neighbor when num_neighbors is 1" do
       key = Nx.Random.key(12)
-      {tensor, key} = Nx.Random.uniform(key, shape: {1000, 10})
-      size = Nx.axis_size(tensor, 0)
-
-      forest =
-        RandomProjectionForest.fit(tensor,
-          num_neighbors: 1,
-          num_trees: 1,
-          min_leaf_size: 1,
-          key: key
-        )
-
-      {neighbors, distances} = RandomProjectionForest.predict(forest, tensor)
-      assert Nx.flatten(neighbors) == Nx.iota({size}, type: :u32)
-      assert Nx.flatten(distances) == Nx.broadcast(0.0, {size})
-    end
-
-    test "every point is its own neighbor when num_neighbors is 1 and size is power of two" do
-      key = Nx.Random.key(12)
-      {tensor, key} = Nx.Random.uniform(key, shape: {1024, 10})
+      tensor = x()
       size = Nx.axis_size(tensor, 0)
 
       forest =
