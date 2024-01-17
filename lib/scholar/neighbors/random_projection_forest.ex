@@ -19,6 +19,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
   import Nx.Defn
   require Nx
+  alias Scholar.Neighbors.Utils
 
   @derive {Nx.Container,
            keep: [:num_neighbors, :depth, :leaf_size, :num_trees],
@@ -48,7 +49,11 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     num_neighbors: [
       required: true,
       type: :pos_integer,
+<<<<<<< HEAD
       doc: "The number of nearest neighbors ..."
+=======
+      doc: "The number of nearest neighbors."
+>>>>>>> knn-graph
     ],
     min_leaf_size: [
       type: :pos_integer,
@@ -80,7 +85,11 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   ## Examples
 
       iex> key = Nx.Random.key(12)
+<<<<<<< HEAD
       iex> tensor = Nx.iota({5, 3})
+=======
+      iex> tensor = Nx.iota({5, 2})
+>>>>>>> knn-graph
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
       iex> forest.indices
       #Nx.Tensor<
@@ -253,9 +262,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
     right_first = Nx.take_along_axis(level_proj, right_indices, axis: 1)
 
-    nodes = Nx.iota({num_nodes}, type: :u32)
     medians_first = (left_first + right_first) / 2
 
+    nodes = Nx.iota({num_nodes}, type: :u32)
     median_mask = width <= nodes and nodes < width + median_offset
     median_pos = Nx.argsort(median_mask, direction: :desc, stable: true, type: :u32)
     level_medians = Nx.take(medians_first, median_pos, axis: 1)
@@ -279,22 +288,36 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   ## Examples
 
       iex> key = Nx.Random.key(12)
+<<<<<<< HEAD
       iex> tensor = Nx.iota({5, 3})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
       iex> query = Nx.tensor([[5, 6, 7]])
+=======
+      iex> tensor = Nx.iota({5, 2})
+      iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
+      iex> query = Nx.tensor([[3, 4]])
+>>>>>>> knn-graph
       iex> {neighbors, distances} = Scholar.Neighbors.RandomProjectionForest.predict(forest, query)
       iex> neighbors
       #Nx.Tensor<
         u32[1][2]
         [
+<<<<<<< HEAD
           [2, 1]
+=======
+          [1, 2]
+>>>>>>> knn-graph
         ]
       >
       iex> distances
       #Nx.Tensor<
         f32[1][2]
         [
+<<<<<<< HEAD
           [3.0, 12.0]
+=======
+          [2.0, 2.0]
+>>>>>>> knn-graph
         ]
       >
   """
@@ -340,7 +363,11 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       |> Nx.transpose(axes: [1, 0, 2])
       |> Nx.reshape({query_size, num_trees * leaf_size})
 
+<<<<<<< HEAD
     find_neighbors(query, forest.data, candidate_indices, num_neighbors: k)
+=======
+    Utils.find_neighbors(query, forest.data, candidate_indices, num_neighbors: k)
+>>>>>>> knn-graph
   end
 
   defnp compute_start_indices(forest, query) do
@@ -396,6 +423,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   end
 
   defnp left_child(nodes), do: 2 * nodes + 1
+<<<<<<< HEAD
 
   defnp right_child(nodes), do: 2 * nodes + 2
 
@@ -458,4 +486,8 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     updates = Nx.iota({size, length}, axis: 1) |> Nx.reshape({size * length})
     Nx.indexed_add(target, indices, updates)
   end
+=======
+
+  defnp right_child(nodes), do: 2 * nodes + 2
+>>>>>>> knn-graph
 end
