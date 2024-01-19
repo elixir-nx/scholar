@@ -122,18 +122,17 @@ defmodule Scholar.Neighbors.LargeVis do
     num_iters = opts[:num_iters]
     {n, k} = Nx.shape(graph)
 
-    {graph, distances, _} =
+    {result, _} =
       while {
-              graph,
-              _distances = Nx.broadcast(Nx.tensor(:nan, type: to_float_type(tensor)), {n, k}),
+              {graph,
+              _distances = Nx.broadcast(Nx.tensor(:nan, type: to_float_type(tensor))}, {n, k}),
               {tensor, iter = 0}
             },
             iter < num_iters do
-        {graph, distances} = expansion_iter(graph, tensor)
-        {graph, distances, {tensor, iter + 1}}
+        {expansion_iter(graph, tensor), {tensor, iter + 1}}
       end
 
-    {graph, distances}
+    result
   end
 
   defnp expansion_iter(graph, tensor) do
