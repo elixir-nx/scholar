@@ -55,6 +55,7 @@ defmodule Scholar.Neighbors.LargeVis do
 
   @doc """
   Constructs the approximate k-NN graph with LargeVis.
+
   Returns neighbor indices and distances.
 
   ## Examples
