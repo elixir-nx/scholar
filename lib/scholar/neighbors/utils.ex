@@ -1,4 +1,5 @@
 defmodule Scholar.Neighbors.Utils do
+  @moduledoc false
   import Nx.Defn
   require Nx
 
