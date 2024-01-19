@@ -124,8 +124,10 @@ defmodule Scholar.Neighbors.LargeVis do
 
     {result, _} =
       while {
-              {graph,
-              _distances = Nx.broadcast(Nx.tensor(:nan, type: to_float_type(tensor))}, {n, k}),
+              {
+                graph,
+                _distances = Nx.broadcast(Nx.tensor(:nan, type: to_float_type(tensor)), {n, k})
+              },
               {tensor, iter = 0}
             },
             iter < num_iters do
