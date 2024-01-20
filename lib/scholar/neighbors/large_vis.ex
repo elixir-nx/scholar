@@ -1,6 +1,7 @@
 defmodule Scholar.Neighbors.LargeVis do
   @moduledoc """
-  Implements LargeVis algorithm for approximate k-nearest neighbor (k-NN) graph construction.
+  LargeVis algorithm for approximate k-nearest neighbor (k-NN) graph construction.
+
   The algorithms works in the following way. First, the approximate k-NN graph is constructed
   using a random projection forest. Then, the graph is refined by looking at the neighbors of
   neighbors of every point for a fixed number of iterations. This step is called NN-expansion.

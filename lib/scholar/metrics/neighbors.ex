@@ -1,6 +1,31 @@
 defmodule Scholar.Metrics.Neighbors do
+  @moduledoc """
+  Metrics for evaluating the results of approximate k-nearest neighbor search algorithms.
+  """
+
   import Nx.Defn
 
+  @doc """
+  Computes the recall of predicted k-nearest neighbors given the true k-nearest neighbors.
+  Recall is defined as the average fraction of nearest neighbors the algorithm predicted correctly.
+
+  ## Examples
+
+      iex> neighbors_true = Nx.tensor([[0, 1], [1, 2], [2, 1]])
+      iex> Scholar.Metrics.Neighbors.recall(neighbors_true, neighbors_true)
+      #Nx.Tensor<
+        f32
+        1.0
+      >
+
+      iex> neighbors_true = Nx.tensor([[0, 1], [1, 2], [2, 1]])
+      iex> neighbors_pred = Nx.tensor([[0, 1], [1, 0], [2, 0]])
+      iex> Scholar.Metrics.Neighbors.recall(neighbors_true, neighbors_pred)
+      #Nx.Tensor<
+        f32
+        0.6666666865348816
+      >
+  """
   defn recall(neighbors_true, neighbors_pred) do
     if Nx.rank(neighbors_true) != 2 do
       raise ArgumentError,

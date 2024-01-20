@@ -13,7 +13,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   The leaves of the trees are arranged as blocks in the field `indices`. We use the same
   hyperplane for all nodes on the same level as in [2].
 
-  * [1] - Random projection trees and low dimensional manifolds
+  * [1] - Randomized partition trees for nearest neighbor search
   * [2] - Fast Nearest Neighbor Search through Sparse Random Projections and Voting
   """
 
