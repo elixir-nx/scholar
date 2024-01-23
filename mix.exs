@@ -33,7 +33,7 @@ defmodule Scholar.MixProject do
       # {:nx, "~> 0.6.4 or ~> 0.7", override: true},
       {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
-      {:exla, "~> 0.6.3 or ~> 0.7", optional: true},
+      {:exla, github: "elixir-nx/nx", sparse: "exla", override: true},
       {:polaris, "~> 0.1"},
       {:benchee, "~> 1.0", only: :dev}
     ]

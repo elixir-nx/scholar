@@ -12,6 +12,7 @@ defmodule Scholar.Neighbors.NNDescent do
   """
 
   import Nx.Defn
+  import Scholar.Shared
   alias Scholar.Metrics.Distance
 
   @derive {Nx.Container, containers: [:neighbor_graph]}
@@ -47,6 +48,11 @@ defmodule Scholar.Neighbors.NNDescent do
       Relative tolerance with regards to Frobenius norm of the difference in
       the cluster centers of two consecutive iterations to declare convergence.
       """
+    ],
+    tree_init?: [
+      type: :boolean,
+      default: true,
+      doc: "Whether to use the tree initialization."
     ]
   ]
 
@@ -68,66 +74,81 @@ defmodule Scholar.Neighbors.NNDescent do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     graph = initialize_graph(tensor, opts)
+
+    graph =
+      if opts[:tree_init?] do
+        leaves =
+          get_leaves_from_forest(
+            Scholar.Neighbors.RandomProjectionForest.fit(tensor,
+              key: key,
+              num_trees: Nx.axis_size(tensor, 0),
+              min_leaf_size: 2
+            )
+          )
+
+        update_by_leaves(tensor, graph, leaves)
+      else
+        graph
+      end
+
+    graph = init_random(tensor, graph, key, opts)
     nn_descent(tensor, graph, key, opts)
   end
 
-  defnp initialize_graph(tensor, opts) do
+  defn initialize_graph(tensor, opts) do
     num_neighbors = opts[:num_neighbors]
     num_samples = Nx.axis_size(tensor, 0)
 
-    {Nx.broadcast(-1, {num_samples, num_neighbors}),
-     Nx.broadcast(Nx.Constants.max_finite(:f32), {num_samples, num_neighbors}),
-     Nx.broadcast(0, {num_samples, num_neighbors})}
+    {Nx.broadcast(Nx.s64(-1), {num_samples, num_neighbors}),
+     Nx.broadcast(Nx.Constants.max_finite(to_float_type(tensor)), {num_samples, num_neighbors}),
+     Nx.broadcast(Nx.s8(1), {num_samples, num_neighbors})}
   end
 
-  defnp get_size(indices, index0) do
-    if(Nx.any(indices[index0] == -1)) do
-      Nx.argmax(indices[index0] == -1)
+  defn get_size(indices, index0) do
+    if Nx.any(indices[index0] == Nx.s64(-1)) do
+      Nx.argmax(indices[index0] == Nx.s64(-1))
     else
       Nx.axis_size(indices, 1)
     end
   end
 
-  defnp init_random(data, curr_graph, num_neighbros, dist, opts) do
-    rng_key = opts[:rng]
-    new = 1
-
+  defn init_random(data, curr_graph, key, opts) do
+    num_neighbors = opts[:num_neighbors]
     {indices, keys, flags} = curr_graph
     num_heaps = Nx.axis_size(indices, 0)
+    num_neighbors - get_size(indices, 0)
 
-    while {{indices, keys, flags}, {index0 = 0, data, rng_key, dist, new}}, index0 < num_heaps do
-      missing = num_neighbros - get_size(indices, index0)
+    {{{indices, keys, flags}, _}, _} =
+      while {{{indices, keys, flags}, key}, {index0 = Nx.s64(0), data}}, index0 < num_heaps do
+        missing = num_neighbors - get_size(indices, index0)
 
-      {{indices, keys, flags}, _} =
-        while {{indices, keys, flags}, {index0, j = 0, data, rng_key, dist}}, j < missing do
-          {index1, new_rng_key} = Nx.Random.randint(rng_key, 1, num_heaps + 1, type: :u32)
-          # check
-          # index1 = Nx.reminder(randint, num_heaps)
+        {{{indices, keys, flags}, key}, _} =
+          while {{{indices, keys, flags}, key}, {index0, j = Nx.s64(0), data, missing}},
+                j < missing do
+            {index1, new_rng_key} = Nx.Random.randint(key, 0, num_heaps, type: :s64)
+            d = Distance.squared_euclidean(data[index0], data[index1])
 
-          ### TO IMPLEMENT: dist
-          # d = dist(data[index0], data[index1])
-          d = Distance.squared_euclidean(data[index0], data[index1])
-          {indices, keys, flags} = add_neighbor({indices, keys, flags}, index0, index1, d, new)
+            {{add_neighbor({indices, keys, flags}, index0, index1, d, Nx.s8(1)), new_rng_key},
+             {index0, j + 1, data, missing}}
+          end
 
-          {{indices, keys, flags}, {index0, j + 1, data, new_rng_key, dist, new}}
-        end
-
-      {{indices, keys, flags}, {index0 + 1, data, rng_key, dist, new}}
-    end
+        {{{indices, keys, flags}, key}, {index0 + 1, data}}
+      end
 
     {indices, keys, flags}
   end
 
   defnp add_zero_nodes(curr_graph) do
-    new = 1
-
-    {indices, _keys, _flags} = curr_graph
+    {indices, keys, _flags} = curr_graph
     num_heaps = Nx.axis_size(indices, 0)
 
-    while {i = 0, curr_graph, new}, i < num_heaps do
-      curr_graph = add_neighbor(curr_graph, i, i, 0.0, new)
-      {i + 1, curr_graph, new}
-    end
+    {curr_graph, _} =
+      while {curr_graph, i = Nx.s64(0)}, i < num_heaps do
+        curr_graph =
+          add_neighbor(curr_graph, i, i, Nx.tensor(0.0, type: to_float_type(keys)), Nx.s8(1))
+
+        {curr_graph, i + 1}
+      end
 
     curr_graph
   end
@@ -137,28 +158,28 @@ defmodule Scholar.Neighbors.NNDescent do
     num_leaves = Nx.axis_size(leaves, 0)
     leaf_size = Nx.axis_size(leaves, 1)
 
-    updates_index = 0
+    updates_index = Nx.s64(0)
     updates_indices = Nx.broadcast(Nx.s64(0), {num_leaves, 2})
-    updates_dist = Nx.broadcast(Nx.f32(0.0), {num_leaves})
+    updates_dist = Nx.broadcast(Nx.tensor(0.0, type: to_float_type(data)), {num_leaves})
 
     {_indices, keys, _flags} = curr_graph
 
-    while {{updates_indices, updates_dist, updates_index}, {i = 0, keys}}, i < num_leaves do
+    while {{updates_indices, updates_dist, updates_index}, {i = Nx.s64(0), keys, data, leaves}},
+          i < num_leaves do
       {{updates_indices, updates_dist, updates_index}, _} =
-        while {{updates_indices, updates_dist, updates_index}, {i, j = 0, keys, stop = 0}},
+        while {{updates_indices, updates_dist, updates_index},
+               {i, j = Nx.s64(0), keys, data, leaves, stop = Nx.u8(0)}},
               j < leaf_size and not stop do
           index0 = leaves[[i, j]]
 
-          if index0 != -1 do
+          if index0 != Nx.s64(-1) do
             {{updates_indices, updates_dist, updates_index}, _} =
               while {{updates_indices, updates_dist, updates_index},
-                     {i, j, k = j + 1, keys, index0, stop_inner = 0}},
+                     {i, j, k = j + 1, keys, index0, data, leaves, stop_inner = Nx.u8(0)}},
                     k < leaf_size and not stop_inner do
                 index1 = leaves[[i, k]]
 
-                if index1 != -1 do
-                  ### TO IMPLEMENT: dist
-                  # d = dist(data[index0], data[index1])
+                if index1 != Nx.s64(-1) do
                   d = Distance.squared_euclidean(data[index0], data[index1])
 
                   {updates_indices, updates_dist, updates_index} =
@@ -166,79 +187,82 @@ defmodule Scholar.Neighbors.NNDescent do
                       updates_indices =
                         Nx.put_slice(
                           updates_indices,
-                          updates_index,
-                          Nx.concatenate([index0, index1])
+                          [updates_index, 0],
+                          Nx.new_axis(
+                            Nx.concatenate([Nx.new_axis(index0, 0), Nx.new_axis(index1, 0)]),
+                            0
+                          )
                         )
 
-                      updates_dist = Nx.indexed_put(updates_dist, updates_index, d)
+                      updates_dist =
+                        Nx.indexed_put(updates_dist, Nx.new_axis(updates_index, 0), d)
+
                       {updates_indices, updates_dist, updates_index + 1}
                     else
                       {updates_indices, updates_dist, updates_index}
                     end
 
                   {{updates_indices, updates_dist, updates_index},
-                   {i, j, k + 1, keys, index0, Nx.u8(0)}}
+                   {i, j, k + 1, keys, index0, data, leaves, Nx.u8(0)}}
                 else
                   {{updates_indices, updates_dist, updates_index},
-                   {i, j, k + 1, keys, index0, Nx.u8(1)}}
+                   {i, j, k + 1, keys, index0, data, leaves, Nx.u8(1)}}
                 end
               end
 
-            {{updates_indices, updates_dist, updates_index}, {i, j + 1, keys, Nx.u8(0)}}
+            {{updates_indices, updates_dist, updates_index},
+             {i, j + 1, keys, data, leaves, Nx.u8(0)}}
           else
-            {{updates_indices, updates_dist, updates_index}, {i, j + 1, keys, Nx.u8(1)}}
+            {{updates_indices, updates_dist, updates_index},
+             {i, j + 1, keys, data, leaves, Nx.u8(1)}}
           end
         end
 
-      {{updates_indices, updates_dist, updates_index}, {i + 1, keys}}
+      {{updates_indices, updates_dist, updates_index}, {i + 1, keys, data, leaves}}
     end
 
     {curr_graph, _} =
-      while {curr_graph, {i = 0, updates_index, updates_indices, updates_dist, new = 1}},
+      while {curr_graph, {i = Nx.s64(0), updates_index, updates_indices, updates_dist}},
             i < updates_index do
         index0 = updates_indices[[i, 0]]
         index1 = updates_indices[[i, 1]]
         d = updates_dist[i]
-
-        ### TO IMPLEMENT: add_neighbor
-        curr_graph = add_neighbor(curr_graph, index0, index1, d, new)
-        {curr_graph, {i + 1, updates_index, updates_indices, updates_dist, new}}
+        curr_graph = add_neighbor(curr_graph, index0, index1, d, Nx.s8(1))
+        {curr_graph, {i + 1, updates_index, updates_indices, updates_dist}}
       end
 
     curr_graph
   end
 
   defnp sample_candidate(curr_graph, new_candidates, old_candidates, rng_key) do
-    # new = 1
-    # old = 0
-
     {indices, keys, flags} = curr_graph
     {num_heaps, num_nodes} = Nx.shape(indices)
 
     {{{indices, keys, flags}, new_candidates, old_candidates, rng_key}, _} =
-      while {{{indices, keys, flags}, new_candidates, old_candidates, rng_key}, i = 0},
+      while {{{indices, keys, flags}, new_candidates, old_candidates, rng_key}, i = Nx.s64(0)},
             i < num_heaps do
         {{{indices, keys, flags}, new_candidates, old_candidates, rng_key}, _} =
-          while {{{indices, keys, flags}, new_candidates, old_candidates, rng_key}, {j = 0, i}},
+          while {{{indices, keys, flags}, new_candidates, old_candidates, rng_key},
+                 {j = Nx.s64(0), i}},
                 j < num_nodes do
             index1 = indices[[i, j]]
             flag = flags[[i, j]]
 
-            if index1 == -1 do
+            if index1 == Nx.s64(-1) do
               {{{indices, keys, flags}, new_candidates, old_candidates, rng_key}, {j + 1, i}}
             else
               # TODO: check scope of rng
               {priority, new_rng_key} = Nx.Random.randint(rng_key, 1, 100_000, type: :u32)
 
               if flag == Nx.u8(1) do
-                new_candidates = add_neighbor(new_candidates, i, index1, priority, -1)
-                new_candidates = add_neighbor(new_candidates, index1, i, priority, -1)
+                new_candidates = add_neighbor(new_candidates, i, index1, priority, Nx.s8(-1))
+                new_candidates = add_neighbor(new_candidates, index1, i, priority, Nx.s8(-1))
 
                 {{{indices, keys, flags}, new_candidates, old_candidates, new_rng_key},
                  {j + 1, i}}
               else
-                old_candidates = add_neighbor(old_candidates, i, index1, priority, -1)
-                old_candidates = add_neighbor(old_candidates, index1, i, priority, -1)
+                old_candidates = add_neighbor(old_candidates, i, index1, priority, Nx.s8(-1))
+                old_candidates = add_neighbor(old_candidates, index1, i, priority, Nx.s8(-1))
 
                 {{{indices, keys, flags}, new_candidates, old_candidates, new_rng_key},
                  {j + 1, i}}
@@ -253,15 +277,16 @@ defmodule Scholar.Neighbors.NNDescent do
     new_candidates_num_nodes = Nx.axis_size(new_candidates_indices, 1)
 
     {{{indices, keys, flags}, _new_candidates_indices}, _} =
-      while {{{indices, keys, flags}, new_candidates_indices}, i = 0}, i < num_heaps do
+      while {{{indices, keys, flags}, new_candidates_indices}, i = Nx.s64(0)}, i < num_heaps do
         {{{indices, keys, flags}, new_candidates_indices}, _} =
-          while {{{indices, keys, flags}, new_candidates_indices}, {j = 0, i}}, j < num_nodes do
+          while {{{indices, keys, flags}, new_candidates_indices}, {j = Nx.s64(0), i}},
+                j < num_nodes do
             index1 = indices[[i, j]]
             termination = Nx.u8(0)
 
             {{{indices, keys, flags}, new_candidates_indices}, _} =
               while {{{indices, keys, flags}, new_candidates_indices},
-                     {termination, index1, k = 0, i, j}},
+                     {termination, index1, k = Nx.s64(0), i, j}},
                     k < new_candidates_num_nodes and not termination do
                 {{indices, keys, flags}, termination} =
                   if new_candidates_indices[[i, k]] == index1 do
@@ -269,7 +294,7 @@ defmodule Scholar.Neighbors.NNDescent do
                       Nx.indexed_put(
                         flags,
                         Nx.concatenate([Nx.new_axis(i, 0), Nx.new_axis(j, 0)]),
-                        Nx.u8(0)
+                        Nx.s8(0)
                       )
 
                     {{indices, keys, flags}, Nx.u8(1)}
@@ -307,127 +332,135 @@ defmodule Scholar.Neighbors.NNDescent do
     {size_new, new_candidates_num_nodes} = Nx.shape(new_candidates_indices)
     old_candidates_num_nodes = Nx.axis_size(old_candidates_indices, 1)
     num_samples = Nx.axis_size(data, 0)
-    update_index = 0
-    updates_indices = Nx.broadcast(Nx.s64(0), {num_samples, 2})
-    updates_dist = Nx.broadcast(Nx.f32(0.0), {num_samples})
+    update_index = Nx.s64(0)
 
-    # {{_keys, _new_candidates_indices, _old_candidates_indices, updates_indices,
-    #   updates_dist, update_index}, _} =
-    while {{keys, new_candidates_indices, old_candidates_indices, updates_indices, updates_dist,
-            update_index}, {i = 0, data}},
-          i < size_new do
-      {{keys, new_candidates_indices, old_candidates_indices, updates_indices, updates_dist,
-        update_index}, {i + 1, data}}
-    end
+    # Normally there would be a stack of that will dynamically grow
+    # so we need to preallocate it with a fixed size
+    expand_factor = 50
+    updates_indices = Nx.broadcast(Nx.s64(0), {expand_factor * num_samples, 2})
 
-    # {{_, _, _, updates_indices, updates_dist, update_index}, _} =
-    #   while {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #           updates_dist, update_index}, {j = 0, data, i}},
-    #         j < new_candidates_num_nodes do
-    #     index0 = new_candidates_indices[[i, j]]
+    updates_dist =
+      Nx.broadcast(Nx.tensor(0.0, type: to_float_type(data)), {expand_factor * num_samples})
 
-    #     if index0 == -1 do
-    #       {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #         updates_dist, update_index}, {j + 1, data, i}}
-    #     else
-    #       {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #         updates_dist, update_index},
-    #        _} =
-    #         while {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #                 updates_dist, update_index}, {k = j + 1, data, i, j, index0}},
-    #               k < new_candidates_num_nodes do
-    #           index1 = new_candidates_indices[[i, k]]
+    {{_keys, _new_candidates_indices, _old_candidates_indices, updates_indices, updates_dist,
+      update_index},
+     _} =
+      while {{keys, new_candidates_indices, old_candidates_indices, updates_indices, updates_dist,
+              update_index}, {i = Nx.s64(0), data}},
+            i < size_new do
+        {{_, _, _, updates_indices, updates_dist, update_index}, _} =
+          while {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                  updates_dist, update_index}, {j = Nx.s64(0), data, i}},
+                j < new_candidates_num_nodes do
+            index0 = new_candidates_indices[[i, j]]
 
-    #           if index1 == -1 do
-    #             {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #               updates_dist, update_index}, {k + 1, data, i, j, index0}}
-    #           else
-    #             ### TO IMPLEMENT: dist
-    #             d = Distance.squared_euclidean(data[index0], data[index1])
-    #             # d = dist(data[index0], data[index1])
+            if index0 == Nx.s64(-1) do
+              {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                updates_dist, update_index}, {j + 1, data, i}}
+            else
+              {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                updates_dist, update_index},
+               _} =
+                while {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                        updates_dist, update_index}, {k = j + 1, data, i, j, index0}},
+                      k < new_candidates_num_nodes do
+                  index1 = new_candidates_indices[[i, k]]
 
-    #             {updates_indices, updates_dist, update_index} =
-    #               if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
-    #                 updates_indices =
-    #                   Nx.put_slice(
-    #                     updates_indices,
-    #                     update_index,
-    #                     Nx.concatenate([Nx.new_axis(index0, 0), Nx.new_axis(index1, 0)])
-    #                   )
+                  if index1 == Nx.s64(-1) do
+                    {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                      updates_dist, update_index}, {k + 1, data, i, j, index0}}
+                  else
+                    d = Distance.squared_euclidean(data[index0], data[index1])
 
-    #                 updates_dist = Nx.indexed_put(updates_dist, update_index, d)
-    #                 {updates_indices, updates_dist, update_index + 1}
-    #               else
-    #                 {updates_indices, updates_dist, update_index}
-    #               end
+                    {updates_indices, updates_dist, update_index} =
+                      if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
+                        updates_indices =
+                          Nx.put_slice(
+                            updates_indices,
+                            [update_index, 0],
+                            Nx.new_axis(
+                              Nx.concatenate([Nx.new_axis(index0, 0), Nx.new_axis(index1, 0)]),
+                              0
+                            )
+                          )
 
-    #             {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #               updates_dist, update_index}, {k + 1, data, i, j, index0}}
-    #           end
-    #         end
+                        updates_dist =
+                          Nx.indexed_put(updates_dist, Nx.new_axis(update_index, 0), d)
 
-    #       {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #         updates_dist, update_index},
-    #        _} =
-    #         while {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #                 updates_dist, update_index}, {k = 0, data, i, index0}},
-    #               k < old_candidates_num_nodes do
-    #           index1 = old_candidates_indices[[i, k]]
+                        {updates_indices, updates_dist, update_index + 1}
+                      else
+                        {updates_indices, updates_dist, update_index}
+                      end
 
-    #           if index1 == -1 do
-    #             {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #               updates_dist, update_index}, {k + 1, data, i, index0}}
-    #           else
-    #             ### TO IMPLEMENT: dist
-    #             # d = dist(data[index0], data[index1])
-    #             d = Distance.squared_euclidean(data[index0], data[index1])
+                    {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                      updates_dist, update_index}, {k + 1, data, i, j, index0}}
+                  end
+                end
 
-    #             {updates_indices, updates_dist, update_index} =
-    #               if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
-    #                 updates_indices =
-    #                   Nx.put_slice(
-    #                     updates_indices,
-    #                     update_index,
-    #                     Nx.concatenate([Nx.new_axis(index0, 0), Nx.new_axis(index1, 0)])
-    #                   )
+              {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                updates_dist, update_index},
+               _} =
+                while {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                        updates_dist, update_index}, {k = Nx.s64(0), data, i, index0}},
+                      k < old_candidates_num_nodes do
+                  index1 = old_candidates_indices[[i, k]]
 
-    #                 updates_dist = Nx.indexed_put(updates_dist, update_index, d)
-    #                 {updates_indices, updates_dist, update_index + 1}
-    #               else
-    #                 {updates_indices, updates_dist, update_index}
-    #               end
+                  if index1 == Nx.s64(-1) do
+                    {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                      updates_dist, update_index}, {k + 1, data, i, index0}}
+                  else
+                    d = Distance.squared_euclidean(data[index0], data[index1])
 
-    #             {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #               updates_dist, update_index}, {k + 1, data, i, index0}}
-    #           end
-    #         end
+                    {updates_indices, updates_dist, update_index} =
+                      if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
+                        updates_indices =
+                          Nx.put_slice(
+                            updates_indices,
+                            [update_index, 0],
+                            Nx.new_axis(
+                              Nx.concatenate([Nx.new_axis(index0, 0), Nx.new_axis(index1, 0)]),
+                              0
+                            )
+                          )
 
-    #       {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-    #         updates_dist, update_index}, {j + 1, data, i}}
-    #     end
-    #   end
+                        updates_dist =
+                          Nx.indexed_put(updates_dist, Nx.new_axis(update_index, 0), d)
 
-    #   {{keys, new_candidates_indices, old_candidates_indices, updates_indices, updates_dist,
-    #     update_index}, {i + 1, data}}
-    # end
+                        {updates_indices, updates_dist, update_index + 1}
+                      else
+                        {updates_indices, updates_dist, update_index}
+                      end
+
+                    {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                      updates_dist, update_index}, {k + 1, data, i, index0}}
+                  end
+                end
+
+              {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
+                updates_dist, update_index}, {j + 1, data, i}}
+            end
+          end
+
+        {{keys, new_candidates_indices, old_candidates_indices, updates_indices, updates_dist,
+          update_index}, {i + 1, data}}
+      end
 
     {updates_indices, updates_dist, update_index}
   end
 
   defnp apply_updates(current_graph, updates_indices, updates_dist, update_index) do
-    new = 1
+    {updates_indices, updates_dist, update_index}
 
     {current_graph, _} =
-      while {current_graph, {i = 0, update_index, updates_indices, updates_dist, new}},
+      while {current_graph, {i = Nx.s64(0), update_index, updates_indices, updates_dist}},
             i < update_index do
         index0 = updates_indices[[i, 0]]
         index1 = updates_indices[[i, 1]]
         d = updates_dist[i]
 
-        ### TO IMPLEMENT: add_neighbor
-        current_graph = add_neighbor(current_graph, index0, index1, d, new)
-        current_graph = add_neighbor(current_graph, index1, index0, d, new)
-        {current_graph, {i + 1, update_index, updates_indices, updates_dist, new}}
+        current_graph = add_neighbor(current_graph, index0, index1, d, Nx.s8(1))
+        current_graph = add_neighbor(current_graph, index1, index0, d, Nx.s8(1))
+        {current_graph, {i + 1, update_index, updates_indices, updates_dist}}
       end
 
     current_graph
@@ -442,16 +475,17 @@ defmodule Scholar.Neighbors.NNDescent do
     termination = Nx.u8(0)
 
     {curr_graph, _} =
-      while {curr_graph, {i = 0, termination, key}}, i < max_iters and not termination do
+      while {curr_graph, {i = Nx.u64(0), termination, key, data}},
+            i < max_iters and not termination do
         new_candidates =
-          {Nx.broadcast(-1, {num_samples, max_candidates}),
+          {Nx.broadcast(Nx.s64(-1), {num_samples, max_candidates}),
            Nx.broadcast(Nx.Constants.max_finite(:s64), {num_samples, max_candidates}),
-           Nx.broadcast(0, {num_samples, max_candidates})}
+           Nx.broadcast(Nx.s8(0), {num_samples, max_candidates})}
 
         old_candidates =
-          {Nx.broadcast(-1, {num_samples, max_candidates}),
+          {Nx.broadcast(Nx.s64(-1), {num_samples, max_candidates}),
            Nx.broadcast(Nx.Constants.max_finite(:s64), {num_samples, max_candidates}),
-           Nx.broadcast(0, {num_samples, max_candidates})}
+           Nx.broadcast(Nx.s8(0), {num_samples, max_candidates})}
 
         {curr_graph, new_candidates, old_candidates, key} =
           sample_candidate(curr_graph, new_candidates, old_candidates, key)
@@ -459,27 +493,30 @@ defmodule Scholar.Neighbors.NNDescent do
         {updates_indices, updates_dist, update_index} =
           generate_graph_updates(data, curr_graph, new_candidates, old_candidates)
 
-        # curr_graph = apply_updates(curr_graph, updates_indices, updates_dist, update_index)
+        curr_graph = apply_updates(curr_graph, updates_indices, updates_dist, update_index)
 
-        # termination =
-        #   if update_index < tol * num_samples * num_neighbors do
-        #     Nx.u8(1)
-        #   else
-        #     Nx.u8(0)
-        #   end
-        {curr_graph, {i + 1, termination, key}}
+        termination =
+          if update_index < tol * num_samples * num_neighbors do
+            Nx.u8(1)
+          else
+            Nx.u8(0)
+          end
+
+        {curr_graph, {i + 1, termination, key, data}}
       end
 
-    curr_graph
+    {indices, dists, _flags} = add_zero_nodes(curr_graph)
+    ord = Nx.argsort(dists, axis: 1)
+    {Nx.take_along_axis(indices, ord, axis: 1), Nx.take_along_axis(dists, ord, axis: 1)}
   end
 
-  defn get_leaves_from_forest(forest) do
+  defnp get_leaves_from_forest(forest) do
     leaf_size = forest.leaf_size
     {num_trees, num_indices} = Nx.shape(forest.indices)
     to_concat = rem(num_indices, leaf_size)
 
     leaves =
-      if to_concat != 0 do
+      if to_concat != Nx.s64(0) do
         Nx.concatenate(
           [
             forest.indices,
@@ -494,7 +531,7 @@ defmodule Scholar.Neighbors.NNDescent do
     Nx.reshape(leaves, {:auto, leaf_size})
   end
 
-  defnp add_neighbor(curr_graph, index0, index1, key, flag) do
+  defn add_neighbor(curr_graph, index0, index1, key, flag) do
     {indices, keys, flags} = curr_graph
     num_nodes = Nx.axis_size(indices, 1)
 
@@ -511,26 +548,36 @@ defmodule Scholar.Neighbors.NNDescent do
       curr_graph
     else
       {{indices, keys, flags, curr, _}, _} =
-        while {{indices, keys, flags, curr = 0, swap = 0}, {index0, stop, key, flag}},
+        while {{indices, keys, flags, curr = Nx.s64(0), swap = Nx.s64(0)},
+               {index0, stop, key, flag}},
               not stop do
           left_child = 2 * curr + 1
           right_child = left_child + 1
 
-          # to check if this simplification is correct
           {swap, stop} =
             cond do
-              left_child < num_nodes ->
-                {swap, stop}
+              left_child >= num_nodes ->
+                {swap, Nx.u8(1)}
 
               right_child >= num_nodes and keys[[index0, left_child]] > key ->
                 {left_child, stop}
+
+              right_child >= num_nodes and keys[[index0, left_child]] <= key ->
+                {swap, Nx.u8(1)}
 
               keys[[index0, left_child]] >= keys[[index0, right_child]] and
                   keys[[index0, left_child]] > key ->
                 {left_child, stop}
 
+              keys[[index0, left_child]] >= keys[[index0, right_child]] and
+                  keys[[index0, left_child]] <= key ->
+                {swap, Nx.u8(1)}
+
               keys[[index0, right_child]] > key ->
                 {right_child, stop}
+
+              keys[[index0, right_child]] <= key ->
+                {swap, Nx.u8(1)}
 
               true ->
                 {swap, Nx.u8(1)}
@@ -550,7 +597,7 @@ defmodule Scholar.Neighbors.NNDescent do
             Nx.indexed_put(keys, Nx.concatenate([index0_ext, curr_ext]), keys[[index0, swap]])
 
           flags =
-            if flag != -1,
+            if flag != Nx.s8(-1),
               do:
                 Nx.indexed_put(
                   flags,
@@ -569,7 +616,7 @@ defmodule Scholar.Neighbors.NNDescent do
       keys = Nx.indexed_put(keys, Nx.concatenate([index0_ext, curr_ext]), key)
 
       flags =
-        if flag != -1,
+        if flag != Nx.s8(-1),
           do: Nx.indexed_put(flags, Nx.concatenate([index0_ext, curr_ext]), flag),
           else: flags
 
