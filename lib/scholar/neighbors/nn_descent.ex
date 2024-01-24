@@ -82,7 +82,7 @@ defmodule Scholar.Neighbors.NNDescent do
             Scholar.Neighbors.RandomProjectionForest.fit(tensor,
               key: key,
               num_trees: Nx.axis_size(tensor, 0),
-              #TODO check if this is correct
+              # TODO check if this is correct
               min_leaf_size: opts[:num_neighbors],
               num_neighbors: opts[:num_neighbors]
             )
@@ -140,7 +140,7 @@ defmodule Scholar.Neighbors.NNDescent do
     {random_indices, new_key} =
       Nx.Random.randint(key, 0, num_heaps, type: :s64, shape: {num_heaps * num_neighbors})
 
-    #TODO check why this gives inconsistent results
+    # TODO check why this gives inconsistent results
     # d =
     #   Distance.squared_euclidean(
     #     Nx.reshape(
@@ -394,7 +394,6 @@ defmodule Scholar.Neighbors.NNDescent do
 
     {{indices, keys, flags}, new_candidates, old_candidates, rng_key}
   end
-
 
   @doc """
   This function generates potential nearest neighbor updates, which are
