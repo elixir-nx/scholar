@@ -82,7 +82,9 @@ defmodule Scholar.Neighbors.NNDescent do
             Scholar.Neighbors.RandomProjectionForest.fit(tensor,
               key: key,
               num_trees: Nx.axis_size(tensor, 0),
-              min_leaf_size: 2
+              #TODO check if this is correct
+              min_leaf_size: opts[:num_neighbors],
+              num_neighbors: opts[:num_neighbors]
             )
           )
 
@@ -91,11 +93,18 @@ defmodule Scholar.Neighbors.NNDescent do
         graph
       end
 
-    graph = init_random(tensor, graph, key, opts)
+    {graph, key} = init_random(tensor, graph, key, opts)
     nn_descent(tensor, graph, key, opts)
   end
 
-  defn initialize_graph(tensor, opts) do
+  @doc """
+  Initializes the graph. It returns a tuple of three tensors:
+
+  * `indices` - the indices of the neighbors
+  * `keys` - the distances to the neighbors
+  * `flags` - flags indicating whether the neighbor is a new candidate or an old candidate
+  """
+  defnp initialize_graph(tensor, opts) do
     num_neighbors = opts[:num_neighbors]
     num_samples = Nx.axis_size(tensor, 0)
 
@@ -104,27 +113,68 @@ defmodule Scholar.Neighbors.NNDescent do
      Nx.broadcast(Nx.s8(1), {num_samples, num_neighbors})}
   end
 
-  defn get_size(indices, index0) do
-    if Nx.any(indices[index0] == Nx.s64(-1)) do
-      Nx.argmax(indices[index0] == Nx.s64(-1))
-    else
-      Nx.axis_size(indices, 1)
-    end
+  @doc """
+  Returns the size of the heap for each row in the indices tensor.
+  By size of the heap we mean the number of indices that are not -1.
+  """
+  defn get_size_vectorized(indices, num_neighbors) do
+    indices =
+      Nx.concatenate(
+        [indices == Nx.s64(-1), Nx.broadcast(Nx.u8(1), {Nx.axis_size(indices, 0), 1})],
+        axis: 1
+      )
+
+    num_neighbors - Nx.argmax(indices, axis: 1)
   end
 
+  @doc """
+  Initializes the graph with random neighbors.
+  """
   defn init_random(data, curr_graph, key, opts) do
     num_neighbors = opts[:num_neighbors]
     {indices, keys, flags} = curr_graph
     num_heaps = Nx.axis_size(indices, 0)
-    num_neighbors - get_size(indices, 0)
+
+    missing = get_size_vectorized(indices, num_neighbors)
+
+    {random_indices, new_key} =
+      Nx.Random.randint(key, 0, num_heaps, type: :s64, shape: {num_heaps * num_neighbors})
+
+    #TODO check why this gives inconsistent results
+    # d =
+    #   Distance.squared_euclidean(
+    #     Nx.reshape(
+    #       Nx.broadcast(Nx.new_axis(data, 0), {num_neighbors, num_heaps, Nx.axis_size(data, -1)}),
+    #       {num_heaps * num_neighbors, Nx.axis_size(data, -1)}
+    #     ),
+    #     Nx.take(data, random_indices), axes: [1]
+    #   )
+
+    # {{indices, keys, flags}, _} =
+    #   while {{indices, keys, flags}, {index0 = Nx.s64(0), data, missing, random_indices, d}},
+    #         index0 < num_heaps do
+    #     {{indices, keys, flags}, _} =
+    #       while {{indices, keys, flags},
+    #              {index0, j = Nx.s64(0), data, missing, random_indices, d}},
+    #             j < missing[index0] do
+    #         {add_neighbor(
+    #             {indices, keys, flags},
+    #             index0,
+    #             random_indices[index0 * num_neighbors + j],
+    #             d[index0 * num_neighbors + j],
+    #             Nx.s8(1)
+    #           ), {index0, j + 1, data, missing, random_indices, d}}
+    #       end
+
+    #     {{indices, keys, flags}, {index0 + 1, data, missing, random_indices, d}}
+    #   end
 
     {{{indices, keys, flags}, _}, _} =
-      while {{{indices, keys, flags}, key}, {index0 = Nx.s64(0), data}}, index0 < num_heaps do
-        missing = num_neighbors - get_size(indices, index0)
-
+      while {{{indices, keys, flags}, key}, {index0 = Nx.s64(0), data, missing}},
+            index0 < num_heaps do
         {{{indices, keys, flags}, key}, _} =
           while {{{indices, keys, flags}, key}, {index0, j = Nx.s64(0), data, missing}},
-                j < missing do
+                j < missing[index0] do
             {index1, new_rng_key} = Nx.Random.randint(key, 0, num_heaps, type: :s64)
             d = Distance.squared_euclidean(data[index0], data[index1])
 
@@ -132,28 +182,52 @@ defmodule Scholar.Neighbors.NNDescent do
              {index0, j + 1, data, missing}}
           end
 
-        {{{indices, keys, flags}, key}, {index0 + 1, data}}
+        {{{indices, keys, flags}, key}, {index0 + 1, data, missing}}
       end
 
-    {indices, keys, flags}
+    {{indices, keys, flags}, new_key}
   end
 
+  @doc """
+  Adds node as its own neighbor with distance 0.
+  """
   defnp add_zero_nodes(curr_graph) do
-    {indices, keys, _flags} = curr_graph
-    num_heaps = Nx.axis_size(indices, 0)
+    {indices, keys, flags} = curr_graph
+    {num_heaps, num_nodes} = Nx.shape(indices)
 
-    {curr_graph, _} =
-      while {curr_graph, i = Nx.s64(0)}, i < num_heaps do
-        curr_graph =
-          add_neighbor(curr_graph, i, i, Nx.tensor(0.0, type: to_float_type(keys)), Nx.s8(1))
+    {indices_vectorized_axes, keys_vectorized_axes, flags_vectorized_axes} =
+      {indices.vectorized_axes, keys.vectorized_axes, flags.vectorized_axes}
 
-        {curr_graph, i + 1}
-      end
+    iota = Nx.revectorize(Nx.iota({num_heaps}), [x: :auto], target_shape: {})
 
-    curr_graph
+    indices = Nx.revectorize(indices, [x: num_heaps], target_shape: {Nx.axis_size(indices, -1)})
+    keys = Nx.revectorize(keys, [x: num_heaps], target_shape: {Nx.axis_size(keys, -1)})
+    flags = Nx.revectorize(flags, [x: num_heaps], target_shape: {Nx.axis_size(flags, -1)})
+
+    [iota, zero_node, new_flag, indices, keys, flags] =
+      Nx.broadcast_vectors([
+        iota,
+        Nx.tensor(0.0, type: to_float_type(keys)),
+        Nx.u8(1),
+        indices,
+        keys,
+        flags
+      ])
+
+    {indices, keys, flags} =
+      add_neighbor_vectorized({indices, keys, flags}, iota, zero_node, new_flag, num_nodes)
+
+    {Nx.revectorize(indices, indices_vectorized_axes, target_shape: {num_heaps, num_nodes}),
+     Nx.revectorize(keys, keys_vectorized_axes, target_shape: {num_heaps, num_nodes}),
+     Nx.revectorize(flags, flags_vectorized_axes, target_shape: {num_heaps, num_nodes})}
   end
 
-  ### TO IMPLEMENT: Vectorization
+  @doc """
+  Updates the nearest neighbor graph using leaves constructed from random projection trees.
+
+  This function updates the nearest neighbor graph by incorporating the
+  information from the leaves constructed from random projection trees.
+  """
   defnp update_by_leaves(data, curr_graph, leaves) do
     num_leaves = Nx.axis_size(leaves, 0)
     leaf_size = Nx.axis_size(leaves, 1)
@@ -234,6 +308,12 @@ defmodule Scholar.Neighbors.NNDescent do
     curr_graph
   end
 
+  @doc """
+  Builds a heap of candidate neighbors for nearest neighbor descent.
+
+  For each vertex, the candidate neighbors include any current neighbors and
+  any vertices that have the vertex as one of their nearest neighbors.
+  """
   defnp sample_candidate(curr_graph, new_candidates, old_candidates, rng_key) do
     {indices, keys, flags} = curr_graph
     {num_heaps, num_nodes} = Nx.shape(indices)
@@ -315,6 +395,12 @@ defmodule Scholar.Neighbors.NNDescent do
     {{indices, keys, flags}, new_candidates, old_candidates, rng_key}
   end
 
+
+  @doc """
+  This function generates potential nearest neighbor updates, which are
+  objects containing two identifiers that identify nodes and their
+  corresponding distance.
+  """
   defnp generate_graph_updates(
           data,
           curr_graph,
@@ -448,6 +534,9 @@ defmodule Scholar.Neighbors.NNDescent do
     {updates_indices, updates_dist, update_index}
   end
 
+  @doc """
+  Applies graph updates to the current nearest neighbor graph.
+  """
   defnp apply_updates(current_graph, updates_indices, updates_dist, update_index) do
     {updates_indices, updates_dist, update_index}
 
@@ -466,6 +555,13 @@ defmodule Scholar.Neighbors.NNDescent do
     current_graph
   end
 
+  @doc """
+  This function applies the NN-descent algorithm to construct an approximate
+  nearest neighbor graph. It iteratively refines the graph by exploring
+  neighbor candidates and updating the graph connections based on the
+  distances between nodes. The algorithm aims to find a graph that represents
+  the nearest neighbor relationships in the data.
+  """
   defnp nn_descent(data, curr_graph, key, opts \\ []) do
     max_iters = opts[:max_iterations]
     tol = opts[:tol]
@@ -510,6 +606,9 @@ defmodule Scholar.Neighbors.NNDescent do
     {Nx.take_along_axis(indices, ord, axis: 1), Nx.take_along_axis(dists, ord, axis: 1)}
   end
 
+  @doc """
+  Retrieve the leaves from random projection forests.
+  """
   defnp get_leaves_from_forest(forest) do
     leaf_size = forest.leaf_size
     {num_trees, num_indices} = Nx.shape(forest.indices)
@@ -531,6 +630,10 @@ defmodule Scholar.Neighbors.NNDescent do
     Nx.reshape(leaves, {:auto, leaf_size})
   end
 
+  @doc """
+  Procedure that adds neighbor to the graph according to the provided distance (key)
+  and flag.
+  """
   defn add_neighbor(curr_graph, index0, index1, key, flag) do
     {indices, keys, flags} = curr_graph
     num_nodes = Nx.axis_size(indices, 1)
@@ -618,6 +721,95 @@ defmodule Scholar.Neighbors.NNDescent do
       flags =
         if flag != Nx.s8(-1),
           do: Nx.indexed_put(flags, Nx.concatenate([index0_ext, curr_ext]), flag),
+          else: flags
+
+      {indices, keys, flags}
+    end
+  end
+
+  defn add_neighbor_vectorized(curr_graph, index1, key, flag, num_nodes) do
+    {indices, keys, flags} = curr_graph
+
+    stop =
+      if key >= keys[[0]] do
+        Nx.u8(1)
+      else
+        Nx.u8(0)
+      end
+
+    stop = stop or Nx.any(indices == index1)
+
+    if stop do
+      curr_graph
+    else
+      {{indices, keys, flags, curr, _}, _} =
+        while {{indices, keys, flags, curr = Nx.s64(0), swap = Nx.s64(0)}, {stop, key, flag}},
+              not stop do
+          left_child = 2 * curr + 1
+          right_child = left_child + 1
+
+          {swap, stop} =
+            cond do
+              left_child >= num_nodes ->
+                {swap, Nx.u8(1)}
+
+              right_child >= num_nodes and keys[[left_child]] > key ->
+                {left_child, stop}
+
+              right_child >= num_nodes and keys[[left_child]] <= key ->
+                {swap, Nx.u8(1)}
+
+              keys[[left_child]] >= keys[[right_child]] and
+                  keys[[left_child]] > key ->
+                {left_child, stop}
+
+              keys[[left_child]] >= keys[[right_child]] and
+                  keys[[left_child]] <= key ->
+                {swap, Nx.u8(1)}
+
+              keys[[right_child]] > key ->
+                {right_child, stop}
+
+              keys[[right_child]] <= key ->
+                {swap, Nx.u8(1)}
+
+              true ->
+                {swap, Nx.u8(1)}
+            end
+
+          curr_ext = Nx.new_axis(curr, 0)
+
+          indices =
+            Nx.indexed_put(
+              indices,
+              Nx.concatenate([curr_ext]),
+              indices[[swap]]
+            )
+
+          keys =
+            Nx.indexed_put(keys, Nx.concatenate([curr_ext]), keys[[swap]])
+
+          flags =
+            if flag != Nx.s8(-1),
+              do:
+                Nx.indexed_put(
+                  flags,
+                  Nx.concatenate([curr_ext]),
+                  flags[[swap]]
+                ),
+              else: flags
+
+          curr = swap
+          {{indices, keys, flags, curr, swap}, {stop, key, flag}}
+        end
+
+      curr_ext = Nx.new_axis(curr, 0)
+      indices = Nx.indexed_put(indices, Nx.concatenate([curr_ext]), index1)
+      keys = Nx.indexed_put(keys, Nx.concatenate([curr_ext]), key)
+
+      flags =
+        if flag != Nx.s8(-1),
+          do: Nx.indexed_put(flags, Nx.concatenate([curr_ext]), flag),
           else: flags
 
       {indices, keys, flags}
