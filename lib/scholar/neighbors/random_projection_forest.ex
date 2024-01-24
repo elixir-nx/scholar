@@ -1,6 +1,6 @@
 defmodule Scholar.Neighbors.RandomProjectionForest do
   @moduledoc """
-  Random Projection Forest.
+  Random Projection Forest for k-Nearest Neighbor Search.
 
   Each tree in a forest is constructed using a divide and conquer approach.
   We start with the entire dataset and at every node we project the data onto a random
@@ -13,30 +13,53 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   The leaves of the trees are arranged as blocks in the field `indices`. We use the same
   hyperplane for all nodes on the same level as in [2].
 
-  * [1] - Random projection trees and low dimensional manifolds
+  * [1] - Randomized partition trees for nearest neighbor search
   * [2] - Fast Nearest Neighbor Search through Sparse Random Projections and Voting
   """
 
   import Nx.Defn
   import Scholar.Shared
   require Nx
+  alias Scholar.Neighbors.Utils
 
   @derive {Nx.Container,
-           keep: [:depth, :leaf_size, :num_trees],
+           keep: [:num_neighbors, :depth, :leaf_size, :num_trees],
            containers: [:indices, :data, :hyperplanes, :medians]}
-  @enforce_keys [:depth, :leaf_size, :num_trees, :indices, :data, :hyperplanes, :medians]
-  defstruct [:depth, :leaf_size, :num_trees, :indices, :data, :hyperplanes, :medians]
+  @enforce_keys [
+    :num_neighbors,
+    :depth,
+    :leaf_size,
+    :num_trees,
+    :indices,
+    :data,
+    :hyperplanes,
+    :medians
+  ]
+  defstruct [
+    :num_neighbors,
+    :depth,
+    :leaf_size,
+    :num_trees,
+    :indices,
+    :data,
+    :hyperplanes,
+    :medians
+  ]
 
   opts = [
+    num_neighbors: [
+      required: true,
+      type: :pos_integer,
+      doc: "The number of nearest neighbors."
+    ],
+    min_leaf_size: [
+      type: :pos_integer,
+      doc: "The minumum number of points in the leaf."
+    ],
     num_trees: [
       required: true,
       type: :pos_integer,
       doc: "The number of trees in the forest."
-    ],
-    min_leaf_size: [
-      required: true,
-      type: :pos_integer,
-      doc: "The minumum number of points in the leaf."
     ],
     key: [
       type: {:custom, Scholar.Options, :key, []},
@@ -60,7 +83,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
       iex> key = Nx.Random.key(12)
       iex> tensor = Nx.iota({5, 2})
-      iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_trees: 3, min_leaf_size: 2, key: key)
+      iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
       iex> forest.indices
       #Nx.Tensor<
         u32[3][5]
@@ -81,7 +104,25 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     end
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
+    num_neighbors = opts[:num_neighbors]
     min_leaf_size = opts[:min_leaf_size]
+
+    min_leaf_size =
+      cond do
+        is_nil(min_leaf_size) ->
+          num_neighbors
+
+        min_leaf_size >= num_neighbors ->
+          min_leaf_size
+
+        true ->
+          raise ArgumentError,
+                """
+                expected min_leaf_size to be at least num_neighbors = #{inspect(num_neighbors)}, \
+                got #{inspect(min_leaf_size)}
+                """
+      end
+
     num_trees = opts[:num_trees]
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     size = Nx.axis_size(tensor, 0)
@@ -100,6 +141,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     {indices, hyperplanes, medians} = fit_n(tensor, key, depth: depth, num_trees: num_trees)
 
     %__MODULE__{
+      num_neighbors: num_neighbors,
       depth: depth,
       leaf_size: leaf_size,
       num_trees: num_trees,
@@ -214,9 +256,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
     right_first = Nx.take_along_axis(level_proj, right_indices, axis: 1)
 
-    nodes = Nx.iota({num_nodes}, type: :u32)
     medians_first = (left_first + right_first) / 2
 
+    nodes = Nx.iota({num_nodes}, type: :u32)
     median_mask = width <= nodes and nodes < width + median_offset
     median_pos = Nx.argsort(median_mask, direction: :desc, stable: true, type: :u32)
     level_medians = Nx.take(medians_first, median_pos, axis: 1)
@@ -234,92 +276,103 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   end
 
   @doc """
-  Computes the leaf indices for every point in the input tensor.
-  If the input tensor contains n points, then the result has shape {n, num_trees, leaf_size}.
+  Computes approximate nearest neighbors of query tensor using random projection forest.
+  Returns the neighbor indices and distances from query points.
 
   ## Examples
 
       iex> key = Nx.Random.key(12)
       iex> tensor = Nx.iota({5, 2})
-      iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_trees: 3, min_leaf_size: 2, key: key)
-      iex> x = Nx.tensor([[3, 4]])
-      iex> Scholar.Neighbors.RandomProjectionForest.predict(forest, x)
+      iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
+      iex> query = Nx.tensor([[3, 4]])
+      iex> {neighbors, distances} = Scholar.Neighbors.RandomProjectionForest.predict(forest, query)
+      iex> neighbors
       #Nx.Tensor<
-        u32[1][3][3]
+        u32[1][2]
         [
-          [
-            [0, 1, 2],
-            [0, 1, 2],
-            [4, 3, 2]
-          ]
+          [1, 2]
+        ]
+      >
+      iex> distances
+      #Nx.Tensor<
+        f32[1][2]
+        [
+          [2.0, 2.0]
         ]
       >
   """
-  deftransform predict(%__MODULE__{} = forest, x) do
-    if Nx.rank(x) != 2 do
+  deftransform predict(%__MODULE__{} = forest, query) do
+    if Nx.rank(query) != 2 do
       raise ArgumentError,
             """
-            expected input tensor to have shape {num_samples, num_features}, \
-            got tensor with shape: #{inspect(Nx.shape(x))}\
+            expected query tensor to have shape {num_samples, num_features}, \
+            got tensor with shape: #{inspect(Nx.shape(query))}
             """
     end
 
-    if Nx.axis_size(forest.hyperplanes, 2) != Nx.axis_size(x, 1) do
+    if Nx.axis_size(forest.data, 1) != Nx.axis_size(query, 1) do
       raise ArgumentError,
             """
-            expected hyperplanes and input tensor to have the same dimension, \
-            got #{inspect(Nx.axis_size(forest.hyperplanes, 2))} \
-            and #{inspect(Nx.axis_size(x, 1))}
+            expected query tensor to have the same dimension as tensor used to grow the forest, \
+            got #{inspect(Nx.axis_size(forest.data, 1))} \
+            and #{inspect(Nx.axis_size(query, 1))}
             """
     end
 
-    predict_n(forest, x)
+    predict_n(forest, query)
   end
 
-  defn predict_n(forest, x) do
+  defnp predict_n(forest, query) do
+    k = forest.num_neighbors
     num_trees = forest.num_trees
     leaf_size = forest.leaf_size
     indices = forest.indices |> Nx.vectorize(:trees)
-    start_indices = compute_start_indices(forest, x, leaf_size: leaf_size) |> Nx.new_axis(1)
-    size = Nx.axis_size(x, 0)
+    start_indices = compute_start_indices(forest, query) |> Nx.new_axis(1)
+    query_size = Nx.axis_size(query, 0)
 
     pos =
       Nx.iota({1, 1, leaf_size})
-      |> Nx.broadcast({num_trees, size, leaf_size})
+      |> Nx.broadcast({num_trees, query_size, leaf_size})
       |> Nx.vectorize(:trees)
       |> Nx.add(start_indices)
 
-    Nx.take(indices, pos)
-    |> Nx.devectorize()
-    |> Nx.rename(nil)
-    |> Nx.transpose(axes: [1, 0, 2])
+    candidate_indices =
+      Nx.take(indices, pos)
+      |> Nx.devectorize()
+      |> Nx.rename(nil)
+      |> Nx.transpose(axes: [1, 0, 2])
+      |> Nx.reshape({query_size, num_trees * leaf_size})
+
+    Utils.find_neighbors(query, forest.data, candidate_indices, num_neighbors: k)
   end
 
-  defn compute_start_indices(forest, x, opts) do
-    leaf_size = opts[:leaf_size]
-    size = Nx.axis_size(x, 0)
+  defnp compute_start_indices(forest, query) do
     depth = forest.depth
+    leaf_size = forest.leaf_size
     num_trees = forest.num_trees
-    hyperplanes = forest.hyperplanes |> Nx.vectorize(:trees)
+    hyperplanes = forest.hyperplanes
     medians = forest.medians |> Nx.vectorize(:trees)
+    size = Nx.axis_size(forest.data, 0)
+    query_size = Nx.axis_size(query, 0)
 
     {start_indices, left?, cell_sizes, _} =
       while {
-              start_indices = Nx.broadcast(Nx.u32(0), {num_trees, size}) |> Nx.vectorize(:trees),
-              _left? = Nx.broadcast(Nx.u8(0), {num_trees, size}) |> Nx.vectorize(:trees),
-              cell_sizes = Nx.broadcast(Nx.u32(size), {num_trees, size}) |> Nx.vectorize(:trees),
+              start_indices =
+                Nx.broadcast(Nx.u32(0), {num_trees, query_size}) |> Nx.vectorize(:trees),
+              _left? = Nx.broadcast(Nx.u8(0), {num_trees, query_size}) |> Nx.vectorize(:trees),
+              cell_sizes =
+                Nx.broadcast(Nx.u32(size), {num_trees, query_size}) |> Nx.vectorize(:trees),
               {
-                x,
+                query,
                 hyperplanes,
                 medians,
                 level = 0,
-                nodes = Nx.broadcast(Nx.u32(0), {num_trees, size}) |> Nx.vectorize(:trees)
+                nodes = Nx.broadcast(Nx.u32(0), {num_trees, query_size}) |> Nx.vectorize(:trees)
               }
             },
             level < depth do
-        h = hyperplanes[level]
+        proj = Nx.dot(hyperplanes[[.., level]], [1], query, [1]) |> Nx.vectorize(:trees)
         median = Nx.take(medians, nodes)
-        proj = Nx.dot(x, h)
         left? = proj <= median
 
         nodes =
@@ -338,18 +391,14 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
           start_indices,
           left?,
           cell_sizes,
-          {x, hyperplanes, medians, level + 1, nodes}
+          {query, hyperplanes, medians, level + 1, nodes}
         }
       end
 
     Nx.select(not left? and cell_sizes < leaf_size, start_indices - 1, start_indices)
   end
 
-  defn left_child(nodes) do
-    2 * nodes + 1
-  end
+  defnp left_child(nodes), do: 2 * nodes + 1
 
-  defn right_child(nodes) do
-    2 * nodes + 2
-  end
+  defnp right_child(nodes), do: 2 * nodes + 2
 end
