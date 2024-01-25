@@ -102,13 +102,16 @@ defmodule Scholar.Neighbors.NNDescent do
       }
   """
   deftransform fit(tensor, opts \\ []) do
-    opts = if Keyword.has_key?(opts, :max_candidates) do
-             opts
-           else
-             Keyword.put(opts, :max_candidates, min(60, opts[:num_neighbors]))
-           end
+    opts =
+      if Keyword.has_key?(opts, :max_candidates) do
+        opts
+      else
+        Keyword.put(opts, :max_candidates, min(60, opts[:num_neighbors]))
+      end
+
     opts = NimbleOptions.validate!(opts, @opts_schema)
     sum_samples = Nx.axis_size(tensor, 0)
+
     if opts[:num_neighbors] > sum_samples do
       raise ArgumentError,
             """
@@ -117,6 +120,7 @@ defmodule Scholar.Neighbors.NNDescent do
             #{sum_samples}
             """
     end
+
     if opts[:max_candidates] > sum_samples do
       raise ArgumentError,
             """

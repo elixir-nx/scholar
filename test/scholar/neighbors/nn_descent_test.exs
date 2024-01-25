@@ -7,6 +7,7 @@ defmodule Scholar.Neighbors.NNDescentTest do
     key = Nx.Random.key(12)
     {tensor, key} = Nx.Random.uniform(key, shape: {10, 5})
     size = Nx.axis_size(tensor, 0)
+
     %NNDescent{nearest_neighbors: nearest_neighbors, distances: distances} =
       NNDescent.fit(tensor,
         num_neighbors: 1,
