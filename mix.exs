@@ -92,7 +92,7 @@ defmodule Scholar.MixProject do
           Scholar.Neighbors.LargeVis,
           Scholar.Neighbors.NNDescent,
           Scholar.Neighbors.RadiusNearestNeighbors,
-          Scholar.Neighbors.RandomProjectionForest,
+          Scholar.Neighbors.RandomProjectionForest
         ],
         Utilities: [
           Scholar.Impute.SimpleImputer,
