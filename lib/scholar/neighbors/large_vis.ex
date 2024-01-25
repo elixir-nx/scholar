@@ -104,7 +104,13 @@ defmodule Scholar.Neighbors.LargeVis do
     num_trees = opts[:num_trees] || 5 + round(:math.pow(size, 0.25))
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
 
-    fit_n(tensor, num_neighbors: k, min_leaf_size: min_leaf_size, num_trees: num_trees, key: key)
+    fit_n(tensor,
+      num_neighbors: k,
+      min_leaf_size: min_leaf_size,
+      num_trees: num_trees,
+      key: key,
+      num_iters: opts[:num_iters]
+    )
   end
 
   defnp fit_n(tensor, opts) do
