@@ -55,7 +55,6 @@ defmodule Scholar.MixProject do
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [
-        # "notebooks/hierarchical_clustering.livemd",
         "README.md",
         "notebooks/cv_gradient_boosting_tree.livemd",
         "notebooks/hierarchical_clustering.livemd",
