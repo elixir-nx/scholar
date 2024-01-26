@@ -110,23 +110,23 @@ defmodule Scholar.Neighbors.NNDescent do
       end
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    sum_samples = Nx.axis_size(tensor, 0)
+    num_samples = Nx.axis_size(tensor, 0)
 
-    if opts[:num_neighbors] > sum_samples do
+    if opts[:num_neighbors] > num_samples do
       raise ArgumentError,
             """
             expected num_neighbors to be less than or equal to the number of samples, \
             got num_neighbors: #{opts[:num_neighbors]} and number of samples: \
-            #{sum_samples}
+            #{num_samples}
             """
     end
 
-    if opts[:max_candidates] > sum_samples do
+    if opts[:max_candidates] > num_samples do
       raise ArgumentError,
             """
             expected max_candidates to be less than or equal to the number of samples, \
             got max_candidates: #{opts[:max_candidates]} and number of samples: \
-            #{sum_samples}
+            #{num_samples}
             """
     end
 
@@ -140,7 +140,7 @@ defmodule Scholar.Neighbors.NNDescent do
             Scholar.Neighbors.RandomProjectionForest.fit(tensor,
               key: key,
               num_trees: min(32, 5 + Kernel.round(:math.pow(Nx.axis_size(tensor, 0), 0.25))),
-              min_leaf_size: min(div(sum_samples, 2), max(opts[:num_neighbors], 10)),
+              min_leaf_size: min(div(num_samples, 2), max(opts[:num_neighbors], 10)),
               num_neighbors: opts[:num_neighbors]
             )
           )
@@ -165,7 +165,7 @@ defmodule Scholar.Neighbors.NNDescent do
     num_samples = Nx.axis_size(tensor, 0)
 
     {Nx.broadcast(Nx.s64(-1), {num_samples, num_neighbors}),
-     Nx.broadcast(Nx.Constants.max_finite(to_float_type(tensor)), {num_samples, num_neighbors}),
+     Nx.broadcast(Nx.Constants.infinity(to_float_type(tensor)), {num_samples, num_neighbors}),
      Nx.broadcast(Nx.s8(1), {num_samples, num_neighbors})}
   end
 
