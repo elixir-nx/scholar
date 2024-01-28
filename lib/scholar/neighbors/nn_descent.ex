@@ -8,7 +8,7 @@ defmodule Scholar.Neighbors.NNDescent do
   ## References
 
     [1] [Efficient K-Nearest Neighbor Graph Construction for Generic Similarity Measures](https://www.cs.princeton.edu/cass/papers/www11.pdf).
-    [2] Random projection trees and low dimensional manifolds
+    [2] [Randomized partition trees for nearest neighbor search](https://cseweb.ucsd.edu/~dasgupta/papers/exactnn-algo.pdf)
   """
 
   import Nx.Defn
