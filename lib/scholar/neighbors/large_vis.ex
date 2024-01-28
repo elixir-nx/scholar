@@ -104,22 +104,23 @@ defmodule Scholar.Neighbors.LargeVis do
     num_trees = opts[:num_trees] || 5 + round(:math.pow(size, 0.25))
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
 
-    fit_n(tensor,
+    fit_n(
+      tensor,
+      key,
       num_neighbors: k,
       min_leaf_size: min_leaf_size,
       num_trees: num_trees,
-      key: key,
       num_iters: opts[:num_iters]
     )
   end
 
-  defnp fit_n(tensor, opts) do
+  defnp fit_n(tensor, key, opts) do
     forest =
       Forest.fit(tensor,
         num_neighbors: opts[:num_neighbors],
         min_leaf_size: opts[:min_leaf_size],
         num_trees: opts[:num_trees],
-        key: opts[:key]
+        key: key
       )
 
     {graph, _} = Forest.predict(forest, tensor)
