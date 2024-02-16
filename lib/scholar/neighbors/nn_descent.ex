@@ -905,7 +905,7 @@ defmodule Scholar.Neighbors.NNDescent do
       iex> query_data = Nx.tensor([[1,7,32,6,2], [1,4,5,2,5], [1,3,67,12,4]])
       iex> key = Nx.Random.key(12)
       iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 6)
-      iex> {indices, distances, search_graph} = Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
+      iex> Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
   """
   deftransform query(
                  %__MODULE__{
@@ -954,16 +954,14 @@ defmodule Scholar.Neighbors.NNDescent do
       iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 6)
       iex> {indices, distances, search_graph} = Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
       iex> query_data2 = Nx.tensor([[2,7,32,6,2], [1,4,6,2,5], [1,3,67,12,3]])
-      iex> {indices2, distances2, search_graph2} = Scholar.Neighbors.NNDescent.query(nn, query_data2, search_graph, num_neighbors: 5, key: key)
+      iex> Scholar.Neighbors.NNDescent.query(nn, query_data2, search_graph, num_neighbors: 5, key: key)
   """
   deftransform query(
                  %__MODULE__{
-                   nearest_neighbors: nearest_neighbors,
-                   distances: distances,
                    forest: forest,
                    is_forest_computed?: is_forest_computed?,
                    train_data: train_data
-                 },
+                 } = nn,
                  query_data,
                  search_graph,
                  opts
@@ -979,7 +977,7 @@ defmodule Scholar.Neighbors.NNDescent do
       end
 
     query_n(
-      %__MODULE__{nearest_neighbors: nearest_neighbors, distances: distances},
+      nn,
       query_data,
       train_data,
       search_graph,
