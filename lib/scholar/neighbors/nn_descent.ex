@@ -14,9 +14,12 @@ defmodule Scholar.Neighbors.NNDescent do
   import Nx.Defn
   import Scholar.Shared
   alias Scholar.Metrics.Distance
+  alias Scholar.Neighbors.RandomProjectionForest
 
-  @derive {Nx.Container, containers: [:nearest_neighbors, :distances]}
-  defstruct [:nearest_neighbors, :distances]
+  @derive {Nx.Container,
+           containers: [:nearest_neighbors, :distances, :forest, :train_data],
+           keep: [:is_forest_computed?]}
+  defstruct [:nearest_neighbors, :distances, :forest, :train_data, :is_forest_computed?]
 
   opts = [
     num_neighbors: [
@@ -43,7 +46,7 @@ defmodule Scholar.Neighbors.NNDescent do
     ],
     tol: [
       type: {:custom, Scholar.Options, :positive_number, []},
-      default: 1.0e-4,
+      default: 1.0e-3,
       doc: """
       Relative tolerance with regards to Frobenius norm of the difference in
       the cluster centers of two consecutive iterations to declare convergence.
@@ -56,7 +59,46 @@ defmodule Scholar.Neighbors.NNDescent do
     ]
   ]
 
+  query_opts = [
+    pruning_probability: [
+      type: :float,
+      default: 0.8,
+      doc: """
+      The probability of pruning a dimension in the random projection tree.
+      """
+    ],
+    prunning_factor: [
+      type: :float,
+      default: 1.5,
+      doc: """
+      # TODO check this description
+      The factor by which the number of points in a leaf should be smaller than
+      the number of points in the root node.
+      """
+    ],
+    eps: [
+      type: :float,
+      default: 1.0e-3,
+      doc: """
+      The minimum value that distinguish between two different points.
+      """
+    ],
+    num_neighbors: [
+      type: :pos_integer,
+      required: true,
+      doc: "The number of neighbors to use in queries"
+    ],
+    key: [
+      type: {:custom, Scholar.Options, :key, []},
+      doc: """
+      Determines random number generation for centroid initialization.
+      If the key is not provided, it is set to `Nx.Random.key(System.system_time())`.
+      """
+    ]
+  ]
+
   @opts_schema NimbleOptions.new!(opts)
+  @query_opts_schema NimbleOptions.new!(query_opts)
 
   @doc """
   Calculates the approximate nearest neighbors for a given set of points. It
@@ -70,36 +112,6 @@ defmodule Scholar.Neighbors.NNDescent do
       iex> data = Nx.iota({10, 5})
       iex> key = Nx.Random.key(12)
       iex> Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 3, key: key)
-      %Scholar.Neighbors.NNDescent{
-        nearest_neighbors: Nx.tensor(
-          [
-            [0, 1, 2],
-            [1, 2, 0],
-            [2, 1, 3],
-            [3, 4, 2],
-            [4, 5, 3],
-            [5, 6, 4],
-            [6, 7, 5],
-            [7, 6, 8],
-            [8, 9, 7],
-            [9, 8, 7]
-          ], type: :s64
-        ),
-        distances: Nx.tensor(
-          [
-            [0.0, 125.0, 500.0],
-            [0.0, 125.0, 125.0],
-            [0.0, 125.0, 125.0],
-            [0.0, 125.0, 125.0],
-            [0.0, 125.0, 125.0],
-            [0.0, 125.0, 125.0],
-            [0.0, 125.0, 125.0],
-            [0.0, 125.0, 125.0],
-            [0.0, 125.0, 125.0],
-            [0.0, 125.0, 500.0]
-          ], type: :f32
-        )
-      }
   """
   deftransform fit(tensor, opts \\ []) do
     opts =
@@ -110,6 +122,10 @@ defmodule Scholar.Neighbors.NNDescent do
       end
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
+
+    opts =
+      Keyword.put(opts, :num_trees, 5 + Kernel.round(:math.pow(Nx.axis_size(tensor, 0), 0.25)))
+
     num_samples = Nx.axis_size(tensor, 0)
 
     if opts[:num_neighbors] > num_samples do
@@ -131,28 +147,10 @@ defmodule Scholar.Neighbors.NNDescent do
     end
 
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
-    graph = initialize_graph(tensor, opts)
-
-    graph =
-      if opts[:tree_init?] do
-        leaves =
-          get_leaves_from_forest(
-            Scholar.Neighbors.RandomProjectionForest.fit(tensor,
-              key: key,
-              num_trees: min(32, 5 + Kernel.round(:math.pow(Nx.axis_size(tensor, 0), 0.25))),
-              min_leaf_size: min(div(num_samples, 2), max(opts[:num_neighbors], 10)),
-              num_neighbors: opts[:num_neighbors]
-            )
-          )
-
-        update_by_leaves(tensor, graph, leaves)
-      else
-        graph
-      end
 
     opts = Keyword.put(opts, :max_candidates, min(opts[:max_candidates], opts[:num_neighbors]))
-    {graph, key} = init_random(tensor, graph, key, opts)
-    nn_descent(tensor, graph, key, opts)
+
+    nn_descent(tensor, key, opts)
   end
 
   # Initializes the graph. It returns a tuple of three tensors:
@@ -256,85 +254,23 @@ defmodule Scholar.Neighbors.NNDescent do
      Nx.revectorize(flags, flags_vectorized_axes, target_shape: {num_heaps, num_nodes})}
   end
 
-  # Updates the nearest neighbor graph using leaves constructed from random projection trees.
+  # Updates the nearest neighbor graph using random projection forest.
 
   # This function updates the nearest neighbor graph by incorporating the
-  # information from the leaves constructed from random projection trees.
-  defnp update_by_leaves(data, curr_graph, leaves) do
-    num_leaves = Nx.axis_size(leaves, 0)
-    leaf_size = Nx.axis_size(leaves, 1)
-
-    updates_index = Nx.s64(0)
-    updates_indices = Nx.broadcast(Nx.s64(0), {num_leaves, 2})
-    updates_dist = Nx.broadcast(Nx.tensor(0.0, type: to_float_type(data)), {num_leaves})
-
-    {_indices, keys, _flags} = curr_graph
-
-    while {{updates_indices, updates_dist, updates_index}, {i = Nx.s64(0), keys, data, leaves}},
-          i < num_leaves do
-      {{updates_indices, updates_dist, updates_index}, _} =
-        while {{updates_indices, updates_dist, updates_index},
-               {i, j = Nx.s64(0), keys, data, leaves, stop = Nx.u8(0)}},
-              j < leaf_size and not stop do
-          index0 = leaves[[i, j]]
-
-          if index0 != Nx.s64(-1) do
-            {{updates_indices, updates_dist, updates_index}, _} =
-              while {{updates_indices, updates_dist, updates_index},
-                     {i, j, k = j + 1, keys, index0, data, leaves, stop_inner = Nx.u8(0)}},
-                    k < leaf_size and not stop_inner do
-                index1 = leaves[[i, k]]
-
-                if index1 != Nx.s64(-1) do
-                  d = Distance.squared_euclidean(data[index0], data[index1])
-
-                  {updates_indices, updates_dist, updates_index} =
-                    if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
-                      updates_indices =
-                        Nx.put_slice(
-                          updates_indices,
-                          [updates_index, 0],
-                          Nx.new_axis(
-                            Nx.concatenate([Nx.new_axis(index0, 0), Nx.new_axis(index1, 0)]),
-                            0
-                          )
-                        )
-
-                      updates_dist =
-                        Nx.indexed_put(updates_dist, Nx.new_axis(updates_index, 0), d)
-
-                      {updates_indices, updates_dist, updates_index + 1}
-                    else
-                      {updates_indices, updates_dist, updates_index}
-                    end
-
-                  {{updates_indices, updates_dist, updates_index},
-                   {i, j, k + 1, keys, index0, data, leaves, Nx.u8(0)}}
-                else
-                  {{updates_indices, updates_dist, updates_index},
-                   {i, j, k + 1, keys, index0, data, leaves, Nx.u8(1)}}
-                end
-              end
-
-            {{updates_indices, updates_dist, updates_index},
-             {i, j + 1, keys, data, leaves, Nx.u8(0)}}
-          else
-            {{updates_indices, updates_dist, updates_index},
-             {i, j + 1, keys, data, leaves, Nx.u8(1)}}
-          end
-        end
-
-      {{updates_indices, updates_dist, updates_index}, {i + 1, keys, data, leaves}}
-    end
+  # information from the random projection forest
+  defnp update_by_forest(data, curr_graph, forest) do
+    {indices, distances} = Scholar.Neighbors.RandomProjectionForest.predict(forest, data)
 
     {curr_graph, _} =
-      while {curr_graph, {i = Nx.s64(0), updates_index, updates_indices, updates_dist}},
-            i < updates_index do
-        index0 = updates_indices[[i, 0]]
-        index1 = updates_indices[[i, 1]]
-        d = updates_dist[i]
-        curr_graph = add_neighbor(curr_graph, index0, index1, d, Nx.s8(1))
-        {curr_graph, {i + 1, updates_index, updates_indices, updates_dist}}
+      while {curr_graph, {i = Nx.s64(0), indices, distances}},
+            i < Nx.axis_size(indices, 0) do
+        {curr_graph, _} =
+          while {curr_graph, {i, j = 0, indices, distances}}, j < Nx.axis_size(data, 1) do
+            curr_graph = add_neighbor(curr_graph, i, indices[i][j], distances[i][j], Nx.s8(1))
+            {curr_graph, {i, j + 1, indices, distances}}
+          end
+
+        {curr_graph, {i + 1, indices, distances}}
       end
 
     curr_graph
@@ -582,7 +518,26 @@ defmodule Scholar.Neighbors.NNDescent do
   # neighbor candidates and updating the graph connections based on the
   # distances between nodes. The algorithm aims to find a graph that represents
   # the nearest neighbor relationships in the data.
-  defnp nn_descent(data, curr_graph, key, opts \\ []) do
+  defnp nn_descent(data, key, opts \\ []) do
+    curr_graph = initialize_graph(data, opts)
+
+    {curr_graph, forest} =
+      if opts[:tree_init?] do
+        forest =
+          RandomProjectionForest.fit(data,
+            key: key,
+            num_trees: opts[:num_trees],
+            min_leaf_size: min(div(Nx.axis_size(data, 0), 2), max(opts[:num_neighbors], 10)),
+            num_neighbors: opts[:num_neighbors]
+          )
+
+        {update_by_forest(data, curr_graph, forest), forest}
+      else
+        {curr_graph, Nx.tensor(:nan)}
+      end
+
+    {curr_graph, key} = init_random(data, curr_graph, key, opts)
+
     max_iters = opts[:max_iterations]
     tol = opts[:tol]
     max_candidates = opts[:max_candidates]
@@ -622,34 +577,15 @@ defmodule Scholar.Neighbors.NNDescent do
       end
 
     {indices, dists, _flags} = add_zero_nodes(curr_graph)
-    ord = Nx.argsort(dists, axis: 1)
+    ord = Nx.argsort(dists, axis: 1, stable: true)
 
     %__MODULE__{
       nearest_neighbors: Nx.take_along_axis(indices, ord, axis: 1),
-      distances: Nx.take_along_axis(dists, ord, axis: 1)
+      distances: Nx.take_along_axis(dists, ord, axis: 1),
+      forest: forest,
+      train_data: data,
+      is_forest_computed?: opts[:tree_init?]
     }
-  end
-
-  # Retrieve the leaves from random projection forests.
-  defnp get_leaves_from_forest(forest) do
-    leaf_size = forest.leaf_size
-    {num_trees, num_indices} = Nx.shape(forest.indices)
-    to_concat = rem(num_indices, leaf_size)
-
-    leaves =
-      if to_concat != Nx.s64(0) do
-        Nx.concatenate(
-          [
-            forest.indices,
-            Nx.broadcast(Nx.s64(-1), {num_trees, leaf_size - to_concat})
-          ],
-          axis: 1
-        )
-      else
-        forest.indices
-      end
-
-    Nx.reshape(leaves, {:auto, leaf_size})
   end
 
   # Procedure that adds neighbor to the graph according to the provided distance (key)
@@ -834,5 +770,455 @@ defmodule Scholar.Neighbors.NNDescent do
 
       {indices, keys, flags}
     end
+  end
+
+  defnp prune_long_edges(data, indices, keys, rng_key, opts) do
+    pruning_probability = opts[:pruning_probability]
+    {num_heaps, num_nodes} = Nx.shape(indices)
+
+    new_indices_init = Nx.broadcast(Nx.s64(-1), {num_nodes})
+    new_keys_init = Nx.broadcast(Nx.Constants.max_finite(to_float_type(data)), {num_nodes})
+
+    {{indices, keys}, _} =
+      while {{indices, keys}, {i = Nx.s64(0), data, new_indices_init, new_keys_init, rng_key}},
+            i < num_heaps do
+        new_indices_size = Nx.s64(0)
+        new_indices = new_indices_init
+        new_keys = new_keys_init
+
+        # First element -> node itself so we prune it.
+        {{new_indices, new_keys, _new_indices_size}, _} =
+          while {{new_indices, new_keys, new_indices_size},
+                 {j = Nx.s64(1), i, data, indices, keys, rng_key}},
+                j < num_nodes do
+            index = indices[[i, j]]
+            key = keys[[i, j]]
+
+            if index == Nx.s64(-1) do
+              {{new_indices, new_keys, new_indices_size},
+               {j + 1, i, data, indices, keys, rng_key}}
+            else
+              add_node? = Nx.u8(1)
+              stop = Nx.u8(0)
+
+              {add_node?, _} =
+                while {add_node?,
+                       {k = Nx.s64(0), i, index, key, data, stop, new_indices, new_keys,
+                        new_indices_size, rng_key}},
+                      k < new_indices_size and not stop do
+                  new_index = new_indices[[k]]
+                  new_key = new_keys[[k]]
+
+                  d = Distance.squared_euclidean(data[index], data[new_index])
+
+                  {add_node?, stop, rng_key} =
+                    if new_key > opts[:eps] and d < key do
+                      {temp, rng_key} = Nx.Random.uniform(rng_key, type: :f32)
+
+                      if temp < pruning_probability do
+                        {Nx.u8(0), Nx.u8(1), rng_key}
+                      else
+                        {add_node?, stop, rng_key}
+                      end
+                    else
+                      {add_node?, stop, rng_key}
+                    end
+
+                  {add_node?,
+                   {k + 1, i, index, key, data, stop, new_indices, new_keys, new_indices_size,
+                    rng_key}}
+                end
+
+              {new_indices, new_keys, new_indices_size} =
+                if add_node? do
+                  new_indices =
+                    Nx.indexed_put(new_indices, Nx.new_axis(new_indices_size, 0), index)
+
+                  new_keys = Nx.indexed_put(new_keys, Nx.new_axis(new_indices_size, 0), key)
+                  {new_indices, new_keys, new_indices_size + 1}
+                else
+                  {new_indices, new_keys, new_indices_size}
+                end
+
+              {{new_indices, new_keys, new_indices_size},
+               {j + 1, i, data, indices, keys, rng_key}}
+            end
+          end
+
+        indices = Nx.put_slice(indices, [i, 0], Nx.new_axis(new_indices, 0))
+        keys = Nx.put_slice(keys, [i, 0], Nx.new_axis(new_keys, 0))
+
+        {{indices, keys}, {i + 1, data, new_indices_init, new_keys_init, rng_key}}
+      end
+
+    {indices, keys}
+  end
+
+  # prepare all needed data for query
+
+  defnp prepare(data, indices, keys, key, opts) do
+    {num_heaps, num_nodes} = Nx.shape(indices)
+
+    {indices, keys} = prune_long_edges(data, indices, keys, key, opts)
+
+    search_graph = initialize_graph(data, opts)
+
+    {search_graph, _} =
+      while {search_graph, {indices, keys, i = 0}}, i < num_heaps do
+        {{search_graph, indices, keys, i}, _} =
+          while {{search_graph, indices, keys, i}, j = 0}, j < num_nodes do
+            index = indices[[i, j]]
+
+            search_graph =
+              if index != Nx.s64(-1) do
+                d = keys[[i, j]]
+                search_graph = add_neighbor(search_graph, i, index, d, Nx.s8(-1))
+                add_neighbor(search_graph, index, i, d, Nx.s8(-1))
+              else
+                search_graph
+              end
+
+            {{search_graph, indices, keys, i}, j + 1}
+          end
+
+        {search_graph, {indices, keys, i + 1}}
+      end
+
+    {search_indices, search_distances, search_flags} = search_graph
+    ord = Nx.argsort(search_distances, axis: 1, stable: true)
+
+    search_indices = Nx.take_along_axis(search_indices, ord, axis: 1)
+    search_distances = Nx.take_along_axis(search_distances, ord, axis: 1)
+
+    {search_indices, search_distances, search_flags}
+  end
+
+  @doc """
+  Query the training data for the nearest neighbors of the query data.
+
+  Use this function if you query for the first time on a training data.
+  It will compute search graph that can be reused in the future queries.
+
+  ## Examples
+
+      iex> data = Nx.iota({100, 5})
+      iex> query_data = Nx.tensor([[1,7,32,6,2], [1,4,5,2,5], [1,3,67,12,4]])
+      iex> key = Nx.Random.key(12)
+      iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 6)
+      iex> {indices, distances, search_graph} = Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
+  """
+  deftransform query(
+                 %__MODULE__{
+                   nearest_neighbors: nearest_neighbors,
+                   distances: distances,
+                   forest: forest,
+                   is_forest_computed?: is_forest_computed?,
+                   train_data: train_data
+                 } = nn,
+                 query_data,
+                 opts
+               ) do
+    opts = NimbleOptions.validate!(opts, @query_opts_schema)
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
+    search_graph = prepare(train_data, nearest_neighbors, distances, key, opts)
+
+    forest =
+      if is_forest_computed? do
+        forest
+      else
+        RandomProjectionForest.fit(train_data, opts)
+      end
+
+    query_n(
+      nn,
+      query_data,
+      train_data,
+      search_graph,
+      forest,
+      key,
+      opts
+    )
+  end
+
+  @doc """
+  Query the training data for the nearest neighbors of the query data.
+
+  Use this function if you have already queried training data.
+  It will compute search graph that can be reused in the future queries.
+
+  ## Examples
+
+      iex> data = Nx.iota({100, 5})
+      iex> query_data = Nx.tensor([[1,7,32,6,2], [1,4,5,2,5], [1,3,67,12,4]])
+      iex> key = Nx.Random.key(12)
+      iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 6)
+      iex> {indices, distances, search_graph} = Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
+      iex> query_data2 = Nx.tensor([[2,7,32,6,2], [1,4,6,2,5], [1,3,67,12,3]])
+      iex> {indices2, distances2, search_graph2} = Scholar.Neighbors.NNDescent.query(nn, query_data2, search_graph, num_neighbors: 5, key: key)
+  """
+  deftransform query(
+                 %__MODULE__{
+                   nearest_neighbors: nearest_neighbors,
+                   distances: distances,
+                   forest: forest,
+                   is_forest_computed?: is_forest_computed?,
+                   train_data: train_data
+                 },
+                 query_data,
+                 search_graph,
+                 opts
+               ) do
+    opts = NimbleOptions.validate!(opts, @query_opts_schema)
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
+
+    forest =
+      if is_forest_computed? do
+        forest
+      else
+        RandomProjectionForest.fit(train_data, opts)
+      end
+
+    query_n(
+      %__MODULE__{nearest_neighbors: nearest_neighbors, distances: distances},
+      query_data,
+      train_data,
+      search_graph,
+      forest,
+      key,
+      opts
+    )
+  end
+
+  defn query_n(
+         %__MODULE__{nearest_neighbors: nearest_neighbors},
+         query_data,
+         train_data,
+         search_graph,
+         forest,
+         rng_key,
+         opts
+       ) do
+    train_data_size = Nx.axis_size(train_data, 0)
+    {query_indices, query_keys, query_flags} = initialize_graph(query_data, opts)
+
+    {num_heaps, num_nodes} = Nx.shape(query_indices)
+
+    {initial_candidates, initial_distances} = RandomProjectionForest.predict(forest, query_data)
+
+    {{query_indices, query_keys, _query_flags}, _query_data, search_graph, _initial_candidates,
+     _initial_distances, _train_data, _rng_key,
+     _i} =
+      while {{query_indices, query_keys, query_flags}, query_data, search_graph,
+             initial_candidates, initial_distances, train_data, rng_key, i = 0},
+            i < num_heaps do
+        visited = Nx.broadcast(Nx.u8(0), {train_data_size})
+        expand_factor = 50
+        search_candidates_indices = Nx.broadcast(Nx.s64(-1), {num_nodes * expand_factor})
+
+        search_candidates_distances =
+          Nx.broadcast(
+            Nx.Constants.max_finite(to_float_type(query_data)),
+            {num_nodes * expand_factor}
+          )
+
+        search_ptr = Nx.s64(0)
+
+        {{query_indices, query_keys, query_flags},
+         {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+         {query_data, search_graph, initial_candidates, initial_distances, train_data, i, _stop,
+          j}} =
+          while {{query_indices, query_keys, query_flags},
+                 {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+                 {query_data, search_graph, initial_candidates, initial_distances, train_data, i,
+                  stop = Nx.u8(0), j = 0}},
+                j < Nx.axis_size(nearest_neighbors, 1) and not stop do
+            if initial_candidates[i][j] != Nx.s64(-1) do
+              d = Distance.squared_euclidean(train_data[initial_candidates[i][j]], query_data[i])
+
+              visited =
+                Nx.indexed_put(visited, Nx.new_axis(initial_candidates[i][j], 0), Nx.u8(1))
+
+              {query_indices, query_keys, query_flags} =
+                add_neighbor(
+                  {query_indices, query_keys, query_flags},
+                  i,
+                  initial_candidates[i][j],
+                  d,
+                  Nx.s8(-1)
+                )
+
+              search_candidates_indices =
+                Nx.indexed_put(
+                  search_candidates_indices,
+                  Nx.new_axis(search_ptr, 0),
+                  initial_candidates[i][j]
+                )
+
+              search_candidates_distances =
+                Nx.indexed_put(search_candidates_distances, Nx.new_axis(search_ptr, 0), d)
+
+              search_ptr = search_ptr + 1
+
+              {{query_indices, query_keys, query_flags},
+               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+               {query_data, search_graph, initial_candidates, initial_distances, train_data, i,
+                Nx.u8(0), j + 1}}
+            else
+              {{query_indices, query_keys, query_flags},
+               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+               {query_data, search_graph, initial_candidates, initial_distances, train_data, i,
+                Nx.u8(1), j}}
+            end
+          end
+
+        {{query_indices, query_keys, query_flags},
+         {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+         _} =
+          while {{query_indices, query_keys, query_flags},
+                 {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+                 {query_data, search_graph, initial_candidates, initial_distances, train_data,
+                  rng_key, i, stop = Nx.u8(0), k = j}},
+                k < Nx.axis_size(nearest_neighbors, 1) and not stop do
+            {index, rng_key} = Nx.Random.randint(rng_key, 0, Nx.axis_size(train_data, 0))
+
+            if not visited[index] do
+              d = Distance.squared_euclidean(train_data[index], query_data[i])
+              visited = Nx.indexed_put(visited, Nx.new_axis(index, 0), Nx.u8(1))
+
+              {query_indices, query_keys, query_flags} =
+                add_neighbor(
+                  {query_indices, query_keys, query_flags},
+                  i,
+                  index,
+                  d,
+                  Nx.s8(-1)
+                )
+
+              search_candidates_indices =
+                Nx.indexed_put(
+                  search_candidates_indices,
+                  Nx.new_axis(search_ptr, 0),
+                  index
+                )
+
+              search_candidates_distances =
+                Nx.indexed_put(search_candidates_distances, Nx.new_axis(search_ptr, 0), d)
+
+              search_ptr = search_ptr + 1
+
+              {{query_indices, query_keys, query_flags},
+               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+               {query_data, search_graph, initial_candidates, initial_distances, train_data,
+                rng_key, i, Nx.u8(0), k + 1}}
+            else
+              {{query_indices, query_keys, query_flags},
+               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+               {query_data, search_graph, initial_candidates, initial_distances, train_data,
+                rng_key, i, Nx.u8(1), k}}
+            end
+          end
+
+        ord = Nx.argsort(search_candidates_distances, stable: true)
+        search_candidates_indices = Nx.take_along_axis(search_candidates_indices, ord)
+        search_candidates_distances = Nx.take_along_axis(search_candidates_distances, ord)
+
+        index = Nx.s64(0)
+
+        dist_bound =
+          (Nx.tensor(1.0, type: to_float_type(query_data)) + opts[:eps]) * query_keys[[i, 0]]
+
+        {search_indices, search_keys, search_flags} = search_graph
+
+        while {{query_indices, query_keys, query_flags},
+               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+               query_data, {search_indices, search_keys, search_flags}, initial_candidates,
+               initial_distances, train_data, i, dist_bound, stop, index},
+              index < search_ptr and search_candidates_distances[[index]] and
+                not stop < dist_bound do
+          candidate = search_candidates_indices[[index]]
+
+          {{query_indices, query_keys, query_flags},
+           {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+           query_data, _, initial_candidates, initial_distances, train_data, i, dist_bound, stop,
+           index, _,
+           _} =
+            while {{query_indices, query_keys, query_flags},
+                   {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+                   query_data, {search_indices, search_keys, search_flags}, initial_candidates,
+                   initial_distances, train_data, i, dist_bound, stop, index, candidate, k = 0},
+                  k < num_nodes do
+              j = search_indices[[candidate, k]]
+
+              if j == Nx.s64(-1) do
+                {{query_indices, query_keys, query_flags},
+                 {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+                 query_data, search_graph, initial_candidates, initial_distances, train_data, i,
+                 dist_bound, Nx.u8(1), index, candidate, k}
+              else
+                if visited[j] do
+                  {{query_indices, query_keys, query_flags},
+                   {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+                   query_data, search_graph, initial_candidates, initial_distances, train_data, i,
+                   dist_bound, stop, index, candidate, k + 1}
+                else
+                  d = Distance.squared_euclidean(train_data[j], query_data[i])
+                  visited = Nx.indexed_put(visited, Nx.new_axis(j, 0), Nx.u8(1))
+
+                  if d < dist_bound do
+                    {query_indices, query_keys, query_flags} =
+                      add_neighbor(
+                        {query_indices, query_keys, query_flags},
+                        i,
+                        j,
+                        d,
+                        Nx.s8(-1)
+                      )
+
+                    search_candidates_indices =
+                      Nx.indexed_put(
+                        search_candidates_indices,
+                        Nx.new_axis(search_ptr, 0),
+                        j
+                      )
+
+                    search_candidates_distances =
+                      Nx.indexed_put(search_candidates_distances, Nx.new_axis(search_ptr, 0), d)
+
+                    search_ptr = search_ptr + 1
+
+                    dist_bound =
+                      (Nx.tensor(1.0, type: to_float_type(query_data)) + opts[:eps]) *
+                        query_keys[[i, 0]]
+
+                    {{query_indices, query_keys, query_flags},
+                     {visited, search_candidates_indices, search_candidates_distances,
+                      search_ptr}, query_data, {search_indices, search_keys, search_flags},
+                     initial_candidates, initial_distances, train_data, i, dist_bound, stop,
+                     index, candidate, k + 1}
+                  else
+                    {{query_indices, query_keys, query_flags},
+                     {visited, search_candidates_indices, search_candidates_distances,
+                      search_ptr}, query_data, {search_indices, search_keys, search_flags},
+                     initial_candidates, initial_distances, train_data, i, dist_bound, stop,
+                     index, candidate, k + 1}
+                  end
+                end
+              end
+            end
+
+          {{query_indices, query_keys, query_flags},
+           {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+           query_data, search_graph, initial_candidates, initial_distances, train_data, i,
+           dist_bound, stop, index + 1}
+        end
+
+        {{query_indices, query_keys, query_flags}, query_data, search_graph, initial_candidates,
+         initial_distances, train_data, rng_key, i + 1}
+      end
+
+    ord = Nx.argsort(query_keys, axis: 1, stable: true)
+    query_indices = Nx.take_along_axis(query_indices, ord, axis: 1)
+    query_keys = Nx.take_along_axis(query_keys, ord, axis: 1)
+    {query_indices, query_keys, search_graph}
   end
 end
