@@ -544,16 +544,10 @@ defmodule Scholar.Metrics.Regression do
 
     # Formula adapted from sklearn:
     # https://github.com/scikit-learn/scikit-learn/blob/128e40ed593c57e8b9e57a4109928d58fa8bf359/sklearn/metrics/_regression.py#L299
-    diff = Nx.subtract(y_true, y_pred)
-    sign = Nx.greater_equal(diff, 0)
-    subtracted_sign = Nx.subtract(1, sign)
-    
-    Nx.subtract(
-      Nx.multiply(alpha, sign)
-      |> Nx.multiply(diff),
-      Nx.multiply(1 - alpha, subtracted_sign)
-      |> Nx.multiply(diff))
-    |> Nx.mean()
+    diff = y_true - y_pred
+    sign = diff >= 0
+    loss = alpha * sign * diff - (1 - alpha) * (1 - sign) * diff
+    Nx.mean(loss)
   end
 
   defnp check_shape(y_true, y_pred) do
