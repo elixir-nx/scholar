@@ -69,6 +69,9 @@ defmodule Scholar.Metrics.RegressionTest do
   
   describe "mean_pinball_loss/3" do
     test "mean_pinball_loss cases from sklearn" do
+      # Test cases copied from sklearn:
+      # https://github.com/scikit-learn/scikit-learn/blob/128e40ed593c57e8b9e57a4109928d58fa8bf359/sklearn/metrics/tests/test_regression.py#L49      
+
       y_true = Nx.linspace(1, 50, n: 50)
       y_pred = Nx.add(y_true, 1)
       y_pred_2 = Nx.add(y_true, -1)
