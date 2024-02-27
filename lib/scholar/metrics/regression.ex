@@ -541,6 +541,9 @@ defmodule Scholar.Metrics.Regression do
   """
   defn mean_pinball_loss(y_true, y_pred, alpha \\ 0.5) do
     check_shape(y_true, y_pred)
+
+    # Formula adapted from sklearn:
+    # https://github.com/scikit-learn/scikit-learn/blob/128e40ed593c57e8b9e57a4109928d58fa8bf359/sklearn/metrics/_regression.py#L299
     diff = Nx.subtract(y_true, y_pred)
     sign = Nx.greater_equal(diff, 0)
     subtracted_sign = Nx.subtract(1, sign)
