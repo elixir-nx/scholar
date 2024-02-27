@@ -539,8 +539,9 @@ defmodule Scholar.Metrics.Regression do
         0.5
       >
   """
-  defn mean_pinball_loss(y_true, y_pred, alpha \\ 0.5) do
+  defn mean_pinball_loss(y_true, y_pred, opts \\ []) do
     check_shape(y_true, y_pred)
+    alpha = opts[:alpha]
 
     # Formula adapted from sklearn:
     # https://github.com/scikit-learn/scikit-learn/blob/128e40ed593c57e8b9e57a4109928d58fa8bf359/sklearn/metrics/_regression.py#L299
