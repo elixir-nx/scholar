@@ -519,6 +519,40 @@ defmodule Scholar.Metrics.Regression do
     Nx.reduce_max(Nx.abs(y_true - y_pred))
   end
 
+  @doc ~S"""
+  Calculates the mean pinball loss to evaluate predictive performance of quantile regression models.
+
+  $$pinball(y, \hat{y}) = \frac{1}{n) \sum_{i=1}^{n} \alpha max(\hat{y_i} - y_i, 0) +
+  (1 - \alpha) max(\hat{y_i} - y_i, 0)$$
+
+  The residual error is defined as $$|y - \hat{y}|$$ where $y$ is a true value
+  and $\hat{y}$ is a predicted value.
+  Equivalent to half of the $$mean_absolute_error$$ when $$\alpha$$ is 0.5.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> y_pred = Nx.tensor([2, 3, 4])
+      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred, 0.5)
+      #Nx.Tensor<
+        f32
+        0.5
+      >
+  """
+  defn mean_pinball_loss(y_true, y_pred, alpha \\ 0.5) do
+    check_shape(y_true, y_pred)
+    diff = Nx.subtract(y_true, y_pred)
+    sign = Nx.greater_equal(diff, 0)
+    subtracted_sign = Nx.subtract(1, sign)
+    
+    Nx.subtract(
+      Nx.multiply(alpha, sign)
+      |> Nx.multiply(diff),
+      Nx.multiply(1 - alpha, subtracted_sign)
+      |> Nx.multiply(diff))
+    |> Nx.mean()
+  end
+
   defnp check_shape(y_true, y_pred) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_true, y_pred)
