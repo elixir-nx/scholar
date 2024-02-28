@@ -533,13 +533,13 @@ defmodule Scholar.Metrics.Regression do
 
       iex> y_true = Nx.tensor([1, 2, 3])
       iex> y_pred = Nx.tensor([2, 3, 4])
-      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred, 0.5)
+      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred)
       #Nx.Tensor<
         f32
         0.5
       >
   """
-  defn mean_pinball_loss(y_true, y_pred, opts \\ []) do
+  defn mean_pinball_loss(y_true, y_pred, opts \\ [alpha: 0.5]) do
     check_shape(y_true, y_pred)
     alpha = opts[:alpha]
 
