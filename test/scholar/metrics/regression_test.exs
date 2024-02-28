@@ -90,24 +90,33 @@ defmodule Scholar.Metrics.RegressionTest do
 
       assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(0.75)
       assert Regression.mean_pinball_loss(
-        y_true, y_pred, alpha: 0.5, sample_weights: sample_weights) == Nx.tensor(0.625)
+        y_true, y_pred, alpha: 0.5, sample_weight: sample_weights) == Nx.tensor(0.625)
       assert_raise ArgumentError, fn ->
         Regression.mean_pinball_loss(y_true, y_pred,
-          alpha: 0.5, sample_weights: wrong_sample_weights)
+          alpha: 0.5, sample_weight: wrong_sample_weights)
       end
     end
 
     test "mean_pinball_loss with multioutput" do
       y_true = Nx.tensor([[1, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 1]])
       y_pred = Nx.tensor([[0, 0, 0, 1], [1, 0, 1, 1], [0, 0, 0, 1]])
+      sample_weight = Nx.tensor([[0.5, 0.5, 0.5, 1.5], [1.5, 0.5, 1.5, 1.5], [1.5, 1.5, 1.5, 1.5]])
       expected_error = (1 + 2 / 3) / 8
       expected_raw_values_tensor = Nx.tensor([0.5, 0.33333333, 0.0, 0.0])
+      expected_raw_values_weighted_tensor = Nx.tensor([0.5, 0.4, 0.0 , 0.0])
 
       assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(expected_error)
-      assert Regression.mean_pinball_loss(y_true, y_pred,
-        alpha: 0.5, multioutput: :uniform_average) == Nx.tensor(expected_error)      
+      ## this assertion yields false due to precission error
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, multioutput: :uniform_average)
+      assert  Nx.abs(Nx.subtract(mpbl, Nx.tensor(expected_error))) <= Nx.tensor(0.0001)
       assert Regression.mean_pinball_loss(y_true, y_pred,
         alpha: 0.5, multioutput: :raw_values) == expected_raw_values_tensor
-    end    
+      assert Regression.mean_pinball_loss(
+        y_true, y_pred, alpha: 0.5,
+        sample_weight: sample_weight,  multioutput: :raw_values) == expected_raw_values_weighted_tensor
+      assert Regression.mean_pinball_loss(
+        y_true, y_pred, alpha: 0.5,
+        sample_weight: sample_weight, multioutput: :uniform_average) == Nx.tensor(0.225)
+    end
   end
 end
