@@ -78,8 +78,8 @@ defmodule Scholar.Metrics.RegressionTest do
 
       assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(0.5)
       assert Regression.mean_pinball_loss(y_true, y_pred_2) == Nx.tensor(0.5)
-      assert Regression.mean_pinball_loss(y_true, y_pred, 0.4) == Nx.tensor(0.6)            
-      assert Regression.mean_pinball_loss(y_true, y_pred_2, 0.4) == Nx.tensor(0.4)
+      assert Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.4) == Nx.tensor(0.6)            
+      assert Regression.mean_pinball_loss(y_true, y_pred_2, alpha: 0.4) == Nx.tensor(0.4)
     end
   end
 end
