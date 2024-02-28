@@ -559,10 +559,13 @@ defmodule Scholar.Metrics.Regression do
     output_errors = handle_sample_weights(loss, opts, axes: [0])
     # mimics the sklearn behavior
     case opts[:multioutput] do
+      # raw_values returns plain output errors. One value per channel.
       :raw_values -> output_errors
+      # uniform_average returns the mean of the above. Note how they are averaged.
       :uniform_average ->
         output_errors
         |> Nx.mean()
+      # every other case, just take the mean without any axes nor weight.
       _ -> handle_sample_weights(loss, opts)
     end
   end
