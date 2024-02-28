@@ -538,9 +538,16 @@ defmodule Scholar.Metrics.Regression do
         f32
         0.5
       >
+      iex> y_true = Nx.tensor([[1, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 1]])
+      iex> y_pred = Nx.tensor([[0, 0, 0, 1], [1, 0, 1, 1], [0, 0, 0, 1]])
+      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, multioutput: :raw_values)
+      #Nx.Tensor<
+        f32[4]
+        [0.5, 0.3333333432674408, 0.0, 0.0]
+      >
   """
   defn mean_pinball_loss(y_true, y_pred, opts \\ [alpha: 0.5]) do
-    check_shape(y_true, y_pred)
+    assert_same_shape!(y_true, y_pred)
     alpha = opts[:alpha]
 
     # Formula adapted from sklearn:
@@ -549,7 +556,11 @@ defmodule Scholar.Metrics.Regression do
     sign = diff >= 0
     loss = alpha * sign * diff - (1 - alpha) * (1 - sign) * diff
 
-    handle_sample_weights(loss, opts)
+    case opts[:multioutput] do
+      :raw_values -> Nx.mean(loss, axes: [0])
+      :uniform_average -> Nx.mean(loss)
+      _ -> handle_sample_weights(loss, opts)
+    end
   end
 
   defnp handle_sample_weights(loss, opts) do

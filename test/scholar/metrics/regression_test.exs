@@ -96,5 +96,18 @@ defmodule Scholar.Metrics.RegressionTest do
           alpha: 0.5, sample_weights: wrong_sample_weights)
       end
     end
+
+    test "mean_pinball_loss with multioutput" do
+      y_true = Nx.tensor([[1, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 1]])
+      y_pred = Nx.tensor([[0, 0, 0, 1], [1, 0, 1, 1], [0, 0, 0, 1]])
+      expected_error = (1 + 2 / 3) / 8
+      expected_raw_values_tensor = Nx.tensor([0.5, 0.33333333, 0.0, 0.0])
+
+      assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(expected_error)
+      assert Regression.mean_pinball_loss(y_true, y_pred,
+        alpha: 0.5, multioutput: :uniform_average) == Nx.tensor(expected_error)      
+      assert Regression.mean_pinball_loss(y_true, y_pred,
+        alpha: 0.5, multioutput: :raw_values) == expected_raw_values_tensor
+    end    
   end
 end
