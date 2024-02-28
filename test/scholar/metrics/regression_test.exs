@@ -81,5 +81,20 @@ defmodule Scholar.Metrics.RegressionTest do
       assert Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.4) == Nx.tensor(0.6)            
       assert Regression.mean_pinball_loss(y_true, y_pred_2, alpha: 0.4) == Nx.tensor(0.4)
     end
+
+    test "mean_pinball_loss with sample weight" do
+      y_true = Nx.tensor([1, 2, 3, 4, 5, 6])
+      y_pred = Nx.tensor([2, 3, 4, 6, 7, 8])
+      sample_weights = Nx.tensor([1.5, 1.5, 1.5, 0.5, 0.5, 0.5])
+      wrong_sample_weights = Nx.tensor([1.5, 1.5, 1.5, 0.5, 0.5, 0.5, 1, 1, 1])      
+
+      assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(0.75)
+      assert Regression.mean_pinball_loss(
+        y_true, y_pred, alpha: 0.5, sample_weights: sample_weights) == Nx.tensor(0.625)
+      assert_raise ArgumentError, fn ->
+        Regression.mean_pinball_loss(y_true, y_pred,
+          alpha: 0.5, sample_weights: wrong_sample_weights)
+      end
+    end
   end
 end
