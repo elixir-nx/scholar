@@ -548,7 +548,15 @@ defmodule Scholar.Metrics.Regression do
     diff = y_true - y_pred
     sign = diff >= 0
     loss = alpha * sign * diff - (1 - alpha) * (1 - sign) * diff
-    Nx.mean(loss)
+
+    handle_sample_weights(loss, opts)
+  end
+
+  defnp handle_sample_weights(loss, opts) do
+    case opts[:sample_weights] do
+      nil -> Nx.mean(loss)
+      weights -> Nx.weighted_mean(loss, weights)
+    end
   end
 
   defnp check_shape(y_true, y_pred) do
