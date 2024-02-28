@@ -556,17 +556,22 @@ defmodule Scholar.Metrics.Regression do
     sign = diff >= 0
     loss = alpha * sign * diff - (1 - alpha) * (1 - sign) * diff
 
+    output_errors = handle_sample_weights(loss, opts, axes: [0])
+    # mimics the sklearn behavior
     case opts[:multioutput] do
-      :raw_values -> Nx.mean(loss, axes: [0])
-      :uniform_average -> Nx.mean(loss)
+      :raw_values -> output_errors
+      :uniform_average ->
+        output_errors
+        |> Nx.mean()
       _ -> handle_sample_weights(loss, opts)
     end
   end
 
-  defnp handle_sample_weights(loss, opts) do
-    case opts[:sample_weights] do
-      nil -> Nx.mean(loss)
-      weights -> Nx.weighted_mean(loss, weights)
+  defnp handle_sample_weights(loss, opts, mean_opts \\ []) do
+    case opts[:sample_weight] do
+      nil -> Nx.mean(loss, mean_opts)
+      weights ->
+        Nx.weighted_mean(loss, weights, mean_opts)
     end
   end
 
