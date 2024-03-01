@@ -519,6 +519,54 @@ defmodule Scholar.Metrics.Regression do
     Nx.reduce_max(Nx.abs(y_true - y_pred))
   end
 
+  mean_pinball_loss_opts = [
+    alpha: [
+      type: :float,
+      default: 0.5,
+      doc: """
+      The slope of the pinball loss, default=0.5,
+      This loss is equivalent to $$mean_absolute_error$$ when $$\alpha$$ is 0.5,
+      $$\alpha = 0.95$$ is minimized by estimators of the 95th percentile.
+      """
+    ],
+    sample_weights: [
+      type:
+        {:or,
+         [
+           {:custom, Scholar.Options, :weights, []},
+           {:custom, Scholar.Options, :multi_weights, []}           
+         ]},
+      doc: """
+      The weights for each observation. If not provided,
+      all observations are assigned equal weight.
+      """
+    ],
+    multioutput: [
+      type: {:or,
+             [
+               {:custom, Scholar.Options, :weights, []},
+               {:in, [:raw_values, :uniform_average]}
+             ]
+      },
+      default: :uniform_average,
+      doc: """
+      Defines aggregating of multiple output values.
+      Array-like value defines weights used to average errors.
+      Defaults to `:uniform_average`.
+
+        `:raw_values` :
+            Returns a full set of errors in case of multioutput input.
+
+        `:uniform_average` :
+            Errors of all outputs are averaged with uniform weight.
+      
+      The weights for each observation. If not provided,
+      all observations are assigned equal weight.
+      """      
+    ]
+  ]
+  @mean_pinball_loss_schema NimbleOptions.new!(mean_pinball_loss_opts)
+  
   @doc ~S"""
   Calculates the mean pinball loss to evaluate predictive performance of quantile regression models.
 
@@ -527,7 +575,8 @@ defmodule Scholar.Metrics.Regression do
 
   The residual error is defined as $$|y - \hat{y}|$$ where $y$ is a true value
   and $\hat{y}$ is a predicted value.
-  Equivalent to half of the $$mean_absolute_error$$ when $$\alpha$$ is 0.5.
+
+  #{NimbleOptions.docs(@mean_pinball_loss_schema)}
 
   ## Examples
 
@@ -546,7 +595,8 @@ defmodule Scholar.Metrics.Regression do
         [0.5, 0.3333333432674408, 0.0, 0.0]
       >
   """
-  defn mean_pinball_loss(y_true, y_pred, opts \\ [alpha: 0.5]) do
+  defn mean_pinball_loss(y_true, y_pred, opts \\ []) do
+    opts = validate_opts(opts)
     assert_same_shape!(y_true, y_pred)
     alpha = opts[:alpha]
 
@@ -570,8 +620,12 @@ defmodule Scholar.Metrics.Regression do
     end
   end
 
+  deftransform validate_opts(opts) do
+    NimbleOptions.validate!(opts, @mean_pinball_loss_schema)
+  end
+  
   defnp handle_sample_weights(loss, opts, mean_opts \\ []) do
-    case opts[:sample_weight] do
+    case opts[:sample_weights] do
       nil -> Nx.mean(loss, mean_opts)
       weights ->
         Nx.weighted_mean(loss, weights, mean_opts)
