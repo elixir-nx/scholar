@@ -90,10 +90,10 @@ defmodule Scholar.Metrics.RegressionTest do
 
       assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(0.75)
       assert Regression.mean_pinball_loss(
-        y_true, y_pred, alpha: 0.5, sample_weight: sample_weights) == Nx.tensor(0.625)
+        y_true, y_pred, alpha: 0.5, sample_weights: sample_weights) == Nx.tensor(0.625)
       assert_raise ArgumentError, fn ->
         Regression.mean_pinball_loss(y_true, y_pred,
-          alpha: 0.5, sample_weight: wrong_sample_weights)
+          alpha: 0.5, sample_weights: wrong_sample_weights)
       end
     end
 
@@ -105,18 +105,28 @@ defmodule Scholar.Metrics.RegressionTest do
       expected_raw_values_tensor = Nx.tensor([0.5, 0.33333333, 0.0, 0.0])
       expected_raw_values_weighted_tensor = Nx.tensor([0.5, 0.4, 0.0 , 0.0])
 
-      assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(expected_error)
-      ## this assertion yields false due to precission error
-      mpbl = Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, multioutput: :uniform_average)
-      assert  Nx.abs(Nx.subtract(mpbl, Nx.tensor(expected_error))) <= Nx.tensor(0.0001)
-      assert Regression.mean_pinball_loss(y_true, y_pred,
-        alpha: 0.5, multioutput: :raw_values) == expected_raw_values_tensor
-      assert Regression.mean_pinball_loss(
-        y_true, y_pred, alpha: 0.5,
-        sample_weight: sample_weight,  multioutput: :raw_values) == expected_raw_values_weighted_tensor
-      assert Regression.mean_pinball_loss(
-        y_true, y_pred, alpha: 0.5,
-        sample_weight: sample_weight, multioutput: :uniform_average) == Nx.tensor(0.225)
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred)
+      assert almost_equal(mpbl, Nx.tensor(expected_error))
+      ## this assertion yields false due to precision error
+      mpbl = Regression.mean_pinball_loss(
+               y_true, y_pred, alpha: 0.5, multioutput: :uniform_average)
+      assert almost_equal(mpbl, Nx.tensor(expected_error))
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred,
+        alpha: 0.5, multioutput: :raw_values)
+      assert almost_equal(mpbl, expected_raw_values_tensor)
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred,
+        alpha: 0.5, sample_weights: sample_weight,  multioutput: :raw_values)
+      assert almost_equal(mpbl, expected_raw_values_weighted_tensor)
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred,
+        alpha: 0.5, sample_weights: sample_weight, multioutput: :uniform_average)
+      assert almost_equal(mpbl, Nx.tensor(0.225))
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred,
+        alpha: 0.5, multioutput: Nx.tensor([1, 2, 3]))
+      assert almost_equal(mpbl, expected_raw_values_weighted_tensor)
     end
+  end
+
+  defp almost_equal(tensor1, tensor2, tolerance \\ 0.0001) do
+    Nx.abs(Nx.subtract(tensor1, tensor2)) <= Nx.tensor(tolerance)
   end
 end
