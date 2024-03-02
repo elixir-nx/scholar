@@ -615,15 +615,12 @@ defmodule Scholar.Metrics.Regression do
       :uniform_average ->
         output_errors
         |> Nx.mean()
-      # every other case, just take the mean without any axes nor weight.
-      _ -> handle_sample_weights(loss, opts)
+      # pass `:multioutput` as sample weights to average the error of each output
+      multi_output_weights ->
+        handle_sample_weights(output_errors, [sample_weights: multi_output_weights])
     end
   end
 
-  deftransform validate_opts(opts) do
-    NimbleOptions.validate!(opts, @mean_pinball_loss_schema)
-  end
-  
   defnp handle_sample_weights(loss, opts, mean_opts \\ []) do
     case opts[:sample_weights] do
       nil -> Nx.mean(loss, mean_opts)
