@@ -595,8 +595,10 @@ defmodule Scholar.Metrics.Regression do
         [0.5, 0.3333333432674408, 0.0, 0.0]
       >
   """
-  defn mean_pinball_loss(y_true, y_pred, opts \\ []) do
-    opts = validate_opts(opts)
+  deftransform mean_pinball_loss(y_true, y_pred, opts \\ []) do
+    mean_pinball_loss_n(y_true, y_pred, NimbleOptions.validate!(opts, @mean_pinball_loss_schema))
+  end
+  defnp mean_pinball_loss_n(y_true, y_pred, opts \\ []) do
     assert_same_shape!(y_true, y_pred)
     alpha = opts[:alpha]
 
