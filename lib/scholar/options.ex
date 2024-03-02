@@ -85,11 +85,10 @@ defmodule Scholar.Options do
   
   def multi_weights(weights) do
     if is_nil(weights) or
-         (Nx.is_tensor(weights) and Nx.rank(weights) > 0) or
-         (is_list(weights) and Enum.all?(weights, &is_number/1)) do
+         (Nx.is_tensor(weights) and Nx.rank(weights) > 1) do
       {:ok, weights}
     else
-      {:error, "expected weights to be a flat tensor or a flat list, got: #{inspect(weights)}"}
+      {:error, "expected weights to be a tensor with rank greater than 1, got: #{inspect(weights)}"}
     end
   end
 
