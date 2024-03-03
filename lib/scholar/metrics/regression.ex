@@ -534,7 +534,7 @@ defmodule Scholar.Metrics.Regression do
         {:or,
          [
            {:custom, Scholar.Options, :weights, []},
-           {:custom, Scholar.Options, :multi_weights, []}           
+           {:custom, Scholar.Options, :multi_weights, []}
          ]},
       doc: """
       The weights for each observation. If not provided,
@@ -542,12 +542,12 @@ defmodule Scholar.Metrics.Regression do
       """
     ],
     multioutput: [
-      type: {:or,
-             [
-               {:custom, Scholar.Options, :weights, []},
-               {:in, [:raw_values, :uniform_average]}
-             ]
-      },
+      type:
+        {:or,
+         [
+           {:custom, Scholar.Options, :weights, []},
+           {:in, [:raw_values, :uniform_average]}
+         ]},
       default: :uniform_average,
       doc: """
       Defines aggregating of multiple output values.
@@ -559,14 +559,15 @@ defmodule Scholar.Metrics.Regression do
 
         `:uniform_average` :
             Errors of all outputs are averaged with uniform weight.
-      
+
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
-      """      
+      """
     ]
   ]
+
   @mean_pinball_loss_schema NimbleOptions.new!(mean_pinball_loss_opts)
-  
+
   @doc ~S"""
   Calculates the mean pinball loss to evaluate predictive performance of quantile regression models.
 
@@ -598,6 +599,7 @@ defmodule Scholar.Metrics.Regression do
   deftransform mean_pinball_loss(y_true, y_pred, opts \\ []) do
     mean_pinball_loss_n(y_true, y_pred, NimbleOptions.validate!(opts, @mean_pinball_loss_schema))
   end
+
   defnp mean_pinball_loss_n(y_true, y_pred, opts) do
     assert_same_shape!(y_true, y_pred)
     alpha = opts[:alpha]
@@ -612,20 +614,25 @@ defmodule Scholar.Metrics.Regression do
     # mimics the sklearn behavior
     case opts[:multioutput] do
       # raw_values returns plain output errors. One value per channel.
-      :raw_values -> output_errors
+      :raw_values ->
+        output_errors
+
       # uniform_average returns the mean of the above. Note how they are averaged.
       :uniform_average ->
         output_errors
         |> Nx.mean()
+
       # pass `:multioutput` as sample weights to average the error of each output
       multi_output_weights ->
-        handle_sample_weights(output_errors, [sample_weights: multi_output_weights])
+        handle_sample_weights(output_errors, sample_weights: multi_output_weights)
     end
   end
 
   defnp handle_sample_weights(loss, opts, mean_opts \\ []) do
     case opts[:sample_weights] do
-      nil -> Nx.mean(loss, mean_opts)
+      nil ->
+        Nx.mean(loss, mean_opts)
+
       weights ->
         Nx.weighted_mean(loss, weights, mean_opts)
     end
