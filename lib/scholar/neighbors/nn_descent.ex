@@ -128,15 +128,6 @@ defmodule Scholar.Neighbors.NNDescent do
 
     num_samples = Nx.axis_size(tensor, 0)
 
-    if opts[:num_neighbors] > num_samples do
-      raise ArgumentError,
-            """
-            expected num_neighbors to be less than or equal to the number of samples, \
-            got num_neighbors: #{opts[:num_neighbors]} and number of samples: \
-            #{num_samples}
-            """
-    end
-
     if opts[:max_candidates] > num_samples do
       raise ArgumentError,
             """
@@ -541,7 +532,7 @@ defmodule Scholar.Neighbors.NNDescent do
     max_iters = opts[:max_iterations]
     tol = opts[:tol]
     max_candidates = opts[:max_candidates]
-    num_neighbors = opts[:num_neighbors]
+    num_neighbors = min(opts[:num_neighbors], Nx.axis_size(data, 0))
     num_samples = Nx.axis_size(data, 0)
     stop = Nx.u8(0)
 
