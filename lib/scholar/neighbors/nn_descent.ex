@@ -18,8 +18,8 @@ defmodule Scholar.Neighbors.NNDescent do
 
   @derive {Nx.Container,
            containers: [:nearest_neighbors, :distances, :forest, :train_data],
-           keep: [:is_forest_computed?]}
-  defstruct [:nearest_neighbors, :distances, :forest, :train_data, :is_forest_computed?]
+           keep: [:is_forest_computed?, :metric]}
+  defstruct [:nearest_neighbors, :distances, :forest, :train_data, :is_forest_computed?, :metric]
 
   opts = [
     num_neighbors: [
@@ -56,6 +56,11 @@ defmodule Scholar.Neighbors.NNDescent do
       type: :boolean,
       default: true,
       doc: "Whether to use the tree initialization."
+    ],
+    metric: [
+      type: {:in, [:squared_euclidean, :euclidean, :manhattan, :cosine, :chebyshev]},
+      default: :squared_euclidean,
+      doc: "The distance metric to use."
     ]
   ]
 
@@ -71,7 +76,6 @@ defmodule Scholar.Neighbors.NNDescent do
       type: :float,
       default: 1.5,
       doc: """
-      # TODO check this description
       The factor by which the number of points in a leaf should be smaller than
       the number of points in the root node.
       """
@@ -128,20 +132,35 @@ defmodule Scholar.Neighbors.NNDescent do
 
     num_samples = Nx.axis_size(tensor, 0)
 
-    if opts[:max_candidates] > num_samples do
-      raise ArgumentError,
-            """
-            expected max_candidates to be less than or equal to the number of samples, \
-            got max_candidates: #{opts[:max_candidates]} and number of samples: \
-            #{num_samples}
-            """
-    end
-
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
 
-    opts = Keyword.put(opts, :max_candidates, min(opts[:max_candidates], opts[:num_neighbors]))
+    opts =
+      Keyword.put(
+        opts,
+        :max_candidates,
+        min(num_samples, min(opts[:max_candidates], opts[:num_neighbors]))
+      )
 
     nn_descent(tensor, key, opts)
+  end
+
+  defnp handle_dist(x, y, opts \\ []) do
+    case opts[:metric] do
+      :squared_euclidean ->
+        Distance.squared_euclidean(x, y, axes: opts[:axes])
+
+      :euclidean ->
+        Distance.euclidean(x, y, axes: opts[:axes])
+
+      :manhattan ->
+        Distance.manhattan(x, y, axes: opts[:axes])
+
+      :cosine ->
+        Distance.cosine(x, y, axes: opts[:axes])
+
+      :chebyshev ->
+        Distance.chebyshev(x, y, axes: opts[:axes])
+    end
   end
 
   # Initializes the graph. It returns a tuple of three tensors:
@@ -182,14 +201,36 @@ defmodule Scholar.Neighbors.NNDescent do
       Nx.Random.randint(key, 0, num_heaps, type: :s64, shape: {num_heaps * num_neighbors})
 
     d =
-      Distance.squared_euclidean(
+      handle_dist(
         Nx.reshape(
           Nx.broadcast(Nx.new_axis(data, 1), {num_heaps, num_neighbors, Nx.axis_size(data, -1)}),
           {num_heaps * num_neighbors, Nx.axis_size(data, -1)}
         ),
         Nx.take(data, random_indices),
+        metric: opts[:metric],
         axes: [1]
       )
+
+    {{indices, keys, flags}, _} =
+      while {{indices, keys, flags}, {index0 = Nx.s64(0), data, missing, random_indices, d}},
+            index0 < num_heaps do
+        {{indices, keys, flags}, _} =
+          while {{indices, keys, flags},
+                 {index0, j = Nx.s64(0), data, missing, random_indices, d}},
+                j < missing[index0] do
+            {add_neighbor(
+               {indices, keys, flags},
+               index0,
+               random_indices[index0 * num_neighbors + j],
+               d[index0 * num_neighbors + j],
+               Nx.s8(1)
+             ), {index0, j + 1, data, missing, random_indices, d}}
+          end
+
+        {{indices, keys, flags}, {index0 + 1, data, missing, random_indices, d}}
+      end
+
+    {{indices, keys, flags}, new_key}
 
     {{indices, keys, flags}, _} =
       while {{indices, keys, flags}, {index0 = Nx.s64(0), data, missing, random_indices, d}},
@@ -358,7 +399,8 @@ defmodule Scholar.Neighbors.NNDescent do
           data,
           curr_graph,
           new_candidate_neighbors,
-          old_candidate_neighbors
+          old_candidate_neighbors,
+          opts
         ) do
     {_indices, keys, _flags} = curr_graph
 
@@ -375,7 +417,7 @@ defmodule Scholar.Neighbors.NNDescent do
 
     # Normally there would be a stack of that will dynamically grow
     # so we need to preallocate it with a fixed size
-    expand_factor = 50
+    expand_factor = 20
     updates_indices = Nx.broadcast(Nx.s64(0), {expand_factor * num_samples, 2})
 
     updates_dist =
@@ -409,7 +451,7 @@ defmodule Scholar.Neighbors.NNDescent do
                     {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
                       updates_dist, update_index}, {k + 1, data, i, j, index0}}
                   else
-                    d = Distance.squared_euclidean(data[index0], data[index1])
+                    d = handle_dist(data[index0], data[index1], metric: opts[:metric])
 
                     {updates_indices, updates_dist, update_index} =
                       if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
@@ -448,7 +490,7 @@ defmodule Scholar.Neighbors.NNDescent do
                     {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
                       updates_dist, update_index}, {k + 1, data, i, index0}}
                   else
-                    d = Distance.squared_euclidean(data[index0], data[index1])
+                    d = handle_dist(data[index0], data[index1], metric: opts[:metric])
 
                     {updates_indices, updates_dist, update_index} =
                       if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
@@ -511,6 +553,7 @@ defmodule Scholar.Neighbors.NNDescent do
   # the nearest neighbor relationships in the data.
   defnp nn_descent(data, key, opts \\ []) do
     curr_graph = initialize_graph(data, opts)
+    num_neighbors = min(opts[:num_neighbors], Nx.axis_size(data, 0))
 
     {curr_graph, forest} =
       if opts[:tree_init?] do
@@ -532,7 +575,6 @@ defmodule Scholar.Neighbors.NNDescent do
     max_iters = opts[:max_iterations]
     tol = opts[:tol]
     max_candidates = opts[:max_candidates]
-    num_neighbors = min(opts[:num_neighbors], Nx.axis_size(data, 0))
     num_samples = Nx.axis_size(data, 0)
     stop = Nx.u8(0)
 
@@ -553,7 +595,7 @@ defmodule Scholar.Neighbors.NNDescent do
           sample_candidate(curr_graph, new_candidates, old_candidates, key)
 
         {updates_indices, updates_dist, update_index} =
-          generate_graph_updates(data, curr_graph, new_candidates, old_candidates)
+          generate_graph_updates(data, curr_graph, new_candidates, old_candidates, opts)
 
         curr_graph = apply_updates(curr_graph, updates_indices, updates_dist, update_index)
 
@@ -575,7 +617,8 @@ defmodule Scholar.Neighbors.NNDescent do
       distances: Nx.take_along_axis(dists, ord, axis: 1),
       forest: forest,
       train_data: data,
-      is_forest_computed?: opts[:tree_init?]
+      is_forest_computed?: opts[:tree_init?],
+      metric: opts[:metric]
     }
   end
 
@@ -892,10 +935,10 @@ defmodule Scholar.Neighbors.NNDescent do
 
   ## Examples
 
-      iex> data = Nx.iota({100, 5})
+      iex> data = Nx.iota({10, 5})
       iex> query_data = Nx.tensor([[1,7,32,6,2], [1,4,5,2,5], [1,3,67,12,4]])
       iex> key = Nx.Random.key(12)
-      iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 6)
+      iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 3)
       iex> Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
   """
   deftransform query(
@@ -917,7 +960,11 @@ defmodule Scholar.Neighbors.NNDescent do
       if is_forest_computed? do
         forest
       else
-        RandomProjectionForest.fit(train_data, opts)
+        RandomProjectionForest.fit(train_data,
+          num_trees: 1,
+          num_neighbors: Nx.axis_size(nearest_neighbors, 1),
+          key: key
+        )
       end
 
     query_n(
@@ -939,11 +986,11 @@ defmodule Scholar.Neighbors.NNDescent do
 
   ## Examples
 
-      iex> data = Nx.iota({100, 5})
+      iex> data = Nx.iota({10, 5})
       iex> query_data = Nx.tensor([[1,7,32,6,2], [1,4,5,2,5], [1,3,67,12,4]])
       iex> key = Nx.Random.key(12)
-      iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 6)
-      iex> {indices, distances, search_graph} = Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
+      iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 3)
+      iex> {_indices, _distances, search_graph} = Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
       iex> query_data2 = Nx.tensor([[2,7,32,6,2], [1,4,6,2,5], [1,3,67,12,3]])
       iex> Scholar.Neighbors.NNDescent.query(nn, query_data2, search_graph, num_neighbors: 5, key: key)
   """
@@ -951,7 +998,8 @@ defmodule Scholar.Neighbors.NNDescent do
                  %__MODULE__{
                    forest: forest,
                    is_forest_computed?: is_forest_computed?,
-                   train_data: train_data
+                   train_data: train_data,
+                   nearest_neighbors: nearest_neighbors
                  } = nn,
                  query_data,
                  search_graph,
@@ -964,7 +1012,11 @@ defmodule Scholar.Neighbors.NNDescent do
       if is_forest_computed? do
         forest
       else
-        RandomProjectionForest.fit(train_data, opts)
+        RandomProjectionForest.fit(train_data,
+          num_trees: 1,
+          num_neighbors: Nx.axis_size(nearest_neighbors, 1),
+          key: key
+        )
       end
 
     query_n(
@@ -979,7 +1031,7 @@ defmodule Scholar.Neighbors.NNDescent do
   end
 
   defn query_n(
-         %__MODULE__{nearest_neighbors: nearest_neighbors},
+         %__MODULE__{nearest_neighbors: nearest_neighbors, metric: metric},
          query_data,
          train_data,
          search_graph,
@@ -1150,7 +1202,7 @@ defmodule Scholar.Neighbors.NNDescent do
                    query_data, search_graph, initial_candidates, initial_distances, train_data, i,
                    dist_bound, stop, index, candidate, k + 1}
                 else
-                  d = Distance.squared_euclidean(train_data[j], query_data[i])
+                  d = handle_dist(train_data[j], query_data[i], metric: metric)
                   visited = Nx.indexed_put(visited, Nx.new_axis(j, 0), Nx.u8(1))
 
                   if d < dist_bound do
