@@ -66,4 +66,98 @@ defmodule Scholar.Metrics.RegressionTest do
       assert Nx.equal(d2, r2)
     end
   end
+
+  describe "mean_pinball_loss/3" do
+    test "mean_pinball_loss cases from sklearn" do
+      # Test cases copied from sklearn:
+      # https://github.com/scikit-learn/scikit-learn/blob/128e40ed593c57e8b9e57a4109928d58fa8bf359/sklearn/metrics/tests/test_regression.py#L49      
+
+      y_true = Nx.linspace(1, 50, n: 50)
+      y_pred = Nx.add(y_true, 1)
+      y_pred_2 = Nx.add(y_true, -1)
+
+      assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(0.5)
+      assert Regression.mean_pinball_loss(y_true, y_pred_2) == Nx.tensor(0.5)
+      assert Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.4) == Nx.tensor(0.6)
+      assert Regression.mean_pinball_loss(y_true, y_pred_2, alpha: 0.4) == Nx.tensor(0.4)
+    end
+
+    test "mean_pinball_loss with sample weight" do
+      y_true = Nx.tensor([1, 2, 3, 4, 5, 6])
+      y_pred = Nx.tensor([2, 3, 4, 6, 7, 8])
+      sample_weights = Nx.tensor([1.5, 1.5, 1.5, 0.5, 0.5, 0.5])
+      wrong_sample_weights = Nx.tensor([1.5, 1.5, 1.5, 0.5, 0.5, 0.5, 1, 1, 1])
+
+      assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(0.75)
+
+      assert Regression.mean_pinball_loss(
+               y_true,
+               y_pred,
+               alpha: 0.5,
+               sample_weights: sample_weights
+             ) == Nx.tensor(0.625)
+
+      assert_raise ArgumentError, fn ->
+        Regression.mean_pinball_loss(y_true, y_pred,
+          alpha: 0.5,
+          sample_weights: wrong_sample_weights
+        )
+      end
+    end
+
+    test "mean_pinball_loss with multioutput" do
+      y_true = Nx.tensor([[1, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 1]])
+      y_pred = Nx.tensor([[0, 0, 0, 1], [1, 0, 1, 1], [0, 0, 0, 1]])
+
+      sample_weight =
+        Nx.tensor([[0.5, 0.5, 0.5, 1.5], [1.5, 0.5, 1.5, 1.5], [1.5, 1.5, 1.5, 1.5]])
+
+      expected_error = Nx.tensor((1 + 2 / 3) / 8)
+      expected_raw_values_tensor = Nx.tensor([0.5, 0.33333333, 0.0, 0.0])
+      expected_raw_values_weighted_tensor = Nx.tensor([0.5, 0.4, 0.0, 0.0])
+
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred)
+      assert_all_close(mpbl, expected_error)
+      ## this assertion yields false due to precision error
+      mpbl =
+        Regression.mean_pinball_loss(
+          y_true,
+          y_pred,
+          alpha: 0.5,
+          multioutput: :uniform_average
+        )
+
+      assert_all_close(mpbl, expected_error)
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, multioutput: :raw_values)
+      assert_all_close(mpbl, expected_raw_values_tensor)
+
+      mpbl =
+        Regression.mean_pinball_loss(y_true, y_pred,
+          alpha: 0.5,
+          sample_weights: sample_weight,
+          multioutput: :raw_values
+        )
+
+      assert_all_close(mpbl, expected_raw_values_weighted_tensor)
+
+      mpbl =
+        Regression.mean_pinball_loss(y_true, y_pred,
+          alpha: 0.5,
+          sample_weights: sample_weight,
+          multioutput: :uniform_average
+        )
+
+      assert_all_close(mpbl, Nx.tensor(0.225))
+
+      mpbl =
+        Regression.mean_pinball_loss(y_true, y_pred,
+          alpha: 0.5,
+          multioutput: Nx.tensor([1, 2, 3, 4])
+        )
+
+      assert_all_close(mpbl, Nx.tensor(0.1166666))
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, multioutput: nil)
+      assert_all_close(mpbl, expected_error)
+    end
+  end
 end
