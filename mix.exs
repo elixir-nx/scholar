@@ -33,7 +33,7 @@ defmodule Scholar.MixProject do
       # {:nx, "~> 0.6.4 or ~> 0.7", override: true},
       {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
-      {:exla, "~> 0.6.3 or ~> 0.7", optional: true},
+      {:exla, github: "elixir-nx/nx", sparse: "exla", override: true},
       {:polaris, "~> 0.1"},
       {:benchee, "~> 1.0", only: :dev}
     ]
@@ -55,12 +55,12 @@ defmodule Scholar.MixProject do
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [
-        # "notebooks/hierarchical_clustering.livemd",
         "README.md",
-        "notebooks/linear_regression.livemd",
+        "notebooks/cv_gradient_boosting_tree.livemd",
+        "notebooks/hierarchical_clustering.livemd",
         "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd",
-        "notebooks/cv_gradient_boosting_tree.livemd",
+        "notebooks/linear_regression.livemd",
         "notebooks/mds.livemd"
       ],
       groups_for_modules: [
@@ -88,7 +88,10 @@ defmodule Scholar.MixProject do
           Scholar.NaiveBayes.Multinomial,
           Scholar.Neighbors.KDTree,
           Scholar.Neighbors.KNearestNeighbors,
-          Scholar.Neighbors.RadiusNearestNeighbors
+          Scholar.Neighbors.LargeVis,
+          Scholar.Neighbors.NNDescent,
+          Scholar.Neighbors.RadiusNearestNeighbors,
+          Scholar.Neighbors.RandomProjectionForest
         ],
         Utilities: [
           Scholar.Impute.SimpleImputer,
@@ -100,6 +103,12 @@ defmodule Scholar.MixProject do
           Scholar.Metrics.Similarity,
           Scholar.ModelSelection,
           Scholar.Preprocessing,
+          Scholar.Preprocessing.MaxAbsScaler,
+          Scholar.Preprocessing.MinMaxScaler,
+          Scholar.Preprocessing.Normalizer,
+          Scholar.Preprocessing.OneHotEncoder,
+          Scholar.Preprocessing.OrdinalEncoder,
+          Scholar.Preprocessing.StandardScaler,
           Scholar.Stats
         ]
       ],
