@@ -106,10 +106,10 @@ defmodule Scholar.Linear.RidgeRegression do
       iex> Scholar.Linear.RidgeRegression.fit(x, y)
       %Scholar.Linear.RidgeRegression{
         coefficients: Nx.tensor(
-          [-0.42378732562065125, -0.6891375780105591]
+          [-0.4237867593765259, -0.6891377568244934]
         ),
         intercept: Nx.tensor(
-          5.656937599182129
+          5.6569366455078125
         )
       }
   """

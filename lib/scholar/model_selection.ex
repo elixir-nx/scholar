@@ -75,9 +75,9 @@ defmodule Scholar.ModelSelection do
   end
 
   # Receive a list of contiguous ranges and returns a range with first first and last last.
-  defp concat_ranges([first.._ | _] = list), do: first..last_last(list)
+  defp concat_ranges([first.._//1 | _] = list), do: first..last_last(list)
 
-  defp last_last([_..last]), do: last
+  defp last_last([_..last//1]), do: last
   defp last_last([_ | tail]), do: last_last(tail)
 
   @doc """
@@ -101,8 +101,8 @@ defmodule Scholar.ModelSelection do
       #Nx.Tensor<
         f32[2][3]
         [
-          [1.5700000524520874, 1.2149654626846313, 0.004999990575015545],
-          [1.100000023841858, 1.0735294818878174, 0.04999995231628418]
+          [1.5700000524520874, 1.2149654626846313, 0.005000002216547728],
+          [1.100000023841858, 1.0735294818878174, 0.050000011920928955]
         ]
       >
   """
@@ -136,11 +136,10 @@ defmodule Scholar.ModelSelection do
       #Nx.Tensor<
         f32[2][3]
         [
-          [0.5010331869125366, 1.1419668197631836, 0.35123956203460693],
-          [0.5227273106575012, 1.0526316165924072, 0.5909090042114258]
+          [0.5010337233543396, 1.1419668197631836, 0.35123950242996216],
+          [0.522727370262146, 1.0526316165924072, 0.590908944606781]
         ]
       >
-
   """
   def weighted_cross_validate(x, y, weights, folding_fun, scoring_fun)
       when is_function(folding_fun, 1) and is_function(scoring_fun, 3) do
