@@ -75,9 +75,9 @@ defmodule Scholar.ModelSelection do
   end
 
   # Receive a list of contiguous ranges and returns a range with first first and last last.
-  defp concat_ranges([first.._ | _] = list), do: first..last_last(list)
+  defp concat_ranges([first.._//1 | _] = list), do: first..last_last(list)
 
-  defp last_last([_..last]), do: last
+  defp last_last([_..last//1]), do: last
   defp last_last([_ | tail]), do: last_last(tail)
 
   @doc """

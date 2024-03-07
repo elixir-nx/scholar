@@ -2,7 +2,7 @@ defmodule Scholar.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-nx/scholar"
-  @version "0.2.1"
+  @version "0.3.0-dev"
 
   def project do
     [
@@ -11,7 +11,6 @@ defmodule Scholar.MixProject do
       version: @version,
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
-      start_permanent: Mix.env() == :prod,
       deps: deps(),
       docs: docs(),
       package: package()
@@ -30,10 +29,9 @@ defmodule Scholar.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.30", only: :docs},
-      # {:nx, "~> 0.6.4 or ~> 0.7", override: true},
-      {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
+      {:nx, "~> 0.7"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
-      {:exla, github: "elixir-nx/nx", sparse: "exla", override: true},
+      {:exla, ">= 0.0.0", only: :test},
       {:polaris, "~> 0.1"},
       {:benchee, "~> 1.0", only: :dev}
     ]

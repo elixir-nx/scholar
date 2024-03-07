@@ -1082,7 +1082,7 @@ defmodule Scholar.Metrics.Classification do
     -Nx.sum(Nx.diff(recall) * precision[0..-2//1])
   end
 
-  # TODO implement :drop_intermediate option when dynamic shapes will be available
+  # TODO Implement :drop_intermediate option when dynamic shapes will be available
   @doc ~S"""
   Compute Receiver operating characteristic (ROC).
 
