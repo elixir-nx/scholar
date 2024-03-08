@@ -126,23 +126,8 @@ defmodule Scholar.Manifold.Trimap do
     end
   end
 
-  defnp handle_dist(x, y, opts \\ []) do
-    case opts[:metric] do
-      :squared_euclidean ->
-        Distance.squared_euclidean(x, y, axes: [-1])
-
-      :euclidean ->
-        Distance.euclidean(x, y, axes: [-1])
-
-      :manhattan ->
-        Distance.manhattan(x, y, axes: [-1])
-
-      :cosine ->
-        Distance.cosine(x, y, axes: [-1])
-
-      :chebyshev ->
-        Distance.chebyshev(x, y, axes: [-1])
-    end
+  deftransformp handle_dist(x, y, opts) do
+    apply(Distance, opts[:metric], [x, y, [axes: [-1]])
   end
 
   defnp in1d(tensor1, tensor2) do
