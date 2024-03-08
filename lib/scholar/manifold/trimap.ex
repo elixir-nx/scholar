@@ -127,7 +127,7 @@ defmodule Scholar.Manifold.Trimap do
   end
 
   deftransformp handle_dist(x, y, opts) do
-    apply(Distance, opts[:metric], [x, y, [axes: [-1]])
+    apply(Distance, opts[:metric], [x, y, [axes: [-1]]])
   end
 
   defnp in1d(tensor1, tensor2) do

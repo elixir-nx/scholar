@@ -892,7 +892,7 @@ defmodule Scholar.Neighbors.NNDescent do
 
   ## Examples
 
-      iex> data = Nx.iota({100, 5})
+      iex> data = Nx.iota({20, 5})
       iex> query_data = Nx.tensor([[1,7,32,6,2], [1,4,5,2,5], [1,3,67,12,4]])
       iex> key = Nx.Random.key(12)
       iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 6)
@@ -939,11 +939,11 @@ defmodule Scholar.Neighbors.NNDescent do
 
   ## Examples
 
-      iex> data = Nx.iota({100, 5})
+      iex> data = Nx.iota({20, 5})
       iex> query_data = Nx.tensor([[1,7,32,6,2], [1,4,5,2,5], [1,3,67,12,4]])
       iex> key = Nx.Random.key(12)
       iex> nn = Scholar.Neighbors.NNDescent.fit(data, num_neighbors: 6)
-      iex> {indices, distances, search_graph} = Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
+      iex> {_indices, _distances, search_graph} = Scholar.Neighbors.NNDescent.query(nn, query_data, num_neighbors: 5, key: key)
       iex> query_data2 = Nx.tensor([[2,7,32,6,2], [1,4,6,2,5], [1,3,67,12,3]])
       iex> Scholar.Neighbors.NNDescent.query(nn, query_data2, search_graph, num_neighbors: 5, key: key)
   """
