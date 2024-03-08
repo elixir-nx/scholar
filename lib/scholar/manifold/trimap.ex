@@ -2,6 +2,15 @@ defmodule Scholar.Manifold.Trimap do
   @moduledoc """
   TriMap: Large-scale Dimensionality Reduction Using Triplets.
 
+  TriMap is a dimensionality reduction method that uses triplet constraints to form a low-dimensional embedding of a set of points.
+  The triplet constraints are of the form "point i is closer to point j than point k".
+  The triplets are sampled from the high-dimensional representation of the points and a weighting scheme is used to reflect the importance of each triplet.
+
+  TriMap provides a significantly better global view of the data than the other dimensionality reduction methods such t-SNE, LargeVis.
+
+  The global structure includes relative distances of the clusters, multiple scales in the data, and the existence of possible outliers.
+  We define a global score to quantify the quality of an embedding in reflecting the global structure of the data.
+
   Based on: https://github.com/google-research/google-research/blob/master/trimap/trimap.py
   Source: https://arxiv.org/pdf/1910.00204.pdf
   """
@@ -20,7 +29,7 @@ defmodule Scholar.Manifold.Trimap do
   @damp_gain 0.8
 
   opts_schema = [
-    num_dim: [
+    num_components: [
       type: :pos_integer,
       default: 2,
       doc: ~S"""
@@ -136,7 +145,7 @@ defmodule Scholar.Manifold.Trimap do
     end
   end
 
-  defn in1d(tensor1, tensor2) do
+  defnp in1d(tensor1, tensor2) do
     order1 = Nx.argsort(tensor1)
     tensor1 = Nx.take(tensor1, order1)
     tensor2 = Nx.sort(tensor2)
@@ -390,6 +399,19 @@ defmodule Scholar.Manifold.Trimap do
     loss
   end
 
+  @doc """
+  Embeds the given inputs using the TriMap algorithm.
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
+
+
+  ## Examples
+
+      iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(0), shape: {10, 10})
+      iex> Scholar.Manifold.Trimap.embed(inputs, num_inliers: 3, num_outliers: 2, num_components: 2, key: key)
+  """
   deftransform embed(inputs, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
@@ -398,8 +420,15 @@ defmodule Scholar.Manifold.Trimap do
     {init_embeddings, opts} = Keyword.pop(opts, :init_embeddings, {})
     opts = Keyword.put(opts, :num_inliers, min(opts[:num_inliers], Nx.axis_size(inputs, 0) - 2))
 
-    if opts[:num_inliers] > Nx.axis_size(inputs, 0) - 1 do
-      raise ArgumentError, "Number of inliners must be less than the number of points - 1"
+    if opts[:num_inliers] <= 0 do
+      raise ArgumentError, "Number of points must be greater than 2"
+    end
+
+    unless (Nx.rank(triplets) == Nx.rank(weights) and Nx.rank(triplets) == 0) or
+             (Nx.rank(triplets) == 2 and Nx.rank(weights) == 1 and
+                Nx.axis_size(triplets, 0) == Nx.axis_size(weights, 0)) do
+      raise ArgumentError, "Triplets and weights must be either not initialized or have the same
+      size of axis zero and rank of triplets must be 2 and rank of weights must be 1"
     end
 
     transform_n(
@@ -413,13 +442,13 @@ defmodule Scholar.Manifold.Trimap do
   end
 
   defnp transform_n(inputs, key, triplets, weights, init_embeddings, opts \\ []) do
-    {num_points, num_dims} = Nx.shape(inputs)
+    {num_points, num_components} = Nx.shape(inputs)
 
     {triplets, weights, applied_pca?} =
       case triplets do
         {} ->
           inputs =
-            if num_dims > @dim_pca do
+            if num_components > @dim_pca do
               {u, s, vt} = Nx.LinAlg.SVD.svd(inputs, full_matrices: false)
               inputs = Nx.dot(u[[.., 0..@dim_pca]] * s[0..@dim_pca], vt[[0..@dim_pca, ..]])
 
@@ -443,14 +472,19 @@ defmodule Scholar.Manifold.Trimap do
           cond do
             opts[:init_embedding_type] == 0 ->
               if applied_pca? do
-                @init_scale * inputs[[.., 0..(opts[:num_dim] - 1)]]
+                @init_scale * inputs[[.., 0..(opts[:num_components] - 1)]]
               else
                 @init_scale *
-                  Scholar.Decomposition.PCA.fit_transform(inputs, num_components: opts[:num_dim])
+                  Scholar.Decomposition.PCA.fit_transform(inputs,
+                    num_components: opts[:num_components]
+                  )
               end
 
             opts[:init_embedding_type] == 1 ->
-              @init_scale * Nx.Random.normal(key, shape: {num_points, opts[:num_dim]})
+              {random_embedding, _key} =
+                Nx.Random.normal(key, shape: {num_points, opts[:num_components]})
+
+              random_embedding * @init_scale
           end
 
         _ ->
