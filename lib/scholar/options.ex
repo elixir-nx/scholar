@@ -83,6 +83,16 @@ defmodule Scholar.Options do
     end
   end
 
+  def multi_weights(weights) do
+    if is_nil(weights) or
+         (Nx.is_tensor(weights) and Nx.rank(weights) > 1) do
+      {:ok, weights}
+    else
+      {:error,
+       "expected weights to be a tensor with rank greater than 1, got: #{inspect(weights)}"}
+    end
+  end
+
   def key(key) do
     if Nx.is_tensor(key) and Nx.type(key) == {:u, 32} and Nx.shape(key) == {2} do
       {:ok, key}
