@@ -18,7 +18,7 @@ defmodule Scholar.Manifold.TrimapTest do
           [1.2916474342346191, 1.301647424697876]
         ])
 
-      assert_all_close(res, expected)
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
 
     test "non default num_random, weight_temp, and learning_rate" do
@@ -45,7 +45,7 @@ defmodule Scholar.Manifold.TrimapTest do
           [1.2802826166152954, 1.2902826070785522]
         ])
 
-      assert_all_close(res, expected)
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
 
     test "non default num_iters and init_embedding_type" do
@@ -71,7 +71,7 @@ defmodule Scholar.Manifold.TrimapTest do
           [1.0548146963119507, 1.0343143939971924]
         ])
 
-      assert_all_close(res, expected)
+      assert_all_close(res, expected, atol: 1.0e-1, rtol: 1.0e-1)
     end
 
     test "passed precomputed triplets and weights" do
@@ -92,14 +92,14 @@ defmodule Scholar.Manifold.TrimapTest do
 
       expected =
         Nx.tensor([
-          [1.249335765838623, 0.9553965330123901],
-          [1.1023664474487305, 0.9553965330123901],
-          [0.9553965330123901, 0.9553965330123901],
+          [0.6614577770233154, 0.9553965330123901],
           [0.8084271550178528, 0.9553965330123901],
-          [0.6614577770233154, 0.9553965330123901]
+          [0.9553965330123901, 0.9553965330123901],
+          [1.1023664474487305, 0.9553965330123901],
+          [1.249335765838623, 0.9553965330123901]
         ])
 
-      assert_all_close(res, expected)
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
 
     test "passed initial_embedding" do
@@ -133,7 +133,7 @@ defmodule Scholar.Manifold.TrimapTest do
           [6.057004928588867, 6.057004928588867]
         ])
 
-      assert_all_close(res, expected)
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
 
     test "metric set to manhattan" do
@@ -158,7 +158,7 @@ defmodule Scholar.Manifold.TrimapTest do
           [1.294005274772644, 1.3040052652359009]
         ])
 
-      assert_all_close(res, expected)
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
   end
 

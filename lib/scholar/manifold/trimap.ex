@@ -173,7 +173,7 @@ defmodule Scholar.Manifold.Trimap do
   defnp rejection_sample(key, shape, rejects, opts \\ []) do
     final_samples = Nx.broadcast(Nx.s64(0), shape)
 
-    {final_samples, _, _, _} =
+    {final_samples, key, _, _} =
       while {final_samples, key, rejects, i = Nx.s64(0)}, i < elem(shape, 0) do
         {samples, key} = Nx.Random.randint(key, 0, opts[:maxval], shape: {elem(shape, 1)})
         discard = in1d(samples, rejects[i])
@@ -190,7 +190,7 @@ defmodule Scholar.Manifold.Trimap do
         {final_samples, key, rejects, i + 1}
       end
 
-    final_samples
+    {final_samples, key}
   end
 
   defnp sample_knn_triplets(key, neighbors, opts \\ []) do
@@ -206,13 +206,14 @@ defmodule Scholar.Manifold.Trimap do
     inliers =
       Nx.tile(neighbors[[.., 1..num_inliers]], [1, num_outliers]) |> Nx.reshape({:auto, 1})
 
-    outliers =
+    {outliers, key} =
       rejection_sample(key, {num_points, num_inliers * num_outliers}, neighbors,
         maxval: num_points
       )
-      |> Nx.reshape({:auto, 1})
 
-    Nx.concatenate([anchors, inliers, outliers], axis: 1)
+    outliers = Nx.reshape(outliers, {:auto, 1})
+
+    {Nx.concatenate([anchors, inliers, outliers], axis: 1), key}
   end
 
   defnp sample_random_triplets(key, inputs, sig, opts \\ []) do
@@ -222,7 +223,9 @@ defmodule Scholar.Manifold.Trimap do
     anchors =
       Nx.tile(Nx.iota({num_points, 1}), [1, num_random]) |> Nx.reshape({:auto, 1})
 
-    pairs = rejection_sample(key, {num_points * num_random, 2}, anchors, maxval: num_points)
+    {pairs, key} =
+      rejection_sample(key, {num_points * num_random, 2}, anchors, maxval: num_points)
+
     triplets = Nx.concatenate([anchors, pairs], axis: 1)
     anc = triplets[[.., 0]]
     sim = triplets[[.., 1]]
@@ -243,7 +246,7 @@ defmodule Scholar.Manifold.Trimap do
       )
 
     triplets = Nx.concatenate([anchors, pairs], axis: 1)
-    {triplets, weights}
+    {triplets, weights, key}
   end
 
   defnp find_scaled_neighbors(inputs, neighbors, opts \\ []) do
@@ -300,7 +303,7 @@ defmodule Scholar.Manifold.Trimap do
     neighbors = neighbors[[.., 0..num_inliners]]
     knn_distances = knn_distances[[.., 0..num_inliners]]
 
-    triplets =
+    {triplets, key} =
       sample_knn_triplets(key, neighbors,
         num_outliers: opts[:num_outliers],
         num_inliers: num_inliners,
@@ -330,19 +333,19 @@ defmodule Scholar.Manifold.Trimap do
 
     triplets = Nx.concatenate([anchors, pairs], axis: 1)
 
-    {triplets, weights} =
+    {triplets, weights, key} =
       if num_random > 0 do
-        {random_triples, random_weights} = sample_random_triplets(key, inputs, sigmas, opts)
+        {random_triples, random_weights, key} = sample_random_triplets(key, inputs, sigmas, opts)
 
         {Nx.concatenate([triplets, random_triples], axis: 0),
-         Nx.concatenate([weights, 0.1 * random_weights])}
+         Nx.concatenate([weights, 0.1 * random_weights]), key}
       else
-        {triplets, weights}
+        {triplets, weights, key}
       end
 
     weights = weights - Nx.reduce_min(weights)
     weights = tempered_log(weights + 1.0, weight_temp)
-    {triplets, weights}
+    {triplets, weights, key}
   end
 
   # Update the embedding using delta-bar-delta.
@@ -394,8 +397,8 @@ defmodule Scholar.Manifold.Trimap do
 
   ## Examples
 
-      iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(0), shape: {10, 10})
-      iex> Scholar.Manifold.Trimap.embed(inputs, num_inliers: 3, num_outliers: 2, num_components: 2, key: key)
+      iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(42), shape: {10, 10})
+      iex> Scholar.Manifold.Trimap.embed(inputs, num_inliers: 2, num_outliers: 1, num_components: 2, key: key)
   """
   deftransform embed(inputs, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -429,7 +432,7 @@ defmodule Scholar.Manifold.Trimap do
   defnp transform_n(inputs, key, triplets, weights, init_embeddings, opts \\ []) do
     {num_points, num_components} = Nx.shape(inputs)
 
-    {triplets, weights, applied_pca?} =
+    {triplets, weights, key, applied_pca?} =
       case triplets do
         {} ->
           inputs =
@@ -444,11 +447,11 @@ defmodule Scholar.Manifold.Trimap do
               inputs
             end
 
-          {triplets, weights} = generate_triplets(key, inputs, opts)
-          {triplets, weights, Nx.u8(1)}
+          {triplets, weights, key} = generate_triplets(key, inputs, opts)
+          {triplets, weights, key, Nx.u8(1)}
 
         _ ->
-          {triplets, weights, Nx.u8(0)}
+          {triplets, weights, key, Nx.u8(0)}
       end
 
     embeddings =

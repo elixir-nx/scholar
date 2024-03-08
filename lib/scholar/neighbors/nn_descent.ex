@@ -144,25 +144,10 @@ defmodule Scholar.Neighbors.NNDescent do
     nn_descent(tensor, key, opts)
   end
 
-  defnp handle_dist(x, y, opts \\ []) do
-    case opts[:metric] do
-      :squared_euclidean ->
-        Distance.squared_euclidean(x, y, axes: opts[:axes])
-
-      :euclidean ->
-        Distance.euclidean(x, y, axes: opts[:axes])
-
-      :manhattan ->
-        Distance.manhattan(x, y, axes: opts[:axes])
-
-      :cosine ->
-        Distance.cosine(x, y, axes: opts[:axes])
-
-      :chebyshev ->
-        Distance.chebyshev(x, y, axes: opts[:axes])
-    end
+  deftransformp handle_dist(x, y, opts \\ []) do
+    apply(Distance, opts[:metric], [x, y, [axes: opts[:axes]]])
   end
-  
+
   # Initializes the graph. It returns a tuple of three tensors:
 
   # * `indices` - the indices of the neighbors
