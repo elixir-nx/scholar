@@ -144,23 +144,8 @@ defmodule Scholar.Neighbors.NNDescent do
     nn_descent(tensor, key, opts)
   end
 
-  defnp handle_dist(x, y, opts \\ []) do
-    case opts[:metric] do
-      :squared_euclidean ->
-        Distance.squared_euclidean(x, y, axes: opts[:axes])
-
-      :euclidean ->
-        Distance.euclidean(x, y, axes: opts[:axes])
-
-      :manhattan ->
-        Distance.manhattan(x, y, axes: opts[:axes])
-
-      :cosine ->
-        Distance.cosine(x, y, axes: opts[:axes])
-
-      :chebyshev ->
-        Distance.chebyshev(x, y, axes: opts[:axes])
-    end
+  deftransformp handle_dist(x, y, opts \\ []) do
+    apply(Distance, opts[:metric], [x, y, [axes: opts[:axes]]])
   end
 
   # Initializes the graph. It returns a tuple of three tensors:
@@ -417,7 +402,7 @@ defmodule Scholar.Neighbors.NNDescent do
 
     # Normally there would be a stack of that will dynamically grow
     # so we need to preallocate it with a fixed size
-    expand_factor = 20
+    expand_factor = 150
     updates_indices = Nx.broadcast(Nx.s64(0), {expand_factor * num_samples, 2})
 
     updates_dist =
@@ -1053,7 +1038,7 @@ defmodule Scholar.Neighbors.NNDescent do
              initial_candidates, initial_distances, train_data, rng_key, i = 0},
             i < num_heaps do
         visited = Nx.broadcast(Nx.u8(0), {train_data_size})
-        expand_factor = 50
+        expand_factor = 150
         search_candidates_indices = Nx.broadcast(Nx.s64(-1), {num_nodes * expand_factor})
 
         search_candidates_distances =
