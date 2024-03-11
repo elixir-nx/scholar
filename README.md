@@ -69,7 +69,7 @@ Mix.install([
 ])
 
 Nx.global_default_backend(EXLA.Backend)
-# Client can also be set to :cuda / :romc
+# Client can also be set to :cuda / :rocm
 Nx.Defn.global_default_options(compiler: EXLA, client: :host)
 ```
 
