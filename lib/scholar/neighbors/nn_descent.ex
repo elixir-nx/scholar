@@ -1159,8 +1159,8 @@ defmodule Scholar.Neighbors.NNDescent do
                {visited, search_candidates_indices, search_candidates_distances, search_ptr},
                query_data, {search_indices, search_keys, search_flags}, initial_candidates,
                initial_distances, train_data, i, dist_bound, stop, index},
-              index < search_ptr and search_candidates_distances[[index]] and
-                not stop < dist_bound do
+              index < search_ptr and search_candidates_distances[[index]] < dist_bound and
+                not stop do
           candidate = search_candidates_indices[[index]]
 
           {{query_indices, query_keys, query_flags},
@@ -1246,5 +1246,83 @@ defmodule Scholar.Neighbors.NNDescent do
     query_indices = Nx.take_along_axis(query_indices, ord, axis: 1)
     query_keys = Nx.take_along_axis(query_keys, ord, axis: 1)
     {query_indices, query_keys, search_graph}
+  end
+
+  defnp parent(index) do
+    div(index, 2)
+  end
+
+  defnp left_child(index) do
+    2 * index
+  end
+
+  defnp right_child(index) do
+    2 * index + 1
+  end
+
+  defn heap_size(heap) do
+    Nx.as_type(heap[0], :s64)
+  end
+
+  defnp heapify_min(heap, index) do
+    {heap, _, _} =
+      while {heap, index, stop = Nx.u8(0)}, not stop do
+        min_index = index
+        left = left_child(index)
+        right = right_child(index)
+
+        min_index =
+          if left <= heap_size(heap) and heap[left] < heap[min_index] do
+            left
+          else
+            min_index
+          end
+
+        min_index =
+          if right <= heap_size(heap) and heap[right] < heap[min_index] do
+            right
+          else
+            min_index
+          end
+
+        {heap, stop} =
+          if min_index != index do
+            temp = heap[index]
+            heap = Nx.indexed_put(heap, Nx.new_axis(index, 0), heap[min_index])
+            heap = Nx.indexed_put(heap, Nx.new_axis(min_index, 0), temp)
+            {heap, Nx.u8(0)}
+          else
+            {heap, Nx.u8(1)}
+          end
+
+        {heap, min_index, stop}
+      end
+
+    heap
+  end
+
+  defn min_heap_insert(heap, val) do
+    heap = Nx.indexed_add(heap, Nx.new_axis(0, 0), 1)
+    heap = Nx.indexed_put(heap, Nx.new_axis(heap_size(heap), 0), val)
+    index = heap_size(heap)
+
+    {heap, _} =
+      while {heap, index}, index > 1 and heap[index] < heap[parent(index)] do
+        temp = heap[parent(index)]
+        heap = Nx.indexed_put(heap, Nx.new_axis(parent(index), 0), heap[index])
+        heap = Nx.indexed_put(heap, Nx.new_axis(index, 0), temp)
+        index = parent(index)
+        {heap, index}
+      end
+
+    heap
+  end
+
+  defn min_heap_pop(heap) do
+    min = heap[1]
+    heap = Nx.indexed_put(heap, Nx.new_axis(1, 0), heap[heap_size(heap)])
+    heap = Nx.indexed_add(heap, Nx.new_axis(0, 0), -1)
+    heap = heapify_min(heap, 1)
+    {heap, min}
   end
 end
