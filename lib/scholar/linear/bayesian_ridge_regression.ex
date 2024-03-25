@@ -178,13 +178,11 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
             "expected number of targets be the same as number of penalties, got: #{inspect(num_targets)} != #{inspect(Nx.size(alpha))}"
     end
 
-    IO.puts("begin fitting")
     {{coefficients, _rmse, iterations, has_converged}, _} =
       fit_n(x, y, sample_weights, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2, 300)
-    IO.puts("fitting ended!!")
-    IO.inspect(coefficients)
-    IO.inspect(iterations)
-    IO.inspect(has_converged)
+    if Nx.to_number(has_converged) == 1 do
+      IO.puts("Convergence after #{Nx.to_number(iterations)} iterations")
+    end
     %__MODULE__{coefficients: coefficients}
   end
 
