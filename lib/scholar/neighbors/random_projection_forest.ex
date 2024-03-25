@@ -1,18 +1,15 @@
 defmodule Scholar.Neighbors.RandomProjectionForest do
   @moduledoc """
   Random Projection Forest for k-Nearest Neighbor Search.
-
   Each tree in a forest is constructed using a divide and conquer approach.
   We start with the entire dataset and at every node we project the data onto a random
   hyperplane and split it in the following way: the points with the projection smaller
   than or equal to the median are put into the left subtree and the points with projection
   greater than the median are put into the right subtree. We then proceed
   recursively with the left and right subtree.
-
   In this implementation the trees are complete, i.e. there are 2^l nodes at level l.
   The leaves of the trees are arranged as blocks in the field `indices`. We use the same
   hyperplane for all nodes on the same level as in [2].
-
   * [1] - Randomized partition trees for nearest neighbor search
   * [2] - Fast Nearest Neighbor Search through Sparse Random Projections and Voting
   """
@@ -74,13 +71,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
   @doc """
   Grows a random projection forest.
-
   ## Options
-
   #{NimbleOptions.docs(@opts_schema)}
-
   ## Examples
-
       iex> key = Nx.Random.key(12)
       iex> tensor = Nx.iota({5, 2})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
@@ -278,9 +271,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   @doc """
   Computes approximate nearest neighbors of query tensor using random projection forest.
   Returns the neighbor indices and distances from query points.
-
   ## Examples
-
       iex> key = Nx.Random.key(12)
       iex> tensor = Nx.iota({5, 2})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
@@ -322,8 +313,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     predict_n(forest, query)
   end
 
-  defnp predict_n(forest, query) do
-    k = forest.num_neighbors
+  defn get_leaves(forest, query) do
     num_trees = forest.num_trees
     leaf_size = forest.leaf_size
     indices = forest.indices |> Nx.vectorize(:trees)
@@ -336,13 +326,16 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       |> Nx.vectorize(:trees)
       |> Nx.add(start_indices)
 
-    candidate_indices =
-      Nx.take(indices, pos)
-      |> Nx.devectorize()
-      |> Nx.rename(nil)
-      |> Nx.transpose(axes: [1, 0, 2])
-      |> Nx.reshape({query_size, num_trees * leaf_size})
+    Nx.take(indices, pos)
+    |> Nx.devectorize()
+    |> Nx.rename(nil)
+    |> Nx.transpose(axes: [1, 0, 2])
+    |> Nx.reshape({query_size, num_trees * leaf_size})
+  end
 
+  defnp predict_n(forest, query) do
+    k = forest.num_neighbors
+    candidate_indices = get_leaves(forest, query)
     Utils.find_neighbors(query, forest.data, candidate_indices, num_neighbors: k)
   end
 

@@ -46,7 +46,7 @@ defmodule Scholar.Neighbors.NNDescent do
     ],
     tol: [
       type: {:custom, Scholar.Options, :positive_number, []},
-      default: 1.0e-3,
+      default: 1.0e-4,
       doc: """
       Relative tolerance with regards to Frobenius norm of the difference in
       the cluster centers of two consecutive iterations to declare convergence.
@@ -67,7 +67,7 @@ defmodule Scholar.Neighbors.NNDescent do
   query_opts = [
     pruning_probability: [
       type: :float,
-      default: 0.8,
+      default: 1.0,
       doc: """
       The probability of pruning a dimension in the random projection tree.
       """
@@ -98,6 +98,11 @@ defmodule Scholar.Neighbors.NNDescent do
       Determines random number generation for centroid initialization.
       If the key is not provided, it is set to `Nx.Random.key(System.system_time())`.
       """
+    ],
+    metric: [
+      type: {:in, [:squared_euclidean, :euclidean, :manhattan, :cosine, :chebyshev]},
+      default: :squared_euclidean,
+      doc: "The distance metric to use."
     ]
   ]
 
@@ -275,20 +280,52 @@ defmodule Scholar.Neighbors.NNDescent do
 
   # This function updates the nearest neighbor graph by incorporating the
   # information from the random projection forest
-  defnp update_by_forest(data, curr_graph, forest) do
-    {indices, distances} = Scholar.Neighbors.RandomProjectionForest.predict(forest, data)
+  defnp update_by_forest(data, curr_graph, forest, opts) do
+    leaves = Scholar.Neighbors.RandomProjectionForest.get_leaves(forest, data)
 
-    {curr_graph, _} =
-      while {curr_graph, {i = Nx.s64(0), indices, distances}},
-            i < Nx.axis_size(indices, 0) do
-        {curr_graph, _} =
-          while {curr_graph, {i, j = 0, indices, distances}}, j < Nx.axis_size(data, 1) do
-            curr_graph = add_neighbor(curr_graph, i, indices[i][j], distances[i][j], Nx.s8(1))
-            {curr_graph, {i, j + 1, indices, distances}}
+    num_leaves = Nx.axis_size(leaves, 0)
+    leaf_size = Nx.axis_size(leaves, 1)
+    {_indices, keys, _flags} = curr_graph
+
+    while {curr_graph, {i = Nx.s64(0), keys, data, leaves}},
+          i < num_leaves do
+      {curr_graph, _} =
+        while {curr_graph, {i, j = Nx.s64(0), keys, data, leaves, stop = Nx.u8(0)}},
+              j < leaf_size and not stop do
+          index0 = leaves[[i, j]]
+
+          if index0 != Nx.s64(-1) do
+            {curr_graph, _} =
+              while {curr_graph,
+                     {i, j, k = j + 1, keys, index0, data, leaves, stop_inner = Nx.u8(0)}},
+                    k < leaf_size and not stop_inner do
+                index1 = leaves[[i, k]]
+
+                if index1 != Nx.s64(-1) do
+                  d = handle_dist(data[index0], data[index1], opts)
+
+                  curr_graph =
+                    if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
+                      curr_graph = add_neighbor(curr_graph, index0, index1, d, Nx.s8(1))
+                      curr_graph
+                    else
+                      curr_graph
+                    end
+
+                  {curr_graph, {i, j, k + 1, keys, index0, data, leaves, Nx.u8(0)}}
+                else
+                  {curr_graph, {i, j, k + 1, keys, index0, data, leaves, Nx.u8(1)}}
+                end
+              end
+
+            {curr_graph, {i, j + 1, keys, data, leaves, Nx.u8(0)}}
+          else
+            {curr_graph, {i, j + 1, keys, data, leaves, Nx.u8(1)}}
           end
+        end
 
-        {curr_graph, {i + 1, indices, distances}}
-      end
+      {curr_graph, {i + 1, keys, data, leaves}}
+    end
 
     curr_graph
   end
@@ -397,138 +434,80 @@ defmodule Scholar.Neighbors.NNDescent do
 
     {size_new, new_candidates_num_nodes} = Nx.shape(new_candidates_indices)
     old_candidates_num_nodes = Nx.axis_size(old_candidates_indices, 1)
-    num_samples = Nx.axis_size(data, 0)
-    update_index = Nx.s64(0)
+    cnt_updates = Nx.s64(0)
 
-    # Normally there would be a stack of that will dynamically grow
-    # so we need to preallocate it with a fixed size
-    expand_factor = 150
-    updates_indices = Nx.broadcast(Nx.s64(0), {expand_factor * num_samples, 2})
-
-    updates_dist =
-      Nx.broadcast(Nx.tensor(0.0, type: to_float_type(data)), {expand_factor * num_samples})
-
-    {{_keys, _new_candidates_indices, _old_candidates_indices, updates_indices, updates_dist,
-      update_index},
-     _} =
-      while {{keys, new_candidates_indices, old_candidates_indices, updates_indices, updates_dist,
-              update_index}, {i = Nx.s64(0), data}},
+    {{_keys, _new_candidates_indices, _old_candidates_indices, curr_graph, cnt_updates}, _} =
+      while {{keys, new_candidates_indices, old_candidates_indices, curr_graph, cnt_updates},
+             {i = Nx.s64(0), data}},
             i < size_new do
-        {{_, _, _, updates_indices, updates_dist, update_index}, _} =
-          while {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                  updates_dist, update_index}, {j = Nx.s64(0), data, i}},
+        {{_, _, _, curr_graph, cnt_updates}, _} =
+          while {{keys, new_candidates_indices, old_candidates_indices, curr_graph, cnt_updates},
+                 {j = Nx.s64(0), data, i}},
                 j < new_candidates_num_nodes do
             index0 = new_candidates_indices[[i, j]]
 
             if index0 == Nx.s64(-1) do
-              {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                updates_dist, update_index}, {j + 1, data, i}}
+              {{keys, new_candidates_indices, old_candidates_indices, curr_graph, cnt_updates},
+               {j + 1, data, i}}
             else
-              {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                updates_dist, update_index},
-               _} =
-                while {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                        updates_dist, update_index}, {k = j + 1, data, i, j, index0}},
+              {{keys, new_candidates_indices, old_candidates_indices, curr_graph, cnt_updates}, _} =
+                while {{keys, new_candidates_indices, old_candidates_indices, curr_graph,
+                        cnt_updates}, {k = j + 1, data, i, j, index0}},
                       k < new_candidates_num_nodes do
                   index1 = new_candidates_indices[[i, k]]
 
                   if index1 == Nx.s64(-1) do
-                    {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                      updates_dist, update_index}, {k + 1, data, i, j, index0}}
+                    {{keys, new_candidates_indices, old_candidates_indices, curr_graph,
+                      cnt_updates}, {k + 1, data, i, j, index0}}
                   else
                     d = handle_dist(data[index0], data[index1], metric: opts[:metric])
 
-                    {updates_indices, updates_dist, update_index} =
+                    {curr_graph, cnt_updates} =
                       if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
-                        updates_indices =
-                          Nx.put_slice(
-                            updates_indices,
-                            [update_index, 0],
-                            Nx.new_axis(
-                              Nx.concatenate([Nx.new_axis(index0, 0), Nx.new_axis(index1, 0)]),
-                              0
-                            )
-                          )
-
-                        updates_dist =
-                          Nx.indexed_put(updates_dist, Nx.new_axis(update_index, 0), d)
-
-                        {updates_indices, updates_dist, update_index + 1}
+                        {add_neighbor(curr_graph, index0, index1, d, Nx.s8(1)), cnt_updates + 1}
                       else
-                        {updates_indices, updates_dist, update_index}
+                        {curr_graph, cnt_updates}
                       end
 
-                    {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                      updates_dist, update_index}, {k + 1, data, i, j, index0}}
+                    {{keys, new_candidates_indices, old_candidates_indices, curr_graph,
+                      cnt_updates}, {k + 1, data, i, j, index0}}
                   end
                 end
 
-              {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                updates_dist, update_index},
-               _} =
-                while {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                        updates_dist, update_index}, {k = Nx.s64(0), data, i, index0}},
+              {{keys, new_candidates_indices, old_candidates_indices, curr_graph, cnt_updates}, _} =
+                while {{keys, new_candidates_indices, old_candidates_indices, curr_graph,
+                        cnt_updates}, {k = Nx.s64(0), data, i, index0}},
                       k < old_candidates_num_nodes do
                   index1 = old_candidates_indices[[i, k]]
 
                   if index1 == Nx.s64(-1) do
-                    {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                      updates_dist, update_index}, {k + 1, data, i, index0}}
+                    {{keys, new_candidates_indices, old_candidates_indices, curr_graph,
+                      cnt_updates}, {k + 1, data, i, index0}}
                   else
                     d = handle_dist(data[index0], data[index1], metric: opts[:metric])
 
-                    {updates_indices, updates_dist, update_index} =
+                    {curr_graph, cnt_updates} =
                       if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
-                        updates_indices =
-                          Nx.put_slice(
-                            updates_indices,
-                            [update_index, 0],
-                            Nx.new_axis(
-                              Nx.concatenate([Nx.new_axis(index0, 0), Nx.new_axis(index1, 0)]),
-                              0
-                            )
-                          )
-
-                        updates_dist =
-                          Nx.indexed_put(updates_dist, Nx.new_axis(update_index, 0), d)
-
-                        {updates_indices, updates_dist, update_index + 1}
+                        {add_neighbor(curr_graph, index0, index1, d, Nx.s8(1)), cnt_updates + 1}
                       else
-                        {updates_indices, updates_dist, update_index}
+                        {curr_graph, cnt_updates}
                       end
 
-                    {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                      updates_dist, update_index}, {k + 1, data, i, index0}}
+                    {{keys, new_candidates_indices, old_candidates_indices, curr_graph,
+                      cnt_updates}, {k + 1, data, i, index0}}
                   end
                 end
 
-              {{keys, new_candidates_indices, old_candidates_indices, updates_indices,
-                updates_dist, update_index}, {j + 1, data, i}}
+              {{keys, new_candidates_indices, old_candidates_indices, curr_graph, cnt_updates},
+               {j + 1, data, i}}
             end
           end
 
-        {{keys, new_candidates_indices, old_candidates_indices, updates_indices, updates_dist,
-          update_index}, {i + 1, data}}
+        {{keys, new_candidates_indices, old_candidates_indices, curr_graph, cnt_updates},
+         {i + 1, data}}
       end
 
-    {updates_indices, updates_dist, update_index}
-  end
-
-  # Applies graph updates to the current nearest neighbor graph.
-  defnp apply_updates(curr_graph, updates_indices, updates_dist, update_index) do
-    {curr_graph, _} =
-      while {curr_graph, {i = Nx.s64(0), update_index, updates_indices, updates_dist}},
-            i < update_index do
-        index0 = updates_indices[[i, 0]]
-        index1 = updates_indices[[i, 1]]
-        d = updates_dist[i]
-
-        curr_graph = add_neighbor(curr_graph, index0, index1, d, Nx.s8(1))
-        curr_graph = add_neighbor(curr_graph, index1, index0, d, Nx.s8(1))
-        {curr_graph, {i + 1, update_index, updates_indices, updates_dist}}
-      end
-
-    curr_graph
+    {curr_graph, cnt_updates}
   end
 
   # This function applies the NN-descent algorithm to construct an approximate
@@ -550,7 +529,7 @@ defmodule Scholar.Neighbors.NNDescent do
             num_neighbors: opts[:num_neighbors]
           )
 
-        {update_by_forest(data, curr_graph, forest), forest}
+        {update_by_forest(data, curr_graph, forest, opts), forest}
       else
         {curr_graph, Nx.tensor(:nan)}
       end
@@ -563,8 +542,8 @@ defmodule Scholar.Neighbors.NNDescent do
     num_samples = Nx.axis_size(data, 0)
     stop = Nx.u8(0)
 
-    {curr_graph, _} =
-      while {curr_graph, {i = Nx.u64(0), stop, key, data}},
+    {{curr_graph, _i}, _} =
+      while {{curr_graph, i = Nx.u64(0)}, {stop, key, data}},
             i < max_iters and not stop do
         new_candidates =
           {Nx.broadcast(Nx.s64(-1), {num_samples, max_candidates}),
@@ -579,10 +558,8 @@ defmodule Scholar.Neighbors.NNDescent do
         {curr_graph, new_candidates, old_candidates, key} =
           sample_candidate(curr_graph, new_candidates, old_candidates, key)
 
-        {updates_indices, updates_dist, update_index} =
+        {curr_graph, update_index} =
           generate_graph_updates(data, curr_graph, new_candidates, old_candidates, opts)
-
-        curr_graph = apply_updates(curr_graph, updates_indices, updates_dist, update_index)
 
         stop =
           if update_index < tol * num_samples * num_neighbors do
@@ -591,7 +568,7 @@ defmodule Scholar.Neighbors.NNDescent do
             Nx.u8(0)
           end
 
-        {curr_graph, {i + 1, stop, key, data}}
+        {{curr_graph, i + 1}, {stop, key, data}}
       end
 
     {indices, dists, _flags} = add_zero_nodes(curr_graph)
@@ -828,7 +805,7 @@ defmodule Scholar.Neighbors.NNDescent do
                   new_index = new_indices[[k]]
                   new_key = new_keys[[k]]
 
-                  d = Distance.squared_euclidean(data[index], data[new_index])
+                  d = handle_dist(data[index], data[new_index], metric: opts[:metric])
 
                   {add_node?, stop, rng_key} =
                     if new_key > opts[:eps] and d < key do
@@ -1029,37 +1006,34 @@ defmodule Scholar.Neighbors.NNDescent do
 
     {num_heaps, num_nodes} = Nx.shape(query_indices)
 
-    {initial_candidates, initial_distances} = RandomProjectionForest.predict(forest, query_data)
+    # {initial_candidates, _} = RandomProjectionForest.predict(forest, query_data)
+    initial_candidates = RandomProjectionForest.get_leaves(forest, query_data)
 
     {{query_indices, query_keys, _query_flags}, _query_data, search_graph, _initial_candidates,
-     _initial_distances, _train_data, _rng_key,
+     _train_data, _rng_key,
      _i} =
       while {{query_indices, query_keys, query_flags}, query_data, search_graph,
-             initial_candidates, initial_distances, train_data, rng_key, i = 0},
+             initial_candidates, train_data, rng_key, i = 0},
             i < num_heaps do
         visited = Nx.broadcast(Nx.u8(0), {train_data_size})
-        expand_factor = 150
-        search_candidates_indices = Nx.broadcast(Nx.s64(-1), {num_nodes * expand_factor})
 
-        search_candidates_distances =
+        heap_dists =
           Nx.broadcast(
-            Nx.Constants.max_finite(to_float_type(query_data)),
-            {num_nodes * expand_factor}
+            Nx.tensor(0.0, type: to_float_type(query_data)),
+            {Nx.axis_size(nearest_neighbors, 1) * 2}
           )
 
-        search_ptr = Nx.s64(0)
+        heap_indices = Nx.broadcast(Nx.s64(0), {Nx.axis_size(nearest_neighbors, 1) * 2})
+        heap = {heap_indices, heap_dists}
 
-        {{query_indices, query_keys, query_flags},
-         {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-         {query_data, search_graph, initial_candidates, initial_distances, train_data, i, _stop,
-          j}} =
-          while {{query_indices, query_keys, query_flags},
-                 {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-                 {query_data, search_graph, initial_candidates, initial_distances, train_data, i,
-                  stop = Nx.u8(0), j = 0}},
+        {{query_indices, query_keys, query_flags}, {visited, heap},
+         {query_data, search_graph, initial_candidates, train_data, i, _stop, j}} =
+          while {{query_indices, query_keys, query_flags}, {visited, heap},
+                 {query_data, search_graph, initial_candidates, train_data, i, stop = Nx.u8(0),
+                  j = 0}},
                 j < Nx.axis_size(nearest_neighbors, 1) and not stop do
             if initial_candidates[i][j] != Nx.s64(-1) do
-              d = Distance.squared_euclidean(train_data[initial_candidates[i][j]], query_data[i])
+              d = handle_dist(train_data[initial_candidates[i][j]], query_data[i], metric: metric)
 
               visited =
                 Nx.indexed_put(visited, Nx.new_axis(initial_candidates[i][j], 0), Nx.u8(1))
@@ -1073,42 +1047,25 @@ defmodule Scholar.Neighbors.NNDescent do
                   Nx.s8(-1)
                 )
 
-              search_candidates_indices =
-                Nx.indexed_put(
-                  search_candidates_indices,
-                  Nx.new_axis(search_ptr, 0),
-                  initial_candidates[i][j]
-                )
+              heap = min_heap_insert(heap, d, initial_candidates[i][j])
 
-              search_candidates_distances =
-                Nx.indexed_put(search_candidates_distances, Nx.new_axis(search_ptr, 0), d)
-
-              search_ptr = search_ptr + 1
-
-              {{query_indices, query_keys, query_flags},
-               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-               {query_data, search_graph, initial_candidates, initial_distances, train_data, i,
-                Nx.u8(0), j + 1}}
+              {{query_indices, query_keys, query_flags}, {visited, heap},
+               {query_data, search_graph, initial_candidates, train_data, i, Nx.u8(0), j + 1}}
             else
-              {{query_indices, query_keys, query_flags},
-               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-               {query_data, search_graph, initial_candidates, initial_distances, train_data, i,
-                Nx.u8(1), j}}
+              {{query_indices, query_keys, query_flags}, {visited, heap},
+               {query_data, search_graph, initial_candidates, train_data, i, Nx.u8(1), j}}
             end
           end
 
-        {{query_indices, query_keys, query_flags},
-         {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-         _} =
-          while {{query_indices, query_keys, query_flags},
-                 {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-                 {query_data, search_graph, initial_candidates, initial_distances, train_data,
-                  rng_key, i, stop = Nx.u8(0), k = j}},
+        {{query_indices, query_keys, query_flags}, {visited, heap}, _} =
+          while {{query_indices, query_keys, query_flags}, {visited, heap},
+                 {query_data, search_graph, initial_candidates, train_data, rng_key, i,
+                  stop = Nx.u8(0), k = j}},
                 k < Nx.axis_size(nearest_neighbors, 1) and not stop do
             {index, rng_key} = Nx.Random.randint(rng_key, 0, Nx.axis_size(train_data, 0))
 
             if not visited[index] do
-              d = Distance.squared_euclidean(train_data[index], query_data[i])
+              d = handle_dist(train_data[index], query_data[i], metric: metric)
               visited = Nx.indexed_put(visited, Nx.new_axis(index, 0), Nx.u8(1))
 
               {query_indices, query_keys, query_flags} =
@@ -1120,126 +1077,102 @@ defmodule Scholar.Neighbors.NNDescent do
                   Nx.s8(-1)
                 )
 
-              search_candidates_indices =
-                Nx.indexed_put(
-                  search_candidates_indices,
-                  Nx.new_axis(search_ptr, 0),
-                  index
-                )
+              heap = min_heap_insert(heap, d, index)
 
-              search_candidates_distances =
-                Nx.indexed_put(search_candidates_distances, Nx.new_axis(search_ptr, 0), d)
-
-              search_ptr = search_ptr + 1
-
-              {{query_indices, query_keys, query_flags},
-               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-               {query_data, search_graph, initial_candidates, initial_distances, train_data,
-                rng_key, i, Nx.u8(0), k + 1}}
+              {{query_indices, query_keys, query_flags}, {visited, heap},
+               {query_data, search_graph, initial_candidates, train_data, rng_key, i, Nx.u8(0),
+                k + 1}}
             else
-              {{query_indices, query_keys, query_flags},
-               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-               {query_data, search_graph, initial_candidates, initial_distances, train_data,
-                rng_key, i, Nx.u8(1), k}}
+              {{query_indices, query_keys, query_flags}, {visited, heap},
+               {query_data, search_graph, initial_candidates, train_data, rng_key, i, Nx.u8(1), k}}
             end
           end
 
-        ord = Nx.argsort(search_candidates_distances, stable: true)
-        search_candidates_indices = Nx.take_along_axis(search_candidates_indices, ord)
-        search_candidates_distances = Nx.take_along_axis(search_candidates_distances, ord)
-
-        index = Nx.s64(0)
+        {heap, {min_dist, min_index}} = min_heap_pop(heap)
 
         dist_bound =
           (Nx.tensor(1.0, type: to_float_type(query_data)) + opts[:eps]) * query_keys[[i, 0]]
 
         {search_indices, search_keys, search_flags} = search_graph
 
-        while {{query_indices, query_keys, query_flags},
-               {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-               query_data, {search_indices, search_keys, search_flags}, initial_candidates,
-               initial_distances, train_data, i, dist_bound, stop, index},
-              index < search_ptr and search_candidates_distances[[index]] < dist_bound and
-                not stop do
-          candidate = search_candidates_indices[[index]]
+        # # SEARCH
+        {{query_indices, query_keys, query_flags}, {_visited, _heap, _min_dist, _min_index},
+         query_data, search_graph, initial_candidates, train_data, i, _dist_bound,
+         _stop} =
+          while {{query_indices, query_keys, query_flags}, {visited, heap, min_dist, min_index},
+                 query_data, {search_indices, search_keys, search_flags}, initial_candidates,
+                 train_data, i, dist_bound, stop},
+                min_dist < dist_bound and
+                  not stop do
+            {{query_indices, query_keys, query_flags}, {visited, heap, _min_dist, _min_index},
+             query_data, _, initial_candidates, train_data, i, dist_bound, _stop_inner,
+             _} =
+              while {{query_indices, query_keys, query_flags},
+                     {visited, heap, min_dist, min_index}, query_data,
+                     {search_indices, search_keys, search_flags}, initial_candidates, train_data,
+                     i, dist_bound, stop_inner = Nx.u8(0), k = 0},
+                    k < num_nodes and not stop_inner do
+                j = search_indices[[min_index, k]]
 
-          {{query_indices, query_keys, query_flags},
-           {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-           query_data, _, initial_candidates, initial_distances, train_data, i, dist_bound, stop,
-           index, _,
-           _} =
-            while {{query_indices, query_keys, query_flags},
-                   {visited, search_candidates_indices, search_candidates_distances, search_ptr},
+                if j == Nx.s64(-1) do
+                  {{query_indices, query_keys, query_flags}, {visited, heap, min_dist, min_index},
                    query_data, {search_indices, search_keys, search_flags}, initial_candidates,
-                   initial_distances, train_data, i, dist_bound, stop, index, candidate, k = 0},
-                  k < num_nodes do
-              j = search_indices[[candidate, k]]
-
-              if j == Nx.s64(-1) do
-                {{query_indices, query_keys, query_flags},
-                 {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-                 query_data, search_graph, initial_candidates, initial_distances, train_data, i,
-                 dist_bound, Nx.u8(1), index, candidate, k}
-              else
-                if visited[j] do
-                  {{query_indices, query_keys, query_flags},
-                   {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-                   query_data, search_graph, initial_candidates, initial_distances, train_data, i,
-                   dist_bound, stop, index, candidate, k + 1}
+                   train_data, i, dist_bound, Nx.u8(1), k}
                 else
-                  d = handle_dist(train_data[j], query_data[i], metric: metric)
-                  visited = Nx.indexed_put(visited, Nx.new_axis(j, 0), Nx.u8(1))
-
-                  if d < dist_bound do
-                    {query_indices, query_keys, query_flags} =
-                      add_neighbor(
-                        {query_indices, query_keys, query_flags},
-                        i,
-                        j,
-                        d,
-                        Nx.s8(-1)
-                      )
-
-                    search_candidates_indices =
-                      Nx.indexed_put(
-                        search_candidates_indices,
-                        Nx.new_axis(search_ptr, 0),
-                        j
-                      )
-
-                    search_candidates_distances =
-                      Nx.indexed_put(search_candidates_distances, Nx.new_axis(search_ptr, 0), d)
-
-                    search_ptr = search_ptr + 1
-
-                    dist_bound =
-                      (Nx.tensor(1.0, type: to_float_type(query_data)) + opts[:eps]) *
-                        query_keys[[i, 0]]
-
+                  if visited[j] do
                     {{query_indices, query_keys, query_flags},
-                     {visited, search_candidates_indices, search_candidates_distances,
-                      search_ptr}, query_data, {search_indices, search_keys, search_flags},
-                     initial_candidates, initial_distances, train_data, i, dist_bound, stop,
-                     index, candidate, k + 1}
+                     {visited, heap, min_dist, min_index}, query_data,
+                     {search_indices, search_keys, search_flags}, initial_candidates, train_data,
+                     i, dist_bound, stop_inner, k + 1}
                   else
-                    {{query_indices, query_keys, query_flags},
-                     {visited, search_candidates_indices, search_candidates_distances,
-                      search_ptr}, query_data, {search_indices, search_keys, search_flags},
-                     initial_candidates, initial_distances, train_data, i, dist_bound, stop,
-                     index, candidate, k + 1}
+                    d = handle_dist(train_data[j], query_data[i], metric: metric)
+                    visited = Nx.indexed_put(visited, Nx.new_axis(j, 0), Nx.u8(1))
+
+                    if d < dist_bound do
+                      {query_indices, query_keys, query_flags} =
+                        add_neighbor(
+                          {query_indices, query_keys, query_flags},
+                          i,
+                          j,
+                          d,
+                          Nx.s8(-1)
+                        )
+
+                      heap = min_heap_insert(heap, d, j)
+
+                      dist_bound =
+                        (Nx.tensor(1.0, type: to_float_type(query_data)) + opts[:eps]) *
+                          query_keys[[i, 0]]
+
+                      {{query_indices, query_keys, query_flags},
+                       {visited, heap, min_dist, min_index}, query_data,
+                       {search_indices, search_keys, search_flags}, initial_candidates,
+                       train_data, i, dist_bound, stop_inner, k + 1}
+                    else
+                      {{query_indices, query_keys, query_flags},
+                       {visited, heap, min_dist, min_index}, query_data,
+                       {search_indices, search_keys, search_flags}, initial_candidates,
+                       train_data, i, dist_bound, stop_inner, k + 1}
+                    end
                   end
                 end
               end
-            end
 
-          {{query_indices, query_keys, query_flags},
-           {visited, search_candidates_indices, search_candidates_distances, search_ptr},
-           query_data, search_graph, initial_candidates, initial_distances, train_data, i,
-           dist_bound, stop, index + 1}
-        end
+            {heap, {min_dist, min_index}, stop} =
+              if heap_size(heap) == Nx.s64(0) do
+                {heap, {-1.0, -1}, Nx.u8(1)}
+              else
+                {heap, {min_dist, min_index}} = min_heap_pop(heap)
+                {heap, {min_dist, min_index}, Nx.u8(0)}
+              end
+
+            {{query_indices, query_keys, query_flags}, {visited, heap, min_dist, min_index},
+             query_data, {search_indices, search_keys, search_flags}, initial_candidates,
+             train_data, i, dist_bound, stop}
+          end
 
         {{query_indices, query_keys, query_flags}, query_data, search_graph, initial_candidates,
-         initial_distances, train_data, rng_key, i + 1}
+         train_data, rng_key, i + 1}
       end
 
     ord = Nx.argsort(query_keys, axis: 1, stable: true)
@@ -1260,69 +1193,97 @@ defmodule Scholar.Neighbors.NNDescent do
     2 * index + 1
   end
 
-  defn heap_size(heap) do
-    Nx.as_type(heap[0], :s64)
+  defn heap_size({_heap_indices, heap_dists}) do
+    Nx.as_type(heap_dists[0], :s64)
   end
 
-  defnp heapify_min(heap, index) do
-    {heap, _, _} =
-      while {heap, index, stop = Nx.u8(0)}, not stop do
+  defnp _heap_size(heap_dists) do
+    Nx.as_type(heap_dists[0], :s64)
+  end
+
+  defnp heapify_min({heap_indices, heap_dists}, index) do
+    {{heap_indices, heap_dists}, _, _} =
+      while {{heap_indices, heap_dists}, index, stop = Nx.u8(0)}, not stop do
         min_index = index
         left = left_child(index)
         right = right_child(index)
 
         min_index =
-          if left <= heap_size(heap) and heap[left] < heap[min_index] do
+          if left <= _heap_size(heap_dists) and heap_dists[left] < heap_dists[min_index] do
             left
           else
             min_index
           end
 
         min_index =
-          if right <= heap_size(heap) and heap[right] < heap[min_index] do
+          if right <= _heap_size(heap_dists) and heap_dists[right] < heap_dists[min_index] do
             right
           else
             min_index
           end
 
-        {heap, stop} =
+        {{heap_indices, heap_dists}, stop} =
           if min_index != index do
-            temp = heap[index]
-            heap = Nx.indexed_put(heap, Nx.new_axis(index, 0), heap[min_index])
-            heap = Nx.indexed_put(heap, Nx.new_axis(min_index, 0), temp)
-            {heap, Nx.u8(0)}
+            temp_dist = heap_dists[index]
+            heap_dists = Nx.indexed_put(heap_dists, Nx.new_axis(index, 0), heap_dists[min_index])
+            heap_dists = Nx.indexed_put(heap_dists, Nx.new_axis(min_index, 0), temp_dist)
+
+            temp_index = heap_indices[index]
+
+            heap_indices =
+              Nx.indexed_put(heap_indices, Nx.new_axis(index, 0), heap_indices[min_index])
+
+            heap_indices = Nx.indexed_put(heap_indices, Nx.new_axis(min_index, 0), temp_index)
+            {{heap_indices, heap_dists}, Nx.u8(0)}
           else
-            {heap, Nx.u8(1)}
+            {{heap_indices, heap_dists}, Nx.u8(1)}
           end
 
-        {heap, min_index, stop}
+        {{heap_indices, heap_dists}, min_index, stop}
       end
 
-    heap
+    {Nx.as_type(heap_indices, :s64), heap_dists}
   end
 
-  defn min_heap_insert(heap, val) do
-    heap = Nx.indexed_add(heap, Nx.new_axis(0, 0), 1)
-    heap = Nx.indexed_put(heap, Nx.new_axis(heap_size(heap), 0), val)
-    index = heap_size(heap)
+  defn min_heap_insert({heap_indices, heap_dists}, val, id) do
+    heap_dists = Nx.indexed_add(heap_dists, Nx.new_axis(0, 0), 1)
+    heap_dists = Nx.indexed_put(heap_dists, Nx.new_axis(_heap_size(heap_dists), 0), val)
+    heap_indices = Nx.indexed_put(heap_indices, Nx.new_axis(_heap_size(heap_dists), 0), id)
+    index = _heap_size(heap_dists)
 
-    {heap, _} =
-      while {heap, index}, index > 1 and heap[index] < heap[parent(index)] do
-        temp = heap[parent(index)]
-        heap = Nx.indexed_put(heap, Nx.new_axis(parent(index), 0), heap[index])
-        heap = Nx.indexed_put(heap, Nx.new_axis(index, 0), temp)
+    {{heap_indices, heap_dists}, _} =
+      while {{heap_indices, heap_dists}, index},
+            index > 1 and heap_dists[index] < heap_dists[parent(index)] do
+        temp_dist = heap_dists[parent(index)]
+        heap_dists = Nx.indexed_put(heap_dists, Nx.new_axis(parent(index), 0), heap_dists[index])
+        heap_dists = Nx.indexed_put(heap_dists, Nx.new_axis(index, 0), temp_dist)
+
+        temp_index = heap_indices[parent(index)]
+
+        heap_indices =
+          Nx.indexed_put(heap_indices, Nx.new_axis(parent(index), 0), heap_indices[index])
+
+        heap_indices = Nx.indexed_put(heap_indices, Nx.new_axis(index, 0), temp_index)
+
         index = parent(index)
-        {heap, index}
+        {{heap_indices, heap_dists}, index}
       end
 
-    heap
+    {Nx.as_type(heap_indices, :s64), heap_dists}
   end
 
-  defn min_heap_pop(heap) do
-    min = heap[1]
-    heap = Nx.indexed_put(heap, Nx.new_axis(1, 0), heap[heap_size(heap)])
-    heap = Nx.indexed_add(heap, Nx.new_axis(0, 0), -1)
-    heap = heapify_min(heap, 1)
-    {heap, min}
+  defn min_heap_pop({heap_indices, heap_dists}) do
+    min_dist = heap_dists[1]
+    mid_id = heap_indices[1]
+
+    heap_dists = Nx.indexed_put(heap_dists, Nx.new_axis(1, 0), heap_dists[_heap_size(heap_dists)])
+
+    heap_indices =
+      Nx.indexed_put(heap_indices, Nx.new_axis(1, 0), heap_indices[_heap_size(heap_dists)])
+
+    heap_dists = Nx.indexed_add(heap_dists, Nx.new_axis(0, 0), -1)
+
+    {heap_indices, heap_dists} = heapify_min({heap_indices, heap_dists}, 1)
+    {{Nx.as_type(heap_indices, :s64), heap_dists}, {min_dist, mid_id}}
   end
 end
