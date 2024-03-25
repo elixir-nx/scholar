@@ -178,140 +178,58 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
             "expected number of targets be the same as number of penalties, got: #{inspect(num_targets)} != #{inspect(Nx.size(alpha))}"
     end
 
-    {coefficients, _rmse, convergence, iterations} =
-      fit_n(x, y, sample_weights, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2)
-
+    IO.puts("begin fitting")
+    {{coefficients, _rmse, iterations, has_converged}, _} =
+      fit_n(x, y, sample_weights, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2, 300)
+    IO.puts("fitting ended!!")
+    IO.inspect(coefficients)
+    IO.inspect(iterations)
+    IO.inspect(has_converged)
     %__MODULE__{coefficients: coefficients}
   end
 
-  deftransformp fit_n(x, y, sample_weights, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2) do
+  defnp fit_n(x, y, sample_weights, alpha, lambda,
+              alpha_1, alpha_2, lambda_1, lambda_2, iterations) do
+    print_value(Nx.u8(0))
     xt_y = Nx.dot(Nx.transpose(x), y)
     {u, s, vh} = Nx.LinAlg.svd(x, full_matrices?: false)
     eigenvals = Nx.pow(s, 2)
     {n_samples, n_features} = Nx.shape(x)
-    initial_coefficients = Nx.tensor(for _n <- 0..(n_features - 1), do: 0)
+    {coef, rmse} = update_coef(x, y, n_samples, n_features,
+                               xt_y, u, vh, eigenvals,
+                               alpha, lambda)
 
-    update_coef_iterations(
-      x,
-      y,
-      n_samples,
-      n_features,
-      xt_y,
-      u,
-      vh,
-      eigenvals,
-      alpha,
-      lambda,
-      alpha_1,
-      alpha_2,
-      lambda_1,
-      lambda_2,
-      300,
-      initial_coefficients
-    )
-  end
-
-  deftransformp update_coef_iterations(
-                  x,
-                  y,
-                  n_samples,
-                  n_features,
-                  xt_y,
-                  u,
-                  vh,
-                  eigenvals,
-                  alpha,
-                  lambda,
-                  alpha_1,
-                  alpha_2,
-                  lambda_1,
-                  lambda_2,
-                  iterations,
-                  coef_old
-                ) do
-    {coefficients, rmse} =
-      update_coef(
-        x,
-        y,
-        n_samples,
-        n_features,
-        xt_y,
-        u,
-        vh,
-        eigenvals,
-        alpha,
-        lambda
-      )
-
-    {gamma, lambda, alpha} =
-      update_hyperparameters(
-        n_samples,
-        coefficients,
-        rmse,
-        eigenvals,
-        alpha,
-        lambda,
-        alpha_1,
-        alpha_2,
-        lambda_1,
-        lambda_2
-      )
-
-    convergence =
-      check_convergence(
-        coef_old,
-        coefficients,
-        Nx.tensor(1.0e-3)
-      )
-      |> Nx.to_number()
-
-    if convergence == 1 or iterations <= 0 do
-      {coefficients, rmse, convergence == 1, iterations}
-    else
-      update_coef_iterations(
-        x,
-        y,
-        n_samples,
-        n_features,
-        xt_y,
-        u,
-        vh,
-        eigenvals,
-        alpha,
-        lambda,
-        alpha_1,
-        alpha_2,
-        lambda_1,
-        lambda_2,
-        iterations - 1,
-        coefficients
-      )
-    end
-  end
-
-  defnp update_hyperparameters(
-          n_samples,
-          coefficients,
-          rmse,
-          eigenvals,
-          alpha,
-          lambda,
-          alpha_1,
-          alpha_2,
-          lambda_1,
-          lambda_2
-        ) do
-    gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
-    lambda = (gamma + 2 * lambda_1) / (Nx.sum(coefficients ** 2) + 2 * lambda_2)
-    alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
-    {gamma, lambda, alpha}
+    {{final_coef, rmse, iter, has_converged}, _} =
+      while {{coef, rmse, iter = 1, has_converged = Nx.u8(0)},
+             {x, y,
+              xt_y, u, s, vh, eigenvals,
+              alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2,
+              iterations}},
+            iter < iterations and not has_converged do
+        {coef_new, rmse} = update_coef(
+                             x, y, n_samples, n_features,
+                             xt_y, u, vh, eigenvals,
+                             alpha, lambda)
+        
+        gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
+        lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef_new ** 2) + 2 * lambda_2)
+        alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
+        
+        has_converged = check_convergence(coef_new, coef, 1.0e-10)
+        
+        {{coef_new, rmse, iter + 1, has_converged},
+         {x, y,
+          xt_y, u, s, vh, eigenvals,
+          alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2,
+          iterations}}
+      end
   end
 
   defnp update_coef(
           x,
           y,
-          n_samples,
-          n_features,
+          _n_samples,
+          _n_features,
           xt_y,
           u,
           vh,
