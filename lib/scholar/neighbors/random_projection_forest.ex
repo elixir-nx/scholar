@@ -12,6 +12,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   In this implementation the trees are complete, i.e. there are 2^l nodes at level l.
   The leaves of the trees are arranged as blocks in the field `indices`. We use the same
   hyperplane for all nodes on the same level as in [2].
+
   * [1] - Randomized partition trees for nearest neighbor search
   * [2] - Fast Nearest Neighbor Search through Sparse Random Projections and Voting
   """
@@ -277,7 +278,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   @doc """
   Computes approximate nearest neighbors of query tensor using random projection forest.
   Returns the neighbor indices and distances from query points.
+
   ## Examples
+  
       iex> key = Nx.Random.key(12)
       iex> tensor = Nx.iota({5, 2})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
