@@ -132,6 +132,10 @@ defmodule Scholar.Neighbors.NNDescent do
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
+    if opts[:tree_init?] and (opts[:metric] != :euclidean and opts[:metric] != :squared_euclidean) do
+      raise ArgumentError, "The tree initialization is only available for Euclidean metrics"
+    end
+
     opts =
       Keyword.put(opts, :num_trees, 5 + Kernel.round(:math.pow(Nx.axis_size(tensor, 0), 0.25)))
 
