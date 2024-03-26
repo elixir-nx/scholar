@@ -280,7 +280,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   Returns the neighbor indices and distances from query points.
 
   ## Examples
-  
+
       iex> key = Nx.Random.key(12)
       iex> tensor = Nx.iota({5, 2})
       iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
