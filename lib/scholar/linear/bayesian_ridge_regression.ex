@@ -38,108 +38,60 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       of targets for a zero-vector on input.
       """
     ],
-    alpha: [
+    alpha_init: [
       type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :non_negative_number, []},
-           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
-           {:custom, Scholar.Options, :weights, []}
-         ]},
+        {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0,
       doc: ~S"""
-      Constant that multiplies the $L_2$ term, controlling regularization strength.
+      The initial value for alpha. This parameter influences the precision of the noise.
       `:alpha` must be a non-negative float i.e. in [0, inf).
-
-      If `:alpha` is set to 0.0 the objective is the ordinary least squares regression.
-      In this case, for numerical reasons, you should use `Scholar.Linear.LinearRegression` instead.
+      """
+    ],
+    lambda_init: [
+      type:
+        {:custom, Scholar.Options, :non_negative_number, []},
+      default: 1.0,
+      doc: ~S"""
+      The initial value for lambda. This parameter influences the precision of the weights.
+      `:lambda` must be a non-negative float i.e. in [0, inf).      
       """
     ],
     alpha_1: [
       type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :non_negative_number, []},
-           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
-           {:custom, Scholar.Options, :weights, []}
-         ]},
+        {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0e-6,
       doc: ~S"""
-      Constant that multiplies the $L_2$ term, controlling regularization strength.
-      `:alpha` must be a non-negative float i.e. in [0, inf).
-
-      If `:alpha` is set to 0.0 the objective is the ordinary least squares regression.
-      In this case, for numerical reasons, you should use `Scholar.Linear.LinearRegression` instead.
+      Hyper-parameter : shape parameter for the Gamma distribution prior      
+      over the alpha parameter.
       """
-    ],
+    ],    
     alpha_2: [
       type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :non_negative_number, []},
-           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
-           {:custom, Scholar.Options, :weights, []}
-         ]},
+        {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0e-6,
       doc: ~S"""
-      Constant that multiplies the $L_2$ term, controlling regularization strength.
-      `:alpha` must be a non-negative float i.e. in [0, inf).
-
-      If `:alpha` is set to 0.0 the objective is the ordinary least squares regression.
-      In this case, for numerical reasons, you should use `Scholar.Linear.LinearRegression` instead.
-      """
-    ],
-    lambda: [
-      type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :non_negative_number, []},
-           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
-           {:custom, Scholar.Options, :weights, []}
-         ]},
-      default: 1.0,
-      doc: ~S"""
-      Constant that multiplies the $L_2$ term, controlling regularization strength.
-      `:alpha` must be a non-negative float i.e. in [0, inf).
-
-      If `:alpha` is set to 0.0 the objective is the ordinary least squares regression.
-      In this case, for numerical reasons, you should use `Scholar.Linear.LinearRegression` instead.
+      Hyper-parameter : inverse scale (rate) parameter for the Gamma distribution prior
+      over the alpha parameter.
       """
     ],
     lambda_1: [
       type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :non_negative_number, []},
-           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
-           {:custom, Scholar.Options, :weights, []}
-         ]},
+        {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0e-6,
       doc: ~S"""
-      Constant that multiplies the $L_2$ term, controlling regularization strength.
-      `:alpha` must be a non-negative float i.e. in [0, inf).
-
-      If `:alpha` is set to 0.0 the objective is the ordinary least squares regression.
-      In this case, for numerical reasons, you should use `Scholar.Linear.LinearRegression` instead.
+      Hyper-parameter : shape parameter for the Gamma distribution prior
+      over the lambda parameter.            
       """
     ],
     lambda_2: [
       type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :non_negative_number, []},
-           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
-           {:custom, Scholar.Options, :weights, []}
-         ]},
+        {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0e-6,
       doc: ~S"""
-      Constant that multiplies the $L_2$ term, controlling regularization strength.
-      `:alpha` must be a non-negative float i.e. in [0, inf).
-
-      If `:alpha` is set to 0.0 the objective is the ordinary least squares regression.
-      In this case, for numerical reasons, you should use `Scholar.Linear.LinearRegression` instead.
+      Hyper-parameter : inverse scale (rate) parameter for the Gamma distribution prior      
+      over the lambda parameter.            
       """
-    ],
+    ],    
     eps: [
       type: :float,
       default: 1.0e-8,
@@ -161,10 +113,10 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         else: Nx.tensor(sample_weights, type: x_type)
 
     ## TODO: refactor this
-    {alpha, opts} = Keyword.pop!(opts, :alpha)
+    {alpha, opts} = Keyword.pop!(opts, :alpha_init)
     {alpha_1, opts} = Keyword.pop!(opts, :alpha_1)
     {alpha_2, opts} = Keyword.pop!(opts, :alpha_2)
-    {lambda, opts} = Keyword.pop!(opts, :lambda)
+    {lambda, opts} = Keyword.pop!(opts, :lambda_init)
     {lambda_1, opts} = Keyword.pop!(opts, :lambda_1)
     {lambda_2, opts} = Keyword.pop!(opts, :lambda_2)
 
