@@ -7,6 +7,14 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   defstruct [:coefficients]
 
   opts = [
+    iterations: [
+      type: :pos_integer,
+      default: 300,
+      doc: """
+      Maximum number of iterations before stopping the fitting algorithm.
+      The number of iterations may be lower is parameters converge.
+      """
+    ],    
     sample_weights: [
       type:
         {:or,
@@ -28,18 +36,6 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       the intercept is set to `0.0`. The intercept is an independent term
       in a linear model. Specifically, it is the expected mean value
       of targets for a zero-vector on input.
-      """
-    ],
-    solver: [
-      type: {:in, [:svd, :cholesky]},
-      default: :svd,
-      doc: """
-      Solver to use in the computational routines:
-
-      * `:svd` - Uses a Singular Value Decomposition of A to compute the Ridge coefficients.
-      In particular, it is more stable for singular matrices than `:cholesky` at the cost of being slower.
-
-      * `:cholesky` - Uses the standard `Nx.LinAlg.solve` function to obtain a closed-form solution.
       """
     ],
     alpha: [
@@ -143,7 +139,14 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       If `:alpha` is set to 0.0 the objective is the ordinary least squares regression.
       In this case, for numerical reasons, you should use `Scholar.Linear.LinearRegression` instead.
       """
-    ]
+    ],
+    eps: [
+      type: :float,
+      default: 1.0e-8,
+      doc:
+        "The convergence tolerance. When `Nx.sum(Nx.abs(coef - coef_new)) < :eps`, the algorithm is considered to have converged."
+    ]    
+    
   ]
 
   @opts_schema NimbleOptions.new!(opts)
