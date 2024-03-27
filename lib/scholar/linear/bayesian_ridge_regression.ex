@@ -177,9 +177,19 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       raise ArgumentError,
             "expected number of targets be the same as number of penalties, got: #{inspect(num_targets)} != #{inspect(Nx.size(alpha))}"
     end
+    # 
+    xt_y = Nx.dot(Nx.transpose(x), y)
+    {u, s, vh} = Nx.LinAlg.svd(x, full_matrices?: false)
+    eigenvals = Nx.pow(s, 2)
+    {n_samples, n_features} = Nx.shape(x)
+    {coef, _rmse} = update_coef(x, y, n_samples, n_features,
+                               xt_y, u, vh, eigenvals,
+                               alpha, lambda)
+    IO.inspect(coef)
 
     {{coefficients, _rmse, iterations, has_converged}, _} =
       fit_n(x, y, sample_weights, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2, 300)
+    IO.inspect(has_converged)
     if Nx.to_number(has_converged) == 1 do
       IO.puts("Convergence after #{Nx.to_number(iterations)} iterations")
     end
@@ -188,7 +198,6 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
   defnp fit_n(x, y, sample_weights, alpha, lambda,
               alpha_1, alpha_2, lambda_1, lambda_2, iterations) do
-    print_value(Nx.u8(0))
     xt_y = Nx.dot(Nx.transpose(x), y)
     {u, s, vh} = Nx.LinAlg.svd(x, full_matrices?: false)
     eigenvals = Nx.pow(s, 2)
@@ -197,45 +206,45 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
                                xt_y, u, vh, eigenvals,
                                alpha, lambda)
 
-    {{final_coef, rmse, iter, has_converged}, _} =
-      while {{coef, rmse, iter = 1, has_converged = Nx.u8(0)},
-             {x, y,
-              xt_y, u, s, vh, eigenvals,
-              alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2,
-              iterations}},
-            iter < iterations and not has_converged do
-        {coef_new, rmse} = update_coef(
-                             x, y, n_samples, n_features,
-                             xt_y, u, vh, eigenvals,
-                             alpha, lambda)
-        
-        gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
-        lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef_new ** 2) + 2 * lambda_2)
-        alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
-        
-        has_converged = check_convergence(coef_new, coef, 1.0e-10)
-        
-        {{coef_new, rmse, iter + 1, has_converged},
-         {x, y,
-          xt_y, u, s, vh, eigenvals,
-          alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2,
-          iterations}}
-      end
+    while {{coef, rmse, iter = 0, has_converged = Nx.u8(0)},
+           {x, y,
+            xt_y, u, s, vh, eigenvals,
+            alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2,
+            iterations}},
+      iter < iterations and not has_converged do
+
+      gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
+      lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef ** 2) + 2 * lambda_2)
+      alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
+      
+      {coef_new, rmse} = update_coef(
+        x, y, n_samples, n_features,
+        xt_y, u, vh, eigenvals,
+        alpha, lambda)
+      
+      has_converged = Nx.sum(Nx.abs(coef - coef_new)) < 1.0e-8
+      {{coef_new, rmse, iter + 1, has_converged},
+       {x, y,
+        xt_y, u, s, vh, eigenvals,
+        alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2,
+        iterations}}
+    end
   end
 
-  defnp update_coef(
-          x,
-          y,
-          _n_samples,
-          _n_features,
-          xt_y,
-          u,
-          vh,
-          eigenvals,
-          alpha,
-          lambda
-        ) do
-    regularization = vh / (eigenvals + lambda / alpha)
+  defn update_coef(
+    x,
+    y,
+    n_samples,
+    n_features,
+    xt_y,
+    u,
+    vh,
+    eigenvals,
+    alpha,
+    lambda
+  ) do
+    scaled_eigens = eigenvals + lambda / alpha
+    regularization = vh / scaled_eigens
     reg_transpose = Nx.dot(regularization, xt_y)
     coef = Nx.dot(Nx.transpose(vh), reg_transpose)
 
@@ -244,10 +253,6 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     rmse = Nx.sum(squared_error)
 
     {coef, rmse}
-  end
-
-  defnp check_convergence(coef_old, coef_new, tol) do
-    Nx.less(Nx.sum(Nx.abs(coef_old - coef_new)), tol)
   end
 
   defn predict(%__MODULE__{coefficients: coeff} = _model, x) do
