@@ -159,17 +159,11 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
     ## TODO: refactor this
     {alpha, opts} = Keyword.pop!(opts, :alpha)
-    alpha = Nx.tensor(alpha, type: x_type) |> Nx.flatten()
     {alpha_1, opts} = Keyword.pop!(opts, :alpha_1)
-    alpha_1 = Nx.tensor(alpha_1, type: x_type) |> Nx.flatten()
     {alpha_2, opts} = Keyword.pop!(opts, :alpha_2)
-    alpha_2 = Nx.tensor(alpha_2, type: x_type) |> Nx.flatten()
     {lambda, opts} = Keyword.pop!(opts, :lambda)
-    lambda = Nx.tensor(lambda, type: x_type) |> Nx.flatten()
     {lambda_1, opts} = Keyword.pop!(opts, :lambda_1)
-    lambda_1 = Nx.tensor(lambda_1, type: x_type) |> Nx.flatten()
     {lambda_2, opts} = Keyword.pop!(opts, :lambda_2)
-    lambda_2 = Nx.tensor(lambda_2, type: x_type) |> Nx.flatten()
 
     num_targets = if Nx.rank(y) == 1, do: 1, else: Nx.axis_size(y, 1)
 
@@ -182,14 +176,10 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {u, s, vh} = Nx.LinAlg.svd(x, full_matrices?: false)
     eigenvals = Nx.pow(s, 2)
     {n_samples, n_features} = Nx.shape(x)
-    {coef, _rmse} = update_coef(x, y, n_samples, n_features,
-                               xt_y, u, vh, eigenvals,
-                               alpha, lambda)
-    IO.inspect(coef)
 
     {{coefficients, _rmse, iterations, has_converged}, _} =
       fit_n(x, y, sample_weights, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2, 300)
-    IO.inspect(has_converged)
+
     if Nx.to_number(has_converged) == 1 do
       IO.puts("Convergence after #{Nx.to_number(iterations)} iterations")
     end
@@ -213,7 +203,11 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
             iterations}},
       iter < iterations and not has_converged do
 
-      gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
+      # gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
+      gamma =
+        Nx.multiply(alpha, eigenvals)
+        |> Nx.divide(Nx.multiply(lambda + alpha, eigenvals))
+        |> Nx.sum()      
       lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef ** 2) + 2 * lambda_2)
       alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
       

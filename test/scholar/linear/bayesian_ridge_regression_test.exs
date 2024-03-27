@@ -14,14 +14,16 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
   end
   
   test "toy bayesian ride expanded" do
-    x = Nx.tensor([[1, 1], [2, 2], [6, 6], [8, 8], [10, 10]])
-    y = Nx.tensor([1, 2, 6, 8, 10])
+    x = Nx.tensor([
+      [1, 5], [2, 6], [6, 6], [8, 4], [10, 0],
+      [5, 5], [6, 2], [6, 4], [4, 2], [0, 10],      
+    ])
+    true_coef = Nx.tensor([0.5, 0.5])
+    y = Nx.dot(x, true_coef)
     clf = BayesianRidgeRegression.fit(x, y)
     test = Nx.tensor([[1, 1], [3, 3], [4, 4]])
     expected = Nx.tensor([1, 3, 4])
     predicted = BayesianRidgeRegression.predict(clf, test)
-    IO.inspect(clf)
-    IO.inspect(predicted)
-    assert false            
+    assert_all_close(expected, predicted, atol: 1.0e-3)
   end  
 end
