@@ -13,7 +13,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     assert_all_close(expected, predicted, atol: 1.0e-6)
   end
   
-  test "toy bayesian ride expanded" do
+  test "multi column toy bayesian ridge" do
     x = Nx.tensor([
       [1, 5], [2, 6], [6, 6], [8, 4], [10, 0],
       [5, 5], [6, 2], [6, 4], [4, 2], [0, 10],      
