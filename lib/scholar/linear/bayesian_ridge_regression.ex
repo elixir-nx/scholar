@@ -197,11 +197,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
               iterations}},
             iter < iterations and not has_converged do
 
-        # gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
-        gamma =
-          Nx.multiply(alpha, eigenvals)
-          |> Nx.divide(Nx.multiply(lambda + alpha, eigenvals))
-          |> Nx.sum()      
+        gamma = (alpha * eigenvals / (lambda + alpha * eigenvals))
+        |> Nx.sum()
         lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef ** 2) + 2 * lambda_2)
         alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
       
