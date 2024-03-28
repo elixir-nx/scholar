@@ -112,28 +112,15 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         do: Nx.as_type(sample_weights, x_type),
         else: Nx.tensor(sample_weights, type: x_type)
 
-    ## TODO: refactor this
-    {alpha, opts} = Keyword.pop!(opts, :alpha_init)
-    {alpha_1, opts} = Keyword.pop!(opts, :alpha_1)
-    {alpha_2, opts} = Keyword.pop!(opts, :alpha_2)
-    {lambda, opts} = Keyword.pop!(opts, :lambda_init)
-    {lambda_1, opts} = Keyword.pop!(opts, :lambda_1)
-    {lambda_2, opts} = Keyword.pop!(opts, :lambda_2)
+    IO.inspect(opts)
+    lambda = Keyword.get(opts, :lambda_init, 1 / Nx.variance(y))
+    opts = Keyword.put(opts, :lambda_init, lambda)
+    IO.inspect(opts)
 
     num_targets = if Nx.rank(y) == 1, do: 1, else: Nx.axis_size(y, 1)
 
-    if Nx.size(alpha) not in [0, 1, num_targets] do
-      raise ArgumentError,
-            "expected number of targets be the same as number of penalties, got: #{inspect(num_targets)} != #{inspect(Nx.size(alpha))}"
-    end
-    # 
-    xt_y = Nx.dot(Nx.transpose(x), y)
-    {u, s, vh} = Nx.LinAlg.svd(x, full_matrices?: false)
-    eigenvals = Nx.pow(s, 2)
-    {n_samples, n_features} = Nx.shape(x)
-
     {{coefficients, _rmse, iterations, has_converged}, _} =
-      fit_n(x, y, sample_weights, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2, 300)
+      fit_n(x, y, sample_weights, opts)
 
     if Nx.to_number(has_converged) == 1 do
       IO.puts("Convergence after #{Nx.to_number(iterations)} iterations")
@@ -141,8 +128,17 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     %__MODULE__{coefficients: coefficients}
   end
 
-  defnp fit_n(x, y, sample_weights, alpha, lambda,
-              alpha_1, alpha_2, lambda_1, lambda_2, iterations) do
+  defnp fit_n(x, y, sample_weights, opts) do
+    alpha = opts[:alpha_init]
+    alpha_1 = opts[:alpha_1]
+    alpha_2 = opts[:alpha_2]
+    lambda = opts[:lambda_init]
+    lambda = opts[:lambda_init]
+               
+    lambda_1 = opts[:lambda_1]
+    lambda_2 = opts[:lambda_2]
+    iterations = opts[:iterations]    
+    
     xt_y = Nx.dot(Nx.transpose(x), y)
     {u, s, vh} = Nx.LinAlg.svd(x, full_matrices?: false)
     eigenvals = Nx.pow(s, 2)
