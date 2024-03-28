@@ -324,6 +324,12 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
   defnp predict_n(forest, query) do
     k = forest.num_neighbors
+    candidate_indices = get_leaves(forest, query)
+    Utils.find_neighbors(query, forest.data, candidate_indices, num_neighbors: k)
+  end
+
+  @doc false
+  defn get_leaves(forest, query) do
     num_trees = forest.num_trees
     leaf_size = forest.leaf_size
     indices = forest.indices |> Nx.vectorize(:trees)
@@ -336,14 +342,11 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       |> Nx.vectorize(:trees)
       |> Nx.add(start_indices)
 
-    candidate_indices =
-      Nx.take(indices, pos)
-      |> Nx.devectorize()
-      |> Nx.rename(nil)
-      |> Nx.transpose(axes: [1, 0, 2])
-      |> Nx.reshape({query_size, num_trees * leaf_size})
-
-    Utils.find_neighbors(query, forest.data, candidate_indices, num_neighbors: k)
+    Nx.take(indices, pos)
+    |> Nx.devectorize()
+    |> Nx.rename(nil)
+    |> Nx.transpose(axes: [1, 0, 2])
+    |> Nx.reshape({query_size, num_trees * leaf_size})
   end
 
   defnp compute_start_indices(forest, query) do
