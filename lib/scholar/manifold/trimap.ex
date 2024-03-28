@@ -291,7 +291,12 @@ defmodule Scholar.Manifold.Trimap do
     num_extra = min(num_inliners + 50, num_points)
 
     nndescent =
-      Scholar.Neighbors.NNDescent.fit(inputs, num_neighbors: num_extra, tree_init?: false)
+      Scholar.Neighbors.NNDescent.fit(inputs,
+        num_neighbors: num_extra,
+        tree_init?: false,
+        metric: opts[:metric],
+        tol: 1.0e-5
+      )
 
     neighbors = nndescent.nearest_neighbors
     {neighbors, neighbors}
@@ -437,6 +442,7 @@ defmodule Scholar.Manifold.Trimap do
         {} ->
           inputs =
             if num_components > @dim_pca do
+              inputs = inputs - Nx.mean(inputs, axes: [0])
               {u, s, vt} = Nx.LinAlg.SVD.svd(inputs, full_matrices: false)
               inputs = Nx.dot(u[[.., 0..@dim_pca]] * s[0..@dim_pca], vt[[0..@dim_pca, ..]])
 
