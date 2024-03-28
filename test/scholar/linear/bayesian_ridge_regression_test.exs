@@ -25,5 +25,11 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     expected = Nx.tensor([1, 3, 4])
     predicted = BayesianRidgeRegression.predict(clf, test)
     assert_all_close(expected, predicted, atol: 1.0e-3)
-  end  
+  end
+
+  test "compare ridge vs bayesian ridge" do
+    # go to sklearn tests and copy
+    assert false
+  end
+
 end
