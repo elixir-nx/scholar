@@ -41,10 +41,10 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     alpha_init: [
       type:
         {:custom, Scholar.Options, :non_negative_number, []},
-      default: 1.0,
       doc: ~S"""
       The initial value for alpha. This parameter influences the precision of the noise.
       `:alpha` must be a non-negative float i.e. in [0, inf).
+      Defaults to 1/Var(y).      
       """
     ],
     lambda_init: [
@@ -53,7 +53,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       default: 1.0,
       doc: ~S"""
       The initial value for lambda. This parameter influences the precision of the weights.
-      `:lambda` must be a non-negative float i.e. in [0, inf).      
+      `:lambda` must be a non-negative float i.e. in [0, inf).
+      Defaults to 1.
       """
     ],
     alpha_1: [
@@ -112,10 +113,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         do: Nx.as_type(sample_weights, x_type),
         else: Nx.tensor(sample_weights, type: x_type)
 
-    IO.inspect(opts)
-    lambda = Keyword.get(opts, :lambda_init, 1 / Nx.variance(y))
-    opts = Keyword.put(opts, :lambda_init, lambda)
-    IO.inspect(opts)
+    alpha = Keyword.get(opts, :alpha_init, Nx.divide(1, Nx.variance(y)))
+    opts = Keyword.put(opts, :alpha_init, alpha)
 
     num_targets = if Nx.rank(y) == 1, do: 1, else: Nx.axis_size(y, 1)
 
@@ -132,11 +131,11 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     alpha = opts[:alpha_init]
     alpha_1 = opts[:alpha_1]
     alpha_2 = opts[:alpha_2]
+
     lambda = opts[:lambda_init]
-    lambda = opts[:lambda_init]
-               
     lambda_1 = opts[:lambda_1]
     lambda_2 = opts[:lambda_2]
+
     iterations = opts[:iterations]    
     
     xt_y = Nx.dot(Nx.transpose(x), y)
