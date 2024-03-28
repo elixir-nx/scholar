@@ -133,7 +133,7 @@ defmodule Scholar.Neighbors.NNDescent do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     if opts[:tree_init?] and (opts[:metric] != :euclidean and opts[:metric] != :squared_euclidean) do
-      raise ArgumentError, "The tree initialization is only available for Euclidean metrics"
+      raise ArgumentError, "the tree initialization is available only for Euclidean metric"
     end
 
     opts =
