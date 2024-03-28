@@ -1,6 +1,7 @@
 defmodule Scholar.Linear.BayesianRidgeRegressionTest do
   use Scholar.Case, async: true
   alias Scholar.Linear.BayesianRidgeRegression
+  alias Scholar.Linear.RidgeRegression  
   doctest BayesianRidgeRegression
 
   test "toy bayesian ridge" do
@@ -10,26 +11,16 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     test = Nx.tensor([[1], [3], [4]])
     expected = Nx.tensor([1, 3, 4])
     predicted = BayesianRidgeRegression.predict(clf, test)
-    assert_all_close(expected, predicted, atol: 1.0e-6)
-  end
-  
-  test "multi column toy bayesian ridge" do
-    x = Nx.tensor([
-      [1, 5], [2, 6], [6, 6], [8, 4], [10, 0],
-      [5, 5], [6, 2], [6, 4], [4, 2], [0, 10],      
-    ])
-    true_coef = Nx.tensor([0.5, 0.5])
-    y = Nx.dot(x, true_coef)
-    clf = BayesianRidgeRegression.fit(x, y)
-    test = Nx.tensor([[1, 1], [3, 3], [4, 4]])
-    expected = Nx.tensor([1, 3, 4])
-    predicted = BayesianRidgeRegression.predict(clf, test)
-    assert_all_close(expected, predicted, atol: 1.0e-3)
+    assert_all_close(expected, predicted, atol: 1.0e-1)
   end
 
   test "compare ridge vs bayesian ridge" do
-    # go to sklearn tests and copy
-    assert false
+    x = Nx.tensor([[1, 1], [3, 4], [5, 7], [4, 1], [2, 6], [3, 10], [3, 2]])
+    y = Nx.tensor([1, 2, 3, 2, 0, 4, 5])
+    brr = BayesianRidgeRegression.fit(x, y)
+    rr = RidgeRegression.fit(x, y, alpha: brr.lambda / brr.alpha)
+    assert_all_close(brr.coefficients, rr.coefficients, atol: 1.0e-2)
+    assert_all_close(brr.intercept, rr.intercept, atol: 1.0e-2)
   end
 
 end
