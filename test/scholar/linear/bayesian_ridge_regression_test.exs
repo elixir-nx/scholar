@@ -1,7 +1,7 @@
 defmodule Scholar.Linear.BayesianRidgeRegressionTest do
   use Scholar.Case, async: true
   alias Scholar.Linear.BayesianRidgeRegression
-  alias Scholar.Linear.RidgeRegression  
+  alias Scholar.Linear.RidgeRegression
   doctest BayesianRidgeRegression
 
   test "toy bayesian ridge" do
@@ -22,7 +22,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     assert_all_close(brr.coefficients, rr.coefficients, atol: 1.0e-2)
     assert_all_close(brr.intercept, rr.intercept, atol: 1.0e-2)
   end
-  
+
   test "ridge vs bayesian ridge: weights" do
     x = Nx.tensor([[1, 1], [3, 4], [5, 7], [4, 1], [2, 6], [3, 10], [3, 2]])
     y = Nx.tensor([1, 2, 3, 2, 0, 4, 5])
@@ -36,13 +36,16 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
   test "compute scores" do
     assert false
   end
+
   test "constant inputs: prediction" do
     assert false
   end
+
   test "constant inputs: variance" do
     assert false
   end
+
   test "n_features > n_samples" do
     assert false
-  end    
+  end
 end

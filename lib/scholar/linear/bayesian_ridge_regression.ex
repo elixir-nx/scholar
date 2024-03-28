@@ -4,12 +4,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   import Scholar.Shared
 
   @derive {Nx.Container,
-           containers: [:coefficients, :intercept,
-                        :alpha, :lambda,
-                        :rmse, :iterations]}
-  defstruct [:coefficients, :intercept,
-             :alpha, :lambda,
-             :rmse, :iterations]
+           containers: [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations]}
+  defstruct [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations]
 
   opts = [
     iterations: [
@@ -19,7 +15,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       Maximum number of iterations before stopping the fitting algorithm.
       The number of iterations may be lower is parameters converge.
       """
-    ],    
+    ],
     sample_weights: [
       type:
         {:or,
@@ -44,8 +40,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       """
     ],
     alpha_init: [
-      type:
-        {:custom, Scholar.Options, :non_negative_number, []},
+      type: {:custom, Scholar.Options, :non_negative_number, []},
       doc: ~S"""
       The initial value for alpha. This parameter influences the precision of the noise.
       `:alpha` must be a non-negative float i.e. in [0, inf).
@@ -53,8 +48,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       """
     ],
     lambda_init: [
-      type:
-        {:custom, Scholar.Options, :non_negative_number, []},
+      type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0,
       doc: ~S"""
       The initial value for lambda. This parameter influences the precision of the weights.
@@ -63,17 +57,15 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       """
     ],
     alpha_1: [
-      type:
-        {:custom, Scholar.Options, :non_negative_number, []},
+      type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0e-6,
       doc: ~S"""
       Hyper-parameter : shape parameter for the Gamma distribution prior      
       over the alpha parameter.
       """
-    ],    
+    ],
     alpha_2: [
-      type:
-        {:custom, Scholar.Options, :non_negative_number, []},
+      type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0e-6,
       doc: ~S"""
       Hyper-parameter : inverse scale (rate) parameter for the Gamma distribution prior
@@ -81,8 +73,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       """
     ],
     lambda_1: [
-      type:
-        {:custom, Scholar.Options, :non_negative_number, []},
+      type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0e-6,
       doc: ~S"""
       Hyper-parameter : shape parameter for the Gamma distribution prior
@@ -90,21 +81,19 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       """
     ],
     lambda_2: [
-      type:
-        {:custom, Scholar.Options, :non_negative_number, []},
+      type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0e-6,
       doc: ~S"""
       Hyper-parameter : inverse scale (rate) parameter for the Gamma distribution prior      
       over the lambda parameter.            
       """
-    ],    
+    ],
     eps: [
       type: :float,
       default: 1.0e-8,
       doc:
         "The convergence tolerance. When `Nx.sum(Nx.abs(coef - coef_new)) < :eps`, the algorithm is considered to have converged."
-    ]    
-    
+    ]
   ]
 
   @opts_schema NimbleOptions.new!(opts)
@@ -133,17 +122,21 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
     num_targets = if Nx.rank(y) == 1, do: 1, else: Nx.axis_size(y, 1)
 
-    {coefficients, intercept,
-      alpha, lambda, rmse,
-      iterations, has_converged} =
+    {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged} =
       fit_n(x, y, sample_weights, opts)
+
     if Nx.to_number(has_converged) == 1 do
       IO.puts("Convergence after #{Nx.to_number(iterations)} iterations")
     end
+
     %__MODULE__{
-      coefficients: coefficients, intercept: intercept,
-      alpha: Nx.to_number(alpha), lambda: Nx.to_number(lambda),
-      rmse: Nx.to_number(rmse), iterations: Nx.to_number(iterations)}
+      coefficients: coefficients,
+      intercept: intercept,
+      alpha: Nx.to_number(alpha),
+      lambda: Nx.to_number(lambda),
+      rmse: Nx.to_number(rmse),
+      iterations: Nx.to_number(iterations)
+    }
   end
 
   defnp fit_n(x, y, sample_weights, opts) do
@@ -161,6 +154,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         {Nx.broadcast(Nx.tensor(0.0, type: Nx.type(x)), {x_offset_shape}),
          Nx.broadcast(Nx.tensor(0.0, type: Nx.type(y)), {y_offset_shape})}
       end
+
     {x, y} = {x - x_offset, y - y_offset}
 
     {x, y} =
@@ -169,7 +163,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       else
         {x, y}
       end
-    
+
     alpha = opts[:alpha_init]
     alpha_1 = opts[:alpha_1]
     alpha_2 = opts[:alpha_2]
@@ -178,61 +172,65 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     lambda_1 = opts[:lambda_1]
     lambda_2 = opts[:lambda_2]
 
-    iterations = opts[:iterations]    
-    
+    iterations = opts[:iterations]
+
     xt_y = Nx.dot(Nx.transpose(x), y)
     {u, s, vh} = Nx.LinAlg.svd(x, full_matrices?: false)
     eigenvals = Nx.pow(s, 2)
     {n_samples, n_features} = Nx.shape(x)
-    {coef, rmse} = update_coef(x, y, n_samples, n_features,
-                               xt_y, u, vh, eigenvals,
-                               alpha, lambda)
-    intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])    
+    {coef, rmse} = update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
+    intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
 
-    {{coef, alpha, lambda, rmse, iter, has_converged,}, _} =
-      while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0),},
-             {x, y,
-              xt_y, u, s, vh, eigenvals,
-              alpha_1, alpha_2, lambda_1, lambda_2,
-              iterations}},
+    {{coef, alpha, lambda, rmse, iter, has_converged}, _} =
+      while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0)},
+             {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}},
             iter < iterations and not has_converged do
+        gamma =
+          (alpha * eigenvals / (lambda + alpha * eigenvals))
+          |> Nx.sum()
 
-        gamma = (alpha * eigenvals / (lambda + alpha * eigenvals))
-        |> Nx.sum()
         lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef ** 2) + 2 * lambda_2)
         alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
-      
-        {coef_new, rmse} = update_coef(
-                             x, y, n_samples, n_features,
-                             xt_y, u, vh, eigenvals,
-                             alpha, lambda)
-      
+
+        {coef_new, rmse} =
+          update_coef(
+            x,
+            y,
+            n_samples,
+            n_features,
+            xt_y,
+            u,
+            vh,
+            eigenvals,
+            alpha,
+            lambda
+          )
+
         has_converged = Nx.sum(Nx.abs(coef - coef_new)) < 1.0e-8
-        {{coef_new, alpha, lambda, rmse, iter + 1, has_converged,},
-         {x, y,
-          xt_y, u, s, vh, eigenvals,
-          alpha_1, alpha_2, lambda_1, lambda_2,
-          iterations}}
+
+        {{coef_new, alpha, lambda, rmse, iter + 1, has_converged},
+         {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}}
       end
+
     intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
-    {coef, intercept, alpha, lambda, rmse, iter, has_converged,}
+    {coef, intercept, alpha, lambda, rmse, iter, has_converged}
   end
 
   defn update_coef(
-    x,
-    y,
-    n_samples,
-    n_features,
-    xt_y,
-    u,
-    vh,
-    eigenvals,
-    alpha,
-    lambda
-  ) do
+         x,
+         y,
+         n_samples,
+         n_features,
+         xt_y,
+         u,
+         vh,
+         eigenvals,
+         alpha,
+         lambda
+       ) do
     scaled_eigens = eigenvals + lambda / alpha
     {n_eigens} = Nx.shape(scaled_eigens)
-    regularization = vh / Nx.new_axis(scaled_eigens, -1) 
+    regularization = vh / Nx.new_axis(scaled_eigens, -1)
     reg_transpose = Nx.dot(regularization, xt_y)
     coef = Nx.dot(Nx.transpose(vh), reg_transpose)
 
@@ -244,7 +242,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   end
 
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
-    Nx.dot(x, [-1], coeff, [-1]) + intercept    
+    Nx.dot(x, [-1], coeff, [-1]) + intercept
   end
 
   # Implements sample weighting by rescaling inputs and
@@ -261,7 +259,6 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     end
   end
 
-
   defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
     if fit_intercept? do
       y_offset - Nx.dot(coeff, x_offset)
@@ -276,5 +273,5 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         {Nx.weighted_mean(x, sample_weights, axes: [0]),
          Nx.weighted_mean(y, sample_weights, axes: [0])},
       else: {Nx.mean(x, axes: [0]), Nx.mean(y, axes: [0])}
-  end  
+  end
 end
