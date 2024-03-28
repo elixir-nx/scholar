@@ -3,8 +3,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   import Nx.Defn
   import Scholar.Shared
 
-  @derive {Nx.Container, containers: [:coefficients]}
-  defstruct [:coefficients]
+  @derive {Nx.Container, containers: [:coefficients, :alpha, :lambda, :rmse, :iterations]}
+  defstruct [:coefficients, :alpha, :lambda, :rmse, :iterations]
 
   opts = [
     iterations: [
@@ -118,13 +118,16 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
     num_targets = if Nx.rank(y) == 1, do: 1, else: Nx.axis_size(y, 1)
 
-    {{coefficients, _rmse, iterations, has_converged}, _} =
+    {{coefficients, rmse, iterations, has_converged, alpha, lambda}, _} =
       fit_n(x, y, sample_weights, opts)
 
     if Nx.to_number(has_converged) == 1 do
       IO.puts("Convergence after #{Nx.to_number(iterations)} iterations")
     end
-    %__MODULE__{coefficients: coefficients}
+    %__MODULE__{
+      coefficients: coefficients,
+      alpha: alpha, lambda: lambda,
+      rmse: rmse, iterations: iterations}
   end
 
   defnp fit_n(x, y, sample_weights, opts) do
@@ -146,10 +149,10 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
                                xt_y, u, vh, eigenvals,
                                alpha, lambda)
 
-    while {{coef, rmse, iter = 0, has_converged = Nx.u8(0)},
+    while {{coef, rmse, iter = 0, has_converged = Nx.u8(0), alpha, lambda,},
            {x, y,
             xt_y, u, s, vh, eigenvals,
-            alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2,
+            alpha_1, alpha_2, lambda_1, lambda_2,
             iterations}},
       iter < iterations and not has_converged do
 
@@ -167,10 +170,10 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         alpha, lambda)
       
       has_converged = Nx.sum(Nx.abs(coef - coef_new)) < 1.0e-8
-      {{coef_new, rmse, iter + 1, has_converged},
+      {{coef_new, rmse, iter + 1, has_converged, alpha, lambda,},
        {x, y,
         xt_y, u, s, vh, eigenvals,
-        alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2,
+        alpha_1, alpha_2, lambda_1, lambda_2,
         iterations}}
     end
   end
