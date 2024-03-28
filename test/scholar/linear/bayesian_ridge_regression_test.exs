@@ -41,5 +41,8 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
   end
   test "constant inputs: variance" do
     assert false
-  end  
+  end
+  test "n_features > n_samples" do
+    assert false
+  end    
 end
