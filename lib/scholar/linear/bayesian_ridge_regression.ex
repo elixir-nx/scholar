@@ -125,7 +125,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         do: Nx.as_type(sample_weights, x_type),
         else: Nx.tensor(sample_weights, type: x_type)
 
-    # handle default alpha value
+    # handle default alpha value, add eps to avoid division by 0
     eps = Nx.Constants.smallest_positive_normal({:f, 64})
     default_alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
     alpha = Keyword.get(opts, :alpha_init, Nx.to_number(default_alpha))
