@@ -28,9 +28,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     y = Nx.tensor([1, 2, 3, 2, 0, 4, 5])
     w = Nx.tensor([4, 3, 3, 1, 1, 2, 3])
     brr = BayesianRidgeRegression.fit(x, y, sample_weights: w)
-    IO.inspect(brr)
     rr = RidgeRegression.fit(x, y, alpha: brr.lambda / brr.alpha, sample_weights: w)
-    IO.inspect(rr)
     assert_all_close(brr.coefficients, rr.coefficients, atol: 1.0e-2)
     assert_all_close(brr.intercept, rr.intercept, atol: 1.0e-2)
   end

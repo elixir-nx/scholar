@@ -126,7 +126,9 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         else: Nx.tensor(sample_weights, type: x_type)
 
     # handle default alpha value
-    alpha = Keyword.get(opts, :alpha_init, Nx.divide(1, Nx.variance(y)))
+    eps = Nx.Constants.smallest_positive_normal({:f, 64})
+    default_alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
+    alpha = Keyword.get(opts, :alpha_init, Nx.to_number(default_alpha))
     opts = Keyword.put(opts, :alpha_init, alpha)
 
     num_targets = if Nx.rank(y) == 1, do: 1, else: Nx.axis_size(y, 1)
