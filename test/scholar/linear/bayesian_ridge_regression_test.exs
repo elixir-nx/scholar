@@ -56,24 +56,23 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
 
   defnp compute_score(x, y, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2) do
     {n_samples, _} = Nx.shape(x)
-    score_lambda = lambda_1 + Nx.log(lambda) - lambda_2 * lambda
-    score_alpha =  alpha_1 + Nx.log(alpha_2) - alpha_2 * alpha
+    lambda_score = lambda_1 + Nx.log(lambda) - lambda_2 * lambda
+    alpha_score =  alpha_1 + Nx.log(alpha_2) - alpha_2 * alpha
     m =  (1.0 / alpha) * Nx.eye(n_samples) + (1.0 / lambda) * Nx.dot(x, Nx.transpose(x))
     m_inv_dot_y = Nx.LinAlg.solve(m, y)
     logdet = m |> Nx.LinAlg.determinant |> Nx.log()
     y_score = -0.5 * (logdet + Nx.dot(y, m_inv_dot_y) +
                         n_samples * Nx.log(2 * Nx.Constants.pi()))
-    
     score_alpha + score_lambda + y_score
   end
 
-  # copied from the linear regression notebook
+  # adapted from the linear regression notebook
   # https://hexdocs.pm/scholar/linear_regression.html
   defnp data do
     key = Nx.Random.key(42)
     size = 30
     {x, new_key} = Nx.Random.normal(key, 0, 2, shape: {size, 3}, type: :f64)
-    {noise, _} = Nx.Random.normal(new_key, -0.5, 0.5, shape: {size}, type: :f64)
+    {noise, _} = Nx.Random.normal(new_key, 0, 1, shape: {size}, type: :f64)
     w = Nx.tensor([1, 2, 3])
     y = Nx.dot(x, w) + 4
     {x, y, noise}
