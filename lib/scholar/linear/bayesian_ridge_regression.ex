@@ -113,14 +113,17 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       if Nx.is_tensor(sample_weights),
         do: Nx.as_type(sample_weights, x_type),
         else: Nx.tensor(sample_weights, type: x_type)
-
+    # handle vector types
     # handle default alpha value, add eps to avoid division by 0
     eps = Nx.Constants.smallest_positive_normal({:f, 64})
     default_alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
-    alpha = Keyword.get(opts, :alpha_init, Nx.to_number(default_alpha))
+    alpha = Keyword.get(opts, :alpha_init, default_alpha)
+    alpha = Nx.tensor(alpha, type: x_type)
     opts = Keyword.put(opts, :alpha_init, alpha)
 
-    num_targets = if Nx.rank(y) == 1, do: 1, else: Nx.axis_size(y, 1)
+    {lambda, opts} = Keyword.pop!(opts, :lambda_init)
+    lambda = Nx.tensor(lambda, type: x_type)
+    opts = Keyword.put(opts, :lambda_init, lambda)
 
     {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged} =
       fit_n(x, y, sample_weights, opts)
@@ -163,12 +166,11 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       else
         {x, y}
       end
-
     alpha = opts[:alpha_init]
+    lambda = opts[:lambda_init]
+
     alpha_1 = opts[:alpha_1]
     alpha_2 = opts[:alpha_2]
-
-    lambda = opts[:lambda_init]
     lambda_1 = opts[:lambda_1]
     lambda_2 = opts[:lambda_2]
 
@@ -179,7 +181,6 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     eigenvals = Nx.pow(s, 2)
     {n_samples, n_features} = Nx.shape(x)
     {coef, rmse} = update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
-    intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
 
     {{coef, alpha, lambda, rmse, iter, has_converged}, _} =
       while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0)},
