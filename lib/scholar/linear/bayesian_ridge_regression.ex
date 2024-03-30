@@ -4,8 +4,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   import Scholar.Shared
 
   @derive {Nx.Container,
-           containers: [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations]}
-  defstruct [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations]
+           containers: [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations, :score]}
+  defstruct [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations, :score]
 
   opts = [
     iterations: [
@@ -113,9 +113,10 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       if Nx.is_tensor(sample_weights),
         do: Nx.as_type(sample_weights, x_type),
         else: Nx.tensor(sample_weights, type: x_type)
+
     # handle vector types
     # handle default alpha value, add eps to avoid division by 0
-    eps = Nx.Constants.smallest_positive_normal({:f, 64})
+    eps = Nx.Constants.smallest_positive_normal(x_type)
     default_alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
     alpha = Keyword.get(opts, :alpha_init, default_alpha)
     alpha = Nx.tensor(alpha, type: x_type)
@@ -125,7 +126,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     lambda = Nx.tensor(lambda, type: x_type)
     opts = Keyword.put(opts, :lambda_init, lambda)
 
-    {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged} =
+    {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged, score} =
       fit_n(x, y, sample_weights, opts)
 
     if Nx.to_number(has_converged) == 1 do
@@ -138,7 +139,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       alpha: Nx.to_number(alpha),
       lambda: Nx.to_number(lambda),
       rmse: Nx.to_number(rmse),
-      iterations: Nx.to_number(iterations)
+      iterations: Nx.to_number(iterations),
+      score: score
     }
   end
 
@@ -166,6 +168,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       else
         {x, y}
       end
+
     alpha = opts[:alpha_init]
     lambda = opts[:lambda_init]
 
@@ -181,40 +184,31 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     eigenvals = Nx.pow(s, 2)
     {n_samples, n_features} = Nx.shape(x)
     {coef, rmse} = update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
-
-    {{coef, alpha, lambda, rmse, iter, has_converged}, _} =
-      while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0)},
+    score =
+      log_marginal_likelihood(
+        coef, rmse, n_samples, n_features, eigenvals, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2)
+    {{coef, alpha, lambda, rmse, iter, has_converged, score}, _} =
+      while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0), score = score},
              {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}},
             iter < iterations and not has_converged do
-        gamma =
-          (alpha * eigenvals / (lambda + alpha * eigenvals))
-          |> Nx.sum()
 
+        gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
         lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef ** 2) + 2 * lambda_2)
         alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
-
         {coef_new, rmse} =
-          update_coef(
-            x,
-            y,
-            n_samples,
-            n_features,
-            xt_y,
-            u,
-            vh,
-            eigenvals,
-            alpha,
-            lambda
-          )
-
+          update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
+        score =
+          log_marginal_likelihood(
+            coef, rmse, n_samples, n_features, eigenvals,
+            alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2)
         has_converged = Nx.sum(Nx.abs(coef - coef_new)) < 1.0e-8
 
-        {{coef_new, alpha, lambda, rmse, iter + 1, has_converged},
+        {{coef_new, alpha, lambda, rmse, iter + 1, has_converged, score},
          {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}}
       end
-
+    
     intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
-    {coef, intercept, alpha, lambda, rmse, iter, has_converged}
+    {coef, intercept, alpha, lambda, rmse, iter, has_converged, score}
   end
 
   defn update_coef(
@@ -241,6 +235,29 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {coef, rmse}
   end
 
+  defn log_marginal_likelihood(
+         coef,
+         rmse,
+         n_samples,
+         n_features,
+         eigenvals,
+         alpha,
+         lambda,
+         alpha_1,
+         alpha_2,
+         lambda_1,
+         lambda_2
+       ) do
+    logdet_sigma = -1 * Nx.sum(Nx.log(lambda + alpha * eigenvals))
+    score_lambda = lambda_1 * Nx.log(lambda) - lambda_2 * lambda
+    score_alpha = alpha_1 * Nx.log(alpha) - alpha_2 * alpha
+    score_parameters =
+      n_features * Nx.log(lambda) + n_samples * Nx.log(alpha) - alpha * rmse - lambda * Nx.sum(coef ** 2)
+    score =
+        0.5 * (score_parameters + logdet_sigma  - n_samples * Nx.log(2 * Nx.Constants.pi()))
+    score_alpha + score_lambda + score
+  end
+
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
     Nx.dot(x, [-1], coeff, [-1]) + intercept
   end
@@ -261,7 +278,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
   defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
     if fit_intercept? do
-      y_offset - Nx.dot(coeff, x_offset)
+      y_offset - Nx.dot(x_offset, coeff)
     else
       Nx.tensor(0.0, type: Nx.type(coeff))
     end
