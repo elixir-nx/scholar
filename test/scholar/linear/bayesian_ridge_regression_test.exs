@@ -48,6 +48,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     lambda_2 = 0.1
     # compute score
     score = compute_score(x, y, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2)
+
     brr =
       BayesianRidgeRegression.fit(x, y,
         alpha_1: alpha_1,
@@ -57,6 +58,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
         fit_intercept?: true,
         iterations: 1
       )
+
     compare_scores = Nx.divide(Nx.subtract(score, brr.score), score)
     check = Nx.less(compare_scores, 0.05) |> Nx.flatten()
     assert check == Nx.tensor([1], type: {:u, 8})
@@ -66,12 +68,13 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     {n_samples, _} = Nx.shape(x)
     lambda_score = lambda_1 * Nx.log(lambda) - lambda_2 * lambda
     alpha_score = alpha_1 * Nx.log(alpha) - alpha_2 * alpha
-    m = (1.0 / alpha * Nx.eye(n_samples)) + (1.0 / lambda * Nx.dot(x, Nx.transpose(x)))
+    m = 1.0 / alpha * Nx.eye(n_samples) + 1.0 / lambda * Nx.dot(x, Nx.transpose(x))
     m_inv_dot_y = Nx.LinAlg.solve(m, y)
     logdet = m |> Nx.LinAlg.determinant() |> Nx.log()
 
     y_score =
-      -0.5 * (logdet + Nx.dot(Nx.transpose(y), m_inv_dot_y) + n_samples * Nx.log(2 * Nx.Constants.pi()))
+      -0.5 *
+        (logdet + Nx.dot(Nx.transpose(y), m_inv_dot_y) + n_samples * Nx.log(2 * Nx.Constants.pi()))
 
     alpha_score + lambda_score + y_score
   end
