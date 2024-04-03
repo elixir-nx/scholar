@@ -97,7 +97,6 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     assert false
   end
 
-  @tag :wip
   test "constant inputs: variance" do
     key = Nx.Random.key(42)
     n_samples = 15
@@ -108,8 +107,8 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     brr = BayesianRidgeRegression.fit(x, y)
     check = Nx.less_equal(brr.sigma, 0.01)
     ones = Nx.tensor(
-             for i <- 0..(n_features - 1) do
-               for k <- 0..(n_features - 1), do: 1
+             for _i <- 0..(n_features - 1) do
+               for _k <- 0..(n_features - 1), do: 1
              end,
       type: {:u, 8})    
     assert ones == check
