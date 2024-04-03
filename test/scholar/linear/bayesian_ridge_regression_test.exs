@@ -44,7 +44,6 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     assert false
   end
   
-  @tag :wip
   test "compute scores" do
     {x, y} = diabetes_data()
     n_samples = 50 - 1
@@ -98,8 +97,22 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     assert false
   end
 
+  @tag :wip
   test "constant inputs: variance" do
-    assert false
+    key = Nx.Random.key(42)
+    n_samples = 15
+    n_features = 10
+    {constant_value, new_key} = Nx.Random.uniform(key)
+    {x, _} = Nx.Random.uniform(new_key, shape: {n_samples, n_features}, type: :f64)
+    y = Nx.tensor(for k <- 0..(n_samples - 1), do: Nx.to_number(constant_value))
+    brr = BayesianRidgeRegression.fit(x, y)
+    check = Nx.less_equal(brr.sigma, 0.01)
+    ones = Nx.tensor(
+             for i <- 0..(n_features - 1) do
+               for k <- 0..(n_features - 1), do: 1
+             end,
+      type: {:u, 8})    
+    assert ones == check
   end
 
   test "n_features > n_samples" do

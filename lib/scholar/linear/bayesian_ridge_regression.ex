@@ -4,8 +4,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   import Scholar.Shared
 
   @derive {Nx.Container,
-           containers: [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations, :scores]}
-  defstruct [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations, :scores]
+           containers: [:coefficients, :intercept, :alpha, :lambda, :sigma, :rmse, :iterations, :scores]}
+  defstruct [:coefficients, :intercept, :alpha, :lambda, :sigma, :rmse, :iterations, :scores]
 
   opts = [
     iterations: [
@@ -127,9 +127,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     opts = Keyword.put(opts, :lambda_init, lambda)
     zeros_list = for k <- 0..opts[:iterations], do: 0
     scores = Nx.tensor(zeros_list, type: x_type)
-    IO.inspect(scores)
 
-    {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged, scores} =
+    {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged, scores, sigma} =
       fit_n(x, y, sample_weights, scores, opts)
     iterations = Nx.to_number(iterations)
     scores = scores
@@ -145,6 +144,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       intercept: intercept,
       alpha: Nx.to_number(alpha),
       lambda: Nx.to_number(lambda),
+      sigma: sigma,
       rmse: Nx.to_number(rmse),
       iterations: iterations,
       scores: scores
@@ -226,7 +226,9 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       end
 
     intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
-    {coef, intercept, alpha, lambda, rmse, iter, has_converged, scores}
+    scaled_sigma = Nx.dot(Nx.transpose(vh), vh / Nx.new_axis(eigenvals + lambda / alpha, -1))
+    sigma = scaled_sigma / alpha
+    {coef, intercept, alpha, lambda, rmse, iter, has_converged, scores, sigma}
   end
 
   defnp update_coef(
