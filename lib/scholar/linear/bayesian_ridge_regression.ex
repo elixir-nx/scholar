@@ -4,8 +4,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   import Scholar.Shared
 
   @derive {Nx.Container,
-           containers: [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations, :score]}
-  defstruct [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations, :score]
+           containers: [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations, :scores]}
+  defstruct [:coefficients, :intercept, :alpha, :lambda, :rmse, :iterations, :scores]
 
   opts = [
     iterations: [
@@ -125,9 +125,16 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {lambda, opts} = Keyword.pop!(opts, :lambda_init)
     lambda = Nx.tensor(lambda, type: x_type)
     opts = Keyword.put(opts, :lambda_init, lambda)
+    zeros_list = for k <- 0..opts[:iterations], do: 0
+    scores = Nx.tensor(zeros_list, type: x_type)
+    IO.inspect(scores)
 
-    {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged, score} =
-      fit_n(x, y, sample_weights, opts)
+    {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged, scores} =
+      fit_n(x, y, sample_weights, scores, opts)
+    iterations = Nx.to_number(iterations)
+    scores = scores
+    |> Nx.to_list()
+    |> Enum.take(iterations)
 
     if Nx.to_number(has_converged) == 1 do
       IO.puts("Convergence after #{Nx.to_number(iterations)} iterations")
@@ -139,12 +146,12 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       alpha: Nx.to_number(alpha),
       lambda: Nx.to_number(lambda),
       rmse: Nx.to_number(rmse),
-      iterations: Nx.to_number(iterations),
-      score: score
+      iterations: iterations,
+      scores: scores
     }
   end
 
-  defnp fit_n(x, y, sample_weights, opts) do
+  defnp fit_n(x, y, sample_weights, scores, opts) do
     x = to_float(x)
     y = to_float(y)
 
@@ -185,33 +192,11 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {n_samples, n_features} = Nx.shape(x)
     {coef, rmse} = update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
 
-    score =
-      log_marginal_likelihood(
-        coef,
-        rmse,
-        n_samples,
-        n_features,
-        eigenvals,
-        alpha,
-        lambda,
-        alpha_1,
-        alpha_2,
-        lambda_1,
-        lambda_2
-      )
-
-    {{coef, alpha, lambda, rmse, iter, has_converged, score}, _} =
-      while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0), score = score},
+    {{coef, alpha, lambda, rmse, iter, has_converged, scores}, _} =
+      while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0), scores = scores},
              {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}},
-            iter < iterations and not has_converged do
-        gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
-        lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef ** 2) + 2 * lambda_2)
-        alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
-
-        {coef_new, rmse} =
-          update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
-
-        score =
+            iter <= iterations and not has_converged do
+        new_score =
           log_marginal_likelihood(
             coef,
             rmse,
@@ -225,15 +210,23 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
             lambda_1,
             lambda_2
           )
+        scores = Nx.put_slice(scores, [iter], Nx.new_axis(new_score, -1))
+        
+        gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
+        lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef ** 2) + 2 * lambda_2)
+        alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
+
+        {coef_new, rmse} =
+          update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
 
         has_converged = Nx.sum(Nx.abs(coef - coef_new)) < 1.0e-8
 
-        {{coef_new, alpha, lambda, rmse, iter + 1, has_converged, score},
+        {{coef_new, alpha, lambda, rmse, iter + 1, has_converged, scores},
          {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}}
       end
 
     intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
-    {coef, intercept, alpha, lambda, rmse, iter, has_converged, score}
+    {coef, intercept, alpha, lambda, rmse, iter, has_converged, scores}
   end
 
   defnp update_coef(

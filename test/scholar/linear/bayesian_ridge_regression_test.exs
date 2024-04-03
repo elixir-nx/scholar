@@ -35,7 +35,6 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     assert_all_close(brr.intercept, rr.intercept, atol: 1.0e-2)
   end
 
-  @tag :wip
   test "Other linear methods struggle with inversion of x's outer product" do
     {x, y} = diabetes_data()
     lr = LinearRegression.fit(x, y)
@@ -44,11 +43,13 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     IO.inspect(rr)
     assert false
   end
-
+  
+  @tag :wip
   test "compute scores" do
     {x, y} = diabetes_data()
     n_samples = 50 - 1
     x = x[[0..n_samples, ..]]
+    IO.inspect(x)
     y = y[[0..n_samples, ..]]
     eps = Nx.Constants.smallest_positive_normal({:f, 64})
     alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
@@ -69,8 +70,11 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
         fit_intercept?: true,
         iterations: 1
       )
-
-    compare_scores = Nx.divide(Nx.subtract(score, brr.score), score)
+    first_score = brr.scores
+    |> List.first()
+    |> Nx.tensor()
+    
+    compare_scores = Nx.divide(Nx.subtract(score, first_score), score)
     check = Nx.less(compare_scores, 0.05) |> Nx.flatten()
     assert check == Nx.tensor([1], type: {:u, 8})
   end
