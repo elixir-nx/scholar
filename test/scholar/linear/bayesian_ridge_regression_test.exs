@@ -3,6 +3,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
   use Scholar.Case, async: true
   alias Scholar.Linear.BayesianRidgeRegression
   alias Scholar.Linear.RidgeRegression
+  alias Scholar.Linear.LinearRegression
   doctest BayesianRidgeRegression
 
   test "toy bayesian ridge" do
@@ -32,6 +33,16 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     rr = RidgeRegression.fit(x, y, alpha: brr.lambda / brr.alpha, sample_weights: w)
     assert_all_close(brr.coefficients, rr.coefficients, atol: 1.0e-2)
     assert_all_close(brr.intercept, rr.intercept, atol: 1.0e-2)
+  end
+
+  @tag :wip
+  test "Other linear methods struggle with inversion of x's outer product" do
+    {x, y} = diabetes_data()
+    lr = LinearRegression.fit(x, y)
+    IO.inspect(lr)
+    rr = RidgeRegression.fit(x, y)
+    IO.inspect(rr)
+    assert false
   end
 
   test "compute scores" do
