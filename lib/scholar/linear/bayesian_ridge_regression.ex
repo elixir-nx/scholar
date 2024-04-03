@@ -282,9 +282,11 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     score_alpha + score_lambda + score
   end
 
-  defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
-    Nx.dot(x, [-1], coeff, [-1]) + intercept
+  deftransform predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
+    predict_n(coeff, intercept, x)
   end
+
+  defnp predict_n(coeff, intercept, x), do: Nx.dot(x, [-1], coeff, [-1]) + intercept
 
   # Implements sample weighting by rescaling inputs and
   # targets by sqrt(sample_weight).
