@@ -186,7 +186,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
     iterations = opts[:iterations]
 
-    xt_y = Nx.dot(Nx.transpose(x), y)
+xt_y = Nx.dot(x, [0], y, [0])
     {u, s, vh} = Nx.LinAlg.svd(x, full_matrices?: false)
     eigenvals = Nx.pow(s, 2)
     {n_samples, n_features} = Nx.shape(x)
