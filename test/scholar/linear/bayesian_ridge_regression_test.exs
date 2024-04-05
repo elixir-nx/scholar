@@ -35,15 +35,6 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     assert_all_close(brr.intercept, rr.intercept, atol: 1.0e-2)
   end
 
-  test "Other linear methods struggle with inversion of x's outer product" do
-    {x, y} = diabetes_data()
-    lr = LinearRegression.fit(x, y)
-    IO.inspect(lr)
-    rr = RidgeRegression.fit(x, y)
-    IO.inspect(rr)
-    assert false
-  end
-  
   test "compute scores" do
     {x, y} = diabetes_data()
     n_samples = 50 - 1
