@@ -105,7 +105,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     {x, _} = Nx.Random.uniform(new_key, shape: {n_samples, n_features}, type: :f64)
     y = Nx.tensor(for k <- 0..(n_samples - 1), do: Nx.to_number(constant_value))
     brr = BayesianRidgeRegression.fit(x, y)
-    check = Nx.less_equal(brr.sigma, 0.01)
+    check = brr.sigma <= 0.01
     ones = Nx.tensor(
              for _i <- 0..(n_features - 1) do
                for _k <- 0..(n_features - 1), do: 1
