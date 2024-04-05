@@ -4,8 +4,28 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   import Scholar.Shared
 
   @derive {Nx.Container,
-           containers: [:coefficients, :intercept, :alpha, :lambda, :sigma, :rmse, :iterations, :has_converged, :scores]}
-  defstruct [:coefficients, :intercept, :alpha, :lambda, :sigma, :rmse, :iterations, :has_converged, :scores]
+           containers: [
+             :coefficients,
+             :intercept,
+             :alpha,
+             :lambda,
+             :sigma,
+             :rmse,
+             :iterations,
+             :has_converged,
+             :scores
+           ]}
+  defstruct [
+    :coefficients,
+    :intercept,
+    :alpha,
+    :lambda,
+    :sigma,
+    :rmse,
+    :iterations,
+    :has_converged,
+    :scores
+  ]
 
   opts = [
     iterations: [
@@ -46,7 +66,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       If set to `true`, the log marginal likelihood will be computed
       at each iteration of the algorithm.
       """
-    ],    
+    ],
     alpha_init: [
       type: {:custom, Scholar.Options, :non_negative_number, []},
       doc: ~S"""
@@ -132,7 +152,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {lambda, opts} = Keyword.pop!(opts, :lambda_init)
     lambda = Nx.tensor(lambda, type: x_type)
 
-    scores = Nx.tensor(:nan)
+    scores =
+      Nx.tensor(:nan)
       |> Nx.broadcast({opts[:iterations] + 1})
       |> Nx.as_type(x_type)
 
@@ -155,7 +176,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       rmse: rmse,
       iterations: iterations,
       has_converged: has_converged,
-      scores: scores,
+      scores: scores
     }
   end
 
@@ -217,11 +238,12 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
                 lambda_1,
                 lambda_2
               )
+
             Nx.put_slice(scores, [iter], Nx.new_axis(new_score, -1))
           else
             scores
           end
-        
+
         gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
         lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef ** 2) + 2 * lambda_2)
         alpha = (n_samples - gamma + 2 * alpha_1) / (rmse + 2 * alpha_2)
@@ -236,7 +258,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       end
 
     intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
-    scaled_sigma = Nx.dot(vh, [0],  vh / Nx.new_axis(eigenvals + lambda / alpha, -1), [0])
+    scaled_sigma = Nx.dot(vh, [0], vh / Nx.new_axis(eigenvals + lambda / alpha, -1), [0])
     sigma = scaled_sigma / alpha
     {coef, intercept, alpha, lambda, rmse, iter, has_converged, scores, sigma}
   end
@@ -253,7 +275,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
           alpha,
           lambda
         ) do
-    scaled_eigens = eigenvals + lambda / alpha    
+    scaled_eigens = eigenvals + lambda / alpha
+
     coef =
       if n_samples > n_features do
         regularization = vh / Nx.new_axis(scaled_eigens, -1)
@@ -263,13 +286,13 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         regularization = u / scaled_eigens
         reg_transpose = Nx.dot(regularization, Nx.dot(u, [0], y, [0]))
         Nx.dot(x, [0], reg_transpose, [0])
-    end
+      end
 
     error = y - Nx.dot(x, coef)
     squared_error = error ** 2
     rmse = Nx.sum(squared_error)
 
-    {coef, rmse}    
+    {coef, rmse}
   end
 
   defnp log_marginal_likelihood(
@@ -290,8 +313,9 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         -1 * Nx.sum(Nx.log(lambda + alpha * eigenvals))
       else
         broad_lambda = Nx.broadcast(lambda, {n_samples})
-        -1 * Nx.sum(Nx.log(broad_lambda + (alpha * eigenvals)))
+        -1 * Nx.sum(Nx.log(broad_lambda + alpha * eigenvals))
       end
+
     score_lambda = lambda_1 * Nx.log(lambda) - lambda_2 * lambda
     score_alpha = alpha_1 * Nx.log(alpha) - alpha_2 * alpha
 

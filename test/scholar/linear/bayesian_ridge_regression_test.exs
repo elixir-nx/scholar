@@ -11,7 +11,8 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     alpha_1 = 0.1
     alpha_2 = 0.1
     lambda_1 = 0.1
-    lambda_2 = 0.1    
+    lambda_2 = 0.1
+
     Nx.Defn.jit(&BayesianRidgeRegression.fit/3).(x, y,
       alpha_1: alpha_1,
       alpha_2: alpha_2,
@@ -19,7 +20,9 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
       lambda_2: lambda_2,
       fit_intercept?: true,
       compute_scores?: true,
-      iterations: 1)
+      iterations: 1
+    )
+
     assert true
   end
 
@@ -47,7 +50,13 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     y = Nx.tensor([1, 2, 3, 2, 0, 4, 5])
     w = Nx.tensor([4, 3, 3, 1, 1, 2, 3])
     brr = BayesianRidgeRegression.fit(x, y, sample_weights: w)
-    rr = RidgeRegression.fit(x, y, alpha: Nx.to_number(brr.lambda) / Nx.to_number(brr.alpha), sample_weights: w)
+
+    rr =
+      RidgeRegression.fit(x, y,
+        alpha: Nx.to_number(brr.lambda) / Nx.to_number(brr.alpha),
+        sample_weights: w
+      )
+
     assert_all_close(brr.coefficients, rr.coefficients, atol: 1.0e-2)
     assert_all_close(brr.intercept, rr.intercept, atol: 1.0e-2)
   end
@@ -74,7 +83,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
         compute_scores?: true,
         iterations: 1
       )
-    
+
     first_score = brr.scores[0]
     assert_all_close(score, first_score, rtol: 0.05)
   end
