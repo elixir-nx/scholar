@@ -246,7 +246,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     scaled_eigens = eigenvals + lambda / alpha
     regularization = vh / Nx.new_axis(scaled_eigens, -1)
     reg_transpose = Nx.dot(regularization, xt_y)
-    coef = Nx.dot(Nx.transpose(vh), reg_transpose)
+    coef = Nx.dot(vh, [0], reg_transpose, [0])
 
     error = y - Nx.dot(x, coef)
     squared_error = error ** 2
