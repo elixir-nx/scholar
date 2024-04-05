@@ -3,7 +3,6 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
   use Scholar.Case, async: true
   alias Scholar.Linear.BayesianRidgeRegression
   alias Scholar.Linear.RidgeRegression
-  alias Scholar.Linear.LinearRegression
   doctest BayesianRidgeRegression
 
   test "toy bayesian ridge" do
