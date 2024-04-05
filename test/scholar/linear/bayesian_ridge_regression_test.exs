@@ -79,8 +79,17 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     alpha_score + lambda_score + y_score
   end
 
-  test "constant inputs: prediction" do
-    assert false
+  test "constant inputs: prediction. n_features > n_samples" do
+    key = Nx.Random.key(42)
+    n_samples = 4
+    n_features = 5
+    {constant_value, new_key} = Nx.Random.uniform(key)
+    {x, _} = Nx.Random.uniform(new_key, shape: {n_samples, n_features}, type: :f64)
+    y = Nx.broadcast(constant_value, {n_samples})
+    expected = Nx.broadcast(constant_value, {n_samples})
+    brr = BayesianRidgeRegression.fit(x, y)
+    predicted = BayesianRidgeRegression.predict(brr, x)
+    assert_all_close(expected, predicted, atol: 0.01)
   end
 
   test "constant inputs: variance" do
@@ -91,11 +100,11 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     {x, _} = Nx.Random.uniform(new_key, shape: {n_samples, n_features}, type: :f64)
     y = Nx.broadcast(constant_value, {n_samples})
     brr = BayesianRidgeRegression.fit(x, y)
-    check = brr.sigma <= 0.01
+    check = Nx.less_equal(brr.sigma, 0.01)
     assert Nx.all(check) == Nx.u8(1)
   end
 
-  test "n_features > n_samples" do
+  test "write docs" do
     assert false
   end
 end

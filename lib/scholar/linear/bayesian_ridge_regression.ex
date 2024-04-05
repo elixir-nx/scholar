@@ -39,6 +39,14 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       of targets for a zero-vector on input.
       """
     ],
+    compute_scores?: [
+      type: :boolean,
+      default: false,
+      doc: """
+      If set to `true`, the log marginal likelihood will be computed
+      at each iteration of the algorithm.
+      """
+    ],    
     alpha_init: [
       type: {:custom, Scholar.Options, :non_negative_number, []},
       doc: ~S"""
@@ -124,11 +132,19 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {lambda, opts} = Keyword.pop!(opts, :lambda_init)
     lambda = Nx.tensor(lambda, type: x_type)
 
-    scores = Nx.broadcast(0, {opts[:iterations] + 1})
-    |> Nx.as_type(x_type)
+    scores = Nx.tensor(:nan)
+      |> Nx.broadcast({opts[:iterations] + 1})
+      |> Nx.as_type(x_type)
 
     {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged, scores, sigma} =
       fit_n(x, y, alpha, lambda, sample_weights, scores, opts)
+
+    scores =
+      if opts[:compute_scores?] do
+        scores
+      else
+        nil
+      end
 
     %__MODULE__{
       coefficients: coefficients,
@@ -185,21 +201,26 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0), scores = scores},
              {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}},
             iter <= iterations and not has_converged do
-        new_score =
-          log_marginal_likelihood(
-            coef,
-            rmse,
-            n_samples,
-            n_features,
-            eigenvals,
-            alpha,
-            lambda,
-            alpha_1,
-            alpha_2,
-            lambda_1,
-            lambda_2
-          )
-        scores = Nx.put_slice(scores, [iter], Nx.new_axis(new_score, -1))
+        scores =
+          if opts[:compute_scores?] do
+            new_score =
+              log_marginal_likelihood(
+                coef,
+                rmse,
+                n_samples,
+                n_features,
+                eigenvals,
+                alpha,
+                lambda,
+                alpha_1,
+                alpha_2,
+                lambda_1,
+                lambda_2
+              )
+            Nx.put_slice(scores, [iter], Nx.new_axis(new_score, -1))
+          else
+            scores
+          end
         
         gamma = Nx.sum(alpha * eigenvals / (lambda + alpha * eigenvals))
         lambda = (gamma + 2 * lambda_1) / (Nx.sum(coef ** 2) + 2 * lambda_2)
@@ -232,16 +253,23 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
           alpha,
           lambda
         ) do
-    scaled_eigens = eigenvals + lambda / alpha
-    regularization = vh / Nx.new_axis(scaled_eigens, -1)
-    reg_transpose = Nx.dot(regularization, xt_y)
-    coef = Nx.dot(vh, [0], reg_transpose, [0])
+    scaled_eigens = eigenvals + lambda / alpha    
+    coef =
+      if n_samples > n_features do
+        regularization = vh / Nx.new_axis(scaled_eigens, -1)
+        reg_transpose = Nx.dot(regularization, xt_y)
+        Nx.dot(vh, [0], reg_transpose, [0])
+      else
+        regularization = u / scaled_eigens
+        reg_transpose = Nx.dot(regularization, Nx.dot(u, [0], y, [0]))
+        Nx.dot(x, [0], reg_transpose, [0])
+    end
 
     error = y - Nx.dot(x, coef)
     squared_error = error ** 2
     rmse = Nx.sum(squared_error)
 
-    {coef, rmse}
+    {coef, rmse}    
   end
 
   defnp log_marginal_likelihood(
@@ -257,7 +285,13 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
           lambda_1,
           lambda_2
         ) do
-    logdet_sigma = -1 * Nx.sum(Nx.log(lambda + alpha * eigenvals))
+    logdet_sigma =
+      if n_samples > n_features do
+        -1 * Nx.sum(Nx.log(lambda + alpha * eigenvals))
+      else
+        broad_lambda = Nx.broadcast(lambda, {n_samples})
+        -1 * Nx.sum(Nx.log(broad_lambda + (alpha * eigenvals)))
+      end
     score_lambda = lambda_1 * Nx.log(lambda) - lambda_2 * lambda
     score_alpha = alpha_1 * Nx.log(alpha) - alpha_2 * alpha
 
