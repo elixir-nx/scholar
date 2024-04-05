@@ -106,12 +106,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     y = Nx.tensor(for k <- 0..(n_samples - 1), do: Nx.to_number(constant_value))
     brr = BayesianRidgeRegression.fit(x, y)
     check = brr.sigma <= 0.01
-    ones = Nx.tensor(
-             for _i <- 0..(n_features - 1) do
-               for _k <- 0..(n_features - 1), do: 1
-             end,
-      type: {:u, 8})    
-    assert ones == check
+    assert Nx.all(check) == Nx.u8(1)
   end
 
   test "n_features > n_samples" do
