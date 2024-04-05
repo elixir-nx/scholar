@@ -291,10 +291,14 @@ defmodule Scholar.Manifold.Trimap do
     num_extra = min(num_inliners + 50, num_points)
 
     nndescent =
-      Scholar.Neighbors.NNDescent.fit(inputs, num_neighbors: num_extra, tree_init?: false)
+      Scholar.Neighbors.NNDescent.fit(inputs,
+        num_neighbors: num_extra,
+        tree_init?: false,
+        metric: opts[:metric],
+        tol: 1.0e-5
+      )
 
     neighbors = nndescent.nearest_neighbors
-    {neighbors, neighbors}
 
     neighbors = Nx.concatenate([Nx.iota({num_points, 1}), neighbors], axis: 1)
 
@@ -397,8 +401,8 @@ defmodule Scholar.Manifold.Trimap do
 
   ## Examples
 
-      iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(42), shape: {10, 10})
-      iex> Scholar.Manifold.Trimap.embed(inputs, num_inliers: 2, num_outliers: 1, num_components: 2, key: key)
+      iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(42), shape: {30, 5})
+      iex> Scholar.Manifold.Trimap.embed(inputs, num_components: 2, num_inliers: 3, num_outliers: 1, key: key)
   """
   deftransform embed(inputs, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -437,6 +441,7 @@ defmodule Scholar.Manifold.Trimap do
         {} ->
           inputs =
             if num_components > @dim_pca do
+              inputs = inputs - Nx.mean(inputs, axes: [0])
               {u, s, vt} = Nx.LinAlg.SVD.svd(inputs, full_matrices: false)
               inputs = Nx.dot(u[[.., 0..@dim_pca]] * s[0..@dim_pca], vt[[0..@dim_pca, ..]])
 
@@ -486,7 +491,8 @@ defmodule Scholar.Manifold.Trimap do
     gain = Nx.broadcast(Nx.tensor(1.0, type: to_float_type(embeddings)), Nx.shape(embeddings))
 
     {embeddings, _} =
-      while {embeddings, {vel, gain, lr, triplets, weights, i = 0}}, i < 20 do
+      while {embeddings, {vel, gain, lr, triplets, weights, i = Nx.s64(0)}},
+            i < opts[:num_iters] do
         gamma = if i < @switch_iter, do: @final_momentum, else: @init_momentum
         grad = trimap_loss(embeddings + gamma * vel, triplets, weights)
 
