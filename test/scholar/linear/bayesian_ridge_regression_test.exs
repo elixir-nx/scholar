@@ -19,7 +19,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     x = Nx.tensor([[1, 1], [3, 4], [5, 7], [4, 1], [2, 6], [3, 10], [3, 2]])
     y = Nx.tensor([1, 2, 3, 2, 0, 4, 5])
     brr = BayesianRidgeRegression.fit(x, y)
-    rr = RidgeRegression.fit(x, y, alpha: brr.lambda / brr.alpha)
+    rr = RidgeRegression.fit(x, y, alpha: Nx.to_number(brr.lambda) / Nx.to_number(brr.alpha))
     assert_all_close(brr.coefficients, rr.coefficients, atol: 1.0e-2)
     assert_all_close(brr.intercept, rr.intercept, atol: 1.0e-2)
   end
@@ -29,7 +29,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     y = Nx.tensor([1, 2, 3, 2, 0, 4, 5])
     w = Nx.tensor([4, 3, 3, 1, 1, 2, 3])
     brr = BayesianRidgeRegression.fit(x, y, sample_weights: w)
-    rr = RidgeRegression.fit(x, y, alpha: brr.lambda / brr.alpha, sample_weights: w)
+    rr = RidgeRegression.fit(x, y, alpha: Nx.to_number(brr.lambda) / Nx.to_number(brr.alpha), sample_weights: w)
     assert_all_close(brr.coefficients, rr.coefficients, atol: 1.0e-2)
     assert_all_close(brr.intercept, rr.intercept, atol: 1.0e-2)
   end
@@ -40,7 +40,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     x = x[[0..n_samples, ..]]
     y = y[[0..n_samples, ..]]
     eps = Nx.Constants.smallest_positive_normal(:f64)
-    alpha = 1 / (Nx.variance(x) + eps)
+    alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
     lambda = 1.0
     alpha_1 = 0.1
     alpha_2 = 0.1
@@ -56,12 +56,11 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
         lambda_1: lambda_1,
         lambda_2: lambda_2,
         fit_intercept?: true,
+        compute_scores?: true,
         iterations: 1
       )
-    first_score = brr.scores
-    |> List.first()
-    |> Nx.tensor()
     
+    first_score = brr.scores[0]
     assert_all_close(score, first_score, rtol: 0.05)
   end
 
