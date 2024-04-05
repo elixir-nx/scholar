@@ -195,6 +195,7 @@ defmodule Scholar.Case do
     {x_train, x_test, y_train, y_test}
   end
 
+  # https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset
   def diabetes_data do
     x =
       File.read!("./test/support/diabetes_data_raw.csv")

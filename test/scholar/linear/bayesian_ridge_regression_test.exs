@@ -36,9 +36,6 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
 
   test "compute scores" do
     {x, y} = diabetes_data()
-    n_samples = 50 - 1
-    x = x[[0..n_samples, ..]]
-    y = y[[0..n_samples, ..]]
     eps = Nx.Constants.smallest_positive_normal(:f64)
     alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
     lambda = 1.0
