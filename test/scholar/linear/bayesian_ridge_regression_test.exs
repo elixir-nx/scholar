@@ -50,9 +50,9 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     x = x[[0..n_samples, ..]]
     IO.inspect(x)
     y = y[[0..n_samples, ..]]
-    eps = Nx.Constants.smallest_positive_normal({:f, 64})
-    alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
-    lambda = Nx.tensor(1.0)
+    eps = Nx.Constants.smallest_positive_normal(:f64)
+    alpha = 1 / (Nx.variance(x) + eps)
+    lambda = 1.0
     alpha_1 = 0.1
     alpha_2 = 0.1
     lambda_1 = 0.1
