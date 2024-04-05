@@ -39,7 +39,6 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     {x, y} = diabetes_data()
     n_samples = 50 - 1
     x = x[[0..n_samples, ..]]
-    IO.inspect(x)
     y = y[[0..n_samples, ..]]
     eps = Nx.Constants.smallest_positive_normal(:f64)
     alpha = 1 / (Nx.variance(x) + eps)
