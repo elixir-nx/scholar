@@ -226,7 +226,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       end
 
     intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
-    scaled_sigma = Nx.dot(Nx.transpose(vh), vh / Nx.new_axis(eigenvals + lambda / alpha, -1))
+    scaled_sigma = Nx.dot(vh, [0],  vh / Nx.new_axis(eigenvals + lambda / alpha, -1), [0])
     sigma = scaled_sigma / alpha
     {coef, intercept, alpha, lambda, rmse, iter, has_converged, scores, sigma}
   end
