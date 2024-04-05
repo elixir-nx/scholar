@@ -86,7 +86,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
 
     y_score =
       -0.5 *
-        (logdet + Nx.dot(Nx.transpose(y), m_inv_dot_y) + n_samples * Nx.log(2 * Nx.Constants.pi()))
+        (logdet + Nx.dot(y, [0], m_inv_dot_y, [0]) + n_samples * Nx.log(2 * Nx.Constants.pi()))
 
     alpha_score + lambda_score + y_score
   end
