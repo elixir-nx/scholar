@@ -73,9 +73,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     |> List.first()
     |> Nx.tensor()
     
-    compare_scores = Nx.divide(Nx.subtract(score, first_score), score)
-    check = Nx.less(compare_scores, 0.05) |> Nx.flatten()
-    assert check == Nx.tensor([1], type: {:u, 8})
+    assert_all_close(score, first_score, rtol: 0.05)
   end
 
   defnp compute_score(x, y, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2) do
