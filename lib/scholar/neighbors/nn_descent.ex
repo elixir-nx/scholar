@@ -183,6 +183,95 @@ defmodule Scholar.Neighbors.NNDescent do
     num_neighbors - Nx.argmax(indices, axis: 1)
   end
 
+  defn in1d(tensor1, tensor2) do
+    order1 = Nx.argsort(tensor1)
+    tensor1 = Nx.take(tensor1, order1)
+    tensor2 = Nx.sort(tensor2)
+
+    is_in = Nx.broadcast(Nx.u8(0), Nx.shape(tensor1))
+
+    # binsearch which checks if the elements of tensor1 are in tensor2
+    {is_in, _} =
+      while {is_in, {tensor1, tensor2, prev = Nx.s64(-1), i = Nx.s64(0)}}, i < Nx.size(tensor1) do
+        if i > 0 and prev == tensor1[i] do
+          is_in = Nx.indexed_put(is_in, Nx.new_axis(i, 0), is_in[i - 1])
+          {is_in, {tensor1, tensor2, prev, i + 1}}
+        else
+          {found?, _} =
+            while {stop = Nx.u8(0),
+                   {tensor1, tensor2, left = Nx.s64(0), right = Nx.size(tensor2) - 1, i}},
+                  left <= right and not stop do
+              mid = div(left + right, 2)
+
+              if tensor1[i] == tensor2[mid] do
+                {Nx.u8(1), {tensor1, tensor2, left, right, i}}
+              else
+                if tensor1[i] < tensor2[mid] do
+                  {Nx.u8(0), {tensor1, tensor2, left, mid - 1, i}}
+                else
+                  {Nx.u8(0), {tensor1, tensor2, mid + 1, right, i}}
+                end
+              end
+            end
+
+          is_in = Nx.indexed_put(is_in, Nx.new_axis(i, 0), found?)
+          prev = tensor1[i]
+          {is_in, {tensor1, tensor2, prev, i + 1}}
+        end
+      end
+
+    Nx.take(is_in, order1)
+  end
+
+  defnp unique_random_sample(key, shape, opts \\ []) do
+    final_samples = Nx.broadcast(Nx.s64(0), shape)
+
+    {final_samples, key, _} =
+      while {final_samples, key, i = Nx.s64(0)}, i < elem(shape, 0) do
+        {samples, key} = Nx.Random.randint(key, 0, opts[:maxval], shape: {elem(shape, 1)})
+        samples = Nx.sort(samples)
+        discard = Nx.broadcast(Nx.u8(0), {elem(shape, 1)})
+        discard = Nx.put_slice(discard, [0], Nx.diff(samples) == Nx.u8(0))
+
+        {samples, key, _, _} =
+          while {samples, key, j = 0, discard}, Nx.any(discard) do
+            {new_samples, key} = Nx.Random.randint(key, 0, opts[:maxval], shape: {elem(shape, 1)})
+
+            new_samples = Nx.sort(new_samples)
+            diff_new_samples = Nx.broadcast(Nx.u8(0), {elem(shape, 1)})
+
+            diff_new_samples =
+              Nx.put_slice(diff_new_samples, [0], Nx.diff(new_samples) == 0)
+
+            in_samples = Scholar.Neighbors.NNDescent.in1d(new_samples, samples)
+
+            to_take = in_samples or diff_new_samples
+            ord = Nx.argsort(to_take)
+            new_samples = Nx.take(new_samples, ord)
+            to_take = not Nx.take(to_take, ord)
+
+            ord1 = Nx.argsort(discard, direction: :desc)
+            samples = Nx.take(samples, ord1)
+
+            samples =
+              Nx.select(
+                to_take,
+                new_samples,
+                samples
+              )
+
+            samples = Nx.sort(samples)
+            discard = Nx.put_slice(discard, [0], Nx.diff(samples) == 0)
+            {samples, key, j + 1, discard}
+          end
+
+        final_samples = Nx.put_slice(final_samples, [i, 0], Nx.new_axis(samples, 0))
+        {final_samples, key, i + 1}
+      end
+
+    {final_samples, key}
+  end
+
   # Initializes the graph with random neighbors.
   defnp init_random(data, curr_graph, key, opts) do
     num_neighbors = opts[:num_neighbors]
@@ -192,17 +281,14 @@ defmodule Scholar.Neighbors.NNDescent do
     missing = get_size_vectorized(indices, num_neighbors)
 
     {random_indices, new_key} =
-      Nx.Random.randint(key, 0, num_heaps, type: :s64, shape: {num_heaps * num_neighbors})
+      unique_random_sample(key, {num_heaps, num_neighbors}, maxval: num_heaps)
 
     d =
       handle_dist(
-        Nx.reshape(
-          Nx.broadcast(Nx.new_axis(data, 1), {num_heaps, num_neighbors, Nx.axis_size(data, -1)}),
-          {num_heaps * num_neighbors, Nx.axis_size(data, -1)}
-        ),
+        Nx.take(data, Nx.iota({num_heaps, num_neighbors}, axis: 0)),
         Nx.take(data, random_indices),
         metric: opts[:metric],
-        axes: [1]
+        axes: [-1]
       )
 
     {{indices, keys, flags}, _} =
@@ -215,29 +301,8 @@ defmodule Scholar.Neighbors.NNDescent do
             {add_neighbor(
                {indices, keys, flags},
                index0,
-               random_indices[index0 * num_neighbors + j],
-               d[index0 * num_neighbors + j],
-               Nx.s8(1)
-             ), {index0, j + 1, data, missing, random_indices, d}}
-          end
-
-        {{indices, keys, flags}, {index0 + 1, data, missing, random_indices, d}}
-      end
-
-    {{indices, keys, flags}, new_key}
-
-    {{indices, keys, flags}, _} =
-      while {{indices, keys, flags}, {index0 = Nx.s64(0), data, missing, random_indices, d}},
-            index0 < num_heaps do
-        {{indices, keys, flags}, _} =
-          while {{indices, keys, flags},
-                 {index0, j = Nx.s64(0), data, missing, random_indices, d}},
-                j < missing[index0] do
-            {add_neighbor(
-               {indices, keys, flags},
-               index0,
-               random_indices[index0 * num_neighbors + j],
-               d[index0 * num_neighbors + j],
+               random_indices[[index0, j]],
+               d[[index0, j]],
                Nx.s8(1)
              ), {index0, j + 1, data, missing, random_indices, d}}
           end
@@ -289,47 +354,47 @@ defmodule Scholar.Neighbors.NNDescent do
 
     num_leaves = Nx.axis_size(leaves, 0)
     leaf_size = Nx.axis_size(leaves, 1)
-    {_indices, keys, _flags} = curr_graph
+    {indices, keys, flags} = curr_graph
 
-    while {curr_graph, {i = Nx.s64(0), keys, data, leaves}},
-          i < num_leaves do
-      {curr_graph, _} =
-        while {curr_graph, {i, j = Nx.s64(0), keys, data, leaves, stop = Nx.u8(0)}},
-              j < leaf_size and not stop do
-          index0 = leaves[[i, j]]
+    {curr_graph, _} =
+      while {{indices, keys, flags}, {i = Nx.s64(0), data, leaves}},
+            i < num_leaves do
+        {{indices, keys, flags}, _} =
+          while {{indices, keys, flags}, {i, j = Nx.s64(0), data, leaves, stop = Nx.u8(0)}},
+                j < leaf_size and not stop do
+            index0 = leaves[[i, j]]
 
-          if index0 != Nx.s64(-1) do
-            {curr_graph, _} =
-              while {curr_graph,
-                     {i, j, k = j + 1, keys, index0, data, leaves, stop_inner = Nx.u8(0)}},
-                    k < leaf_size and not stop_inner do
-                index1 = leaves[[i, k]]
+            if index0 != Nx.s64(-1) do
+              {{indices, keys, flags}, _} =
+                while {{indices, keys, flags},
+                       {i, j, k = j + 1, index0, data, leaves, stop_inner = Nx.u8(0)}},
+                      k < leaf_size and not stop_inner do
+                  index1 = leaves[[i, k]]
 
-                if index1 != Nx.s64(-1) do
-                  d = handle_dist(data[index0], data[index1], opts)
+                  if index1 != Nx.s64(-1) do
+                    d = handle_dist(data[index0], data[index1], opts)
 
-                  curr_graph =
-                    if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
-                      curr_graph = add_neighbor(curr_graph, index0, index1, d, Nx.s8(1))
-                      curr_graph
-                    else
-                      curr_graph
-                    end
+                    {indices, keys, flags} =
+                      if d < keys[[index0, 0]] or d < keys[[index1, 0]] do
+                        add_neighbor({indices, keys, flags}, index0, index1, d, Nx.s8(1))
+                      else
+                        {indices, keys, flags}
+                      end
 
-                  {curr_graph, {i, j, k + 1, keys, index0, data, leaves, Nx.u8(0)}}
-                else
-                  {curr_graph, {i, j, k + 1, keys, index0, data, leaves, Nx.u8(1)}}
+                    {{indices, keys, flags}, {i, j, k + 1, index0, data, leaves, Nx.u8(0)}}
+                  else
+                    {{indices, keys, flags}, {i, j, k + 1, index0, data, leaves, Nx.u8(1)}}
+                  end
                 end
-              end
 
-            {curr_graph, {i, j + 1, keys, data, leaves, Nx.u8(0)}}
-          else
-            {curr_graph, {i, j + 1, keys, data, leaves, Nx.u8(1)}}
+              {{indices, keys, flags}, {i, j + 1, data, leaves, Nx.u8(0)}}
+            else
+              {{indices, keys, flags}, {i, j + 1, data, leaves, Nx.u8(1)}}
+            end
           end
-        end
 
-      {curr_graph, {i + 1, keys, data, leaves}}
-    end
+        {{indices, keys, flags}, {i + 1, data, leaves}}
+      end
 
     curr_graph
   end
@@ -538,7 +603,12 @@ defmodule Scholar.Neighbors.NNDescent do
         {curr_graph, Nx.tensor(:nan)}
       end
 
-    {curr_graph, key} = init_random(data, curr_graph, key, opts)
+    {curr_graph, key} =
+      if num_neighbors > 1 do
+        init_random(data, curr_graph, key, opts)
+      else
+        {curr_graph, key}
+      end
 
     max_iters = opts[:max_iterations]
     tol = opts[:tol]
