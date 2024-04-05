@@ -4,8 +4,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   import Scholar.Shared
 
   @derive {Nx.Container,
-           containers: [:coefficients, :intercept, :alpha, :lambda, :sigma, :rmse, :iterations, :scores]}
-  defstruct [:coefficients, :intercept, :alpha, :lambda, :sigma, :rmse, :iterations, :scores]
+           containers: [:coefficients, :intercept, :alpha, :lambda, :sigma, :rmse, :iterations, :has_converged, :scores]}
+  defstruct [:coefficients, :intercept, :alpha, :lambda, :sigma, :rmse, :iterations, :has_converged, :scores]
 
   opts = [
     iterations: [
@@ -117,41 +117,33 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     # handle vector types
     # handle default alpha value, add eps to avoid division by 0
     eps = Nx.Constants.smallest_positive_normal(x_type)
-    default_alpha = 1 / (Nx.variance(x) + eps)
+    default_alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
     alpha = Keyword.get(opts, :alpha_init, default_alpha)
     alpha = Nx.tensor(alpha, type: x_type)
-    opts = Keyword.put(opts, :alpha_init, alpha)
 
     {lambda, opts} = Keyword.pop!(opts, :lambda_init)
     lambda = Nx.tensor(lambda, type: x_type)
-    opts = Keyword.put(opts, :lambda_init, lambda)
-    zeros_list = List.duplicate(0, opts[:iterations])
-    scores = Nx.tensor(zeros_list, type: x_type)
+
+    scores = Nx.broadcast(0, {opts[:iterations] + 1})
+    |> Nx.as_type(x_type)
 
     {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged, scores, sigma} =
-      fit_n(x, y, sample_weights, scores, opts)
-    iterations = Nx.to_number(iterations)
-    scores = scores
-    |> Nx.to_list()
-    |> Enum.take(iterations)
-
-    if Nx.to_number(has_converged) == 1 do
-      IO.puts("Convergence after #{Nx.to_number(iterations)} iterations")
-    end
+      fit_n(x, y, alpha, lambda, sample_weights, scores, opts)
 
     %__MODULE__{
       coefficients: coefficients,
       intercept: intercept,
-      alpha: Nx.to_number(alpha),
-      lambda: Nx.to_number(lambda),
+      alpha: alpha,
+      lambda: lambda,
       sigma: sigma,
-      rmse: Nx.to_number(rmse),
+      rmse: rmse,
       iterations: iterations,
-      scores: scores
+      has_converged: has_converged,
+      scores: scores,
     }
   end
 
-  defnp fit_n(x, y, sample_weights, scores, opts) do
+  defnp fit_n(x, y, alpha, lambda, sample_weights, scores, opts) do
     x = to_float(x)
     y = to_float(y)
 
@@ -176,9 +168,6 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         {x, y}
       end
 
-    alpha = opts[:alpha_init]
-    lambda = opts[:lambda_init]
-
     alpha_1 = opts[:alpha_1]
     alpha_2 = opts[:alpha_2]
     lambda_1 = opts[:lambda_1]
@@ -186,7 +175,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
     iterations = opts[:iterations]
 
-xt_y = Nx.dot(x, [0], y, [0])
+    xt_y = Nx.dot(x, [0], y, [0])
     {u, s, vh} = Nx.LinAlg.svd(x, full_matrices?: false)
     eigenvals = s ** 2
     {n_samples, n_features} = Nx.shape(x)
