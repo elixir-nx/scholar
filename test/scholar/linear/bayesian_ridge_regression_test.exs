@@ -82,7 +82,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     {n_samples, _} = Nx.shape(x)
     lambda_score = lambda_1 * Nx.log(lambda) - lambda_2 * lambda
     alpha_score = alpha_1 * Nx.log(alpha) - alpha_2 * alpha
-    m = 1.0 / alpha * Nx.eye(n_samples) + 1.0 / lambda * Nx.dot(x, Nx.transpose(x))
+    m = 1.0 / alpha * Nx.eye(n_samples) + 1.0 / lambda * Nx.dot(x, [-1], x, [-1])
     m_inv_dot_y = Nx.LinAlg.solve(m, y)
     logdet = m |> Nx.LinAlg.determinant() |> Nx.log()
 
