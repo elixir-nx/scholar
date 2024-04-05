@@ -125,7 +125,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {lambda, opts} = Keyword.pop!(opts, :lambda_init)
     lambda = Nx.tensor(lambda, type: x_type)
     opts = Keyword.put(opts, :lambda_init, lambda)
-    zeros_list = for k <- 0..opts[:iterations], do: 0
+    zeros_list = List.duplicate(0, opts[:iterations])
     scores = Nx.tensor(zeros_list, type: x_type)
 
     {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged, scores, sigma} =
