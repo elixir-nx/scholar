@@ -101,7 +101,7 @@ defmodule Scholar.Metrics.Ranking do
   ## Options
 
   #{NimbleOptions.docs(@dcg_opts_schema)}
-  
+
   ## Examples
 
       iex> true_relevance = Nx.tensor([10, 0, 0, 1, 5])
