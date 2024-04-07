@@ -94,4 +94,42 @@ defmodule Scholar.Metrics.Ranking do
         end
     end
   end
+
+  @doc """
+  Computes the normalized discounted cumulative gain (NDCG) based on true relevance scores `y_true` and their respective predicted scores `y_score`.
+
+  ## Options
+
+  #{NimbleOptions.docs(@dcg_opts_schema)}
+
+  ## Examples
+
+      iex> true_relevance = Nx.tensor([10, 0, 0, 1, 5])
+      iex> scores = Nx.tensor([0.1, 0.2, 0.3, 4, 70])
+      iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, scores)
+      #Nx.Tensor<
+        f32
+        0.6956940293312073
+      >
+      iex> scores = Nx.tensor([0.05, 1.1, 1.0, 0.5, 0.0])
+      iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, scores)
+      #Nx.Tensor<
+        f32
+        0.4936802089214325
+      >
+      iex> scores = Nx.tensor([0.05, 1.1, 1.0, 0.5, 0.0])
+      iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, scores, k: 4)
+      #Nx.Tensor<
+        f32
+        0.352024108171463
+      >
+      iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, true_relevance, k: 4)
+      #Nx.Tensor<
+        f32
+        1.0
+      >
+  """
+  defn ndcg_n(y_true, y_score, opts \\ []) do
+    dcg_n(y_true, y_score, opts) / dcg_n(y_true, y_true, opts)
+  end
 end
