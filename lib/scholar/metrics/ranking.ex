@@ -117,12 +117,12 @@ defmodule Scholar.Metrics.Ranking do
         0.4936802089214325
       >
       iex> scores = Nx.tensor([0.05, 1.1, 1.0, 0.5, 0.0])
-      iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, scores, [{:k, 4}])
+      iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, scores, k: 4)
       #Nx.Tensor<
         f32
         0.352024108171463
       >
-      iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, true_relevance, [{:k, 4}])
+      iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, true_relevance, k: 4)
       #Nx.Tensor<
         f32
         1.0
@@ -131,5 +131,4 @@ defmodule Scholar.Metrics.Ranking do
   defn ndcg_n(y_true, y_score, opts) do
     dcg_n(y_true, y_score, opts) / dcg_n(y_true, y_true, opts)
   end
-
 end
