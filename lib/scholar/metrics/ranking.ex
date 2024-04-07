@@ -96,10 +96,11 @@ defmodule Scholar.Metrics.Ranking do
   end
 
   @doc """
-  ## Options
-  #{NimbleOptions.docs(@dcg_opts_schema)}
-
   Computes the NDCG based on true relevance scores (`y_true`) and their respective predicted scores (`y_score`).
+
+  ## Options
+
+  #{NimbleOptions.docs(@dcg_opts_schema)}
   
   ## Examples
 
