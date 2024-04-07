@@ -96,7 +96,7 @@ defmodule Scholar.Metrics.Ranking do
   end
 
   @doc """
-  Computes the NDCG based on true relevance scores (`y_true`) and their respective predicted scores (`y_score`).
+  Computes the normalized discounted cumulative gain (NDCG) based on true relevance scores `y_true` and their respective predicted scores `y_score`.
 
   ## Options
 
