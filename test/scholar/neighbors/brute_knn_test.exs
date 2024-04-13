@@ -29,25 +29,27 @@ defmodule Scholar.Neighbors.BruteKNNTest do
   end
 
   defp result do
-    neighbor_indices = Nx.tensor(
-      [
-        [0, 5, 3],
-        [7, 3, 2],
-        [6, 1, 9],
-        [8, 9, 1],
-        [5, 4, 3]
-      ],
-      type: :u64
-    )
-    neighbor_distances = Nx.tensor(
-      [
+    neighbor_indices =
+      Nx.tensor(
+        [
+          [0, 5, 3],
+          [7, 3, 2],
+          [6, 1, 9],
+          [8, 9, 1],
+          [5, 4, 3]
+        ],
+        type: :u64
+      )
+
+    neighbor_distances =
+      Nx.tensor([
         [8.246211051940918, 20.2237491607666, 29.73213768005371],
         [14.142135620117188, 15.29705810546875, 15.81138801574707],
         [3.1622776985168457, 7.8102498054504395, 15.620499610900879],
         [3.605551242828369, 12.083045959472656, 20.124610900878906],
         [11.704699516296387, 15.033296585083008, 15.231546401977539]
-      ]
-    )
+      ])
+
     {neighbor_indices, neighbor_distances}
   end
 
@@ -75,7 +77,6 @@ defmodule Scholar.Neighbors.BruteKNNTest do
   end
 
   describe "predict" do
-
     test "batch_size = 1" do
       query = query()
       k = 3
@@ -112,8 +113,10 @@ defmodule Scholar.Neighbors.BruteKNNTest do
       model = BruteKNN.fit(data(), num_neighbors: k, batch_size: 10)
       {neighbors_true, distances_true} = result()
       {neighbors_pred, distances_pred} = BruteKNN.predict(model, query)
-      assert neighbors_pred
-       == neighbors_true
+
+      assert neighbors_pred ==
+               neighbors_true
+
       assert distances_pred == distances_true
     end
   end

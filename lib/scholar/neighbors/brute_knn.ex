@@ -3,10 +3,10 @@ defmodule Scholar.Neighbors.BruteKNN do
   Brute-Force k-Nearest Neighbor Search Algorithm.
 
   In order to find the k-nearest neighbors the algorithm calculates
-  the distance between query point and each of data samples.
+  the distance between the query point and each of the data samples.
   Therefore, its time complexity is $O(MN)$ for $N$ samples and $M$ query points.
-  It uses $O(BN)$ memory for batch size B.
-  Larger batch sizes will be faster, but will consume more memory.
+  It uses $O(BN)$ memory for batch size $B$.
+  Larger batch sizes will lead to faster predictions, but will consume more memory.
   """
   import Nx.Defn
   import Scholar.Shared
@@ -98,7 +98,8 @@ defmodule Scholar.Neighbors.BruteKNN do
   end
 
   @doc """
-  ...
+  Computes nearest neighbors of query tensor using brute-force search.
+  Returns the neighbors indices and distances from query points.
 
   ## Examples
 
