@@ -2,10 +2,11 @@ defmodule Scholar.Neighbors.BruteKNN do
   @moduledoc """
   Brute-Force k-Nearest Neighbor Search Algorithm.
 
-  <how it works> .. i.e. ...
+  In order to find the k-nearest neighbors the algorithm calculates
+  the distance between query point and each of data samples.
+  Therefore, its time complexity is $O(MN)$ for $N$ samples and $M$ query points.
+  It uses $O(BN)$ memory for batch size B.
   Larger batch sizes will be faster, but will consume more memory.
-  Time complexity is $O(MN)$ for $N$ samples and $M$ query points.
-  Memory complexity is $O(BN)$ for batch size B.
   """
   import Nx.Defn
   import Scholar.Shared
@@ -13,9 +14,6 @@ defmodule Scholar.Neighbors.BruteKNN do
 
   @derive {Nx.Container, keep: [:num_neighbors, :metric, :batch_size], containers: [:data]}
   defstruct [:num_neighbors, :metric, :data, :batch_size]
-
-  # @derive {Nx.Container, keep: [:num_neighbors, :batch_size], containers: [:data]}
-  # defstruct [:num_neighbors, :data, :batch_size]
 
   opts = [
     num_neighbors: [
@@ -55,21 +53,20 @@ defmodule Scholar.Neighbors.BruteKNN do
   ## Examples
 
       iex> data = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
-      iex> Scholar.Neighbors.BruteKNN.fit(data, num_neighbors: 2)
-      %Scholar.Neighbors.BruteKNN{
-        num_neighbors: 2,
-        metric: #Function<5.26796099/2 in Scholar.Neighbors.BruteKNN.fit/2>,
-        data: Nx.Tensor(
-          [
-            [1, 2],
-            [2, 3],
-            [3, 4],
-            [4, 5],
-            [5, 6]
-          ]
-        ),
-        batch_size: nil
-      }
+      iex> model = Scholar.Neighbors.BruteKNN.fit(data, num_neighbors: 2)
+      iex> model.num_neighbors
+      2
+      iex> model.data
+      #Nx.Tensor<
+        s64[5][2]
+        [
+          [1, 2],
+          [2, 3],
+          [3, 4],
+          [4, 5],
+          [5, 6]
+        ]
+      >
   """
   deftransform fit(data, opts) do
     if Nx.rank(data) != 2 do
@@ -180,8 +177,6 @@ defmodule Scholar.Neighbors.BruteKNN do
         {batch_indices, batch_distances} =
           brute_force_search(data, batch, num_neighbors: k, metric: metric)
 
-        # brute_force_search(data, batch, num_neighbors: k)
-
         neighbor_indices = Nx.put_slice(neighbor_indices, [i * batch_size, 0], batch_indices)
 
         neighbor_distances =
@@ -204,8 +199,6 @@ defmodule Scholar.Neighbors.BruteKNN do
           {leftover_indices, leftover_distances} =
             brute_force_search(data, leftover, num_neighbors: k, metric: metric)
 
-          # brute_force_search(data, leftover, num_neighbors: k)
-
           neighbor_indices =
             Nx.put_slice(neighbor_indices, [num_batches * batch_size, 0], leftover_indices)
 
@@ -225,8 +218,7 @@ defmodule Scholar.Neighbors.BruteKNN do
     n = Nx.axis_size(query, 0)
     x = query |> Nx.new_axis(1) |> Nx.broadcast({n, m, d}) |> Nx.vectorize([:query, :data])
     y = data |> Nx.new_axis(0) |> Nx.broadcast({n, m, d}) |> Nx.vectorize([:query, :data])
-    distances = metric.(x, y) |> Nx.devectorize()
-    # distances = Scholar.Metrics.Distance.minkowski(x, y) |> Nx.devectorize()
+    distances = metric.(x, y) |> Nx.devectorize() |> Nx.rename(nil)
 
     neighbor_indices =
       Nx.argsort(distances, axis: 1, type: :u64) |> Nx.slice_along_axis(0, k, axis: 1)
