@@ -127,8 +127,4 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     check = Nx.less_equal(brr.sigma, 0.01)
     assert Nx.all(check) == Nx.u8(1)
   end
-
-  test "write docs" do
-    assert false
-  end
 end

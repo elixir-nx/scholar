@@ -1,4 +1,63 @@
 defmodule Scholar.Linear.BayesianRidgeRegression do
+  @moduledoc ~S"""
+  Bayesian ridge regression: A fully probabilistic linear model with parameter regularization.
+
+  In order to obtain a fully probabilistic linear model,
+  we declare the precision parameter in the model: $\alpha$,
+  This parameter describes the dispersion of the data around the mean.
+
+  $$
+  p(y | X, w, \alpha) = \mathcal{N}(y | Xw, \alpha^{-1})
+  $$
+
+  Where:
+  * $X$ is an input data
+
+  * $y$ is an input target
+
+  * $w$ is the model weights matrix
+
+  * $\alpha$ is the precision parameter of the target and $\alpha^{-1} = \sigma^{2}$, the variance.
+
+  In order to obtain a fully probabilistic regularized linear model,
+  we declare the distribution of the model weights matrix
+  with it's corresponding precision parameter:
+
+  $$
+  p(w | \lambda) = \mathcal{N}(w, \lambda^{-1})
+  $$
+
+  Where $\lambda$ is the precision parameter of the weights matrix.
+
+  Both $\alpha$ and $\lambda$ are choosen to have prior gamma distributions,
+  controlled through hyperparameters $\alpha_1$, $\alpha_2$, $\lambda_1$, $\lambda_2$.
+  These parameters are set by default to non-informative
+  $\alpha_1 = \alpha_2 = \lambda_1 = \lambda_2 = 1^{-6}$.
+
+  This model is similar to the classical ridge regression.
+  Confusingly the classical ridge regression's $\alpha$ parameter is the Bayesian ridge's $\lambda$ parameter.
+
+  Other than that, the differences between alorithms are:
+  * The matrix weight regularization parameter is estimated from data,
+  * The precision of the target is estimated.
+
+  As such, Bayesian ridge is more flexible to the data at hand.
+  These features come at higher computational cost.
+
+  This implementation is ported from Python's scikit-learn.
+  It uses the algorithm described in (Tipping, 2001)
+  and regularization parameters are updated as by (MacKay, 1992).
+  References
+  ----------
+  D. J. C. MacKay, Bayesian Interpolation, Computation and Neural Systems,
+  Vol. 4, No. 3, 1992.
+
+  M. E. Tipping, Sparse Bayesian Learning and the Relevance Vector Machine,
+  Journal of Machine Learning Research, Vol. 1, 2001.
+
+  Pedregosa et al., Scikit-learn: Machine Learning in Python,
+  JMLR 12, pp. 2825-2830, 2011.
+  """
   require Nx
   import Nx.Defn
   import Scholar.Shared
@@ -10,7 +69,6 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
              :alpha,
              :lambda,
              :sigma,
-             :rmse,
              :iterations,
              :has_converged,
              :scores
@@ -21,7 +79,6 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     :alpha,
     :lambda,
     :sigma,
-    :rmse,
     :iterations,
     :has_converged,
     :scores
@@ -125,6 +182,51 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   ]
 
   @opts_schema NimbleOptions.new!(opts)
+
+  @doc """
+  Fits a Bayesian ridge model for sample inputs `x` and
+  sample targets `y`.
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
+
+  ## Return Values
+
+    The function returns a struct with the following parameters:
+
+    * `:coefficients` - Estimated coefficients for the linear regression problem.
+
+    * `:intercept` - Independent term in the linear model.
+
+    * `:alpha` - Estimated precision of the noise.
+
+    * `:lambda` - Estimated precision of the weights.
+
+    * `:sigma` - Estimated variance covariance matrix of weights with shape (n_features, n_features).
+
+    * `:iterations` - How many times the optimization algorithm was computed.
+
+    * `:has_converged` - Whether the coefficients converged during the optimization algorithm.
+
+    * `:scores` - Value of the log marginal likelihood at each iteration during the optimization.
+
+  ## Examples
+
+      iex> x = Nx.tensor([[1], [2], [6], [8], [10]])
+      iex> y = Nx.tensor([1, 2, 6, 8, 10])
+      iex> model = Scholar.Linear.BayesianRidgeRegression.fit(x, y)
+      iex> model.coefficients
+      #Nx.Tensor<
+        f32[1]
+        [0.9932512044906616]
+      >
+      iex> model.intercept
+      #Nx.Tensor<
+        f32
+        0.03644371032714844
+      >
+  """
   deftransform fit(x, y, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
@@ -157,7 +259,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       |> Nx.broadcast({opts[:iterations] + 1})
       |> Nx.as_type(x_type)
 
-    {coefficients, intercept, alpha, lambda, rmse, iterations, has_converged, scores, sigma} =
+    {coefficients, intercept, alpha, lambda, iterations, has_converged, scores, sigma} =
       fit_n(x, y, alpha, lambda, sample_weights, scores, opts)
 
     scores =
@@ -173,7 +275,6 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       alpha: alpha,
       lambda: lambda,
       sigma: sigma,
-      rmse: rmse,
       iterations: iterations,
       has_converged: has_converged,
       scores: scores
@@ -218,7 +319,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {n_samples, n_features} = Nx.shape(x)
     {coef, rmse} = update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
 
-    {{coef, alpha, lambda, rmse, iter, has_converged, scores}, _} =
+    {{coef, alpha, lambda, _rmse, iter, has_converged, scores}, _} =
       while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0), scores = scores},
              {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}},
             iter <= iterations and not has_converged do
@@ -260,7 +361,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
     scaled_sigma = Nx.dot(vh, [0], vh / Nx.new_axis(eigenvals + lambda / alpha, -1), [0])
     sigma = scaled_sigma / alpha
-    {coef, intercept, alpha, lambda, rmse, iter, has_converged, scores, sigma}
+    {coef, intercept, alpha, lambda, iter, has_converged, scores, sigma}
   end
 
   defnp update_coef(
@@ -329,6 +430,18 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     score_alpha + score_lambda + score
   end
 
+  @doc """
+  Makes predictions with the given `model` on input `x`.
+  ## Examples
+
+      iex> x = Nx.tensor([[1], [2], [6], [8], [10]])
+      iex> y = Nx.tensor([1, 2, 6, 8, 10])
+      iex> model = Scholar.Linear.BayesianRidgeRegression.fit(x, y)
+      iex> Scholar.Linear.BayesianRidgeRegression.predict(model, Nx.tensor([[1], [3], [4]]))
+      Nx.tensor(
+        [1.02969491481781, 3.0161972045898438, 4.009448528289795]  
+      )  
+  """
   deftransform predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
     predict_n(coeff, intercept, x)
   end
