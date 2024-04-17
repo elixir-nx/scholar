@@ -1491,7 +1491,7 @@ defmodule Scholar.Metrics.Classification do
   Compute error rates for different probability thresholds (DET).
 
   Note: This metric is used for evaluation of ranking and error tradeoffs of
-       a binary classification task.
+  a binary classification task.
 
   ## Examples
 
