@@ -1497,8 +1497,8 @@ defmodule Scholar.Metrics.Classification do
 
       iex> y_true = Nx.tensor([0, 0, 1, 1])
       iex> y_score = Nx.tensor([0.1, 0.4, 0.35, 0.8])
-      iex> distinct_value_indices = Scholar.Metrics.Classification1.distinct_value_indices(y_score)
-      iex> {fpr, fnr, thresholds} = Scholar.Metrics.Classification1.det_curve(y_true, y_score, distinct_value_indices)
+      iex> distinct_value_indices = Scholar.Metrics.Classification.distinct_value_indices(y_score)
+      iex> {fpr, fnr, thresholds} = Scholar.Metrics.Classification.det_curve(y_true, y_score, distinct_value_indices)
       iex> fpr
       #Nx.Tensor<
         f32[4]
