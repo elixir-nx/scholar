@@ -47,8 +47,9 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   This implementation is ported from Python's scikit-learn.
   It uses the algorithm described in (Tipping, 2001)
   and regularization parameters are updated as by (MacKay, 1992).
-References:
-  ----------
+  
+  References:
+
   D. J. C. MacKay, Bayesian Interpolation, Computation and Neural Systems,
   Vol. 4, No. 3, 1992.
 
@@ -320,7 +321,8 @@ References:
     {coef, rmse} = update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
 
     {{coef, alpha, lambda, _rmse, iter, has_converged, scores}, _} =
-while {{coef, rmse, alpha, lambda, iter = Nx.u64(0), has_converged = Nx.u8(0), scores = scores},
+      while {{coef, rmse, alpha, lambda, iter = Nx.u64(0), has_converged = Nx.u8(0),
+              scores = scores},
              {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}},
             iter <= iterations and not has_converged do
         scores =
@@ -457,7 +459,7 @@ while {{coef, rmse, alpha, lambda, iter = Nx.u64(0), has_converged = Nx.u8(0), s
         {scalar * x, scalar * y}
 
       _ ->
-scale = sample_weights |> Nx.sqrt() |> Nx.new_axis(1)
+        scale = sample_weights |> Nx.sqrt() |> Nx.new_axis(1)
         {Nx.dot(scale, x), Nx.dot(scale, y)}
     end
   end
