@@ -457,7 +457,7 @@ while {{coef, rmse, alpha, lambda, iter = Nx.u64(0), has_converged = Nx.u8(0), s
         {scalar * x, scalar * y}
 
       _ ->
-        scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
+scale = sample_weights |> Nx.sqrt() |> Nx.new_axis(1)
         {Nx.dot(scale, x), Nx.dot(scale, y)}
     end
   end
