@@ -453,15 +453,12 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   # Implements sample weighting by rescaling inputs and
   # targets by sqrt(sample_weight).
   defnp rescale(x, y, sample_weights) do
-    case Nx.shape(sample_weights) do
-      {} = scalar ->
-        scalar = Nx.sqrt(scalar)
-        {scalar * x, scalar * y}
-
-      _ ->
-        scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
-        {Nx.dot(scale, x), Nx.dot(scale, y)}
+    factor = Nx.sqrt(sample_weights)
+    x_scaled = case Nx.shape(factor) do
+      {} -> factor * x
+      _ -> Nx.new_axis(factor, 1) * x
     end
+    {x_scaled, factor * y}    
   end
 
   defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
