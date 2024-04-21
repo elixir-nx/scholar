@@ -320,7 +320,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {coef, rmse} = update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
 
     {{coef, alpha, lambda, _rmse, iter, has_converged, scores}, _} =
-      while {{coef, rmse, alpha, lambda, iter = 0, has_converged = Nx.u8(0), scores = scores},
+while {{coef, rmse, alpha, lambda, iter = Nx.u64(0), has_converged = Nx.u8(0), scores = scores},
              {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}},
             iter <= iterations and not has_converged do
         scores =
