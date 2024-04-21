@@ -47,7 +47,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   This implementation is ported from Python's scikit-learn.
   It uses the algorithm described in (Tipping, 2001)
   and regularization parameters are updated as by (MacKay, 1992).
-  References
+References:
   ----------
   D. J. C. MacKay, Bayesian Interpolation, Computation and Neural Systems,
   Vol. 4, No. 3, 1992.
