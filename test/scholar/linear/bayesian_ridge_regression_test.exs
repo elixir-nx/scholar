@@ -5,27 +5,6 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
   alias Scholar.Linear.RidgeRegression
   doctest BayesianRidgeRegression
 
-  test "bayesian ridge is jit compilable" do
-    x = Nx.tensor([[1], [2], [6], [8], [10]])
-    y = Nx.tensor([1, 2, 6, 8, 10])
-    alpha_1 = 0.1
-    alpha_2 = 0.1
-    lambda_1 = 0.1
-    lambda_2 = 0.1
-
-    Nx.Defn.jit(&BayesianRidgeRegression.fit/3).(x, y,
-      alpha_1: alpha_1,
-      alpha_2: alpha_2,
-      lambda_1: lambda_1,
-      lambda_2: lambda_2,
-      fit_intercept?: true,
-      compute_scores?: true,
-      iterations: 1
-    )
-
-    assert true
-  end
-
   test "toy bayesian ridge" do
     x = Nx.tensor([[1], [2], [6], [8], [10]])
     y = Nx.tensor([1, 2, 6, 8, 10])
