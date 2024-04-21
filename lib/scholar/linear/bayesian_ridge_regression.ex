@@ -459,7 +459,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
         {scalar * x, scalar * y}
 
       _ ->
-        scale = sample_weights |> Nx.sqrt() |> Nx.new_axis(1)
+        scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
         {Nx.dot(scale, x), Nx.dot(scale, y)}
     end
   end
