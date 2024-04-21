@@ -454,11 +454,14 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   # targets by sqrt(sample_weight).
   defnp rescale(x, y, sample_weights) do
     factor = Nx.sqrt(sample_weights)
-    x_scaled = case Nx.shape(factor) do
-      {} -> factor * x
-      _ -> Nx.new_axis(factor, 1) * x
-    end
-    {x_scaled, factor * y}    
+
+    x_scaled =
+      case Nx.shape(factor) do
+        {} -> factor * x
+        _ -> Nx.new_axis(factor, 1) * x
+      end
+
+    {x_scaled, factor * y}
   end
 
   defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
