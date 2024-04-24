@@ -75,5 +75,12 @@ defmodule Scholar.Neighbors.KDTreeTest do
       assert KDTree.predict(kdtree, x_pred(), k: 4) ==
                Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
     end
+
+    test "float type data" do
+      kdtree = KDTree.fit(x() |> Nx.as_type(:f64))
+
+      assert KDTree.predict(kdtree, x_pred(), k: 4) ==
+               Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
+    end
   end
 end
