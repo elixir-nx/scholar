@@ -331,9 +331,7 @@ defmodule Scholar.Neighbors.KDTree do
     indices = tree.indices |> Nx.as_type(:s64)
     data = tree.data
 
-    down = Nx.u8(0)
-    up = Nx.u8(1)
-    mode = down
+    mode = down()
     i = Nx.s64(0)
 
     [nearest_neighbors, node, distances, visited, i, mode, point] =
@@ -348,28 +346,27 @@ defmodule Scholar.Neighbors.KDTree do
       ])
 
     {nearest_neighbors, _} =
-      while {nearest_neighbors,
-             {node, data, indices, point, distances, visited, i, mode, down, up}},
+      while {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}},
             node != -1 and i >= 0 do
         coord_indicator = rem(i, dims)
 
-        {node, i, visited, nearest_neighbors, distances, mode, down, up} =
+        {node, i, visited, nearest_neighbors, distances, mode} =
           cond do
             node >= size ->
-              {parent(node), i - 1, visited, nearest_neighbors, distances, up, down, up}
+              {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
 
-            mode == down and
+            mode == down() and
                 point[[coord_indicator]] < data[[indices[node], coord_indicator]] ->
-              {left_child(node), i + 1, visited, nearest_neighbors, distances, down, down, up}
+              {left_child(node), i + 1, visited, nearest_neighbors, distances, down()}
 
-            mode == down and
+            mode == down() and
                 point[[coord_indicator]] >= data[[indices[node], coord_indicator]] ->
-              {right_child(node), i + 1, visited, nearest_neighbors, distances, down, down, up}
+              {right_child(node), i + 1, visited, nearest_neighbors, distances, down()}
 
-            mode == up ->
+            mode == up() ->
               cond do
                 visited[indices[node]] ->
-                  {parent(node), i - 1, visited, nearest_neighbors, distances, up, down, up}
+                  {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
 
                 (left_child(node) >= size and right_child(node) >= size) or
                   (left_child(node) < size and visited[indices[left_child(node)]] and
@@ -390,7 +387,7 @@ defmodule Scholar.Neighbors.KDTree do
                       opts
                     )
 
-                  {parent(node), i - 1, visited, nearest_neighbors, distances, up, down, up}
+                  {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
 
                 left_child(node) < size and visited[indices[left_child(node)]] and
                   right_child(node) < size and
@@ -416,10 +413,9 @@ defmodule Scholar.Neighbors.KDTree do
                        ) <
                          distances
                      ) do
-                    {right_child(node), i + 1, visited, nearest_neighbors, distances, down, down,
-                     up}
+                    {right_child(node), i + 1, visited, nearest_neighbors, distances, down()}
                   else
-                    {parent(node), i - 1, visited, nearest_neighbors, distances, up, down, up}
+                    {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
                   end
 
                 ((right_child(node) < size and visited[indices[right_child(node)]]) or
@@ -446,25 +442,28 @@ defmodule Scholar.Neighbors.KDTree do
                        ) <
                          distances
                      ) do
-                    {left_child(node), i + 1, visited, nearest_neighbors, distances, down, down,
-                     up}
+                    {left_child(node), i + 1, visited, nearest_neighbors, distances, down()}
                   else
-                    {parent(node), i - 1, visited, nearest_neighbors, distances, up, down, up}
+                    {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
                   end
 
                 # Should be not reachable
                 true ->
-                  {node, i, visited, nearest_neighbors, distances, Nx.u8(-1), down, up}
+                  {node, i, visited, nearest_neighbors, distances, none()}
               end
 
             # Should be not reachable
             true ->
-              {node, i, visited, nearest_neighbors, distances, Nx.u8(-1), down, up}
+              {node, i, visited, nearest_neighbors, distances, none()}
           end
 
-        {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode, down, up}}
+        {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}}
       end
 
     Nx.revectorize(nearest_neighbors, input_vectorized_axes, target_shape: {num_points, k})
   end
+
+  defnp down(), do: Nx.u8(0)
+  defnp up(), do: Nx.u8(1)
+  defnp none(), do: Nx.u8(2)
 end
