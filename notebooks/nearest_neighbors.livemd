@@ -59,7 +59,7 @@ Now let's move to a more abstract example. You're listening to your favorite roc
 
 One type of [recommendation system](https://en.wikipedia.org/wiki/Recommender_system) relies on collaborative filtering: it recommends songs based on what other users with similar musical tastes listen to. Another approach is to treat songs as points, like in our earlier definition, and then compute the closest songs to your favorites. This is another example of calculating nearest neighbors. While it might not be immediately obvious how to represent songs as points and measure the "distance" between them, it turns out that it can be done.
 
-Another use of nearest neighbors is in building classifiers and regressors. This approach was covered in a [previous notebook](https://github.com/elixir-nx/scholar/blob/main/notebooks/k_nearest_neighbors.livemd), which we strongly recommend you review before proceeding with this one.
+Another use of nearest neighbors is in building classifiers and regressors. This approach was covered in a [previous notebook](k_nearest_neighbors.livemd), which we strongly recommend you review before proceeding with this one.
 
 ## How to compute K-Nearest Neighbors - Brute Force Approach
 
