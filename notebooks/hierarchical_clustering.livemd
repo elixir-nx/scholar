@@ -1,4 +1,4 @@
-# Hierarchical Clustering
+# Hierarchical clustering
 
 ```elixir
 app_root = Path.join(__DIR__, "..")

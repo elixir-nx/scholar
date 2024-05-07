@@ -1,6 +1,6 @@
 <!-- livebook:{"persist_outputs":true} -->
 
-# K-means clustering
+# k-means clustering
 
 ```elixir
 Mix.install([

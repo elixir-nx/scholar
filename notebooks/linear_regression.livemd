@@ -1,6 +1,6 @@
 <!-- livebook:{"persist_outputs":true} -->
 
-# Linear Regression in Practice
+# Linear regression in practice
 
 ```elixir
 Mix.install([

@@ -1,4 +1,4 @@
-# MDS
+# Multidimensional scaling (MDS)
 
 ```elixir
 Mix.install([
@@ -24,6 +24,8 @@ alias Explorer.DataFrame, as: DF
 <!-- livebook:{"branch_parent_index":0} -->
 
 ## Swiss Roll
+
+Multidimensional scaling (MDS) seeks a low-dimensional representation of the data in which the distances respect well the distances in the original high-dimensional space.
 
 The first example demonstrating MDS will use so-called Swiss Roll dataset. It's call as such because it resembles a popular sponge cake. Let's have a look on this dataset.
 
@@ -1098,7 +1100,7 @@ labels
 Let's look how one of the images look like
 
 ```elixir
-image = 
+image =
   Nx.reshape(digits_data[[1234, ..]], {image_height, image_width})
   |> Nx.as_type({:u, 8})
 

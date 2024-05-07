@@ -1,6 +1,6 @@
 <!-- livebook:{"persist_outputs":true} -->
 
-# K-Nearest Neighbors
+# k-nearest neighbors
 
 ```elixir
 Mix.install([

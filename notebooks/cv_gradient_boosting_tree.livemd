@@ -1,4 +1,4 @@
-# Using cross-validation with gradient boosting trees
+# Cross-validation with gradient boosting trees
 
 ```elixir
 Mix.install([
