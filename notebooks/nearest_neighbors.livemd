@@ -69,7 +69,7 @@ While this method accurately computes the $k$-nearest neighbors, it has a major 
 
 Given this, for large values of $N$, we need to consider other approaches. However, the brute-force method can still be useful in certain situations. If $N$ is small, the distance matrix $D$ can be computed in a reasonable amount of time. Additionally, if $k \approx N$, this approach is optimal since you always need to compute $O(Nk)$, which leads to $O(N^2)$ operations. Computing the distance matrix is optimized in many frameworks, giving it an advantage over other methods when $k$ is on the order of magnitude of $N$.
 
-In Scholar, the brute-force approach is implemented [here](https://github.com/elixir-nx/scholar/blob/main/lib/scholar/neighbors/k_nearest_neighbors.ex). In a previous section, we mentioned a notebook that uses this approach to calculate $k$-nearest neighbors.
+In Scholar, the brute-force approach is implemented with `Scholar.Neighbors.KNearestNeighbors`. In a previous section, we mentioned a notebook that uses this approach to calculate $k$-nearest neighbors.
 
 <!-- livebook:{"branch_parent_index":3} -->
 
