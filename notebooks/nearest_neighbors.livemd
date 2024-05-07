@@ -1,6 +1,6 @@
 <!-- livebook:{"file_entries":[{"name":"knn_gyms.png","type":"attachment"}]} -->
 
-# Nearest Neighbors
+# Nearest neighbors
 
 ```elixir
 Mix.install([
