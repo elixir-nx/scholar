@@ -190,9 +190,9 @@ adults =
 
 Our intuition was correct: for seniors, 28% of their nearest neighbors in terms of medical results are also seniors, while for adults, nearly 86% of their nearest neighbors are also adults. This indicates that age should always be considered to ensure proper treatment when assessing medical results and drawing conclusions.
 
-## How to compute Approximated Nearest Neighbors - LargeVis
+## How to compute Approximate Nearest Neighbors - LargeVis
 
-In the previous example, KDTree was a perfect choice for computing K-Nearest Neighbors. However, this approach doesn't always work effectively. When the number of features grows, the efficiency of KDTree decreases significantly, so it's best suited for data with a smaller number of features (<15), like in the previous example. For data with many samples but also many features, a different approach is required. Here, algorithms that return an approximated version of nearest neighbors are needed. These approximated algorithms may not give exact solutions, but the deviation is usually minor and accepted as a tradeoff for faster computation. An example of an algorithm that computes approximated nearest neighbors is LargeVis.
+In the previous example, KDTree was a perfect choice for computing K-Nearest Neighbors. However, this approach doesn't always work effectively. When the number of features grows, the efficiency of KDTree decreases dramatically, so it's best suited for data with a smaller number of features (<15), like in the previous example. For data with many samples but also many features, a different approach is required. Here, algorithms that return approximate nearest neighbors are needed. These approximation algorithms may not give exact solutions, but the deviation is usually minor and accepted as a tradeoff for faster computation. An example of an algorithm that computes approximated nearest neighbors is LargeVis.
 
 LargeVis is an approximated nearest neighbors algorithm that uses the concept of a Random Projection Forest. A Random Projection Forest consists of multiple trees. Each tree is built using a divide-and-conquer approach. The entire dataset is used to start the construction, and at each node, the data is projected onto a random hyperplane and split as follows: points with a projection smaller than or equal to the median go into the left subtree, while those with a projection greater than the median go into the right subtree. This process is then recursively applied to the left and right subtrees.
 
@@ -205,9 +205,9 @@ Figure 3: A process of creating a tree in Random Projection Forest. Source: http
 
 <!-- livebook:{"break_markdown":true} -->
 
-Here's a brief explanation of LargeVis. First, we compute an approximated nearest neighbors graph using a Random Projection Forest. Then, we refine the graph by examining the neighbors of each point's neighbors for a fixed number of iterations. Now, let's use LargeVis in practice.
+Here's a brief explanation of LargeVis. First, we compute the approximate nearest neighbors graph using a Random Projection Forest. Then, we refine the graph by examining the neighbors of each point's neighbors for a fixed number of iterations. Now, let's use LargeVis in practice.
 
-In this example, we will use a dataset on online news popularity. This dataset summarizes a diverse set of features about articles published by Mashable over a two-year period. To read more about this dataset, click [here](https://archive.ics.uci.edu/dataset/332/online+news+popularity). Usually, the dataset is used to predict the number of shares on social networks, but we'll use it differently. KNN and Approximated Nearest Neighbors can be valuable in data mining, particularly in business scenarios. Imagine you're an editor at an online news agency, and you want to create a series of articles that boost your reach. One strategy could be to examine groups of the most popular articles and analyze them to identify specific patterns. We can use Approximated Nearest Neighbors to do this. For each news article, we'll calculate its nearest neighbors and then sort these groups by the total number of shares they receive on social networks.
+In this example, we will use a dataset on online news popularity. This dataset summarizes a diverse set of features about articles published by Mashable over a two-year period. To read more about this dataset, click [here](https://archive.ics.uci.edu/dataset/332/online+news+popularity). Usually, the dataset is used to predict the number of shares on social networks, but we'll use it differently. K-NN can be valuable in data mining, particularly in business scenarios. Imagine you're an editor at an online news agency, and you want to create a series of articles that boost your reach. One strategy could be to examine groups of the most popular articles and analyze them to identify specific patterns. We can use Approximate Nearest Neighbors to do this. For each news article, we'll calculate its nearest neighbors and then sort these groups by the total number of shares they receive on social networks.
 
 The first step is to load the dataset from the Internet archive.
 
@@ -237,7 +237,7 @@ x = Scholar.Preprocessing.StandardScaler.fit_transform(x)
 {x, y}
 ```
 
-Now, let's move on to computing the approximated nearest neighbors. Notice that this dataset has significantly more features than the previous one (58 compared to 7).
+Now, let's move on to computing the approximate nearest neighbors. Notice that this dataset has significantly more features than the previous one (58 compared to 7).
 
 ```elixir
 num_neighbors = 6
