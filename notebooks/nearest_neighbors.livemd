@@ -1,10 +1,10 @@
-<!-- livebook:{"file_entries":[{"name":"knn_gyms.png","type":"attachment"}]} -->
+<!-- livebook:{"file_entries":[{"name":"knn_gyms.png","type":"attachment"},{"name":"rbf_and_kdtree.png","type":"attachment"}]} -->
 
-# Nearest neighbors
+# Nearest Neighbors
 
 ```elixir
 Mix.install([
-  {:scholar, path: "/home/mateusz/Dashbit/scholar", override: true},
+  {:scholar, github: "elixir-nx/scholar", override: true},
   {:explorer, "~> 0.8.1"},
   {:exla, "~> 0.7.2"},
   {:nx, "~> 0.7.2"},
@@ -59,7 +59,7 @@ Now let's move to a more abstract example. You're listening to your favorite roc
 
 One type of [recommendation system](https://en.wikipedia.org/wiki/Recommender_system) relies on collaborative filtering: it recommends songs based on what other users with similar musical tastes listen to. Another approach is to treat songs as points, like in our earlier definition, and then compute the closest songs to your favorites. This is another example of calculating nearest neighbors. While it might not be immediately obvious how to represent songs as points and measure the "distance" between them, it turns out that it can be done.
 
-Another use of nearest neighbors is in building classifiers and regressors. This approach was covered in a [previous notebook](k_nearest_neighbors.livemd), which we strongly recommend you review before proceeding with this one.
+Another use of nearest neighbors is in building classifiers and regressors. This approach was covered in a [previous notebook](https://github.com/elixir-nx/scholar/blob/main/notebooks/k_nearest_neighbors.livemd), which we strongly recommend you review before proceeding with this one.
 
 ## How to compute K-Nearest Neighbors - Brute Force Approach
 
@@ -69,7 +69,7 @@ While this method accurately computes the $k$-nearest neighbors, it has a major 
 
 Given this, for large values of $N$, we need to consider other approaches. However, the brute-force method can still be useful in certain situations. If $N$ is small, the distance matrix $D$ can be computed in a reasonable amount of time. Additionally, if $k \approx N$, this approach is optimal since you always need to compute $O(Nk)$, which leads to $O(N^2)$ operations. Computing the distance matrix is optimized in many frameworks, giving it an advantage over other methods when $k$ is on the order of magnitude of $N$.
 
-In Scholar, the brute-force approach is implemented with `Scholar.Neighbors.KNearestNeighbors`. In a previous section, we mentioned a notebook that uses this approach to calculate $k$-nearest neighbors.
+In Scholar, the brute-force approach is implemented [here](https://github.com/elixir-nx/scholar/blob/main/lib/scholar/neighbors/k_nearest_neighbors.ex). In a previous section, we mentioned a notebook that uses this approach to calculate $k$-nearest neighbors.
 
 <!-- livebook:{"branch_parent_index":3} -->
 
@@ -141,19 +141,16 @@ Once the data is preprocessed, we can move on to the KDTree model. First, we nee
 num_neighbors = 6
 
 knn_model =
-  EXLA.jit_apply(&Scholar.Neighbors.KDTree.fit(&1, k: num_neighbors, metric: :euclidean), [x])
+  EXLA.jit(&Scholar.Neighbors.KDTree.fit(&1, k: num_neighbors, metric: :euclidean)).(x)
 ```
 
 Now, we need to run a query to calculate the nearest neighbors for a given set of data. To compute the nearest neighbors, we call `Scholar.Neighbors.KDTree.predict`.
 
 ```elixir
 knn =
-  EXLA.jit_apply(
-    &Scholar.Neighbors.KDTree.predict(&1, &2, k: num_neighbors, metric: {:minkowski, 2}),
-    [
-      knn_model,
-      x
-    ]
+  EXLA.jit(&Scholar.Neighbors.KDTree.predict(&1, &2, k: num_neighbors, metric: {:minkowski, 2})).(
+    knn_model,
+    x
   )
 ```
 
@@ -190,13 +187,13 @@ adults =
 
 Our intuition was correct: for seniors, 28% of their nearest neighbors in terms of medical results are also seniors, while for adults, nearly 86% of their nearest neighbors are also adults. This indicates that age should always be considered to ensure proper treatment when assessing medical results and drawing conclusions.
 
-## How to compute Approximate Nearest Neighbors - LargeVis
+## How to compute Approximated Nearest Neighbors - LargeVis
 
-In the previous example, KDTree was a perfect choice for computing K-Nearest Neighbors. However, this approach doesn't always work effectively. When the number of features grows, the efficiency of KDTree decreases dramatically, so it's best suited for data with a smaller number of features (<15), like in the previous example. For data with many samples but also many features, a different approach is required. Here, algorithms that return approximate nearest neighbors are needed. These approximation algorithms may not give exact solutions, but the deviation is usually minor and accepted as a tradeoff for faster computation. An example of an algorithm that computes approximated nearest neighbors is LargeVis.
+In the previous example, KDTree was a perfect choice for computing K-Nearest Neighbors. However, this approach doesn't always work effectively. When the number of features grows, the efficiency of KDTree decreases significantly, so it's best suited for data with a smaller number of features (<15), like in the previous example. For data with many samples but also many features, a different approach is required. Here, algorithms that return an approximated version of nearest neighbors are needed. These approximated algorithms may not give exact solutions, but the deviation is usually minor and accepted as a tradeoff for faster computation. An example of an algorithm that computes approximated nearest neighbors is LargeVis.
 
 LargeVis is an approximated nearest neighbors algorithm that uses the concept of a Random Projection Forest. A Random Projection Forest consists of multiple trees. Each tree is built using a divide-and-conquer approach. The entire dataset is used to start the construction, and at each node, the data is projected onto a random hyperplane and split as follows: points with a projection smaller than or equal to the median go into the left subtree, while those with a projection greater than the median go into the right subtree. This process is then recursively applied to the left and right subtrees.
 
-This structure allows us to quickly create an approximated nearest neighbors graph, which can then be used to find the nearest neighbors efficiently. To better understand this, below is a figure illustrating the process of creating a tree in a random projection forest.
+This structure allows us to quickly create an approximated nearest neighbors graph, which can then be used to find the nearest neighbors efficiently. To better understand this, below is a figure illustrating the process of creating a tree in a random projection forest. We need to note that in Scholar implementation in each step points are splitted in half, but on the figure below this condition is not satisifed. However, the general idea of splitting points is the same.
 
 | ![Random Projection Forest](http://www.math.umassd.edu/~dyan/rpKNN.png?attredirects=0) |
 | :------------------------------------------------------------------------------------: |
@@ -205,9 +202,16 @@ Figure 3: A process of creating a tree in Random Projection Forest. Source: http
 
 <!-- livebook:{"break_markdown":true} -->
 
-Here's a brief explanation of LargeVis. First, we compute the approximate nearest neighbors graph using a Random Projection Forest. Then, we refine the graph by examining the neighbors of each point's neighbors for a fixed number of iterations. Now, let's use LargeVis in practice.
+On the next figure, we have a comparison of how space is partitioned using KDTree and Random Projection Forest. This time splitting is the same as the output of Scholar implementation of Random Projection Forest.
 
-In this example, we will use a dataset on online news popularity. This dataset summarizes a diverse set of features about articles published by Mashable over a two-year period. To read more about this dataset, click [here](https://archive.ics.uci.edu/dataset/332/online+news+popularity). Usually, the dataset is used to predict the number of shares on social networks, but we'll use it differently. K-NN can be valuable in data mining, particularly in business scenarios. Imagine you're an editor at an online news agency, and you want to create a series of articles that boost your reach. One strategy could be to examine groups of the most popular articles and analyze them to identify specific patterns. We can use Approximate Nearest Neighbors to do this. For each news article, we'll calculate its nearest neighbors and then sort these groups by the total number of shares they receive on social networks.
+![](files/rbf_and_kdtree.png)
+Figure 4: Left: A spatial partitioning of $\mathbf{R}^2$ inducedby a KDTree with three levels. The dots are data points; the cross marks a query point $q$ for KNN. Right: Partitioning induced by an Random Projection Tree.
+
+<!-- livebook:{"break_markdown":true} -->
+
+Here's a brief explanation of LargeVis. First, we compute an approximated nearest neighbors graph using a Random Projection Forest. Then, we refine the graph by examining the neighbors of each point's neighbors for a fixed number of iterations. Now, let's use LargeVis in practice.
+
+In this example, we will use a dataset on online news popularity. This dataset summarizes a diverse set of features about articles published by Mashable over a two-year period. To read more about this dataset, click [here](https://archive.ics.uci.edu/dataset/332/online+news+popularity). Usually, the dataset is used to predict the number of shares on social networks, but we'll use it differently. KNN and Approximated Nearest Neighbors can be valuable in data mining, particularly in business scenarios. Imagine you're an editor at an online news agency, and you want to create a series of articles that boost your reach. One strategy could be to examine groups of the most popular articles and analyze them to identify specific patterns. We can use Approximated Nearest Neighbors to do this. For each news article, we'll calculate its nearest neighbors and then sort these groups by the total number of shares they receive on social networks.
 
 The first step is to load the dataset from the Internet archive.
 
@@ -237,11 +241,11 @@ x = Scholar.Preprocessing.StandardScaler.fit_transform(x)
 {x, y}
 ```
 
-Now, let's move on to computing the approximate nearest neighbors. Notice that this dataset has significantly more features than the previous one (58 compared to 7).
+Now, let's move on to computing the approximated nearest neighbors. Notice that this dataset has significantly more features than the previous one (58 compared to 7).
 
 ```elixir
 num_neighbors = 6
-{indices, _dist} = Scholar.Neighbors.LargeVis.fit(x, num_neighbors: num_neighbors)
+{indices, _dist} = EXLA.jit(&Scholar.Neighbors.LargeVis.fit(&1, num_neighbors: num_neighbors)).(x)
 ```
 
 Finally, we compute the nearest neighbors and sort them in descending order based on the sum of shares.
