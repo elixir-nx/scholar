@@ -53,7 +53,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     score = compute_score(x, y, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2)
 
     brr =
-      BayesianRidgeRegression.fit(x, y,
+      BayesianRidgeRegression.fit(x, Nx.flatten(y),
         alpha_1: alpha_1,
         alpha_2: alpha_2,
         lambda_1: lambda_1,

@@ -62,6 +62,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   require Nx
   import Nx.Defn
   import Scholar.Shared
+  alias Scholar.Linear.LinearHelpers
 
   @derive {Nx.Container,
            containers: [
@@ -288,7 +289,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
     {x_offset, y_offset} =
       if opts[:fit_intercept?] do
-        preprocess_data(x, y, sample_weights, opts)
+        LinearHelpers.preprocess_data(x, y, sample_weights, opts)
       else
         x_offset_shape = Nx.axis_size(x, 1)
         y_reshaped = if Nx.rank(y) > 1, do: y, else: Nx.reshape(y, {:auto, 1})
@@ -302,7 +303,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
     {x, y} =
       if opts[:sample_weights_flag] do
-        rescale(x, y, sample_weights)
+        LinearHelpers.rescale(x, y, sample_weights)
       else
         {x, y}
       end
@@ -360,7 +361,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
          {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}}
       end
 
-    intercept = set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
+    intercept = LinearHelpers.set_intercept(coef, x_offset, y_offset, opts[:fit_intercept?])
     scaled_sigma = Nx.dot(vh, [0], vh / Nx.new_axis(eigenvals + lambda / alpha, -1), [0])
     sigma = scaled_sigma / alpha
     {coef, intercept, alpha, lambda, iter, has_converged, scores, sigma}
@@ -449,34 +450,4 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
   end
 
   defnp predict_n(coeff, intercept, x), do: Nx.dot(x, [-1], coeff, [-1]) + intercept
-
-  # Implements sample weighting by rescaling inputs and
-  # targets by sqrt(sample_weight).
-  defnp rescale(x, y, sample_weights) do
-    factor = Nx.sqrt(sample_weights)
-
-    x_scaled =
-      case Nx.shape(factor) do
-        {} -> factor * x
-        _ -> Nx.new_axis(factor, 1) * x
-      end
-
-    {x_scaled, factor * y}
-  end
-
-  defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
-    if fit_intercept? do
-      y_offset - Nx.dot(x_offset, coeff)
-    else
-      Nx.tensor(0.0, type: Nx.type(coeff))
-    end
-  end
-
-  defnp preprocess_data(x, y, sample_weights, opts) do
-    if opts[:sample_weights_flag],
-      do:
-        {Nx.weighted_mean(x, sample_weights, axes: [0]),
-         Nx.weighted_mean(y, sample_weights, axes: [0])},
-      else: {Nx.mean(x, axes: [0]), Nx.mean(y, axes: [0])}
-  end
 end
