@@ -305,7 +305,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     if Nx.rank(query) != 2 do
       raise ArgumentError,
             """
-            expected query tensor to have shape {num_samples, num_features}, \
+            expected query tensor to have shape {num_queries, num_features}, \
             got tensor with shape: #{inspect(Nx.shape(query))}
             """
     end
