@@ -2,7 +2,7 @@ defmodule Scholar.Neighbors.KNNClassifier do
   @moduledoc """
   K-Nearest Neighbors Classifier.
 
-  ...
+  The model classifies the point by looking at its k-nearest neighbors and performing a (weighted) majority voting.
   """
 
   import Nx.Defn
