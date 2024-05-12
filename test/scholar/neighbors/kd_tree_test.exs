@@ -20,18 +20,24 @@ defmodule Scholar.Neighbors.KDTreeTest do
 
   describe "fit" do
     test "iota" do
-      assert %KDTree{levels: 3, indices: indices} = KDTree.fit(Nx.iota({5, 2}))
-      assert indices == Nx.u32([3, 1, 4, 0, 2])
+      tree = KDTree.fit(Nx.iota({5, 2}))
+      assert tree.levels == 3
+      assert tree.indices == Nx.u32([3, 1, 4, 0, 2])
+      assert tree.num_neighbors == 3
     end
 
     test "float" do
-      assert %KDTree{levels: 4, indices: indices} = KDTree.fit(example() |> Nx.as_type(:f32))
-      assert Nx.to_flat_list(indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
+      tree = KDTree.fit(Nx.as_type(example(), :f32))
+      assert tree.levels == 4
+      assert Nx.to_flat_list(tree.indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
+      assert tree.num_neighbors == 3
     end
 
     test "sample" do
-      assert %KDTree{levels: 4, indices: indices} = KDTree.fit(example())
-      assert Nx.to_flat_list(indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
+      tree = KDTree.fit(example())
+      assert tree.levels == 4
+      assert Nx.to_flat_list(tree.indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
+      assert tree.num_neighbors == 3
     end
   end
 
@@ -63,23 +69,23 @@ defmodule Scholar.Neighbors.KDTreeTest do
     end
 
     test "metric set to {:minkowski, 1.5}" do
-      kdtree = KDTree.fit(x())
+      kdtree = KDTree.fit(x(), metric: {:minkowski, 1.5})
 
-      assert KDTree.predict(kdtree, x_pred(), metric: {:minkowski, 1.5}) ==
+      assert KDTree.predict(kdtree, x_pred()) ==
                Nx.tensor([[0, 6, 2], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
     end
 
     test "k set to 4" do
-      kdtree = KDTree.fit(x())
+      kdtree = KDTree.fit(x(), num_neighbors: 4)
 
-      assert KDTree.predict(kdtree, x_pred(), k: 4) ==
+      assert KDTree.predict(kdtree, x_pred()) ==
                Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
     end
 
     test "float type data" do
-      kdtree = KDTree.fit(x() |> Nx.as_type(:f64))
+      kdtree = KDTree.fit(x() |> Nx.as_type(:f64), num_neighbors: 4)
 
-      assert KDTree.predict(kdtree, x_pred(), k: 4) ==
+      assert KDTree.predict(kdtree, x_pred()) ==
                Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
     end
   end
