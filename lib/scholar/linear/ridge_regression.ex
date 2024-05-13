@@ -22,6 +22,7 @@ defmodule Scholar.Linear.RidgeRegression do
   require Nx
   import Nx.Defn
   import Scholar.Shared
+  alias Scholar.Linear.LinearHelpers
 
   @derive {Nx.Container, containers: [:coefficients, :intercept]}
   defstruct [:coefficients, :intercept]
@@ -160,7 +161,7 @@ defmodule Scholar.Linear.RidgeRegression do
 
     {a_offset, b_offset} =
       if opts[:fit_intercept?] do
-        preprocess_data(a, b, sample_weights, opts)
+        LinearHelpers.preprocess_data(a, b, sample_weights, opts)
       else
         a_offset_shape = Nx.axis_size(a, 1)
         b_reshaped = if Nx.rank(b) > 1, do: b, else: Nx.reshape(b, {:auto, 1})
@@ -175,7 +176,7 @@ defmodule Scholar.Linear.RidgeRegression do
 
     {a, b} =
       if opts[:rescale_flag] do
-        rescale(a, b, sample_weights)
+        LinearHelpers.rescale(a, b, sample_weights)
       else
         {a, b}
       end
@@ -198,7 +199,7 @@ defmodule Scholar.Linear.RidgeRegression do
       end
 
     coeff = if flatten?, do: Nx.flatten(coeff), else: coeff
-    intercept = set_intercept(coeff, a_offset, b_offset, opts[:fit_intercept?])
+    intercept = LinearHelpers.set_intercept(coeff, a_offset, b_offset, opts[:fit_intercept?])
     %__MODULE__{coefficients: coeff, intercept: intercept}
   end
 
@@ -220,20 +221,6 @@ defmodule Scholar.Linear.RidgeRegression do
     coeff = if original_rank == 1, do: Nx.new_axis(coeff, 0), else: coeff
     res = Nx.dot(x, [-1], coeff, [-1]) + intercept
     if original_rank <= 1, do: Nx.squeeze(res, axes: [1]), else: res
-  end
-
-  # Implements sample weighting by rescaling inputs and
-  # targets by sqrt(sample_weight).
-  defnp rescale(a, b, sample_weights) do
-    case Nx.shape(sample_weights) do
-      {} = scalar ->
-        scalar = Nx.sqrt(scalar)
-        {scalar * a, scalar * b}
-
-      _ ->
-        scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
-        {Nx.dot(scale, a), Nx.dot(scale, b)}
-    end
   end
 
   defnp solve_cholesky_kernel(kernel, b, alpha, sample_weights, opts) do
@@ -324,21 +311,5 @@ defmodule Scholar.Linear.RidgeRegression do
     uty = Nx.dot(u, [0], b, [0])
     d_uty = d * uty
     Nx.dot(d_uty, [0], vt, [0])
-  end
-
-  defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
-    if fit_intercept? do
-      y_offset - Nx.dot(coeff, x_offset)
-    else
-      Nx.tensor(0.0, type: Nx.type(coeff))
-    end
-  end
-
-  defnp preprocess_data(a, b, sample_weights, opts) do
-    if opts[:sample_weights_flag],
-      do:
-        {Nx.weighted_mean(a, sample_weights, axes: [0]),
-         Nx.weighted_mean(b, sample_weights, axes: [0])},
-      else: {Nx.mean(a, axes: [0]), Nx.mean(b, axes: [0])}
   end
 end
