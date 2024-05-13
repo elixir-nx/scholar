@@ -12,6 +12,7 @@ defmodule Scholar.Linear.LinearHelpers do
     default_sample_weights = Nx.broadcast(Nx.as_type(1.0, x_type), {num_samples})
     {sample_weights, _} = Keyword.pop(opts, :sample_weights, default_sample_weights)
 
+    # this is required for ridge regression
     sample_weights =
       if Nx.is_tensor(sample_weights),
         do: Nx.as_type(sample_weights, x_type),
