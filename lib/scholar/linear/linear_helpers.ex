@@ -52,16 +52,4 @@ defmodule Scholar.Linear.LinearHelpers do
         {Nx.dot(scale, x), Nx.dot(scale, y)}
     end
   end
-
-  # defn rescale(x, y, sample_weights) do
-  #   factor = Nx.sqrt(sample_weights)
-
-  #   x_scaled =
-  #     case Nx.shape(factor) do
-  #       {} -> factor * x
-  #       _ -> Nx.new_axis(factor, 1) * x
-  #     end
-
-  #   {x_scaled, factor * y}
-  # end
 end
