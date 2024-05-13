@@ -29,7 +29,7 @@ defmodule Scholar.Linear.RidgeRegression do
 
   opts = [
     sample_weights: [
-      type: {:custom, Scholar.Options, :weights, []},      
+      type: {:custom, Scholar.Options, :weights, []},
       doc: """
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
@@ -121,13 +121,9 @@ defmodule Scholar.Linear.RidgeRegression do
       ] ++
         opts
 
-    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     x_type = to_float_type(x)
 
-    sample_weights =
-      if Nx.is_tensor(sample_weights),
-        do: Nx.as_type(sample_weights, x_type),
-        else: Nx.tensor(sample_weights, type: x_type)
+    sample_weights = LinearHelpers.build_sample_weights(x, opts)
 
     {alpha, opts} = Keyword.pop!(opts, :alpha)
     alpha = Nx.tensor(alpha, type: x_type) |> Nx.flatten()

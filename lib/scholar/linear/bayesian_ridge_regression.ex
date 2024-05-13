@@ -232,13 +232,9 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       ] ++
         opts
 
-    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     x_type = to_float_type(x)
 
-    sample_weights =
-      if Nx.is_tensor(sample_weights),
-        do: Nx.as_type(sample_weights, x_type),
-        else: Nx.tensor(sample_weights, type: x_type)
+    sample_weights = LinearHelpers.build_sample_weights(x, opts)
 
     # handle vector types
     # handle default alpha value, add eps to avoid division by 0

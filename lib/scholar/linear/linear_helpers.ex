@@ -1,8 +1,24 @@
 defmodule Scholar.Linear.LinearHelpers do
   require Nx
   import Nx.Defn
+  import Scholar.Shared
 
   @moduledoc false
+
+  @doc false
+  def build_sample_weights(x, opts) do
+    x_type = to_float_type(x)
+    {num_samples, _} = Nx.shape(x)
+    default_sample_weights = Nx.broadcast(Nx.as_type(1.0, x_type), {num_samples})
+    {sample_weights, _} = Keyword.pop(opts, :sample_weights, default_sample_weights)
+
+    sample_weights =
+      if Nx.is_tensor(sample_weights),
+        do: Nx.as_type(sample_weights, x_type),
+        else: Nx.tensor(sample_weights, type: x_type)
+
+    sample_weights
+  end
 
   @doc false
   defn preprocess_data(x, y, sample_weights, opts) do
