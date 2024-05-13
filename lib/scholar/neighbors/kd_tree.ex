@@ -317,6 +317,14 @@ defmodule Scholar.Neighbors.KDTree do
       >
   """
   deftransform predict(tree, data) do
+    if Nx.rank(data) != 2 do
+      raise ArgumentError, "Input data must be a 2D tensor"
+    end
+
+    if Nx.axis_size(data, -1) != Nx.axis_size(tree.data, -1) do
+      raise ArgumentError, "Input data must have the same number of features as the training data"
+    end
+
     predict_n(tree, data)
   end
 
