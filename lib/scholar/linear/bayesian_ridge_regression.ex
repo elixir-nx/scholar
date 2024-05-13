@@ -96,13 +96,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       """
     ],
     sample_weights: [
-      type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :non_negative_number, []},
-           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
-           {:custom, Scholar.Options, :weights, []}
-         ]},
+      type: {:custom, Scholar.Options, :weights, []},
       doc: """
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
