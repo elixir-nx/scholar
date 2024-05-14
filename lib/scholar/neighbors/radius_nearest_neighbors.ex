@@ -180,7 +180,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
   defn predict(%__MODULE__{labels: labels, weights: weights, task: task} = model, x) do
     case task do
       :classification ->
-        {probabilities, outliers_mask} = predict_proba(model, x)
+        {probabilities, outliers_mask} = predict_probability(model, x)
         results = Nx.argmax(probabilities, axis: 1)
         Nx.select(outliers_mask, -1, results)
 
@@ -235,7 +235,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
       iex> model = Scholar.Neighbors.RadiusNearestNeighbors.fit(x, y, num_classes: 2)
-      iex> Scholar.Neighbors.RadiusNearestNeighbors.predict_proba(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      iex> Scholar.Neighbors.RadiusNearestNeighbors.predict_probability(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       {Nx.tensor(
         [
           [0.5, 0.5],
@@ -246,7 +246,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
         [0, 0], type: :u8
       )}
   """
-  deftransform predict_proba(%__MODULE__{task: :classification} = model, x) do
+  deftransform predict_probability(%__MODULE__{task: :classification} = model, x) do
     predict_proba_n(model, x)
   end
 

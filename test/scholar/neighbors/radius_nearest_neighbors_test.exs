@@ -143,7 +143,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighborsTest do
   describe "predict_proba" do
     test "predict_proba with default values except radius set to 10" do
       model = RadiusNearestNeighbors.fit(x(), y(), num_classes: 2, radius: 10)
-      {predictions, outliers_mask} = RadiusNearestNeighbors.predict_proba(model, x_pred())
+      {predictions, outliers_mask} = RadiusNearestNeighbors.predict_probability(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -156,7 +156,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighborsTest do
     test "predict_proba with weights set to :distance" do
       model = RadiusNearestNeighbors.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
 
-      {predictions, outliers_mask} = RadiusNearestNeighbors.predict_proba(model, x_pred())
+      {predictions, outliers_mask} = RadiusNearestNeighbors.predict_probability(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -180,7 +180,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighborsTest do
           metric: {:minkowski, 1.5}
         )
 
-      {predictions, outliers_mask} = RadiusNearestNeighbors.predict_proba(model, x_pred())
+      {predictions, outliers_mask} = RadiusNearestNeighbors.predict_probability(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -200,7 +200,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighborsTest do
 
       model = RadiusNearestNeighbors.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
 
-      {predictions, outliers_mask} = RadiusNearestNeighbors.predict_proba(model, x_pred)
+      {predictions, outliers_mask} = RadiusNearestNeighbors.predict_probability(model, x_pred)
 
       assert_all_close(
         predictions,

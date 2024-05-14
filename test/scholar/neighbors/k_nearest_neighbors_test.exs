@@ -140,7 +140,7 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
   describe "predict_proba" do
     test "predict_proba with default values" do
       model = KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3)
-      predictions = KNearestNeighbors.predict_proba(model, x_pred())
+      predictions = KNearestNeighbors.predict_probability(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -157,7 +157,7 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
       model =
         KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3, weights: :distance)
 
-      predictions = KNearestNeighbors.predict_proba(model, x_pred())
+      predictions = KNearestNeighbors.predict_probability(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -179,7 +179,7 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
           metric: {:minkowski, 1.5}
         )
 
-      predictions = KNearestNeighbors.predict_proba(model, x_pred())
+      predictions = KNearestNeighbors.predict_probability(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -198,7 +198,7 @@ defmodule Scholar.Neighbors.KNearestNeighborsTest do
       model =
         KNearestNeighbors.fit(x(), y(), num_classes: 2, num_neighbors: 3, weights: :distance)
 
-      predictions = KNearestNeighbors.predict_proba(model, x_pred)
+      predictions = KNearestNeighbors.predict_probability(model, x_pred)
 
       assert_all_close(
         predictions,

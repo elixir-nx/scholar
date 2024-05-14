@@ -224,7 +224,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
       iex> model = Scholar.Neighbors.KNearestNeighbors.fit(x, y, num_classes: 2)
-      iex> Scholar.Neighbors.KNearestNeighbors.predict_proba(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      iex> Scholar.Neighbors.KNearestNeighbors.predict_probability(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       Nx.tensor(
         [
           [0.75, 0.25],
@@ -232,7 +232,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
         ]
       )
   """
-  deftransform predict_proba(
+  deftransform predict_probability(
                  %__MODULE__{
                    task: :classification
                  } = model,
