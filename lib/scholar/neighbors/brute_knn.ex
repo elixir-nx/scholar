@@ -22,17 +22,17 @@ defmodule Scholar.Neighbors.BruteKNN do
       doc: "The number of nearest neighbors."
     ],
     metric: [
-      type: {:or, [{:custom, Scholar.Options, :metric, []}, {:fun, 2}]},
-      default: {:minkowski, 2},
+      type: {:custom, Scholar.Neighbors.Utils, :pairwise_metric, []},
+      default: &Scholar.Metrics.Distance.pairwise_minkowski/2,
       doc: ~S"""
-      The function that measures the distance between two points. Possible values:
+      The function that measures the pairwise distance between two points. Possible values:
 
       * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
       we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
 
-      * Anonymous function of arity 2 that takes two rank-1 tensors of same dimension and returns a scalar.
+      * Anonymous function of arity 2 that takes two rank-2 tensors.
       """
     ],
     batch_size: [
@@ -86,21 +86,9 @@ defmodule Scholar.Neighbors.BruteKNN do
             """
     end
 
-    metric =
-      case opts[:metric] do
-        {:minkowski, p} ->
-          &Scholar.Metrics.Distance.minkowski(&1, &2, p: p)
-
-        :cosine ->
-          &Scholar.Metrics.Distance.cosine/2
-
-        fun when is_function(fun, 2) ->
-          fun
-      end
-
     %__MODULE__{
       num_neighbors: k,
-      metric: metric,
+      metric: opts[:metric],
       data: data,
       batch_size: opts[:batch_size]
     }
@@ -245,11 +233,7 @@ defmodule Scholar.Neighbors.BruteKNN do
   defnp brute_force_search(data, query, opts) do
     k = opts[:num_neighbors]
     metric = opts[:metric]
-    {m, d} = Nx.shape(data)
-    n = Nx.axis_size(query, 0)
-    x = query |> Nx.new_axis(1) |> Nx.broadcast({n, m, d}) |> Nx.vectorize([:query, :data])
-    y = data |> Nx.new_axis(0) |> Nx.broadcast({n, m, d}) |> Nx.vectorize([:query, :data])
-    distances = metric.(x, y) |> Nx.devectorize() |> Nx.rename(nil)
+    distances = metric.(query, data)
 
     neighbor_indices =
       Nx.argsort(distances, axis: 1, type: :u64) |> Nx.slice_along_axis(0, k, axis: 1)

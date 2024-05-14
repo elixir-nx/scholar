@@ -31,15 +31,17 @@ defmodule Scholar.Neighbors.KDTree do
       doc: "The number of neighbors to use by default for `k_neighbors` queries"
     ],
     metric: [
-      type: {:custom, Scholar.Options, :metric, []},
-      default: {:minkowski, 2},
+      type: {:custom, Scholar.Neighbors.Utils, :metric, []},
+      default: &Scholar.Metrics.Distance.minkowski/2,
       doc: ~S"""
-      Name of the metric. Possible values:
+      The function that measures the distance between two points. Possible values:
 
       * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
-        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
+      we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
+
+      * Anonymous function of arity 2 that takes two rank-1 tensors and returns a scalar.
       """
     ]
   ]
@@ -70,21 +72,12 @@ defmodule Scholar.Neighbors.KDTree do
   deftransform fit(tensor, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
-    metric =
-      case opts[:metric] do
-        {:minkowski, p} ->
-          &Scholar.Metrics.Distance.minkowski(&1, &2, p: p)
-
-        :cosine ->
-          &Scholar.Metrics.Distance.pairwise_cosine/2
-      end
-
     %__MODULE__{
       levels: levels(tensor),
       indices: fit_n(tensor),
       data: tensor,
       num_neighbors: opts[:num_neighbors],
-      metric: metric
+      metric: opts[:metric]
     }
   end
 

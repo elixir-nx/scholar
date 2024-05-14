@@ -32,7 +32,6 @@ defmodule Scholar.Neighbors.RadiusNearestNeighborsTest do
 
       assert model.weights == :uniform
       assert model.task == :classification
-      assert model.metric == {:minkowski, 2}
       assert model.num_classes == 2
       assert model.data == x()
       assert model.labels == y()

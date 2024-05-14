@@ -39,15 +39,17 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       """
     ],
     metric: [
-      type: {:custom, Scholar.Options, :metric, []},
-      default: {:minkowski, 2},
+      type: {:custom, Scholar.Neighbors.Utils, :pairwise_metric, []},
+      default: &Scholar.Metrics.Distance.pairwise_minkowski/2,
       doc: ~S"""
-      Name of the metric. Possible values:
+      The function that measures the pairwise distance between two points. Possible values:
 
       * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
-        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
+      we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
+
+      * Anonymous function of arity 2 that takes two rank-2 tensors.
       """
     ],
     task: [
@@ -119,7 +121,7 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
         weights: :uniform,
         num_classes: 2,
         task: :classification,
-        metric: {:minkowski, 2}
+        metric: &Scholar.Metrics.Distance.pairwise_minkowski/2
       }
   """
   deftransform fit(x, y, opts \\ []) do
@@ -287,8 +289,8 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
       iex> Scholar.Neighbors.KNearestNeighbors.k_neighbors(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       {Nx.tensor(
         [
-          [0.3162279427051544, 0.7071065902709961, 1.5811389684677124, 2.469817876815796],
-          [0.10000002384185791, 1.0049875974655151, 2.193171262741089, 3.132091760635376]
+          [0.3162313997745514, 0.7071067690849304, 1.5811394453048706, 2.469818353652954],
+          [0.10000114142894745, 1.0049877166748047, 2.1931710243225098, 3.132091760635376]
         ]
       ),
       Nx.tensor(
@@ -306,27 +308,8 @@ defmodule Scholar.Neighbors.KNearestNeighbors do
          } = _model,
          x
        ) do
-    {num_samples, num_features} = Nx.shape(data)
-    {num_samples_x, _num_features} = Nx.shape(x)
-    broadcast_shape = {num_samples_x, num_samples, num_features}
-    data_broadcast = Nx.new_axis(data, 0) |> Nx.broadcast(broadcast_shape)
-    x_broadcast = Nx.new_axis(x, 1) |> Nx.broadcast(broadcast_shape)
-
-    dist =
-      case metric do
-        {:minkowski, p} ->
-          Scholar.Metrics.Distance.minkowski(
-            data_broadcast,
-            x_broadcast,
-            axes: [-1],
-            p: p
-          )
-
-        :cosine ->
-          Scholar.Metrics.Distance.pairwise_cosine(x, data)
-      end
-
-    {val, ind} = Nx.top_k(-dist, k: default_num_neighbors)
+    distances = metric.(x, data)
+    {val, ind} = Nx.top_k(-distances, k: default_num_neighbors)
     {-val, ind}
   end
 

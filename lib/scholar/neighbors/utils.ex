@@ -3,6 +3,32 @@ defmodule Scholar.Neighbors.Utils do
   import Nx.Defn
   require Nx
 
+  def metric(:cosine), do: {:ok, &Scholar.Metrics.Distance.cosine/2}
+
+  def metric({:minkowski, p}) when p == :infinity or (is_number(p) and p > 0) do
+    {:ok, &Scholar.Metrics.Distance.minkowski(&1, &2, p: p)}
+  end
+
+  def metric(metric) when is_function(metric, 2), do: {:ok, metric}
+
+  def metric(metric) do
+    {:error,
+     "expected metric to be a 2-arity function, :cosine, tuple {:minkowski, p} where p is a positive number or :infinity, got: #{inspect(metric)}"}
+  end
+
+  def pairwise_metric(:cosine), do: {:ok, &Scholar.Metrics.Distance.pairwise_cosine/2}
+
+  def pairwise_metric({:minkowski, p}) when p == :infinity or (is_number(p) and p > 0) do
+    {:ok, &Scholar.Metrics.Distance.pairwise_minkowski(&1, &2, p: p)}
+  end
+
+  def pairwise_metric(metric) when is_function(metric, 2), do: {:ok, metric}
+
+  def pairwise_metric(metric) do
+    {:error,
+     "expected metric to be a 2-arity function, :cosine or tuple {:minkowski, p} where p is a positive number or :infinity, got: #{inspect(metric)}"}
+  end
+
   defn brute_force_search_with_candidates(data, query, candidate_indices, opts) do
     k = opts[:num_neighbors]
     metric = opts[:metric]
