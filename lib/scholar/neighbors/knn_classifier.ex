@@ -153,11 +153,11 @@ defmodule Scholar.Neighbors.KNNClassifier do
   """
   defn predict(model, x) do
     {neighbors, distances} = compute_knn(model.algorithm, x)
-    labels_pred = Nx.take(model.labels, neighbors)
+    neighbor_labels = Nx.take(model.labels, neighbors)
 
     case model.weights do
-      :uniform -> Nx.mode(labels_pred, axis: 1)
-      :distance -> weighted_mode(labels_pred, check_weights(distances))
+      :uniform -> Nx.mode(neighbor_labels, axis: 1)
+      :distance -> weighted_mode(neighbor_labels, check_weights(distances))
     end
   end
 
@@ -170,20 +170,20 @@ defmodule Scholar.Neighbors.KNNClassifier do
       iex> y_train = Nx.tensor([0, 0, 0, 1, 1])
       iex> model = Scholar.Neighbors.KNNClassifier.fit(x_train, y_train, num_neighbors: 3, num_classes: 2)
       iex> x = Nx.tensor([[1, 3], [4, 2], [3, 6]])
-      iex> Scholar.Neighbors.KNNClassifier.predict_proba(model, x)
+      iex> Scholar.Neighbors.KNNClassifier.predict_probability(model, x)
       Nx.tensor(
         [
           [1.0, 0.0],
           [1.0, 0.0],
-          [1.0, 0.0]
+          [0.3333333432674408, 0.6666666865348816]
         ]
       )
   """
-  defn predict_proba(model, x) do
+  defn predict_probability(model, x) do
     num_samples = Nx.axis_size(x, 0)
-    {neighbors, distances} = compute_knn(model.algorithm, x)
-    labels_pred = Nx.take(model.labels, neighbors)
     type = Nx.Type.merge(to_float_type(x), {:f, 32})
+    {neighbors, distances} = compute_knn(model.algorithm, x)
+    neighbor_labels = Nx.take(model.labels, neighbors)
     proba = Nx.broadcast(Nx.tensor(0.0, type: type), {num_samples, model.num_classes})
 
     weights =
@@ -194,7 +194,7 @@ defmodule Scholar.Neighbors.KNNClassifier do
 
     indices =
       Nx.stack(
-        [Nx.iota(Nx.shape(labels_pred), axis: 0), Nx.take(model.labels, labels_pred)],
+        [Nx.iota(Nx.shape(neighbor_labels), axis: 0), neighbor_labels],
         axis: 2
       )
       |> Nx.flatten(axes: [0, 1])

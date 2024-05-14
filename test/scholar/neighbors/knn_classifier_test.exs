@@ -134,10 +134,10 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
     end
   end
 
-  describe "predict_proba" do
-    test "predict_proba with default values" do
+  describe "predict_probability" do
+    test "predict_probability with default values" do
       model = KNNClassifier.fit(x_train(), y_train(), num_classes: 2, num_neighbors: 3)
-      predictions = KNNClassifier.predict_proba(model, x())
+      predictions = KNNClassifier.predict_probability(model, x())
 
       assert_all_close(
         predictions,
@@ -150,7 +150,7 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
       )
     end
 
-    test "predict_proba with weights set to :distance" do
+    test "predict_probability with weights set to :distance" do
       model =
         KNNClassifier.fit(x_train(), y_train(),
           num_neighbors: 3,
@@ -158,7 +158,7 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
           weights: :distance
         )
 
-      predictions = KNNClassifier.predict_proba(model, x())
+      predictions = KNNClassifier.predict_probability(model, x())
 
       assert_all_close(
         predictions,
@@ -171,7 +171,7 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
       )
     end
 
-    test "predict_proba with weights set to :distance and with specific metric" do
+    test "predict_probability with weights set to :distance and with specific metric" do
       model =
         KNNClassifier.fit(x_train(), y_train(),
           num_classes: 2,
@@ -180,7 +180,7 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
           metric: {:minkowski, 1.5}
         )
 
-      predictions = KNNClassifier.predict_proba(model, x())
+      predictions = KNNClassifier.predict_probability(model, x())
 
       assert_all_close(
         predictions,
@@ -193,7 +193,7 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
       )
     end
 
-    test "predict_proba with weights set to :distance and with x that contains sample with zero-distance" do
+    test "predict_probability with weights set to :distance and with x that contains sample with zero-distance" do
       x = Nx.tensor([[3, 6, 7, 5], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
 
       model =
@@ -203,7 +203,7 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
           weights: :distance
         )
 
-      predictions = KNNClassifier.predict_proba(model, x)
+      predictions = KNNClassifier.predict_probability(model, x)
 
       assert_all_close(
         predictions,
