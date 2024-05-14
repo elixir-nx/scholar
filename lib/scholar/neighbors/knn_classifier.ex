@@ -2,23 +2,22 @@ defmodule Scholar.Neighbors.KNNClassifier do
   @moduledoc """
   K-Nearest Neighbors Classifier.
 
-  Performs classifiction by looking at the k-nearest neighbors of a point and using (weighted) majority voting.
+  Performs classifiction by computing the (weighted) majority voting among k-nearest neighbors.
   """
 
   import Nx.Defn
+  import Scholar.Shared
   require Nx
 
-  @derive {Nx.Container, keep: [:algorithm, :num_classes, :weights], containers: [:labels]}
+  @derive {Nx.Container, keep: [:num_classes, :weights], containers: [:algorithm, :labels]}
   defstruct [:algorithm, :num_classes, :weights, :labels]
 
   opts = [
     algorithm: [
-      type: {:or, [:atom, {:tuple, [:atom, :keyword_list]}]},
+      type: :atom,
       default: :brute,
       doc: """
-      k-NN algorithm to be used for finding the nearest neighbors. It can be provided as
-      an atom or a tuple containing an atom and algorithm specific options.
-      Possible values for the atom:
+      Algorithm used to compute the k-nearest neighbors. Possible values:
 
         * `:brute` - Brute-force search. See `Scholar.Neighbors.BruteKNN` for more details.
 
@@ -26,26 +25,8 @@ defmodule Scholar.Neighbors.KNNClassifier do
 
         * `:random_projection_forest` - Random projection forest. See `Scholar.Neighbors.RandomProjectionForest` for more details.
 
-        * Module implementing fit/2 and predict/2.
-      """
-    ],
-    num_neighbors: [
-      required: true,
-      type: :pos_integer,
-      doc: "The number of nearest neighbors."
-    ],
-    metric: [
-      type: {:or, [{:custom, Scholar.Options, :metric, []}, {:fun, 2}]},
-      default: {:minkowski, 2},
-      doc: """
-      The function that measures distance between two points. Possible values:
-
-        * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
-        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
-
-        * `:cosine` - Cosine metric.
-
-      Keep in mind that different algorithms support different metrics. For more information have a look at the corresponding modules.
+        * Module implementing `fit(data, opts)` and `predict(model, query)`. predict/2 must return tuple containing indices
+        of k-nearest neighbors of query points as well as distances between query points and their k-nearest neighbors.
       """
     ],
     num_classes: [
@@ -76,6 +57,8 @@ defmodule Scholar.Neighbors.KNNClassifier do
 
   #{NimbleOptions.docs(@opts_schema)}
 
+  Algorithm-specific options (e.g. `:num_neighbors`, `:metric`) should be provided together with the classifier options.
+
   ## Examples
 
       iex> x = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
@@ -85,31 +68,54 @@ defmodule Scholar.Neighbors.KNNClassifier do
       Scholar.Neighbors.BruteKNN.fit(x, num_neighbors: 3)
       iex> model.labels
       Nx.tensor([0, 0, 0, 1, 1])
+
+      iex> x = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
+      iex> y = Nx.tensor([0, 0, 0, 1, 1])
+      iex> model = Scholar.Neighbors.KNNClassifier.fit(x, y, algorithm: :kd_tree, num_neighbors: 3, metric: {:minkowski, 1}, num_classes: 2)
+      iex> model.algorithm
+      Scholar.Neighbors.KDTree.fit(x, num_neighbors: 3, metric: {:minkowski, 1})
+      iex> model.labels
+      Nx.tensor([0, 0, 0, 1, 1])
+
+      iex> x = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
+      iex> y = Nx.tensor([0, 0, 0, 1, 1])
+      iex> key = Nx.Random.key(12)
+      iex> model = Scholar.Neighbors.KNNClassifier.fit(x, y, algorithm: :random_projection_forest, num_neighbors: 2, num_classes: 2, num_trees: 4, key: key)
+      iex> model.algorithm
+      Scholar.Neighbors.RandomProjectionForest.fit(x, num_neighbors: 2, num_trees: 4, key: key)
+      iex> model.labels
+      Nx.tensor([0, 0, 0, 1, 1])
   """
   deftransform fit(x, y, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
-            "expected x to have shape {num_samples, num_features},
-             got tensor with shape: #{inspect(Nx.shape(x))}"
+            """
+            expected x to have shape {num_samples, num_features}, \
+            got tensor with shape: #{inspect(Nx.shape(x))}
+            """
     end
 
-    if Nx.rank(y) != 1 and Nx.axis_size(x, 0) == Nx.axis_size(y, 0) do
+    if Nx.rank(y) != 1 do
       raise ArgumentError,
-            "expected y to have shape {num_samples},
-             got tensor with shape: #{inspect(Nx.shape(y))}"
+            """
+            expected y to have shape {num_samples}, \
+            got tensor with shape: #{inspect(Nx.shape(y))}
+            """
     end
 
+    if Nx.axis_size(x, 0) != Nx.axis_size(y, 0) do
+      raise ArgumentError,
+            """
+            expected x and y to have the same first dimension, \
+            got #{Nx.axis_size(x, 0)} and #{Nx.axis_size(y, 0)}
+            """
+    end
+
+    {opts, algorithm_opts} = Keyword.split(opts, [:algorithm, :num_classes, :weights])
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
-    {algorithm_name, algorithm_opts} =
-      if is_atom(opts[:algorithm]) do
-        {opts[:algorithm], []}
-      else
-        opts[:algorithm]
-      end
-
-    knn_module =
-      case algorithm_name do
+    algorithm_module =
+      case opts[:algorithm] do
         :brute ->
           Scholar.Neighbors.BruteKNN
 
@@ -119,22 +125,11 @@ defmodule Scholar.Neighbors.KNNClassifier do
         :random_projection_forest ->
           Scholar.Neighbors.RandomProjectionForest
 
-        knn_module when is_atom(knn_module) ->
-          knn_module
-
-        _ ->
-          raise ArgumentError,
-                """
-                not supported
-                """
+        module when is_atom(module) ->
+          module
       end
 
-    # TODO: Maybe raise an error if :num_neighbors or :metric is already in algorithm_opts?
-
-    algorithm_opts = Keyword.put(algorithm_opts, :num_neighbors, opts[:num_neighbors])
-    algorithm_opts = Keyword.put(algorithm_opts, :metric, opts[:metric])
-
-    algorithm = knn_module.fit(x, algorithm_opts)
+    algorithm = algorithm_module.fit(x, algorithm_opts)
 
     %__MODULE__{
       algorithm: algorithm,
@@ -156,15 +151,44 @@ defmodule Scholar.Neighbors.KNNClassifier do
       iex> Scholar.Neighbors.KNNClassifier.predict(model, x_test)
       Nx.tensor([0, 0, 1])
   """
-  deftransform predict(model, x) do
-    knn_module = model.algorithm.__struct__
-    {neighbors, distances} = knn_module.predict(model.algorithm, x)
+  defn predict(model, x) do
+    {neighbors, distances} = compute_knn(model.algorithm, x)
     labels_pred = Nx.take(model.labels, neighbors)
 
     case model.weights do
       :uniform -> Nx.mode(labels_pred, axis: 1)
       :distance -> weighted_mode(labels_pred, check_weights(distances))
     end
+  end
+
+  defn predict_proba(model, x) do
+    num_samples = Nx.axis_size(x, 0)
+    {neighbors, distances} = compute_knn(model.algorithm, x)
+    labels_pred = Nx.take(model.labels, neighbors)
+    type = Nx.Type.merge(to_float_type(x), {:f, 32})
+    proba = Nx.broadcast(Nx.tensor(0.0, type: type), {num_samples, model.num_classes})
+
+    weights =
+      case model.weights do
+        :distance -> check_weights(distances)
+        :uniform -> Nx.broadcast(1.0, neighbors)
+      end
+
+    indices =
+      Nx.stack(
+        [Nx.iota(Nx.shape(labels_pred), axis: 0), Nx.take(model.labels, labels_pred)],
+        axis: -1 # TODO: Replace -1 here
+      )
+      |> Nx.flatten(axes: [0, 1])
+
+    proba = Nx.indexed_add(proba, indices, Nx.flatten(weights))
+    normalizer = Nx.sum(proba, axes: [1])
+    normalizer = Nx.select(normalizer == 0, 1, normalizer)
+    proba / Nx.new_axis(normalizer, -1) # TODO: Replace -1 here
+  end
+
+  deftransformp compute_knn(algorithm, x) do
+    algorithm.__struct__.predict(algorithm, x)
   end
 
   defnp check_weights(weights) do

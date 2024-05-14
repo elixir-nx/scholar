@@ -49,6 +49,30 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
       assert model.labels == y_train()
       assert model.weights == :uniform
     end
+
+    test "fit with random projection forest" do
+      key = Nx.Random.key(12)
+
+      model =
+        KNNClassifier.fit(x_train(), y_train(),
+          algorithm: :random_projection_forest,
+          num_neighbors: 3,
+          num_classes: 2,
+          num_trees: 4,
+          key: key
+        )
+
+      assert model.algorithm ==
+               Scholar.Neighbors.RandomProjectionForest.fit(x_train(),
+                 num_neighbors: 3,
+                 num_trees: 4,
+                 key: key
+               )
+
+      assert model.num_classes == 2
+      assert model.labels == y_train()
+      assert model.weights == :uniform
+    end
   end
 
   describe "predict" do
