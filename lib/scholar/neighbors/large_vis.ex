@@ -14,7 +14,7 @@ defmodule Scholar.Neighbors.LargeVis do
   import Nx.Defn
   import Scholar.Shared
   require Nx
-  alias Scholar.Neighbors.RandomProjectionForest, as: Forest
+  alias Scholar.Neighbors.RandomProjectionForest
   alias Scholar.Neighbors.Utils
 
   opts = [
@@ -22,6 +22,11 @@ defmodule Scholar.Neighbors.LargeVis do
       required: true,
       type: :pos_integer,
       doc: "The number of neighbors in the graph."
+    ],
+    metric: [
+      type: {:in, [:squared_euclidean, :euclidean]},
+      default: :euclidean,
+      doc: "The function that measures distance between two points."
     ],
     min_leaf_size: [
       type: :pos_integer,
@@ -63,7 +68,7 @@ defmodule Scholar.Neighbors.LargeVis do
 
       iex> key = Nx.Random.key(12)
       iex> tensor = Nx.iota({5, 2})
-      iex> {graph, distances} = Scholar.Neighbors.LargeVis.fit(tensor, num_neighbors: 2, min_leaf_size: 2, num_trees: 3, key: key)
+      iex> {graph, distances} = Scholar.Neighbors.LargeVis.fit(tensor, num_neighbors: 2, metric: :squared_euclidean, min_leaf_size: 2, num_trees: 3, key: key)
       iex> graph
       #Nx.Tensor<
         u32[5][2]
@@ -98,6 +103,13 @@ defmodule Scholar.Neighbors.LargeVis do
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
     k = opts[:num_neighbors]
+
+    metric =
+      case opts[:metric] do
+        :euclidean -> &Scholar.Metrics.Distance.euclidean/2
+        :squared_euclidean -> &Scholar.Metrics.Distance.squared_euclidean/2
+      end
+
     min_leaf_size = opts[:min_leaf_size] || max(10, 2 * k)
 
     size = Nx.axis_size(tensor, 0)
@@ -108,6 +120,7 @@ defmodule Scholar.Neighbors.LargeVis do
       tensor,
       key,
       num_neighbors: k,
+      metric: metric,
       min_leaf_size: min_leaf_size,
       num_trees: num_trees,
       num_iters: opts[:num_iters]
@@ -116,15 +129,15 @@ defmodule Scholar.Neighbors.LargeVis do
 
   defnp fit_n(tensor, key, opts) do
     forest =
-      Forest.fit(tensor,
+      RandomProjectionForest.fit(tensor,
         num_neighbors: opts[:num_neighbors],
         min_leaf_size: opts[:min_leaf_size],
         num_trees: opts[:num_trees],
         key: key
       )
 
-    {graph, _} = Forest.predict(forest, tensor)
-    expand(graph, tensor, num_iters: opts[:num_iters])
+    {graph, _} = RandomProjectionForest.predict(forest, tensor)
+    expand(graph, tensor, metric: opts[:metric], num_iters: opts[:num_iters])
   end
 
   defn expand(graph, tensor, opts) do
@@ -140,17 +153,20 @@ defmodule Scholar.Neighbors.LargeVis do
               {tensor, iter = 0}
             },
             iter < num_iters do
-        {expansion_iter(graph, tensor), {tensor, iter + 1}}
+        {expansion_iter(graph, tensor, metric: opts[:metric]), {tensor, iter + 1}}
       end
 
     result
   end
 
-  defnp expansion_iter(graph, tensor) do
+  defnp expansion_iter(graph, tensor, opts) do
     {size, k} = Nx.shape(graph)
     candidate_indices = Nx.take(graph, graph) |> Nx.reshape({size, k * k})
     candidate_indices = Nx.concatenate([graph, candidate_indices], axis: 1)
 
-    Utils.find_neighbors(tensor, tensor, candidate_indices, num_neighbors: k)
+    Utils.brute_force_search_with_candidates(tensor, tensor, candidate_indices,
+      num_neighbors: k,
+      metric: opts[:metric]
+    )
   end
 end

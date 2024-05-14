@@ -25,7 +25,7 @@ defmodule Scholar.Neighbors.BruteKNN do
       type: {:or, [{:custom, Scholar.Options, :metric, []}, {:fun, 2}]},
       default: {:minkowski, 2},
       doc: ~S"""
-      The function that measures distance between two points. Possible values:
+      The function that measures the distance between two points. Possible values:
 
       * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
       we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.

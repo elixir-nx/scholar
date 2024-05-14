@@ -3,16 +3,20 @@ defmodule Scholar.Neighbors.Utils do
   import Nx.Defn
   require Nx
 
-  defn find_neighbors(query, data, candidate_indices, opts) do
+  defn brute_force_search_with_candidates(data, query, candidate_indices, opts) do
     k = opts[:num_neighbors]
+    metric = opts[:metric]
+    dim = Nx.axis_size(data, 1)
     {size, length} = Nx.shape(candidate_indices)
 
-    distances =
+    x =
       query
       |> Nx.new_axis(1)
-      |> Nx.subtract(Nx.take(data, candidate_indices))
-      |> Nx.pow(2)
-      |> Nx.sum(axes: [2])
+      |> Nx.broadcast({size, length, dim})
+      |> Nx.vectorize([:query, :candidates])
+
+    y = Nx.take(data, candidate_indices) |> Nx.vectorize([:query, :candidates])
+    distances = metric.(x, y) |> Nx.devectorize() |> Nx.rename(nil)
 
     distances =
       if length > 1 do
@@ -55,11 +59,11 @@ defmodule Scholar.Neighbors.Utils do
     target = Nx.broadcast(Nx.u32(0), {size, length})
     samples = Nx.iota({size, length, 1}, axis: 0)
 
-    indices =
+    target_indices =
       Nx.concatenate([samples, Nx.new_axis(indices, 2)], axis: 2)
       |> Nx.reshape({size * length, 2})
 
     updates = Nx.iota({size, length}, axis: 1) |> Nx.reshape({size * length})
-    Nx.indexed_add(target, indices, updates)
+    Nx.indexed_add(target, target_indices, updates)
   end
 end
