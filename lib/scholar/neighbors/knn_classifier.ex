@@ -140,15 +140,15 @@ defmodule Scholar.Neighbors.KNNClassifier do
   end
 
   @doc """
-  Makes predictions using a k-NN classifier model.
+  Predicts classes using a k-NN classifier model.
 
   ## Examples
 
       iex> x_train = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
       iex> y_train = Nx.tensor([0, 0, 0, 1, 1])
       iex> model = Scholar.Neighbors.KNNClassifier.fit(x_train, y_train, num_neighbors: 3, num_classes: 2)
-      iex> x_test = Nx.tensor([[1, 3], [4, 2], [3, 6]])
-      iex> Scholar.Neighbors.KNNClassifier.predict(model, x_test)
+      iex> x = Nx.tensor([[1, 3], [4, 2], [3, 6]])
+      iex> Scholar.Neighbors.KNNClassifier.predict(model, x)
       Nx.tensor([0, 0, 1])
   """
   defn predict(model, x) do
@@ -161,6 +161,24 @@ defmodule Scholar.Neighbors.KNNClassifier do
     end
   end
 
+  @doc """
+  Predicts class probabilities using a k-NN classifier model.
+
+  ## Examples
+
+      iex> x_train = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
+      iex> y_train = Nx.tensor([0, 0, 0, 1, 1])
+      iex> model = Scholar.Neighbors.KNNClassifier.fit(x_train, y_train, num_neighbors: 3, num_classes: 2)
+      iex> x = Nx.tensor([[1, 3], [4, 2], [3, 6]])
+      iex> Scholar.Neighbors.KNNClassifier.predict_proba(model, x)
+      Nx.tensor(
+        [
+          [1.0, 0.0],
+          [1.0, 0.0],
+          [1.0, 0.0]
+        ]
+      )
+  """
   defn predict_proba(model, x) do
     num_samples = Nx.axis_size(x, 0)
     {neighbors, distances} = compute_knn(model.algorithm, x)
@@ -170,21 +188,21 @@ defmodule Scholar.Neighbors.KNNClassifier do
 
     weights =
       case model.weights do
-        :distance -> check_weights(distances)
         :uniform -> Nx.broadcast(1.0, neighbors)
+        :distance -> check_weights(distances)
       end
 
     indices =
       Nx.stack(
         [Nx.iota(Nx.shape(labels_pred), axis: 0), Nx.take(model.labels, labels_pred)],
-        axis: -1 # TODO: Replace -1 here
+        axis: 2
       )
       |> Nx.flatten(axes: [0, 1])
 
     proba = Nx.indexed_add(proba, indices, Nx.flatten(weights))
     normalizer = Nx.sum(proba, axes: [1])
     normalizer = Nx.select(normalizer == 0, 1, normalizer)
-    proba / Nx.new_axis(normalizer, -1) # TODO: Replace -1 here
+    proba / Nx.new_axis(normalizer, 1)
   end
 
   deftransformp compute_knn(algorithm, x) do

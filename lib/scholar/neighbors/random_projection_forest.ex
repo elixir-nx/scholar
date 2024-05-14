@@ -326,9 +326,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     if Nx.axis_size(forest.data, 1) != Nx.axis_size(query, 1) do
       raise ArgumentError,
             """
-            expected query tensor to have the same dimension as tensor used to grow the forest, \
-            got #{inspect(Nx.axis_size(forest.data, 1))} \
-            and #{inspect(Nx.axis_size(query, 1))}
+            expected query tensor to have same number of features as tensor used to grow the forest, \
+            got #{inspect(Nx.axis_size(query, 1))} \
+            and #{inspect(Nx.axis_size(forest.data, 1))}
             """
     end
 

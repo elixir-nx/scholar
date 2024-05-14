@@ -318,11 +318,20 @@ defmodule Scholar.Neighbors.KDTree do
   """
   deftransform predict(tree, data) do
     if Nx.rank(data) != 2 do
-      raise ArgumentError, "Input data must be a 2D tensor"
+      raise ArgumentError,
+            """
+            expected query tensor to have shape {num_queries, num_features}, \
+            got tensor with shape: #{inspect(Nx.shape(data))}
+            """
     end
 
-    if Nx.axis_size(data, -1) != Nx.axis_size(tree.data, -1) do
-      raise ArgumentError, "Input data must have the same number of features as the training data"
+    if Nx.axis_size(tree.data, 1) != Nx.axis_size(data, 1) do
+      raise ArgumentError,
+            """
+            expected query tensor to have same number of features as tensor used to fit the tree, \
+            got #{inspect(Nx.axis_size(data, 1))} \
+            and #{inspect(Nx.axis_size(tree.data, 1))}
+            """
     end
 
     predict_n(tree, data)

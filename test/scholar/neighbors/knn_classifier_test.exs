@@ -40,8 +40,8 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
       model =
         KNNClassifier.fit(x_train(), y_train(),
           algorithm: :kd_tree,
-          num_neighbors: 3,
-          num_classes: 2
+          num_classes: 2,
+          num_neighbors: 3
         )
 
       assert model.algorithm == Scholar.Neighbors.KDTree.fit(x_train(), num_neighbors: 3)
@@ -56,8 +56,8 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
       model =
         KNNClassifier.fit(x_train(), y_train(),
           algorithm: :random_projection_forest,
-          num_neighbors: 3,
           num_classes: 2,
+          num_neighbors: 3,
           num_trees: 4,
           key: key
         )
@@ -86,8 +86,8 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
       model =
         KNNClassifier.fit(x_train(), y_train(),
           algorithm: :kd_tree,
-          num_neighbors: 3,
-          num_classes: 2
+          num_classes: 2,
+          num_neighbors: 3
         )
 
       labels_pred = KNNClassifier.predict(model, x())
@@ -97,8 +97,8 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
     test "predict with weights set to :distance" do
       model =
         KNNClassifier.fit(x_train(), y_train(),
-          num_neighbors: 3,
           num_classes: 2,
+          num_neighbors: 3,
           weights: :distance
         )
 
@@ -109,8 +109,8 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
     test "predict with specific metric and weights set to :distance" do
       model =
         KNNClassifier.fit(x_train(), y_train(),
-          num_neighbors: 3,
           num_classes: 2,
+          num_neighbors: 3,
           metric: {:minkowski, 1.5},
           weights: :distance
         )
@@ -124,13 +124,96 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
 
       model =
         KNNClassifier.fit(x_train(), y_train(),
-          num_neighbors: 3,
           num_classes: 2,
+          num_neighbors: 3,
           weights: :distance
         )
 
       labels_pred = KNNClassifier.predict(model, x)
       assert labels_pred == Nx.tensor([0, 1, 0, 1])
+    end
+  end
+
+  describe "predict_proba" do
+    test "predict_proba with default values" do
+      model = KNNClassifier.fit(x_train(), y_train(), num_classes: 2, num_neighbors: 3)
+      predictions = KNNClassifier.predict_proba(model, x())
+
+      assert_all_close(
+        predictions,
+        Nx.tensor([
+          [0.33333333, 0.66666667],
+          [0.33333333, 0.66666667],
+          [0.66666667, 0.33333333],
+          [0.0, 1.0]
+        ])
+      )
+    end
+
+    test "predict_proba with weights set to :distance" do
+      model =
+        KNNClassifier.fit(x_train(), y_train(),
+          num_neighbors: 3,
+          num_classes: 2,
+          weights: :distance
+        )
+
+      predictions = KNNClassifier.predict_proba(model, x())
+
+      assert_all_close(
+        predictions,
+        Nx.tensor([
+          [0.40351151, 0.59648849],
+          [0.31717204, 0.68282796],
+          [0.7283494, 0.2716506],
+          [0.0, 1.0]
+        ])
+      )
+    end
+
+    test "predict_proba with weights set to :distance and with specific metric" do
+      model =
+        KNNClassifier.fit(x_train(), y_train(),
+          num_classes: 2,
+          num_neighbors: 3,
+          weights: :distance,
+          metric: {:minkowski, 1.5}
+        )
+
+      predictions = KNNClassifier.predict_proba(model, x())
+
+      assert_all_close(
+        predictions,
+        Nx.tensor([
+          [0.40381038, 0.59618962],
+          [0.31457406, 0.68542594],
+          [0.72993802, 0.27006198],
+          [0.0, 1.0]
+        ])
+      )
+    end
+
+    test "predict_proba with weights set to :distance and with x that contains sample with zero-distance" do
+      x = Nx.tensor([[3, 6, 7, 5], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
+
+      model =
+        KNNClassifier.fit(x_train(), y_train(),
+          num_classes: 2,
+          num_neighbors: 3,
+          weights: :distance
+        )
+
+      predictions = KNNClassifier.predict_proba(model, x)
+
+      assert_all_close(
+        predictions,
+        Nx.tensor([
+          [1.0, 0.0],
+          [0.31717204, 0.68282796],
+          [0.7283494, 0.2716506],
+          [0.0, 1.0]
+        ])
+      )
     end
   end
 end
