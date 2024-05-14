@@ -273,7 +273,8 @@ defmodule Scholar.Neighbors.KDTree do
       iex> x = Nx.iota({10, 2})
       iex> x_predict = Nx.tensor([[2, 5], [1, 9], [6, 4]])
       iex> kdtree = Scholar.Neighbors.KDTree.fit(x, num_neighbors: 3)
-      iex> Scholar.Neighbors.KDTree.predict(kdtree, x_predict)
+      iex> {indices, distances} = Scholar.Neighbors.KDTree.predict(kdtree, x_predict)
+      iex> indices
       #Nx.Tensor<
         s64[3][3]
         [
@@ -282,11 +283,21 @@ defmodule Scholar.Neighbors.KDTree do
           [2, 3, 1]
         ]
       >
+      iex> distances
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [2.0, 2.0, 4.4721360206604],
+          [5.0, 5.385164737701416, 6.082762718200684],
+          [2.2360680103302, 3.0, 4.123105525970459]
+        ]
+      >
 
       iex> x = Nx.iota({10, 2})
       iex> x_predict = Nx.tensor([[2, 5], [1, 9], [6, 4]])
       iex> kdtree = Scholar.Neighbors.KDTree.fit(x, num_neighbors: 3, metric: {:minkowski, 1})
-      iex> Scholar.Neighbors.KDTree.predict(kdtree, x_predict)
+      iex> {indices, distances} = Scholar.Neighbors.KDTree.predict(kdtree, x_predict)
+      iex> indices
       #Nx.Tensor<
         s64[3][3]
         [
@@ -295,8 +306,34 @@ defmodule Scholar.Neighbors.KDTree do
           [2, 3, 1]
         ]
       >
+      iex> distances
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [2.0, 2.0, 6.0],
+          [7.0, 7.0, 7.0],
+          [3.0, 3.0, 5.0]
+        ]
+      >
   """
   deftransform predict(tree, data) do
+    if Nx.rank(data) != 2 do
+      raise ArgumentError,
+            """
+            expected query tensor to have shape {num_queries, num_features}, \
+            got tensor with shape: #{inspect(Nx.shape(data))}
+            """
+    end
+
+    if Nx.axis_size(tree.data, 1) != Nx.axis_size(data, 1) do
+      raise ArgumentError,
+            """
+            expected query tensor to have same number of features as tensor used to fit the tree, \
+            got #{inspect(Nx.axis_size(data, 1))} \
+            and #{inspect(Nx.axis_size(tree.data, 1))}
+            """
+    end
+
     predict_n(tree, data)
   end
 
@@ -368,8 +405,8 @@ defmodule Scholar.Neighbors.KDTree do
         point
       ])
 
-    {nearest_neighbors, _} =
-      while {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}},
+    {{nearest_neighbors, distances}, _} =
+      while {{nearest_neighbors, distances}, {node, data, indices, point, visited, i, mode}},
             node != -1 and i >= 0 do
         coord_indicator = rem(i, dims)
 
@@ -478,10 +515,11 @@ defmodule Scholar.Neighbors.KDTree do
               {node, i, visited, nearest_neighbors, distances, none()}
           end
 
-        {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}}
+        {{nearest_neighbors, distances}, {node, data, indices, point, visited, i, mode}}
       end
 
-    Nx.revectorize(nearest_neighbors, input_vectorized_axes, target_shape: {num_points, k})
+    {Nx.revectorize(nearest_neighbors, input_vectorized_axes, target_shape: {num_points, k}),
+     Nx.revectorize(distances, input_vectorized_axes, target_shape: {num_points, k})}
   end
 
   defnp down(), do: Nx.u8(0)

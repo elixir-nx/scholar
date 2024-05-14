@@ -1,5 +1,5 @@
 defmodule Scholar.Neighbors.KDTreeTest do
-  use ExUnit.Case, async: true
+  use Scholar.Case, async: true
   alias Scholar.Neighbors.KDTree
   doctest KDTree
 
@@ -63,30 +63,70 @@ defmodule Scholar.Neighbors.KDTreeTest do
   describe "predict knn" do
     test "all defaults" do
       kdtree = KDTree.fit(x())
+      {indices, distances} = KDTree.predict(kdtree, x_pred())
 
-      assert KDTree.predict(kdtree, x_pred()) ==
-               Nx.tensor([[0, 6, 4], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
+      assert indices == Nx.tensor([[0, 6, 4], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
+
+      assert_all_close(
+        distances,
+        Nx.tensor([
+          [3.464101552963257, 4.582575798034668, 4.795831680297852],
+          [4.242640495300293, 4.690415859222412, 4.795831680297852],
+          [3.7416574954986572, 5.5677642822265625, 6.0],
+          [3.872983455657959, 3.872983455657959, 6.164413928985596]
+        ])
+      )
     end
 
     test "metric set to {:minkowski, 1.5}" do
       kdtree = KDTree.fit(x(), metric: {:minkowski, 1.5})
+      {indices, distances} = KDTree.predict(kdtree, x_pred())
 
-      assert KDTree.predict(kdtree, x_pred()) ==
-               Nx.tensor([[0, 6, 2], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
+      assert indices == Nx.tensor([[0, 6, 2], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
+
+      assert_all_close(
+        distances,
+        Nx.tensor([
+          [4.065119743347168, 5.191402435302734, 5.862917423248291],
+          [5.198591709136963, 5.591182708740234, 5.869683265686035],
+          [4.334622859954834, 6.35192346572876, 6.9637274742126465],
+          [4.649191856384277, 4.649191856384277, 7.664907932281494]
+        ])
+      )
     end
 
     test "k set to 4" do
       kdtree = KDTree.fit(x(), num_neighbors: 4)
+      {indices, distances} = KDTree.predict(kdtree, x_pred())
 
-      assert KDTree.predict(kdtree, x_pred()) ==
-               Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
+      assert indices == Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
+
+      assert_all_close(
+        distances,
+        Nx.tensor([
+          [3.464101552963257, 4.582575798034668, 4.795831680297852, 5.099019527435303],
+          [4.242640495300293, 4.690415859222412, 4.795831680297852, 7.4833149909973145],
+          [3.7416574954986572, 5.5677642822265625, 6.0, 6.480740547180176],
+          [3.872983455657959, 3.872983455657959, 6.164413928985596, 6.78233003616333]
+        ])
+      )
     end
 
     test "float type data" do
       kdtree = KDTree.fit(x() |> Nx.as_type(:f64), num_neighbors: 4)
+      {indices, distances} = KDTree.predict(kdtree, x_pred())
 
-      assert KDTree.predict(kdtree, x_pred()) ==
-               Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
+      assert indices == Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
+
+      assert_all_close(
+        distances,
+        Nx.tensor([
+          [3.464101552963257, 4.582575798034668, 4.795831680297852, 5.099019527435303],
+          [4.242640495300293, 4.690415859222412, 4.795831680297852, 7.4833149909973145],
+          [3.7416574954986572, 5.5677642822265625, 6.0, 6.480740547180176],
+          [3.872983455657959, 3.872983455657959, 6.164413928985596, 6.78233003616333]
+        ])
+      )
     end
   end
 end
