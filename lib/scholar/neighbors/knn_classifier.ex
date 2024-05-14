@@ -181,7 +181,7 @@ defmodule Scholar.Neighbors.KNNClassifier do
   """
   defn predict_probability(model, x) do
     num_samples = Nx.axis_size(x, 0)
-    type = Nx.Type.merge(to_float_type(x), {:f, 32})
+    type = to_float_type(x)
     {neighbors, distances} = compute_knn(model.algorithm, x)
     neighbor_labels = Nx.take(model.labels, neighbors)
     proba = Nx.broadcast(Nx.tensor(0.0, type: type), {num_samples, model.num_classes})
