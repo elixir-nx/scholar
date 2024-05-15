@@ -156,8 +156,11 @@ defmodule Scholar.Neighbors.KNNClassifier do
     neighbor_labels = Nx.take(model.labels, neighbors)
 
     case model.weights do
-      :uniform -> Nx.mode(neighbor_labels, axis: 1)
-      :distance -> weighted_mode(neighbor_labels, check_weights(distances))
+      :uniform ->
+        Nx.mode(neighbor_labels, axis: 1)
+
+      :distance ->
+        weighted_mode(neighbor_labels, Scholar.Neighbors.Utils.check_weights(distances))
     end
   end
 
@@ -189,7 +192,7 @@ defmodule Scholar.Neighbors.KNNClassifier do
     weights =
       case model.weights do
         :uniform -> Nx.broadcast(1.0, neighbors)
-        :distance -> check_weights(distances)
+        :distance -> Scholar.Neighbors.Utils.check_weights(distances)
       end
 
     indices =
@@ -207,14 +210,6 @@ defmodule Scholar.Neighbors.KNNClassifier do
 
   deftransformp compute_knn(algorithm, x) do
     algorithm.__struct__.predict(algorithm, x)
-  end
-
-  defnp check_weights(weights) do
-    zero_mask = weights == 0
-    zero_rows = zero_mask |> Nx.any(axes: [1], keep_axes: true) |> Nx.broadcast(weights)
-    weights = Nx.select(zero_mask, 1, weights)
-    weights_inv = 1 / weights
-    Nx.select(zero_rows, Nx.select(zero_mask, 1, 0), weights_inv)
   end
 
   defnp weighted_mode(tensor, weights) do
