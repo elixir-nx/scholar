@@ -92,4 +92,12 @@ defmodule Scholar.Neighbors.Utils do
     updates = Nx.iota({size, length}, axis: 1) |> Nx.reshape({size * length})
     Nx.indexed_add(target, target_indices, updates)
   end
+
+  defn check_weights(weights) do
+    zero_mask = weights == 0
+    zero_rows = zero_mask |> Nx.any(axes: [1], keep_axes: true) |> Nx.broadcast(weights)
+    weights = Nx.select(zero_mask, 1, weights)
+    weights_inv = 1 / weights
+    Nx.select(zero_rows, zero_mask, weights_inv)
+  end
 end
