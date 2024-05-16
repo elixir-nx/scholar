@@ -43,14 +43,20 @@ defmodule Scholar.Linear.LinearHelpers do
   # targets by sqrt(sample_weight).
   @doc false
   defn rescale(x, y, sample_weights) do
-    case Nx.shape(sample_weights) do
-      {} = scalar ->
-        scalar = Nx.sqrt(scalar)
-        {scalar * x, scalar * y}
+    factor = Nx.sqrt(sample_weights)
 
-      _ ->
-        scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
-        {Nx.dot(scale, x), Nx.dot(scale, y)}
-    end
+    x_scaled =
+      case Nx.shape(factor) do
+        {} -> factor * x
+        _ -> x * Nx.new_axis(factor, -1)
+      end
+
+    y_scaled =
+      case Nx.rank(y) do
+        1 -> factor * y
+        _ -> y * Nx.new_axis(factor, -1)
+      end
+
+    {x_scaled, y_scaled}
   end
 end
