@@ -12,7 +12,7 @@ defmodule Scholar.Linear.PolynomialRegression do
 
   opts = [
     sample_weights: [
-      type: {:list, {:custom, Scholar.Options, :positive_number, []}},
+      type: {:custom, Scholar.Options, :weights, []},
       doc: """
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
