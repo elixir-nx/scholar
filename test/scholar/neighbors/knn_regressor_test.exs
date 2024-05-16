@@ -19,7 +19,7 @@ defmodule Scholar.Neighbors.KNNRegressorTest do
   end
 
   defp y_train do
-    Nx.tensor([0, 1, 1, 1, 1, 1, 1, 1, 0, 0])
+    Nx.tensor([[0], [1], [1], [1], [1], [1], [1], [1], [0], [0]])
   end
 
   defp x do
@@ -70,13 +70,13 @@ defmodule Scholar.Neighbors.KNNRegressorTest do
     test "predict with default parameters" do
       model = KNNRegressor.fit(x_train(), y_train(), num_neighbors: 3)
       y_pred = KNNRegressor.predict(model, x())
-      assert_all_close(y_pred, Nx.tensor([0.66666667, 0.66666667, 0.33333333, 1.0]))
+      assert_all_close(y_pred, Nx.tensor([[0.66666667], [0.66666667], [0.33333333], [1.0]]))
     end
 
     test "predict with weights set to :distance" do
       model = KNNRegressor.fit(x_train(), y_train(), num_neighbors: 3, weights: :distance)
       y_pred = KNNRegressor.predict(model, x())
-      assert_all_close(y_pred, Nx.tensor([0.59648849, 0.68282796, 0.2716506, 1.0]))
+      assert_all_close(y_pred, Nx.tensor([[0.59648849], [0.68282796], [0.2716506], [1.0]]))
     end
 
     test "predict with cosine metric and weights set to :distance" do
@@ -88,7 +88,7 @@ defmodule Scholar.Neighbors.KNNRegressorTest do
         )
 
       y_pred = KNNRegressor.predict(model, x())
-      assert_all_close(y_pred, Nx.tensor([0.5736568, 0.427104, 0.33561941, 1.0]))
+      assert_all_close(y_pred, Nx.tensor([[0.5736568], [0.427104], [0.33561941], [1.0]]))
     end
 
     test "predict with 2D labels" do

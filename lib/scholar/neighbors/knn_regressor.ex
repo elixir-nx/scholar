@@ -55,43 +55,43 @@ defmodule Scholar.Neighbors.KNNRegressor do
   ## Examples
 
       iex> x = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
-      iex> y = Nx.tensor([1, 2, 3, 4, 5])
+      iex> y = Nx.tensor([[1], [2], [3], [4], [5]])
       iex> model = Scholar.Neighbors.KNNRegressor.fit(x, y, num_neighbors: 3)
       iex> model.algorithm
       Scholar.Neighbors.BruteKNN.fit(x, num_neighbors: 3)
       iex> model.labels
-      Nx.tensor([1, 2, 3, 4, 5])
+      Nx.tensor([[1], [2], [3], [4], [5]])
 
       iex> x = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
-      iex> y = Nx.tensor([1, 2, 3, 4, 5])
+      iex> y = Nx.tensor([[1], [2], [3], [4], [5]])
       iex> model = Scholar.Neighbors.KNNRegressor.fit(x, y, algorithm: :kd_tree, num_neighbors: 3, metric: {:minkowski, 1})
       iex> model.algorithm
       Scholar.Neighbors.KDTree.fit(x, num_neighbors: 3, metric: {:minkowski, 1})
       iex> model.labels
-      Nx.tensor([1, 2, 3, 4, 5])
+      Nx.tensor([[1], [2], [3], [4], [5]])
 
       iex> x = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
-      iex> y = Nx.tensor([1, 2, 3, 4, 5])
+      iex> y = Nx.tensor([[1], [2], [3], [4], [5]])
       iex> key = Nx.Random.key(12)
       iex> model = Scholar.Neighbors.KNNRegressor.fit(x, y, algorithm: :random_projection_forest, num_neighbors: 2, num_trees: 4, key: key)
       iex> model.algorithm
       Scholar.Neighbors.RandomProjectionForest.fit(x, num_neighbors: 2, num_trees: 4, key: key)
       iex> model.labels
-      Nx.tensor([1, 2, 3, 4, 5])
+      Nx.tensor([[1], [2], [3], [4], [5]])
   """
   deftransform fit(x, y, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             """
-            expected x to have shape {num_samples, num_features}, \
+            expected x to have shape {num_samples, num_features_in}, \
             got tensor with shape: #{inspect(Nx.shape(x))}
             """
     end
 
-    if Nx.rank(y) not in [1, 2] do
+    if Nx.rank(y) != 2 do
       raise ArgumentError,
             """
-            expected y to have rank 1 or 2, \
+            expected y to have shape {num_samples, num_features_out}, \
             got tensor with shape: #{inspect(Nx.shape(y))}
             """
     end
@@ -137,11 +137,11 @@ defmodule Scholar.Neighbors.KNNRegressor do
   ## Examples
 
       iex> x_train = Nx.tensor([[1, 2], [2, 3], [3, 4], [4, 5], [5, 6]])
-      iex> y_train = Nx.tensor([1, 2, 3, 4, 5])
+      iex> y_train = Nx.tensor([[1], [2], [3], [4], [5]])
       iex> model = Scholar.Neighbors.KNNRegressor.fit(x_train, y_train, num_neighbors: 3)
       iex> x = Nx.tensor([[1, 3], [4, 2], [3, 6]])
       iex> Scholar.Neighbors.KNNRegressor.predict(model, x)
-      Nx.tensor([2.0, 2.0, 4.0])
+      Nx.tensor([[2.0], [2.0], [4.0]])
   """
   defn predict(model, x) do
     {neighbors, distances} = compute_knn(model.algorithm, x)
@@ -152,14 +152,10 @@ defmodule Scholar.Neighbors.KNNRegressor do
         Nx.mean(neighbor_labels, axes: [1])
 
       :distance ->
-        weights = Scholar.Neighbors.Utils.check_weights(distances)
-
         weights =
-          if Nx.rank(model.labels) == 2 do
-            weights |> Nx.new_axis(2) |> Nx.broadcast(neighbor_labels)
-          else
-            weights
-          end
+          Scholar.Neighbors.Utils.check_weights(distances)
+          |> Nx.new_axis(2)
+          |> Nx.broadcast(neighbor_labels)
 
         Nx.weighted_mean(neighbor_labels, weights, axes: [1])
     end
