@@ -15,15 +15,13 @@ defmodule Scholar.Decomposition.PCA do
   import Nx.Defn
 
   @derive {Nx.Container,
-           keep: [:num_components],
+           keep: [:num_components, :num_samples, :num_features],
            containers: [
              :components,
              :explained_variance,
              :explained_variance_ratio,
              :singular_values,
-             :mean,
-             :num_features,
-             :num_samples
+             :mean
            ]}
   defstruct [
     :components,
@@ -157,7 +155,7 @@ defmodule Scholar.Decomposition.PCA do
         num_samples
       )
 
-    {_, components} = flip_svd(decomposer, components)
+    {_, components} = Scholar.Decomposition.Utils.flip_svd(decomposer, components)
     components = components[[0..(num_components - 1), ..]]
 
     explained_variance = singular_values * singular_values / (num_samples - 1)
@@ -287,15 +285,6 @@ defmodule Scholar.Decomposition.PCA do
     else
       decomposer * singular_values[[0..(num_components - 1)]]
     end
-  end
-
-  defnp flip_svd(u, v) do
-    # columns of u, rows of v
-    max_abs_cols_idx = u |> Nx.abs() |> Nx.argmax(axis: 0, keep_axis: true)
-    signs = u |> Nx.take_along_axis(max_abs_cols_idx, axis: 0) |> Nx.sign() |> Nx.squeeze()
-    u = u * signs
-    v = v * Nx.new_axis(signs, -1)
-    {u, v}
   end
 
   deftransformp calculate_num_components(

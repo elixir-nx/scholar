@@ -89,4 +89,25 @@ defmodule Scholar.Shared do
 
     valid_broadcast(to_parse - 1, n_dims, shape1, shape2)
   end
+
+  defn get_batches(tensor, opts) do
+    {size, dim} = Nx.shape(tensor)
+    batch_size = min(opts[:batch_size], size)
+    num_batches = div(size, batch_size)
+    leftover_size = rem(size, batch_size)
+
+    batches =
+      tensor
+      |> Nx.slice_along_axis(0, num_batches * batch_size, axis: 0)
+      |> Nx.reshape({num_batches, batch_size, dim})
+
+    leftover =
+      if leftover_size > 0 do
+        Nx.slice_along_axis(tensor, num_batches * batch_size, leftover_size, axis: 0)
+      else
+        nil
+      end
+
+    {batches, leftover}
+  end
 end
