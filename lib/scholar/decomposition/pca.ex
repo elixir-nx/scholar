@@ -123,12 +123,8 @@ defmodule Scholar.Decomposition.PCA do
           [0.0, 0.0]
         ),
         num_components: 2,
-        num_features: Nx.tensor(
-          2
-        ),
-        num_samples: Nx.tensor(
-          6
-        )
+        num_features: 2,
+        num_samples: 6
       }
   """
   deftransform fit(x, opts \\ []) do
@@ -277,7 +273,7 @@ defmodule Scholar.Decomposition.PCA do
         num_samples
       )
 
-    {decomposer, _components} = flip_svd(decomposer, components)
+    {decomposer, _components} = Scholar.Decomposition.Utils.flip_svd(decomposer, components)
     decomposer = decomposer[[.., 0..(num_components - 1)]]
 
     if opts[:whiten] do
