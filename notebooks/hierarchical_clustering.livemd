@@ -20,7 +20,7 @@ Let's configure `EXLA` as our default backend (where our tensors are stored) and
 
 ```elixir
 Nx.global_default_backend(EXLA.Backend)
-Nx.global_default_options(compiler: EXLA)
+Nx.Defn.global_default_options(compiler: EXLA)
 ```
 
 ## Introduction

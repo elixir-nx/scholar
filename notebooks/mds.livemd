@@ -25,7 +25,7 @@ And let's configure `EXLA` as our default backend (where our tensors are stored)
 
 ```elixir
 Nx.global_default_backend(EXLA.Backend)
-Nx.global_default_options(compiler: EXLA)
+Nx.Defn.global_default_options(compiler: EXLA)
 ```
 
 <!-- livebook:{"branch_parent_index":0} -->
@@ -38,7 +38,7 @@ The first example demonstrating MDS will use so-called Swiss Roll dataset. It's 
 
 | ![Skewness](https://scikit-learn.org/stable/_images/sphx_glr_plot_swissroll_001.png)                        |
 | :---------------------------------------------------------------------------------------------------------: |
-| Figure 1: Swiss Roll   (Source: https://scikit-learn.org/stable/auto_examples/manifold/plot_swissroll.html) |
+| Figure 1: Swiss Roll (Source: https://scikit-learn.org/stable/auto_examples/manifold/plot_swissroll.html)   |
 
 <!-- livebook:{"break_markdown":true} -->
 

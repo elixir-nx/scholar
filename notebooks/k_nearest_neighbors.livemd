@@ -32,7 +32,7 @@ And let's configure `EXLA` as our default backend (where our tensors are stored)
 
 ```elixir
 Nx.global_default_backend(EXLA.Backend)
-Nx.global_default_options(compiler: EXLA)
+Nx.Defn.global_default_options(compiler: EXLA)
 seed = 42
 key = Nx.Random.key(42)
 ```

@@ -27,7 +27,7 @@ And let's configure `EXLA` as our default backend (where our tensors are stored)
 
 ```elixir
 Nx.global_default_backend(EXLA.Backend)
-Nx.global_default_options(compiler: EXLA)
+Nx.Defn.global_default_options(compiler: EXLA)
 ```
 
 We are going to work with [Medical Cost Personal Datasets](https://www.kaggle.com/datasets/mirichoi0218/insurance) to predict medical charges that were applied to each person from the dataset. Let's download it:

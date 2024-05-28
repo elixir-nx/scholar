@@ -12,7 +12,7 @@ defmodule Scholar.MixProject do
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
-      docs: docs(),
+      docs: &docs/0,
       package: package()
     ]
   end
@@ -50,6 +50,7 @@ defmodule Scholar.MixProject do
     [
       main: "readme",
       source_url: @source_url,
+      assets: "notebooks/assets",
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [
