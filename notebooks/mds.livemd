@@ -21,6 +21,13 @@ alias VegaLite, as: Vl
 alias Explorer.DataFrame, as: DF
 ```
 
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
+Nx.global_default_backend(EXLA.Backend)
+Nx.global_default_options(compiler: EXLA)
+```
+
 <!-- livebook:{"branch_parent_index":0} -->
 
 ## Swiss Roll
@@ -1043,11 +1050,11 @@ swiss_roll =
   ])
 ```
 
-Now we will call `MDS.fit/1` on our dataset. To speed up calculations we'll use `EXLA.jit_apply/2` that JITs the computations and make them faster.
+Now we will call `MDS.fit/1` on our dataset:
 
 ```elixir
 key = Nx.Random.key(42)
-embedding = EXLA.jit_apply(&MDS.fit(&1, key: &2), [swiss_roll, key])
+embedding = MDS.fit(swiss_roll, key: key)
 ```
 
 Extract only embedded data from struct
@@ -1108,7 +1115,7 @@ Tucan.imshow(image, width: 200, height: 200, color_scheme: :greys, reverse: true
 ```
 
 ```elixir
-embedding = EXLA.jit_apply(&MDS.fit(&1, key: &2), [digits_data, key])
+embedding = MDS.fit(digits_data, key: key)
 embedded_data = embedding.embedding
 ```
 

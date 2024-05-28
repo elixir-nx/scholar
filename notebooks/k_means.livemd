@@ -17,14 +17,20 @@ Mix.install([
 ])
 ```
 
-## Introduction
+## Setup
 
-The main purpose of this livebook is to introduce the **KMeans** clustering algorithm. We will explore KMeans in three different use cases.
+This notebook introduces the **KMeans** clustering algorithm. We will explore KMeans in three different use cases. Let's setup some aliases:
 
 ```elixir
 alias Scholar.Cluster.KMeans
 require Explorer.DataFrame, as: DF
+```
+
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
 Nx.global_default_backend(EXLA.Backend)
+Nx.global_default_options(compiler: EXLA)
 key = Nx.Random.key(42)
 ```
 

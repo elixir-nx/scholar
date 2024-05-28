@@ -1,10 +1,10 @@
 <!-- livebook:{"file_entries":[{"name":"knn_gyms.png","type":"attachment"},{"name":"rbf_and_kdtree.png","type":"attachment"}]} -->
 
-# Nearest Neighbors
+# Nearest neighbors
 
 ```elixir
 Mix.install([
-  {:scholar, github: "elixir-nx/scholar", override: true},
+  {:scholar, "~> 0.3.0"},
   {:explorer, "~> 0.8.1"},
   {:exla, "~> 0.7.2"},
   {:nx, "~> 0.7.2"},
@@ -17,21 +17,27 @@ Mix.install([
 
 ## Setup
 
+We will use Explorer in this notebook, so let's define aliases for its main modules:
+
 ```elixir
 require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
-Nx.global_default_backend(EXLA.Backend)
 ```
 
-## Introduction to Nearest Neighbors
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
 
-In this notebook, we introduce the concept of "**nearest neighbors**." We start by defining what nearest neighbors are and why they are useful in real-life scenarios. Next, we present various methods to compute them, highlighting the advantages and disadvantages of each approach. To make this notebook easier to follow, we will demonstrate these algorithms on a few examples and analyze the results.
+```elixir
+Nx.global_default_backend(EXLA.Backend)
+Nx.global_default_options(compiler: EXLA)
+```
 
-## Definition of K-Nearest Neighbors
+## Definition of nearest neighbors
 
-Let's first define what exactly "nearest neighbors" are. Consider a set of points ${p_1, p_2, \ldots, p_N}$, where each point $p_i$ is represented as a vector of size $M$, with real-number coordinates: $p_i = (p_{i1}, p_{i2}, \ldots, p_{iM})$. We say that the dimension of the space is $M$. For convenience, instead of listing the set of points as ${p_1, p_2, \ldots, p_N}$, we can treat it as a matrix $P$ of size $N \times M$, where $P_{ij}$ represents the $j$th coordinate of the $i$th point.
+We introduced [k-nearest neighbors (KNN) in a previous notebook](k_nearest_neighbors.livemd) alongside some example problems. In that guide, we used the default algorithm for KNN, which uses a brute-force approach. In this document, we will introduce alternative algorithms and their trade-offs, but to do so, we need to define exactly what "nearest neighbors" are.
 
-A metric between two points $a$ and $b$ is defined as a function d that takes two points and returns a non-negative real number, subject to the following conditions for arbitrary points $a$, $b$, and $c$:
+Consider a set of points ${p_1, p_2, \ldots, p_N}$, where each point $p_i$ is represented as a vector of size $M$, with real-number coordinates: $p_i = (p_{i1}, p_{i2}, \ldots, p_{iM})$. We say that the dimension of the space is $M$. For convenience, instead of listing the set of points as ${p_1, p_2, \ldots, p_N}$, we can treat it as a matrix $P$ of size $N \times M$, where $P_{ij}$ represents the $j$th coordinate of the $i$th point.
+
+A metric between two points $a$ and $b$ is defined as a function `d` that takes two points and returns a non-negative real number, subject to the following conditions for arbitrary points $a$, $b$, and $c$:
 
 * $d(a,b) = 0 \iff a = b$ (identity)
 * $d(a,b) = d(b, a)$ (symmetry)
@@ -43,39 +49,19 @@ Given a set of points $P$, a point $q$, and a metric $d$, the $k$ nearest neighb
 
 It's especially interesting to consider the case when point $q$ is part of the set $P$. In the remainder of the notebook, we will assume that $q$ is indeed in $P$, and if this is not the case, we will note it explicitly.
 
-## Why Do We Want to Use K-Nearest Neighbors
-
-Now, after the formal section with definitions, let's move on to the more practical part: why would we even want to calculate something like K-nearest Neighbors? Consider the following example. Let's say you've just moved to a new city, and you're here for the first time. Since you're an active person, you'd like to find a nearby gym with good facilities. What would you do? You'd probably start by searching for gyms on online maps. The search results might look something like this.
-
-<!-- livebook:{"break_markdown":true} -->
-
-![](files/knn_gyms.png)
-
-<!-- livebook:{"break_markdown":true} -->
-
-Now you can check out the gyms and eventually decide which one will be your regular spot. What did the search engine do? It basically calculated the nearest gyms (nearest neighbors) from your current location, which is the essence of finding nearest neighbors.
-
-Now let's move to a more abstract example. You're listening to your favorite rock playlist and you think, "Yeah, these tracks are cool, but I've been listening to them on repeat. Maybe I should explore some new music." Searching for random songs might not be the most effective approach; you could end up with hip-hop or pop tracks, which you may not enjoy as much. However, it might also lead you to discover entirely new genres. A better approach could be to explore other rock playlists available online. While these playlists align with your preferred genre, they may not consider your unique tastes within rock music. Wouldn't it be great if there were a tool that could recommend new songs based on your previous playlists? Fortunately, such tools exist!
-
-One type of [recommendation system](https://en.wikipedia.org/wiki/Recommender_system) relies on collaborative filtering: it recommends songs based on what other users with similar musical tastes listen to. Another approach is to treat songs as points, like in our earlier definition, and then compute the closest songs to your favorites. This is another example of calculating nearest neighbors. While it might not be immediately obvious how to represent songs as points and measure the "distance" between them, it turns out that it can be done.
-
-Another use of nearest neighbors is in building classifiers and regressors. This approach was covered in a [previous notebook](https://github.com/elixir-nx/scholar/blob/main/notebooks/k_nearest_neighbors.livemd), which we strongly recommend you review before proceeding with this one.
-
-## How to compute K-Nearest Neighbors - Brute Force Approach
+## Brute force approach
 
 Now let's consider how we can compute the $k$-nearest neighbors. The simplest method is to compute the distance using a metric $d$ for each pair of points in the dataset. This can be represented as a matrix $D$ of size $N \times N$, where $D_{ij}$ indicates the distance between the $i$th and $j$th points. Given the symmetry of metric $d$, the matrix $D$ is also symmetric: $D_{ij} = D_{ji}$. To find the nearest neighbors, you would sort the distances for each point (sorting the rows of matrix $D$), and then return only the first $k$ columns from each row of the sorted matrix.
 
-While this method accurately computes the $k$-nearest neighbors, it has a major drawback: time complexity. The time complexity of this approach is $O(MN^2 + N\log(N)) = O(MN^2)$, where $N$ is the number of points, and $M$ represents the number of dimensions (features) of each point. Even if we set $M = 1$, when $N$ is very large (like the number of songs on Spotify, which is on the order of $10^8$), the number of operations required becomes unfeasible, even if $k$ is relatively small.
+While this method accurately computes the $k$-nearest neighbors, it has a major drawback: time complexity. The time complexity of this approach is $O(MN^2 + N\log(N)) = O(MN^2)$, where $N$ is the number of points, and $M$ represents the number of dimensions (features) of each point. Even if we set $M = 1$, when $N$ is very large (like the number of songs on Spotify, which is on the order of $10^8$), the number of operations required becomes unfeasible, even if $k$ is relatively small. Given this, for large values of $N$, we need to consider other approaches. However, the brute-force method can still be useful in certain situations. If $N$ is small, the distance matrix $D$ can be computed in a reasonable amount of time. Additionally, if $k \approx N$, this approach is optimal since you always need to compute $O(Nk)$, which leads to $O(N^2)$ operations. Computing the distance matrix is optimized in many frameworks, giving it an advantage over other methods when $k$ is on the order of magnitude of $N$.
 
-Given this, for large values of $N$, we need to consider other approaches. However, the brute-force method can still be useful in certain situations. If $N$ is small, the distance matrix $D$ can be computed in a reasonable amount of time. Additionally, if $k \approx N$, this approach is optimal since you always need to compute $O(Nk)$, which leads to $O(N^2)$ operations. Computing the distance matrix is optimized in many frameworks, giving it an advantage over other methods when $k$ is on the order of magnitude of $N$.
+Brute force is the default algorithm used by `Scholar.Neighbors.KNNClassifier` and `Scholar.Neighbors.KNNRegressor`. However, different algorithms can be given via the `:algorithm` option. Let's take a look at one of them.
 
-In Scholar, the brute-force approach is implemented [here](https://github.com/elixir-nx/scholar/blob/main/lib/scholar/neighbors/k_nearest_neighbors.ex). In a previous section, we mentioned a notebook that uses this approach to calculate $k$-nearest neighbors.
+<!-- livebook:{"branch_parent_index":1} -->
 
-<!-- livebook:{"branch_parent_index":3} -->
+## KDtrees
 
-## How to compute K-Nearest Neighbors - KDtrees
-
-From the previous section, we know that for large datasets, we need a much faster approach. It turns out that there is a data structure that allows querying for a single neighbor in $O(\log(N))$ average time, resulting in a total computation time of $O(kN\log(N))$, which is efficient for small values of $k$. But what is this data structure that allows querying faster than the brute-force approach? It's called a **KDTree**. KDTree, short for "K-Dimensional Tree", is a tree structure that organizes points in a K-dimensional space. More precisely, it's a binary tree where each non-leaf node has an associated splitting hyperplane. All points on the left side of this splitting hyperplane belong to the left subtree, while those on the right side belong to the right subtree. The dimension along which the split occurs is consistent across each level of the tree, and it changes as you move to different levels.
+For large datasets, we need a much faster approach. It turns out that there is a data structure that allows querying for a single neighbor in $O(\log(N))$ average time, resulting in a total computation time of $O(kN\log(N))$, which is efficient for small values of $k$. But what is this data structure that allows querying faster than the brute-force approach? It's called a **KDTree**. KDTree, short for "K-Dimensional Tree", is a tree structure that organizes points in a K-dimensional space. More precisely, it's a binary tree where each non-leaf node has an associated splitting hyperplane. All points on the left side of this splitting hyperplane belong to the left subtree, while those on the right side belong to the right subtree. The dimension along which the split occurs is consistent across each level of the tree, and it changes as you move to different levels.
 
 To better understand this, let's look at two graphical examples of KDTrees.
 
@@ -103,9 +89,9 @@ In this example, the dimensions are abstract values like name, salary, and age. 
 
 Now, let's move on to the code and implementation of KDTrees in Scholar!
 
-<!-- livebook:{"branch_parent_index":3} -->
+<!-- livebook:{"branch_parent_index":1} -->
 
-## KDtrees in action - Practical Example
+## KDtrees in action: a practical example
 
 In this example, we'll use data from the [National Health and Nutrition Examination Survey (NHANES) 2013-2014](https://archive.ics.uci.edu/dataset/887/national+health+and+nutrition+health+survey+2013-2014+(nhanes)+age+prediction+subset). The dataset consists of 7 features that are biomedical indicators. For more information, click the link above.
 
@@ -140,18 +126,13 @@ Once the data is preprocessed, we can move on to the KDTree model. First, we nee
 ```elixir
 num_neighbors = 6
 
-knn_model =
-  EXLA.jit(&Scholar.Neighbors.KDTree.fit(&1, k: num_neighbors, metric: {:minkowski, 2})).(x)
+knn_model = Scholar.Neighbors.KDTree.fit(x, k: 6, metric: {:minkowski, 2}))
 ```
 
 Now, we need to run a query to calculate the nearest neighbors for a given set of data. To compute the nearest neighbors, we call `Scholar.Neighbors.KDTree.predict`.
 
 ```elixir
-knn =
-  EXLA.jit(&Scholar.Neighbors.KDTree.predict(&1, &2, k: num_neighbors, metric: {:minkowski, 2})).(
-    knn_model,
-    x
-  )
+knn = Scholar.Neighbors.KDTree.predict(knn_model, x, k: 6, metric: {:minkowski, 2}))
 ```
 
 Before we compute the statistics from the results, we need to now what are the proportions of each group initially.
@@ -187,9 +168,11 @@ adults =
 
 Our intuition was correct: for seniors, 28% of their nearest neighbors in terms of medical results are also seniors, while for adults, nearly 86% of their nearest neighbors are also adults. This indicates that age should always be considered to ensure proper treatment when assessing medical results and drawing conclusions.
 
-## How to compute Approximated Nearest Neighbors - LargeVis
+## Approximated nearest neighbors with LargeVis
 
-In the previous example, KDTree was a perfect choice for computing K-Nearest Neighbors. However, this approach doesn't always work effectively. When the number of features grows, the efficiency of KDTree decreases significantly, so it's best suited for data with a smaller number of features (<15), like in the previous example. For data with many samples but also many features, a different approach is required. Here, algorithms that return an approximated version of nearest neighbors are needed. These approximated algorithms may not give exact solutions, but the deviation is usually minor and accepted as a tradeoff for faster computation. An example of an algorithm that computes approximated nearest neighbors is LargeVis.
+The approaches we have seen so far have been exact: they always find the closest `k` nearest neighbors. However, there are situations where exact computations are too expensive and we want to perform approximate computations.
+
+In the previous example, KDTree was a perfect choice for computing K-Nearest Neighbors. However, when the number of features grows, the efficiency of KDTree decreases significantly, so it's best suited for data with a smaller number of features (<15). For data with many samples but also many features, approximated versions of nearest neighbors are often preferred. They may not give exact solutions, but the deviation is usually minor and accepted as a tradeoff for faster computation.
 
 LargeVis is an approximated nearest neighbors algorithm that uses the concept of a Random Projection Forest. A Random Projection Forest consists of multiple trees. Each tree is built using a divide-and-conquer approach. The entire dataset is used to start the construction, and at each node, the data is projected onto a random hyperplane and split as follows: points with a projection smaller than or equal to the median go into the left subtree, while those with a projection greater than the median go into the right subtree. This process is then recursively applied to the left and right subtrees.
 

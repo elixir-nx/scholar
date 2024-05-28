@@ -55,11 +55,12 @@ defmodule Scholar.MixProject do
       extras: [
         "README.md",
         "notebooks/cv_gradient_boosting_tree.livemd",
-        "notebooks/hierarchical_clustering.livemd",
+        # "notebooks/hierarchical_clustering.livemd",
         "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd",
         "notebooks/linear_regression.livemd",
-        "notebooks/mds.livemd"
+        "notebooks/mds.livemd",
+        "notebooks/nearest_neighbors.livemd"
       ],
       groups_for_modules: [
         Models: [

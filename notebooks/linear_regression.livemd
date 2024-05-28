@@ -27,17 +27,15 @@ alias Scholar.Linear.LinearRegression, as: LR
 alias Scholar.Linear.PolynomialRegression, as: PR
 alias Scholar.Impute.SimpleImputer
 alias Scholar.Metrics.Regression
+```
+
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
 Nx.global_default_backend(EXLA.Backend)
+Nx.global_default_options(compiler: EXLA)
 seed = 42
 key = Nx.Random.key(42)
-```
-
-<!-- livebook:{"output":true} -->
-
-```
-
-02:37:23.509 [info] TfrtCpuClient created.
-
 ```
 
 <!-- livebook:{"output":true} -->

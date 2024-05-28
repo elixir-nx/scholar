@@ -1,10 +1,10 @@
 <!-- livebook:{"persist_outputs":true} -->
 
-# k-nearest neighbors
+# k-nearest neighbors (KNN)
 
 ```elixir
 Mix.install([
-  {:scholar, github: "elixir-nx/scholar", override: true},
+  {:scholar, "~> 0.3.0"},
   {:explorer, "~> 0.8.2", override: true},
   {:exla, "~> 0.7.2"},
   {:nx, "~> 0.7.2"},
@@ -18,7 +18,7 @@ Mix.install([
 
 ## Setup
 
-We will extensively use VegaLite, Explorer, and Scholar throughout this guide, so let's define some aliases:
+We will use VegaLite, Explorer, and Scholar throughout this guide, so let's define some aliases:
 
 ```elixir
 require Explorer.DataFrame, as: DF
@@ -28,16 +28,11 @@ alias Scholar.Neighbors.{KNNClassifier, KNNRegressor, BruteKNN}
 alias Scholar.Metrics.{Classification, Regression}
 ```
 
-<!-- livebook:{"output":true} -->
-
-```
-[Scholar.Metrics.Classification, Scholar.Metrics.Regression]
-```
-
-And let's configure `EXLA.Backend` as our default across the notebook and all branched sections:
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
 
 ```elixir
 Nx.global_default_backend(EXLA.Backend)
+Nx.global_default_options(compiler: EXLA)
 seed = 42
 key = Nx.Random.key(42)
 ```
@@ -54,8 +49,19 @@ key = Nx.Random.key(42)
 
 ## Introduction
 
-This notebook will cover the three primary applications of K-Nearest Neighbors: classification, regression, and
-anomaly detection.
+This notebook will cover the three primary applications of k-nearest Neighbors: classification, regression, and anomaly detection. Let's get started with a practical example. Imagine just moved to a new city, and you're here for the first time. Since you're an active person, you'd like to find a nearby gym with good facilities. What would you do? You'd probably start by searching for gyms on online maps. The search results might look something like this:
+
+<!-- livebook:{"break_markdown":true} -->
+
+![](files/knn_gyms.png)
+
+<!-- livebook:{"break_markdown":true} -->
+
+Now you can check out the gyms and eventually decide which one will be your regular spot. What did the search engine do? It calculated the nearest gyms (nearest neighbors) from your current location, which is the essence of finding nearest neighbors.
+
+Now let's move to a more abstract example. You're listening to your favorite rock playlist and you think, "Yeah, these tracks are cool, but I've been listening to them on repeat. Maybe I should explore some new music." Searching for random songs might not be the most effective approach; you could end up with hip-hop or pop tracks, which you may not enjoy as much. However, it might also lead you to discover entirely new genres. A better approach could be to explore other rock playlists available online. While these playlists align with your preferred genre, they may not consider your unique tastes within rock music. Wouldn't it be great if there were a tool that could recommend new songs based on your previous playlists? Fortunately, such tools exist!
+
+One type of [recommendation system](https://en.wikipedia.org/wiki/Recommender_system) relies on collaborative filtering: it recommends songs based on what other users with similar musical tastes (aka its neighbours) listen to. Another approach is to treat songs as points and then compute the closest songs to your favorites. Part of the challenge in solving these problems is how to model users and songs as points in space however, once that is done, KNN algorithms play an essential role in understanding the relationships between them. So let's take a look at some concrete examples.
 
 <!-- livebook:{"branch_parent_index":1} -->
 
@@ -229,7 +235,7 @@ Let's check some statistical properties of the dataset. We will start with *skew
 | :--------------------------------------------------------------------------------------------------------------------------------: |
 | Figure 1: A general relationship of mean and median under differently skewed unimodal distribution                                 |
 
-Now, let's check the skewness of our dataset using Scholar.Stats.skew function.
+Now, let's check the skewness of our dataset using `Scholar.Stats.skew/1` function.
 
 ```elixir
 Scholar.Stats.skew(tensor_data)
