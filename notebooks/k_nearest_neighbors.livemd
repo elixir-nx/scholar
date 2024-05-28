@@ -47,7 +47,7 @@ key = Nx.Random.key(42)
 >
 ```
 
-## Introduction
+## Use cases
 
 This notebook will cover the three primary applications of k-nearest Neighbors: classification, regression, and anomaly detection. Let's get started with a practical example. Imagine just moved to a new city, and you're here for the first time. Since you're an active person, you'd like to find a nearby gym with good facilities. What would you do? You'd probably start by searching for gyms on online maps. The search results might look something like this:
 

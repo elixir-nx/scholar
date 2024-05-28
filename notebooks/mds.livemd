@@ -30,7 +30,7 @@ Nx.global_default_options(compiler: EXLA)
 
 <!-- livebook:{"branch_parent_index":0} -->
 
-## Swiss Roll
+## Swiss roll
 
 Multidimensional scaling (MDS) seeks a low-dimensional representation of the data in which the distances respect well the distances in the original high-dimensional space.
 
@@ -1081,7 +1081,7 @@ As we see, MDS collapsed one dimension and what we see is similar to a cross sec
 
 <!-- livebook:{"branch_parent_index":0} -->
 
-## Digits Dataset
+## Digits dataset
 
 In the next section we change dataset to Digits dataset. It consists of almost 1800 8x8 images with digits.
 

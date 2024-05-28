@@ -121,7 +121,7 @@ x = Scholar.Preprocessing.StandardScaler.fit_transform(x)
 {x, y}
 ```
 
-Once the data is preprocessed, we can move on to the KDTree model. First, we need to set up the model using `Scholar.Neighbors.KDTree.fit`. This method initializes the tree structure for further processing.
+Once the data is preprocessed, we can move on to the KDTree model. First, we need to set up the model using `Scholar.Neighbors.KDTree.fit/2`. This method initializes the tree structure for further processing.
 
 ```elixir
 num_neighbors = 6
