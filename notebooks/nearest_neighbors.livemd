@@ -120,6 +120,24 @@ data =
 df_data = DF.load_csv!(data)
 ```
 
+<!-- livebook:{"output":true} -->
+
+```text
+#Explorer.DataFrame<
+  Polars[2278 x 10]
+  SEQN f64 [73564.0, 73568.0, 73576.0, 73577.0, 73580.0, ...]
+  age_group string ["Adult", "Adult", "Adult", "Adult", "Adult", ...]
+  RIDAGEYR f64 [61.0, 26.0, 16.0, 32.0, 38.0, ...]
+  RIAGENDR f64 [2.0, 2.0, 1.0, 1.0, 2.0, ...]
+  PAQ605 f64 [2.0, 2.0, 2.0, 2.0, 1.0, ...]
+  BMXBMI f64 [35.7, 20.3, 23.2, 28.9, 35.9, ...]
+  LBXGLU f64 [110.0, 89.0, 89.0, 104.0, 103.0, ...]
+  DIQ010 f64 [2.0, 2.0, 2.0, 2.0, 2.0, ...]
+  LBXGLT f64 [150.0, 80.0, 68.0, 84.0, 81.0, ...]
+  LBXIN f64 [14.91, 3.85, 6.14, 16.15, 10.92, ...]
+>
+```
+
 In this analysis, we want to determine if the most similar people, in terms of medical parameters, belong to the same age group. In the dataset, we categorize people into two groups: adults (18-64 years) and seniors (65+ years). Intuitively, we might expect that people with similar medical results are often in the same age group, but we want to quantify the extent to which this is true. To do this, we compute the 5 closest results for each patient and then calculate the average for these two groups.
 
 First, we need to separate the medical results from the data that indicates the age group.
@@ -400,6 +418,75 @@ Next, we load the data into a dataframe.
 {:ok, [_, {_, data}]} = :zip.extract(raw_data, [:memory])
 data = String.replace(data, ", ", ",")
 df_data = DF.load_csv!(data, delimiter: ",")
+```
+
+<!-- livebook:{"output":true} -->
+
+```text
+#Explorer.DataFrame<
+  Polars[39644 x 61]
+  url string ["http://mashable.com/2013/01/07/amazon-instant-video-browser/", "http://mashable.com/2013/01/07/ap-samsung-sponsored-tweets/", "http://mashable.com/2013/01/07/apple-40-billion-app-downloads/", "http://mashable.com/2013/01/07/astronaut-notre-dame-bcs/", "http://mashable.com/2013/01/07/att-u-verse-apps/", ...]
+  timedelta f64 [731.0, 731.0, 731.0, 731.0, 731.0, ...]
+  n_tokens_title f64 [12.0, 9.0, 9.0, 9.0, 13.0, ...]
+  n_tokens_content f64 [219.0, 255.0, 211.0, 531.0, 1072.0, ...]
+  n_unique_tokens f64 [0.663594466988, 0.604743080614, 0.575129530699, 0.503787877834, 0.41564561695, ...]
+  n_non_stop_words f64 [0.999999992308, 0.999999993289, 0.999999991597, 0.999999996904, 0.999999998565, ...]
+  n_non_stop_unique_tokens f64 [0.815384609112, 0.79194630341, 0.66386554064, 0.665634672862, 0.540889525766, ...]
+  num_hrefs f64 [4.0, 3.0, 3.0, 9.0, 19.0, ...]
+  num_self_hrefs f64 [2.0, 1.0, 1.0, 0.0, 19.0, ...]
+  num_imgs f64 [1.0, 1.0, 1.0, 1.0, 20.0, ...]
+  num_videos f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  average_token_length f64 [4.6803652968, 4.9137254902, 4.39336492891, 4.40489642185, 4.6828358209, ...]
+  num_keywords f64 [5.0, 4.0, 6.0, 7.0, 7.0, ...]
+  data_channel_is_lifestyle f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  data_channel_is_entertainment f64 [1.0, 0.0, 0.0, 1.0, 0.0, ...]
+  data_channel_is_bus f64 [0.0, 1.0, 1.0, 0.0, 0.0, ...]
+  data_channel_is_socmed f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  data_channel_is_tech f64 [0.0, 0.0, 0.0, 0.0, 1.0, ...]
+  data_channel_is_world f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  kw_min_min f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  kw_max_min f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  kw_avg_min f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  kw_min_max f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  kw_max_max f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  kw_avg_max f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  kw_min_avg f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  kw_max_avg f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  kw_avg_avg f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  self_reference_min_shares f64 [496.0, 0.0, 918.0, 0.0, 545.0, ...]
+  self_reference_max_shares f64 [496.0, 0.0, 918.0, 0.0, 1.6e4, ...]
+  self_reference_avg_sharess f64 [496.0, 0.0, 918.0, 0.0, 3151.15789474, ...]
+  weekday_is_monday f64 [1.0, 1.0, 1.0, 1.0, 1.0, ...]
+  weekday_is_tuesday f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  weekday_is_wednesday f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  weekday_is_thursday f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  weekday_is_friday f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  weekday_is_saturday f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  weekday_is_sunday f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  is_weekend f64 [0.0, 0.0, 0.0, 0.0, 0.0, ...]
+  LDA_00 f64 [0.500331204081, 0.799755687423, 0.217792288518, 0.0285732164707, 0.0286328101715, ...]
+  LDA_01 f64 [0.378278929586, 0.0500466753998, 0.033334456999, 0.419299641782, 0.0287935517322, ...]
+  LDA_02 f64 [0.0400046751006, 0.0500962518137, 0.0333514249339, 0.49465082574, 0.0285751849112, ...]
+  LDA_03 f64 [0.0412626477296, 0.0501006734234, 0.0333335358046, 0.0289047184252, 0.028571675324, ...]
+  LDA_04 f64 [0.0401225435029, 0.0500007119405, 0.682188293744, 0.0285715975818, 0.885426777861, ...]
+  global_subjectivity f64 [0.521617145481, 0.341245791246, 0.702222222222, 0.42984968735, 0.513502122877, ...]
+  global_sentiment_polarity f64 [0.0925619834711, 0.148947811448, 0.323333333333, 0.100704665705, 0.281003475691, ...]
+  global_rate_positive_words f64 [0.0456621004566, 0.043137254902, 0.0568720379147, 0.0414312617702, 0.0746268656716, ...]
+  global_rate_negative_words f64 [0.013698630137, 0.0156862745098, 0.00947867298578, 0.0207156308851, 0.0121268656716, ...]
+  rate_positive_words f64 [0.769230769231, 0.733333333333, 0.857142857143, 0.666666666667, 0.860215053763, ...]
+  rate_negative_words f64 [0.230769230769, 0.266666666667, 0.142857142857, 0.333333333333, 0.139784946237, ...]
+  avg_positive_polarity f64 [0.378636363636, 0.286914600551, 0.495833333333, 0.385965171192, 0.411127435065, ...]
+  min_positive_polarity f64 [0.1, 0.0333333333333, 0.1, 0.136363636364, 0.0333333333333, ...]
+  max_positive_polarity f64 [0.7, 0.7, 1.0, 0.8, 1.0, ...]
+  avg_negative_polarity f64 [-0.35, -0.11875, -0.466666666667, -0.369696969697, -0.220192307692, ...]
+  min_negative_polarity f64 [-0.6, -0.125, -0.8, -0.6, -0.5, ...]
+  max_negative_polarity f64 [-0.2, -0.1, -0.133333333333, -0.166666666667, -0.05, ...]
+  title_subjectivity f64 [0.5, 0.0, 0.0, 0.0, 0.454545454545, ...]
+  title_sentiment_polarity f64 [-0.1875, 0.0, 0.0, 0.0, 0.136363636364, ...]
+  abs_title_subjectivity f64 [0.0, 0.5, 0.5, 0.5, 0.0454545454545, ...]
+  abs_title_sentiment_polarity f64 [0.1875, 0.0, 0.0, 0.0, 0.136363636364, ...]
+  shares s64 [593, 711, 1500, 1200, 505, ...]
+>
 ```
 
 Next, we split the data into two parts: the target variable (shares, or $y$) and the rest of the data ($x$). We separate the shares from $x$ to avoid introducing bias. We also remove URLs because tensors do not support non-numerical data types, and we exclude the timedelta feature, which is an auxiliary feature used in creating the dataset. Finally, we apply standard scaling to $x$.
