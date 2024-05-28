@@ -141,7 +141,7 @@ Once the data is preprocessed, we can move on to the KDTree model. First, we nee
 num_neighbors = 6
 
 knn_model =
-  EXLA.jit(&Scholar.Neighbors.KDTree.fit(&1, k: num_neighbors, metric: :euclidean)).(x)
+  EXLA.jit(&Scholar.Neighbors.KDTree.fit(&1, k: num_neighbors, metric: {:minkowski, 2})).(x)
 ```
 
 Now, we need to run a query to calculate the nearest neighbors for a given set of data. To compute the nearest neighbors, we call `Scholar.Neighbors.KDTree.predict`.
