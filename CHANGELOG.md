@@ -5,7 +5,7 @@
 ### Enhancements
 
   * Add LargeVis for visualization of large-scale and high-dimensional data in a low-dimensional (typically 2D or 3D) space
-  * Add `Scholar.Neighbors.KDTree` and `Scholar.Neighbors.RandomForestTree`
+  * Add `Scholar.Neighbors.KDTree` and `Scholar.Neighbors.RandomProjectionForest`
   * Add `Scholar.Metrics.Neighbors`
   * Add `Scholar.Linear.BayesianRidgeRegression`
   * Add `Scholar.Cluster.Hierarchical`
