@@ -5,8 +5,11 @@
 ### Enhancements
 
   * Add LargeVis for visualization of large-scale and high-dimensional data in a low-dimensional (typically 2D or 3D) space
-  * Add KDTree and RandomForestTree
-  * Add Hierarchical Clustering
+  * Add `Scholar.Neighbors.KDTree` and `Scholar.Neighbors.RandomForestTree`
+  * Add `Scholar.Metrics.Neighbors`
+  * Add `Scholar.Linear.BayesianRidgeRegression`
+  * Add `Scholar.Cluster.Hierarchical`
+  * Add `Scholar.Manifold.Trimap`
   * Add Mean Pinball Loss function
   * Add Matthews Correlation Coefficient function
   * Add D2 Tweedie Score function
@@ -17,6 +20,10 @@
   * Add convergence check to AffinityPropagation
   * Default Affinity Propagation preference to `reduce_min` and make it customizable
   * Move preprocessing functionality to their own modules with `fit` and `fit_transform` callbacks
+
+### Breaking changes
+
+  * Split `KNearestNeighbors` into `KNNClassifier` and `KNNRegressor` with custom algorithm support
 
 ## v0.2.1 (2023-08-30)
 
