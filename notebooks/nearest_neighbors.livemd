@@ -49,20 +49,6 @@ Given a set of points $P$, a point $q$, and a metric $d$, the $k$ nearest neighb
 
 It's especially interesting to consider the case when point $q$ is part of the set $P$. In the remainder of the notebook, we will assume that $q$ is indeed in $P$, and if this is not the case, we will note it explicitly.
 
-## Why Do We Want to Use K-Nearest Neighbors
-
-Now, after the formal section with definitions, let's move on to the more practical part: why would we even want to calculate something like K-nearest Neighbors? Consider the following example. Let's say you've just moved to a new city, and you're here for the first time. Since you're an active person, you'd like to find a nearby gym with good facilities. What would you do? You'd probably start by searching for gyms on online maps. The search results might look something like this.
-
-![](files/knn_gyms.png)
-
-Now you can check out the gyms and eventually decide which one will be your regular spot. What did the search engine do? It basically calculated the nearest gyms (nearest neighbors) from your current location, which is the essence of finding nearest neighbors.
-
-Now let's move to a more abstract example. You're listening to your favorite rock playlist and you think, "Yeah, these tracks are cool, but I've been listening to them on repeat. Maybe I should explore some new music." Searching for random songs might not be the most effective approach; you could end up with hip-hop or pop tracks, which you may not enjoy as much. However, it might also lead you to discover entirely new genres. A better approach could be to explore other rock playlists available online. While these playlists align with your preferred genre, they may not consider your unique tastes within rock music. Wouldn't it be great if there were a tool that could recommend new songs based on your previous playlists? Fortunately, such tools exist!
-
-One type of [recommendation system](https://en.wikipedia.org/wiki/Recommender_system) relies on collaborative filtering: it recommends songs based on what other users with similar musical tastes listen to. Another approach is to treat songs as points, like in our earlier definition, and then compute the closest songs to your favorites. This is another example of calculating nearest neighbors. While it might not be immediately obvious how to represent songs as points and measure the "distance" between them, it turns out that it can be done.
-
-Another use of nearest neighbors is in building classifiers and regressors. This approach was covered in a [previous notebook](https://github.com/elixir-nx/scholar/blob/main/notebooks/k_nearest_neighbors.livemd), which we strongly recommend you review before proceeding with this one.
-
 ## Brute force approach
 
 Now let's consider how we can compute the $k$-nearest neighbors. The simplest method is to compute the distance using a metric $d$ for each pair of points in the dataset. This can be represented as a matrix $D$ of size $N \times N$, where $D_{ij}$ indicates the distance between the $i$th and $j$th points. Given the symmetry of metric $d$, the matrix $D$ is also symmetric: $D_{ij} = D_{ji}$. To find the nearest neighbors, you would sort the distances for each point (sorting the rows of matrix $D$), and then return only the first $k$ columns from each row of the sorted matrix.
