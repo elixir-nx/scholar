@@ -28,7 +28,7 @@ defmodule Scholar.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.30", only: :docs},
+      {:ex_doc, "~> 0.30", github: "elixir-lang/ex_doc", only: :docs},
       {:nx, "~> 0.7"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, ">= 0.0.0", only: :test},
@@ -50,7 +50,7 @@ defmodule Scholar.MixProject do
     [
       main: "readme",
       source_url: @source_url,
-      assets: "notebooks/assets",
+      assets: %{"notebooks/files" => "files"},
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [

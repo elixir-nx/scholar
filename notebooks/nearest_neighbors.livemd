@@ -363,7 +363,7 @@ LargeVis is an approximated nearest neighbors algorithm that uses the concept of
 
 This structure allows us to quickly create an approximated nearest neighbors graph, which can then be used to find the nearest neighbors efficiently. To better understand this, below is a figure illustrating the process of creating a tree in a random projection forest. We need to note that in Scholar implementation in each step points are splitted in half, but on the figure below this condition is not satisifed. However, the general idea of splitting points is the same.
 
-| ![Random Projection Forest](assets/rpKNN.png)                                                                                      |
+| ![Random Projection Forest](files/rpKNN.png)                                                                                       |
 | :--------------------------------------------------------------------------------------------------------------------------------: |
 | Figure 3: A process of creating a tree in Random Projection Forest (Source: http://www.math.umassd.edu/~dyan/Slides_rpForests.pdf) |
 
