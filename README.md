@@ -23,7 +23,7 @@ Add to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:scholar, "~> 0.2.1"}
+    {:scholar, "~> 0.3.0"}
   ]
 end
 ```
@@ -34,7 +34,7 @@ such as EXLA:
 ```elixir
 def deps do
   [
-    {:scholar, "~> 0.2.1"},
+    {:scholar, "~> 0.3.0"},
     {:exla, ">= 0.0.0"}
   ]
 end

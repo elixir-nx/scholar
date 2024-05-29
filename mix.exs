@@ -12,7 +12,7 @@ defmodule Scholar.MixProject do
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
-      docs: docs(),
+      docs: &docs/0,
       package: package()
     ]
   end
@@ -28,7 +28,7 @@ defmodule Scholar.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.30", only: :docs},
+      {:ex_doc, "~> 0.30", github: "elixir-lang/ex_doc", only: :docs},
       {:nx, "~> 0.7"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, ">= 0.0.0", only: :test},
@@ -39,7 +39,7 @@ defmodule Scholar.MixProject do
 
   defp package do
     [
-      maintainers: ["Mateusz Słuszniak"],
+      maintainers: ["Mateusz Słuszniak", "Krsto Proroković"],
       description: "Traditional machine learning on top of Nx",
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url}
@@ -50,16 +50,18 @@ defmodule Scholar.MixProject do
     [
       main: "readme",
       source_url: @source_url,
+      assets: %{"notebooks/files" => "files"},
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [
         "README.md",
         "notebooks/cv_gradient_boosting_tree.livemd",
-        "notebooks/hierarchical_clustering.livemd",
+        # "notebooks/hierarchical_clustering.livemd",
         "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd",
         "notebooks/linear_regression.livemd",
-        "notebooks/mds.livemd"
+        "notebooks/mds.livemd",
+        "notebooks/nearest_neighbors.livemd"
       ],
       groups_for_modules: [
         Models: [
@@ -73,6 +75,7 @@ defmodule Scholar.MixProject do
           Scholar.Interpolation.BezierSpline,
           Scholar.Interpolation.CubicSpline,
           Scholar.Interpolation.Linear,
+          Scholar.Linear.BayesianRidgeRegression,
           Scholar.Linear.IsotonicRegression,
           Scholar.Linear.LinearRegression,
           Scholar.Linear.LogisticRegression,
@@ -80,12 +83,15 @@ defmodule Scholar.MixProject do
           Scholar.Linear.RidgeRegression,
           Scholar.Linear.SVM,
           Scholar.Manifold.MDS,
+          Scholar.Manifold.Trimap,
           Scholar.Manifold.TSNE,
           Scholar.NaiveBayes.Complement,
           Scholar.NaiveBayes.Gaussian,
           Scholar.NaiveBayes.Multinomial,
+          Scholar.Neighbors.BruteKNN,
           Scholar.Neighbors.KDTree,
-          Scholar.Neighbors.KNearestNeighbors,
+          Scholar.Neighbors.KNNClassifier,
+          Scholar.Neighbors.KNNRegressor,
           Scholar.Neighbors.LargeVis,
           Scholar.Neighbors.NNDescent,
           Scholar.Neighbors.RadiusNearestNeighbors,
@@ -96,6 +102,7 @@ defmodule Scholar.MixProject do
           Scholar.Metrics.Classification,
           Scholar.Metrics.Clustering,
           Scholar.Metrics.Distance,
+          Scholar.Metrics.Neighbors,
           Scholar.Metrics.Ranking,
           Scholar.Metrics.Regression,
           Scholar.Metrics.Similarity,

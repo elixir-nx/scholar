@@ -35,15 +35,17 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
       """
     ],
     metric: [
-      type: {:custom, Scholar.Options, :metric, []},
-      default: {:minkowski, 2},
+      type: {:custom, Scholar.Neighbors.Utils, :pairwise_metric, []},
+      default: &Scholar.Metrics.Distance.pairwise_minkowski/2,
       doc: ~S"""
-      Name of the metric. Possible values:
+      The function that measures the pairwise distance between two points. Possible values:
 
       * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
-        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
+      we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
+
+      * Anonymous function of arity 2 that takes two rank-2 tensors.
       """
     ],
     task: [
@@ -90,7 +92,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
     For `:classification` task, model will be a classifier implementing the Radius Nearest Neighbors vote.
     For `:regression` task, model is a regressor based on Radius Nearest Neighbors.
 
-    * `:metric` - Name of the metric.
+    * `:metric` - The metric function used.
 
     * `:radius` - Radius of neighborhood.
 
@@ -114,7 +116,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
         weights: :uniform,
         num_classes: 2,
         task: :classification,
-        metric: {:minkowski, 2},
+        metric: &Scholar.Metrics.Distance.pairwise_minkowski/2,
         radius: 1.0
       }
   """
@@ -178,7 +180,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
   defn predict(%__MODULE__{labels: labels, weights: weights, task: task} = model, x) do
     case task do
       :classification ->
-        {probabilities, outliers_mask} = predict_proba(model, x)
+        {probabilities, outliers_mask} = predict_probability(model, x)
         results = Nx.argmax(probabilities, axis: 1)
         Nx.select(outliers_mask, -1, results)
 
@@ -233,7 +235,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
       iex> model = Scholar.Neighbors.RadiusNearestNeighbors.fit(x, y, num_classes: 2)
-      iex> Scholar.Neighbors.RadiusNearestNeighbors.predict_proba(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      iex> Scholar.Neighbors.RadiusNearestNeighbors.predict_probability(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       {Nx.tensor(
         [
           [0.5, 0.5],
@@ -244,12 +246,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
         [0, 0], type: :u8
       )}
   """
-  deftransform predict_proba(
-                 %__MODULE__{
-                   task: :classification
-                 } = model,
-                 x
-               ) do
+  deftransform predict_probability(%__MODULE__{task: :classification} = model, x) do
     predict_proba_n(model, x)
   end
 
@@ -268,8 +265,8 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
       iex> Scholar.Neighbors.RadiusNearestNeighbors.radius_neighbors(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       {Nx.tensor(
         [
-          [2.469817876815796, 0.3162279427051544, 1.5811389684677124, 0.7071065902709961],
-          [0.10000002384185791, 2.193171262741089, 1.0049875974655151, 3.132091760635376]
+          [2.469818353652954, 0.3162313997745514, 1.5811394453048706, 0.7071067690849304],
+          [0.10000114142894745, 2.1931710243225098, 1.0049877166748047, 3.132091760635376]
         ]
       ),
       Nx.tensor(
@@ -280,27 +277,8 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
       )}
   """
   defn radius_neighbors(%__MODULE__{metric: metric, radius: radius, data: data}, x) do
-    {num_samples, num_features} = Nx.shape(data)
-    {num_samples_x, _num_features} = Nx.shape(x)
-    broadcast_shape = {num_samples_x, num_samples, num_features}
-    data_broadcast = Nx.new_axis(data, 0) |> Nx.broadcast(broadcast_shape)
-    x_broadcast = Nx.new_axis(x, 1) |> Nx.broadcast(broadcast_shape)
-
-    dist =
-      case metric do
-        {:minkowski, p} ->
-          Scholar.Metrics.Distance.minkowski(
-            data_broadcast,
-            x_broadcast,
-            axes: [-1],
-            p: p
-          )
-
-        :cosine ->
-          Scholar.Metrics.Distance.pairwise_cosine(x, data)
-      end
-
-    {dist, dist <= radius}
+    distances = metric.(x, data)
+    {distances, distances <= radius}
   end
 
   defnp predict_proba_n(

@@ -23,7 +23,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   alias Scholar.Neighbors.Utils
 
   @derive {Nx.Container,
-           keep: [:num_neighbors, :depth, :leaf_size, :num_trees],
+           keep: [:num_neighbors, :metric, :depth, :leaf_size, :num_trees],
            containers: [:indices, :data, :hyperplanes, :medians]}
   @enforce_keys [
     :num_neighbors,
@@ -37,6 +37,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   ]
   defstruct [
     :num_neighbors,
+    :metric,
     :depth,
     :leaf_size,
     :num_trees,
@@ -51,6 +52,11 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
       required: true,
       type: :pos_integer,
       doc: "The number of nearest neighbors."
+    ],
+    metric: [
+      type: {:in, [:squared_euclidean, :euclidean]},
+      default: :euclidean,
+      doc: "The function that measures the distance between two points."
     ],
     min_leaf_size: [
       type: :pos_integer,
@@ -107,6 +113,12 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     num_neighbors = opts[:num_neighbors]
     min_leaf_size = opts[:min_leaf_size]
 
+    metric =
+      case opts[:metric] do
+        :euclidean -> &Scholar.Metrics.Distance.euclidean/2
+        :squared_euclidean -> &Scholar.Metrics.Distance.squared_euclidean/2
+      end
+
     min_leaf_size =
       cond do
         is_nil(min_leaf_size) ->
@@ -142,6 +154,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
     %__MODULE__{
       num_neighbors: num_neighbors,
+      metric: metric,
       depth: depth,
       leaf_size: leaf_size,
       num_trees: num_trees,
@@ -283,7 +296,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
       iex> key = Nx.Random.key(12)
       iex> tensor = Nx.iota({5, 2})
-      iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, num_trees: 3, key: key)
+      iex> forest = Scholar.Neighbors.RandomProjectionForest.fit(tensor, num_neighbors: 2, metric: :squared_euclidean, num_trees: 3, key: key)
       iex> query = Nx.tensor([[3, 4]])
       iex> {neighbors, distances} = Scholar.Neighbors.RandomProjectionForest.predict(forest, query)
       iex> neighbors
@@ -305,7 +318,7 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     if Nx.rank(query) != 2 do
       raise ArgumentError,
             """
-            expected query tensor to have shape {num_samples, num_features}, \
+            expected query tensor to have shape {num_queries, num_features}, \
             got tensor with shape: #{inspect(Nx.shape(query))}
             """
     end
@@ -313,9 +326,9 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
     if Nx.axis_size(forest.data, 1) != Nx.axis_size(query, 1) do
       raise ArgumentError,
             """
-            expected query tensor to have the same dimension as tensor used to grow the forest, \
-            got #{inspect(Nx.axis_size(forest.data, 1))} \
-            and #{inspect(Nx.axis_size(query, 1))}
+            expected query tensor to have same number of features as tensor used to grow the forest, \
+            got #{inspect(Nx.axis_size(query, 1))} \
+            and #{inspect(Nx.axis_size(forest.data, 1))}
             """
     end
 
@@ -323,9 +336,12 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
   end
 
   defnp predict_n(forest, query) do
-    k = forest.num_neighbors
     candidate_indices = get_leaves(forest, query)
-    Utils.find_neighbors(query, forest.data, candidate_indices, num_neighbors: k)
+
+    Utils.brute_force_search_with_candidates(forest.data, query, candidate_indices,
+      num_neighbors: forest.num_neighbors,
+      metric: forest.metric
+    )
   end
 
   @doc false

@@ -8,6 +8,7 @@ defmodule Scholar.Linear.LinearRegression do
   require Nx
   import Nx.Defn
   import Scholar.Shared
+  alias Scholar.Linear.LinearHelpers
 
   @derive {Nx.Container, containers: [:coefficients, :intercept]}
   defstruct [:coefficients, :intercept]
@@ -75,13 +76,7 @@ defmodule Scholar.Linear.LinearRegression do
       ] ++
         opts
 
-    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
-    x_type = to_float_type(x)
-
-    sample_weights =
-      if Nx.is_tensor(sample_weights),
-        do: Nx.as_type(sample_weights, x_type),
-        else: Nx.tensor(sample_weights, type: x_type)
+    sample_weights = LinearHelpers.build_sample_weights(x, opts)
 
     fit_n(x, y, sample_weights, opts)
   end
@@ -92,7 +87,7 @@ defmodule Scholar.Linear.LinearRegression do
 
     {a_offset, b_offset} =
       if opts[:fit_intercept?] do
-        preprocess_data(a, b, sample_weights, opts)
+        LinearHelpers.preprocess_data(a, b, sample_weights, opts)
       else
         a_offset_shape = Nx.axis_size(a, 1)
         b_reshaped = if Nx.rank(b) > 1, do: b, else: Nx.reshape(b, {:auto, 1})
@@ -106,7 +101,7 @@ defmodule Scholar.Linear.LinearRegression do
 
     {a, b} =
       if opts[:sample_weights_flag] do
-        rescale(a, b, sample_weights)
+        LinearHelpers.rescale(a, b, sample_weights)
       else
         {a, b}
       end
@@ -132,42 +127,12 @@ defmodule Scholar.Linear.LinearRegression do
     Nx.dot(x, coeff) + intercept
   end
 
-  # Implements sample weighting by rescaling inputs and
-  # targets by sqrt(sample_weight).
-  defnp rescale(x, y, sample_weights) do
-    case Nx.shape(sample_weights) do
-      {} = scalar ->
-        scalar = Nx.sqrt(scalar)
-        {scalar * x, scalar * y}
-
-      _ ->
-        scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
-        {Nx.dot(scale, x), Nx.dot(scale, y)}
-    end
-  end
-
   # Implements ordinary least-squares by estimating the
   # solution A to the equation A.X = b.
   defnp lstsq(a, b, a_offset, b_offset, fit_intercept?) do
     pinv = Nx.LinAlg.pinv(a)
     coeff = Nx.dot(b, [0], pinv, [1])
-    intercept = set_intercept(coeff, a_offset, b_offset, fit_intercept?)
+    intercept = LinearHelpers.set_intercept(coeff, a_offset, b_offset, fit_intercept?)
     {coeff, intercept}
-  end
-
-  defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
-    if fit_intercept? do
-      y_offset - Nx.dot(coeff, x_offset)
-    else
-      Nx.tensor(0.0, type: Nx.type(coeff))
-    end
-  end
-
-  defnp preprocess_data(x, y, sample_weights, opts) do
-    if opts[:sample_weights_flag],
-      do:
-        {Nx.weighted_mean(x, sample_weights, axes: [0]),
-         Nx.weighted_mean(y, sample_weights, axes: [0])},
-      else: {Nx.mean(x, axes: [0]), Nx.mean(y, axes: [0])}
   end
 end

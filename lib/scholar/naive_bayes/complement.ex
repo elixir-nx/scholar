@@ -288,7 +288,7 @@ defmodule Scholar.NaiveBayes.Complement do
   end
 
   defnp fit_n(x, y, sample_weights, class_priors, alpha, opts) do
-    x_type = Nx.Type.merge(to_float_type(x), {:f, 32})
+    x_type = to_float_type(x)
     input_rank = Nx.rank(x)
     targets_rank = Nx.rank(y)
 
@@ -430,7 +430,7 @@ defmodule Scholar.NaiveBayes.Complement do
   end
 
   defnp check_alpha(alpha, force_alpha, num_features) do
-    type = Nx.Type.merge(Nx.type(alpha), {:f, 32})
+    type = to_float_type(alpha)
     alpha_lower_bound = Nx.tensor(1.0e-10, type: type)
 
     case Nx.shape(alpha) do
