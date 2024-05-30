@@ -28,7 +28,7 @@ defmodule Scholar.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.30", github: "elixir-lang/ex_doc", only: :docs},
+      {:ex_doc, "~> 0.34", only: :docs},
       {:nx, "~> 0.7"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, ">= 0.0.0", only: :test},
