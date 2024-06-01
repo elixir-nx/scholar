@@ -23,13 +23,6 @@ require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 ```
 
-And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
-
-```elixir
-Nx.global_default_backend(EXLA.Backend)
-Nx.Defn.global_default_options(compiler: EXLA)
-```
-
 We are going to work with [Medical Cost Personal Datasets](https://www.kaggle.com/datasets/mirichoi0218/insurance) to predict medical charges that were applied to each person from the dataset. Let's download it:
 
 ```elixir
