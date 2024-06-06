@@ -642,4 +642,242 @@ defmodule Scholar.Metrics.Regression do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_true, y_pred)
   end
+
+
+  d2_absolute_error_score_opts = [
+    multioutput: [
+      type: {:in, [:raw_values, :uniform_average]},
+      default: :uniform_average,
+      doc: """
+      Defines aggregating of multiple output values.
+      Array-like value defines weights used to average errors.
+      Defaults to `:uniform_average`.
+
+        `:raw_values` :
+            Returns a full set of errors in case of multioutput input.
+
+        `:uniform_average` :
+            Errors of all outputs are averaged with uniform weight.
+      """
+    ]
+  ]
+
+  @d2_absolute_error_score_schema NimbleOptions.new!(d2_absolute_error_score_opts)
+
+  @doc ~S"""
+
+  `D^2` regression score function, fraction of absolute error explained.
+
+  Best possible score is 1.0 and it can be negative (because the model can be
+  arbitrarily worse). A model that always uses the empirical median of `y_true`
+  as constant prediction, disregarding the input features,
+  gets a `D^2` score of 0.0.
+
+  ## Options
+
+  #{NimbleOptions.docs(@d2_absolute_error_score_opts)}
+
+  ## Return Values
+
+  It returns float or tensor of floats.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> y_pred = Nx.tensor([1, 2, 3])
+      iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        1.0
+      >
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> y_pred = Nx.tensor([2, 2, 2])
+      iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.0
+      >
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> y_pred = Nx.tensor([3, 2, 1])
+      iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        -1.0
+      >
+      iex> y_true = Nx.tensor([3, -0.5, 2, 7])
+      iex> y_pred = Nx.tensor([2.5, 0.0, 2, 8])
+      iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.7647058963775635
+      >
+      iex> y_true = Nx.tensor([[0.5, 1], [-1, 1], [7, -6]])
+      iex> y_pred = Nx.tensor([[0, 2], [-1, 2], [8, -5]])
+      iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.6919642686843872
+      >
+      iex> y_true = Nx.tensor([[0.5, 1], [-1, 1], [7, -6]])
+      iex> y_pred = Nx.tensor([[0, 2], [-1, 2], [8, -5]])
+      iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred, multioutput: :raw_values)
+      #Nx.Tensor<
+        f32[2]
+        [0.8125, 0.5714285373687744]
+      >
+  """
+
+  deftransform d2_absolute_error_score(y_true, y_pred, opts \\ []) do
+    d2_absolute_error_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @d2_absolute_error_score_schema))
+  end
+
+
+  defn d2_absolute_error_score_n(y_true, y_pred, opts \\ []) do 
+    d2_pinball_score(y_true, y_pred, alpha: 0.5, multioutput: opts[:multioutput])
+  end
+
+  d2_pinball_score_opts = [
+    alpha: [
+      type: :float,
+      default: 0.5,
+      doc: """
+      The slope of the pinball loss, default=0.5,
+      This loss is equivalent to $$mean_absolute_error$$ when $$\alpha$$ is 0.5,
+      $$\alpha = 0.95$$ is minimized by estimators of the 95th percentile.
+      """
+    ],
+    multioutput: [
+      type: {:in, [:raw_values, :uniform_average]},
+      default: :uniform_average,
+      doc: """
+      Defines aggregating of multiple output values.
+      Array-like value defines weights used to average errors.
+      Defaults to `:uniform_average`.
+
+        `:raw_values` :
+            Returns a full set of errors in case of multioutput input.
+
+        `:uniform_average` :
+            Errors of all outputs are averaged with uniform weight.
+      """
+    ]
+  ]
+
+  @d2_pinball_score_schema NimbleOptions.new!(d2_pinball_score_opts)
+
+  @doc ~S"""
+
+  `D^2` regression score function, fraction of pinball loss explained.
+
+  Best possible score is 1.0 and it can be negative (because the model can be
+  arbitrarily worse). A model that always uses the empirical alpha-quantile of
+  `y_true` as constant prediction, disregarding the input features,
+  gets a `D^2` score of 0.0.
+
+  ## Options
+
+  #{NimbleOptions.docs(@d2_pinball_score_opts)}
+
+  ## Return Values
+
+  It returns float or tensor of floats.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([1, 2, 3])
+      iex> y_pred = Nx.tensor([1, 3, 3])
+      iex> Scholar.Metrics.Regression.d2_pinball_score(y_true, y_pred)
+      #Nx.Tensor<
+        f32
+        0.5
+      >
+      iex> Scholar.Metrics.Regression.d2_pinball_score(y_true, y_pred, alpha: 0.9)
+      #Nx.Tensor<
+        f32
+        0.7727271914482117
+      >
+      iex> Scholar.Metrics.Regression.d2_pinball_score(y_true, y_true, alpha: 0.1)
+      #Nx.Tensor<
+        f32
+        1.0
+      >
+  """
+
+  deftransform d2_pinball_score(y_true, y_pred, opts \\ []) do
+    if Nx.size(y_pred) < 2 do
+      Nx.Constants.nan()
+    else
+      d2_pinball_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @d2_pinball_score_schema))
+    end
+  end
+
+  defnp d2_pinball_score_n(y_true, y_pred, opts \\ []) do
+    alpha = opts[:alpha]
+    shape = Nx.shape(y_true)
+    m = if Nx.rank(shape) == 1 do shape |> elem(0) else shape |> elem(1) end 
+
+    numerator = mean_pinball_loss(y_true, y_pred, alpha: alpha, multioutput: :raw_values)
+    
+    y_quantile = Nx.broadcast(quantile(y_true, alpha), shape)
+    denominator = mean_pinball_loss(y_true, y_quantile, alpha: alpha, multioutput: :raw_values)
+
+    nonzero_numerator = Nx.not_equal(numerator, 0)
+    nonzero_denominator = Nx.not_equal(denominator, 0)
+
+    valid_score = Nx.logical_and(nonzero_numerator, nonzero_denominator)
+    invalid_score = Nx.logical_and(nonzero_numerator, Nx.logical_not(nonzero_denominator))
+
+    output_scores = Nx.broadcast(1, {m})
+    output_scores = Nx.select(valid_score, Nx.subtract(1, Nx.divide(numerator, denominator)), output_scores)
+    output_scores = Nx.select(invalid_score, 0.0, output_scores)
+    case opts[:multioutput] do 
+      :uniform_average -> Nx.mean(output_scores)
+      :raw_values -> output_scores
+    end
+  end
+       
+  defn quantile(tensor, q) do
+    rank = Nx.rank(tensor)
+    if rank == 1 do
+      sorted_tensor = Nx.sort(tensor)
+      n = Nx.size(sorted_tensor)
+      float_index = q * (n - 1)
+      index = Nx.floor(float_index) |> Nx.as_type(:s64)
+      next_index = Nx.min(index + 1, n - 1)
+
+      value_at_index = Nx.take(sorted_tensor, index)
+      value_at_next_index = Nx.take(sorted_tensor, next_index)
+
+      weight = float_index - Nx.floor(float_index)
+
+      quantile = Nx.add(
+        Nx.multiply(value_at_index, 1 - weight),
+        Nx.multiply(value_at_next_index, weight)
+      )
+
+      Nx.squeeze(quantile)
+    else
+      sorted_tensor = Nx.sort(tensor, axis: 0)
+      {n, m} = Nx.shape(sorted_tensor)
+
+      float_indices = q * (n - 1)
+      indices = Nx.floor(float_indices) |> Nx.as_type(:s64)
+      next_indices = Nx.min(indices + 1, n - 1)
+
+      indices_tensor = Nx.broadcast(indices, {n, m})
+      next_indices_tensor = Nx.broadcast(next_indices, {n, m})
+
+      values_at_indices = Nx.take_along_axis(sorted_tensor, indices_tensor, axis: 0)
+      values_at_next_indices = Nx.take_along_axis(sorted_tensor, next_indices_tensor, axis: 0)
+
+      weights = float_indices - Nx.floor(float_indices)
+
+      quantiles = Nx.add(
+        Nx.multiply(values_at_indices, 1 - weights),
+        Nx.multiply(values_at_next_indices, weights)
+      )
+
+      Nx.squeeze(quantiles)
+    end
+  end
 end
