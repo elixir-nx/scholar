@@ -650,7 +650,6 @@ defmodule Scholar.Metrics.Regression do
       default: :uniform_average,
       doc: """
       Defines aggregating of multiple output values.
-      Array-like value defines weights used to average errors.
       Defaults to `:uniform_average`.
 
         `:raw_values` :
@@ -751,7 +750,6 @@ defmodule Scholar.Metrics.Regression do
       default: :uniform_average,
       doc: """
       Defines aggregating of multiple output values.
-      Array-like value defines weights used to average errors.
       Defaults to `:uniform_average`.
 
         `:raw_values` :
