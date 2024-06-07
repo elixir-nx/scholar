@@ -643,7 +643,6 @@ defmodule Scholar.Metrics.Regression do
     assert_same_shape!(y_true, y_pred)
   end
 
-
   d2_absolute_error_score_opts = [
     multioutput: [
       type: {:in, [:raw_values, :uniform_average]},
@@ -726,11 +725,14 @@ defmodule Scholar.Metrics.Regression do
   """
 
   deftransform d2_absolute_error_score(y_true, y_pred, opts \\ []) do
-    d2_absolute_error_score_n(y_true, y_pred, NimbleOptions.validate!(opts, @d2_absolute_error_score_schema))
+    d2_absolute_error_score_n(
+      y_true,
+      y_pred,
+      NimbleOptions.validate!(opts, @d2_absolute_error_score_schema)
+    )
   end
 
-
-  defn d2_absolute_error_score_n(y_true, y_pred, opts \\ []) do 
+  defn d2_absolute_error_score_n(y_true, y_pred, opts \\ []) do
     d2_pinball_score(y_true, y_pred, alpha: 0.5, multioutput: opts[:multioutput])
   end
 
@@ -810,10 +812,16 @@ defmodule Scholar.Metrics.Regression do
   defnp d2_pinball_score_n(y_true, y_pred, opts \\ []) do
     alpha = opts[:alpha]
     shape = Nx.shape(y_true)
-    m = if Nx.rank(shape) == 1 do shape |> elem(0) else shape |> elem(1) end 
+
+    m =
+      if Nx.rank(shape) == 1 do
+        shape |> elem(0)
+      else
+        shape |> elem(1)
+      end
 
     numerator = mean_pinball_loss(y_true, y_pred, alpha: alpha, multioutput: :raw_values)
-    
+
     y_quantile = Nx.broadcast(quantile(y_true, alpha), shape)
     denominator = mean_pinball_loss(y_true, y_quantile, alpha: alpha, multioutput: :raw_values)
 
@@ -824,16 +832,21 @@ defmodule Scholar.Metrics.Regression do
     invalid_score = Nx.logical_and(nonzero_numerator, Nx.logical_not(nonzero_denominator))
 
     output_scores = Nx.broadcast(1, {m})
-    output_scores = Nx.select(valid_score, Nx.subtract(1, Nx.divide(numerator, denominator)), output_scores)
+
+    output_scores =
+      Nx.select(valid_score, Nx.subtract(1, Nx.divide(numerator, denominator)), output_scores)
+
     output_scores = Nx.select(invalid_score, 0.0, output_scores)
-    case opts[:multioutput] do 
+
+    case opts[:multioutput] do
       :uniform_average -> Nx.mean(output_scores)
       :raw_values -> output_scores
     end
   end
-       
+
   defn quantile(tensor, q) do
     rank = Nx.rank(tensor)
+
     if rank == 1 do
       sorted_tensor = Nx.sort(tensor)
       n = Nx.size(sorted_tensor)
@@ -846,10 +859,11 @@ defmodule Scholar.Metrics.Regression do
 
       weight = float_index - Nx.floor(float_index)
 
-      quantile = Nx.add(
-        Nx.multiply(value_at_index, 1 - weight),
-        Nx.multiply(value_at_next_index, weight)
-      )
+      quantile =
+        Nx.add(
+          Nx.multiply(value_at_index, 1 - weight),
+          Nx.multiply(value_at_next_index, weight)
+        )
 
       Nx.squeeze(quantile)
     else
@@ -868,10 +882,11 @@ defmodule Scholar.Metrics.Regression do
 
       weights = float_indices - Nx.floor(float_indices)
 
-      quantiles = Nx.add(
-        Nx.multiply(values_at_indices, 1 - weights),
-        Nx.multiply(values_at_next_indices, weights)
-      )
+      quantiles =
+        Nx.add(
+          Nx.multiply(values_at_indices, 1 - weights),
+          Nx.multiply(values_at_next_indices, weights)
+        )
 
       Nx.squeeze(quantiles)
     end
