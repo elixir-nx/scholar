@@ -846,49 +846,37 @@ defmodule Scholar.Metrics.Regression do
 
   defn quantile(tensor, q) do
     rank = Nx.rank(tensor)
+    sorted_tensor = Nx.sort(tensor, axis: 0)
+    n = Nx.shape(sorted_tensor) |> elem(0)
+    float_indices = q * (n - 1)
+    indices = Nx.floor(float_indices) |> Nx.as_type(:s64)
+    next_indices = Nx.min(indices + 1, n - 1)
 
-    if rank == 1 do
-      sorted_tensor = Nx.sort(tensor)
-      n = Nx.size(sorted_tensor)
-      float_index = q * (n - 1)
-      index = Nx.floor(float_index) |> Nx.as_type(:s64)
-      next_index = Nx.min(index + 1, n - 1)
+    {values_at_indices, values_at_next_indices} =
+      if rank == 1 do
+        {
+          Nx.take(sorted_tensor, indices),
+          Nx.take(sorted_tensor, next_indices)
+        }
+      else
+        m = Nx.shape(sorted_tensor) |> elem(1)
+        indices_tensor = Nx.broadcast(indices, {n, m})
+        next_indices_tensor = Nx.broadcast(next_indices, {n, m})
 
-      value_at_index = Nx.take(sorted_tensor, index)
-      value_at_next_index = Nx.take(sorted_tensor, next_index)
+        {
+          Nx.take_along_axis(sorted_tensor, indices_tensor, axis: 0),
+          Nx.take_along_axis(sorted_tensor, next_indices_tensor, axis: 0)
+        }
+      end
 
-      weight = float_index - Nx.floor(float_index)
+    weights = float_indices - Nx.floor(float_indices)
 
-      quantile =
-        Nx.add(
-          Nx.multiply(value_at_index, 1 - weight),
-          Nx.multiply(value_at_next_index, weight)
-        )
+    quantiles =
+      Nx.add(
+        Nx.multiply(values_at_indices, 1 - weights),
+        Nx.multiply(values_at_next_indices, weights)
+      )
 
-      Nx.squeeze(quantile)
-    else
-      sorted_tensor = Nx.sort(tensor, axis: 0)
-      {n, m} = Nx.shape(sorted_tensor)
-
-      float_indices = q * (n - 1)
-      indices = Nx.floor(float_indices) |> Nx.as_type(:s64)
-      next_indices = Nx.min(indices + 1, n - 1)
-
-      indices_tensor = Nx.broadcast(indices, {n, m})
-      next_indices_tensor = Nx.broadcast(next_indices, {n, m})
-
-      values_at_indices = Nx.take_along_axis(sorted_tensor, indices_tensor, axis: 0)
-      values_at_next_indices = Nx.take_along_axis(sorted_tensor, next_indices_tensor, axis: 0)
-
-      weights = float_indices - Nx.floor(float_indices)
-
-      quantiles =
-        Nx.add(
-          Nx.multiply(values_at_indices, 1 - weights),
-          Nx.multiply(values_at_next_indices, weights)
-        )
-
-      Nx.squeeze(quantiles)
-    end
+    Nx.squeeze(quantiles)
   end
 end
