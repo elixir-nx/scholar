@@ -16,7 +16,7 @@ Mix.install([
 ])
 ```
 
-## Introduction
+## Setup
 
 In the livebook, we will cover the typical use cases of linear regression on practical examples.
 
@@ -27,17 +27,15 @@ alias Scholar.Linear.LinearRegression, as: LR
 alias Scholar.Linear.PolynomialRegression, as: PR
 alias Scholar.Impute.SimpleImputer
 alias Scholar.Metrics.Regression
+```
+
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
 Nx.global_default_backend(EXLA.Backend)
+Nx.Defn.global_default_options(compiler: EXLA)
 seed = 42
 key = Nx.Random.key(42)
-```
-
-<!-- livebook:{"output":true} -->
-
-```
-
-02:37:23.509 [info] TfrtCpuClient created.
-
 ```
 
 <!-- livebook:{"output":true} -->
@@ -52,7 +50,7 @@ key = Nx.Random.key(42)
 
 <!-- livebook:{"branch_parent_index":0} -->
 
-## Linear Regression on Synthetic Data
+## Linear regression on synthetic data
 
 Before we dive into real-life use cases of linear regression, we start with a simpler one. We will generate data with a linear pattern and then use `Scholar.Linear.LinearRegression` to compute regression.
 
@@ -227,7 +225,7 @@ x_b |> Nx.LinAlg.pinv() |> Nx.dot(y)
 
 <!-- livebook:{"branch_parent_index":0} -->
 
-## Polynomial Regression on Synthetic Data
+## Polynomial regression on synthetic data
 
 Before moving on to a more complex example, this section will briefly show how to use another regression method. While not strictly linear, the approach and calculations that go into it is similar enough that it makes sense for it to be explained alongside linear regression.
 
