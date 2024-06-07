@@ -664,7 +664,6 @@ defmodule Scholar.Metrics.Regression do
   @d2_absolute_error_score_schema NimbleOptions.new!(d2_absolute_error_score_opts)
 
   @doc ~S"""
-
   `D^2` regression score function, fraction of absolute error explained.
 
   Best possible score is 1.0 and it can be negative (because the model can be
@@ -764,7 +763,6 @@ defmodule Scholar.Metrics.Regression do
   @d2_pinball_score_schema NimbleOptions.new!(d2_pinball_score_opts)
 
   @doc ~S"""
-
   `D^2` regression score function, fraction of pinball loss explained.
 
   Best possible score is 1.0 and it can be negative (because the model can be
@@ -879,4 +877,3 @@ defmodule Scholar.Metrics.Regression do
     end
   end
 end
-
