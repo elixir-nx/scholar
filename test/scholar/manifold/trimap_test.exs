@@ -136,7 +136,7 @@ defmodule Scholar.Manifold.TrimapTest do
       assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
 
-    test "metric set to manhattan" do
+    test "metric set to euclidean" do
       x = Nx.iota({5, 6})
       key = Nx.Random.key(42)
 
@@ -146,7 +146,7 @@ defmodule Scholar.Manifold.TrimapTest do
           key: key,
           num_inliers: 3,
           num_outliers: 1,
-          metric: :manhattan
+          metric: :euclidean
         )
 
       expected =
