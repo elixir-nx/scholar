@@ -18,7 +18,7 @@ Mix.install([
 
 ## Setup
 
-We will use `Explorer` in this notebook, so let's define aliase for its main module DataFrame:
+We will use `Explorer` in this notebook, so let's define an alias for its main module DataFrame:
 
 ```elixir
 require Explorer.DataFrame, as: DF
@@ -33,9 +33,9 @@ Nx.Defn.global_default_options(compiler: EXLA)
 
 ## Testing Manifold Learning Functionalities
 
-In this notebook, we test how manifold learning algorithms works, and what results we can get from them.
+In this notebook we test how manifold learning algorithms works and what results we can get from them.
 
-Firstly, let's fetch the dataset that we experiment on. The data represents 3D coordinates of a mammoth. Below we include a figure of original dataset.
+First, let's fetch the dataset that we experiment on. The data represents 3D coordinates of a mammoth. Below we include a figure of original dataset.
 
 ![](files/mammoth.png)
 
@@ -150,6 +150,6 @@ Tucan.layers([
 )
 ```
 
-As we see, t-SNE have completely different results than trimap. This is because t-SNE has a completely different mathematical background of computation. Also t-SNE is slower algorithm, so it can't be used to such big datasets as trimap. However, t-SNE still preserve some features of mammoth like small tusks, feets, and corp. You can experiment with parameter *perplexity* which can significantly change the output of the algorithm.
+As we see, t-SNE gives completely different results than trimap. This is because t-SNE has a completely different mathematical background of computation. Also t-SNE is slower algorithm, so it can't be used on such big datasets as trimap. However, t-SNE preserves some features of mammoth like small tusks, feets, and corp. You can experiment with parameter *perplexity* which can substantially change the output of the algorithm.
 
 <!-- livebook:{"offset":4756,"stamp":{"token":"XCP.N4iPPNOOaf_v2YT6Ztr5xZap7jLZO88ChjT4Zo_vGiGvGM3Y2dj633k1VoBWjjgxmvxiOM2-XAZXsQFQWxNx6f4mfs6_Tt_Dq7WI_A","version":2}} -->
