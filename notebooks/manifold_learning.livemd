@@ -55,25 +55,24 @@ tensor_data = Nx.stack(df, axis: 1)
 
 Since there is almost 1 million data points and they are sorted, we shuffle dataset and then use only the part of the dataset.
 
+<!-- livebook:{"branch_parent_index":1} -->
+
+## Trimap
+
 We start with Trimap. It's a manifold learning algorithm that is based of nearest neighbors. It preserves the global structure of dataset, but it doesn't handle in a poroper way the local structure. Let's look what will be the result of the Trimap on mammoth dataset.
 
 ```elixir
-{tensor_data, key} = EXLA.jit(&Nx.Random.shuffle(&1, &2)).(Nx.Random.key(42), tensor_data)
+{tensor_data, key} = Nx.Random.shuffle(Nx.Random.key(42), tensor_data)
 
 trimap_res =
-  EXLA.jit(
-    &Scholar.Manifold.Trimap.embed(&1,
-      key: &2,
-      num_components: 2,
-      num_inliers: 12,
-      num_outliers: 4,
-      weight_temp: 0.5,
-      learning_rate: 0.1,
-      metric: :squared_euclidean
-    )
-  ).(
-    tensor_data[[0..10000, ..]],
-    Nx.Random.key(55)
+  Scholar.Manifold.Trimap.embed(tensor_data[[0..10000, ..]],
+    key: Nx.Random.key(55),
+    num_components: 2,
+    num_inliers: 12,
+    num_outliers: 4,
+    weight_temp: 0.5,
+    learning_rate: 0.1,
+    metric: :squared_euclidean
   )
 ```
 
@@ -115,22 +114,19 @@ Tucan.layers([
 
 These two plots are similiar but there are some important differences. Even if the second figure seems "prettier" it is less informative than the result of trimap. On the first figure, we can spot two tusks while one the second one they overlap and we see only one. Similarly, legs overlay on the first plot and one the second one they are spread and don't intersect with each other.
 
+## t-SNE
+
 Now, lets try different algorithm: t-SNE
 
 ```elixir
 tsne_res =
-  EXLA.jit(
-    &Scholar.Manifold.TSNE.fit(&1,
-      key: &2,
-      num_components: 2,
-      perplexity: 125,
-      exaggeration: 10.0,
-      learning_rate: 500,
-      metric: :squared_euclidean
-    )
-  ).(
-    tensor_data[[0..2000, ..]],
-    Nx.Random.key(55)
+  Scholar.Manifold.TSNE.fit(tensor_data[[0..2000, ..]],
+    key: Nx.Random.key(55),
+    num_components: 2,
+    perplexity: 125,
+    exaggeration: 10.0,
+    learning_rate: 500,
+    metric: :squared_euclidean
   )
 ```
 
@@ -151,5 +147,3 @@ Tucan.layers([
 ```
 
 As we see, t-SNE gives completely different results than trimap. This is because t-SNE has a completely different mathematical background of computation. Also t-SNE is slower algorithm, so it can't be used on such big datasets as trimap. However, t-SNE preserves some features of mammoth like small tusks, feets, and corp. You can experiment with parameter *perplexity* which can substantially change the output of the algorithm.
-
-<!-- livebook:{"offset":4756,"stamp":{"token":"XCP.N4iPPNOOaf_v2YT6Ztr5xZap7jLZO88ChjT4Zo_vGiGvGM3Y2dj633k1VoBWjjgxmvxiOM2-XAZXsQFQWxNx6f4mfs6_Tt_Dq7WI_A","version":2}} -->
