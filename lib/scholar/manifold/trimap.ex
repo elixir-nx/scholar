@@ -113,6 +113,16 @@ defmodule Scholar.Manifold.Trimap do
       doc: ~S"""
       Metric used to compute the distances.
       """
+    ],
+    algorithm: [
+      type: {:in, [:nndescent, :large_vis]},
+      default: :large_vis,
+      doc: ~S"""
+      Algorithm used to compute the nearest neighbors. Possible values:
+      * `:nndescent` - Nearest Neighbors Descent. See `Scholar.Neighbors.NNDescent` for more details.
+
+      * `:large_vis` - LargeVis algorithm. See `Scholar.Neighbors.LaregVis` for more details.
+      """
     ]
   ]
 
@@ -290,15 +300,28 @@ defmodule Scholar.Manifold.Trimap do
     num_points = Nx.axis_size(inputs, 0)
     num_extra = min(num_inliners + 50, num_points)
 
-    nndescent =
-      Scholar.Neighbors.NNDescent.fit(inputs,
-        num_neighbors: num_extra,
-        tree_init?: false,
-        metric: opts[:metric],
-        tol: 1.0e-5
-      )
+    neighbors =
+      case opts[:algorithm] do
+        :nndescent ->
+          nndescent =
+            Scholar.Neighbors.NNDescent.fit(inputs,
+              num_neighbors: num_extra,
+              tree_init?: false,
+              metric: opts[:metric],
+              tol: 1.0e-5
+            )
 
-    neighbors = nndescent.nearest_neighbors
+          nndescent.nearest_neighbors
+
+        :large_vis ->
+          {neighbors, _distances} =
+            Scholar.Neighbors.LargeVis.fit(inputs,
+              num_neighbors: num_extra,
+              metric: opts[:metric]
+            )
+
+          neighbors
+      end
 
     neighbors = Nx.concatenate([Nx.iota({num_points, 1}), neighbors], axis: 1)
 
@@ -402,7 +425,7 @@ defmodule Scholar.Manifold.Trimap do
   ## Examples
 
       iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(42), shape: {30, 5})
-      iex> Scholar.Manifold.Trimap.embed(inputs, num_components: 2, num_inliers: 3, num_outliers: 1, key: key)
+      iex> Scholar.Manifold.Trimap.embed(inputs, num_components: 2, num_inliers: 3, num_outliers: 1, key: key, algorithm: :nndescent)
   """
   deftransform embed(inputs, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)

@@ -7,7 +7,15 @@ defmodule Scholar.Manifold.TrimapTest do
     test "non default num_inliers and num_outliers" do
       x = Nx.iota({5, 6})
       key = Nx.Random.key(42)
-      res = Trimap.embed(x, num_components: 2, key: key, num_inliers: 3, num_outliers: 1)
+
+      res =
+        Trimap.embed(x,
+          num_components: 2,
+          key: key,
+          num_inliers: 3,
+          num_outliers: 1,
+          algorithm: :nndescent
+        )
 
       expected =
         Nx.tensor([
@@ -33,7 +41,8 @@ defmodule Scholar.Manifold.TrimapTest do
           num_outliers: 1,
           num_random: 5,
           weight_temp: 0.1,
-          learning_rate: 0.3
+          learning_rate: 0.3,
+          algorithm: :nndescent
         )
 
       expected =
@@ -59,7 +68,8 @@ defmodule Scholar.Manifold.TrimapTest do
           num_inliers: 3,
           num_outliers: 1,
           num_iters: 100,
-          init_embedding_type: 1
+          init_embedding_type: 1,
+          algorithm: :nndescent
         )
 
       expected =
@@ -87,7 +97,8 @@ defmodule Scholar.Manifold.TrimapTest do
           num_inliers: 3,
           num_outliers: 1,
           triplets: triplets,
-          weights: weights
+          weights: weights,
+          algorithm: :nndescent
         )
 
       expected =
@@ -121,7 +132,8 @@ defmodule Scholar.Manifold.TrimapTest do
           key: key,
           num_inliers: 3,
           num_outliers: 1,
-          init_embeddings: init_embeddings
+          init_embeddings: init_embeddings,
+          algorithm: :nndescent
         )
 
       expected =
@@ -146,7 +158,8 @@ defmodule Scholar.Manifold.TrimapTest do
           key: key,
           num_inliers: 3,
           num_outliers: 1,
-          metric: :manhattan
+          metric: :manhattan,
+          algorithm: :nndescent
         )
 
       expected =
@@ -195,7 +208,8 @@ defmodule Scholar.Manifold.TrimapTest do
                        num_inliers: 3,
                        num_outliers: 1,
                        triplets: triplets,
-                       weights: weights
+                       weights: weights,
+                       algorithm: :nndescent
                      )
                    end
     end
