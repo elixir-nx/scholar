@@ -121,7 +121,7 @@ defmodule Scholar.Manifold.Trimap do
       Algorithm used to compute the nearest neighbors. Possible values:
       * `:nndescent` - Nearest Neighbors Descent. See `Scholar.Neighbors.NNDescent` for more details.
 
-      * `:large_vis` - LargeVis algorithm. See `Scholar.Neighbors.LaregVis` for more details.
+      * `:large_vis` - LargeVis algorithm. See `Scholar.Neighbors.LargeVis` for more details.
       """
     ]
   ]
