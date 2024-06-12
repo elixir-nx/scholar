@@ -301,26 +301,37 @@ defmodule Scholar.Manifold.Trimap do
     num_extra = min(num_inliners + 50, num_points)
 
     neighbors =
-      case opts[:algorithm] do
-        :nndescent ->
-          nndescent =
-            Scholar.Neighbors.NNDescent.fit(inputs,
-              num_neighbors: num_extra,
-              tree_init?: false,
-              metric: opts[:metric],
-              tol: 1.0e-5
-            )
+      if Nx.axis_size(inputs, 0) <= 500 do
+        model =
+          Scholar.Neighbors.BruteKNN.fit(inputs,
+            num_neighbors: num_extra,
+            metric: opts[:metric]
+          )
 
-          nndescent.nearest_neighbors
+        {neighbors, _distances} = Scholar.Neighbors.BruteKNN.predict(model, inputs)
+        neighbors
+      else
+        case opts[:algorithm] do
+          :nndescent ->
+            nndescent =
+              Scholar.Neighbors.NNDescent.fit(inputs,
+                num_neighbors: num_extra,
+                tree_init?: false,
+                metric: opts[:metric],
+                tol: 1.0e-5
+              )
 
-        :large_vis ->
-          {neighbors, _distances} =
-            Scholar.Neighbors.LargeVis.fit(inputs,
-              num_neighbors: num_extra,
-              metric: opts[:metric]
-            )
+            nndescent.nearest_neighbors
 
-          neighbors
+          :large_vis ->
+            {neighbors, _distances} =
+              Scholar.Neighbors.LargeVis.fit(inputs,
+                num_neighbors: num_extra,
+                metric: opts[:metric]
+              )
+
+            neighbors
+        end
       end
 
     neighbors = Nx.concatenate([Nx.iota({num_points, 1}), neighbors], axis: 1)
@@ -425,9 +436,9 @@ defmodule Scholar.Manifold.Trimap do
   ## Examples
 
       iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(42), shape: {30, 5})
-      iex> Scholar.Manifold.Trimap.embed(inputs, num_components: 2, num_inliers: 3, num_outliers: 1, key: key, algorithm: :nndescent)
+      iex> Scholar.Manifold.Trimap.transform(inputs, num_components: 2, num_inliers: 3, num_outliers: 1, key: key, algorithm: :nndescent)
   """
-  deftransform embed(inputs, opts \\ []) do
+  deftransform transform(inputs, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     {triplets, opts} = Keyword.pop(opts, :triplets, {})

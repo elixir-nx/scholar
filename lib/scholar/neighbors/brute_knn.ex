@@ -32,6 +32,12 @@ defmodule Scholar.Neighbors.BruteKNN do
 
       * `:cosine` - Cosine metric.
 
+      * `:euclidean` - Euclidean metric.
+
+      * `:squared_euclidean` - Squared Euclidean metric.
+
+      * `:manhattan` - Manhattan metric.
+
       * Anonymous function of arity 2 that takes two rank-2 tensors.
       """
     ],
