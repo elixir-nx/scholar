@@ -13,8 +13,7 @@ defmodule Scholar.Manifold.TrimapTest do
           num_components: 2,
           key: key,
           num_inliers: 3,
-          num_outliers: 1,
-          algorithm: :nndescent
+          num_outliers: 1
         )
 
       expected =
@@ -41,8 +40,7 @@ defmodule Scholar.Manifold.TrimapTest do
           num_outliers: 1,
           num_random: 5,
           weight_temp: 0.1,
-          learning_rate: 0.3,
-          algorithm: :nndescent
+          learning_rate: 0.3
         )
 
       expected =
@@ -68,8 +66,7 @@ defmodule Scholar.Manifold.TrimapTest do
           num_inliers: 3,
           num_outliers: 1,
           num_iters: 100,
-          init_embedding_type: 1,
-          algorithm: :nndescent
+          init_embedding_type: 1
         )
 
       expected =
@@ -97,8 +94,7 @@ defmodule Scholar.Manifold.TrimapTest do
           num_inliers: 3,
           num_outliers: 1,
           triplets: triplets,
-          weights: weights,
-          algorithm: :nndescent
+          weights: weights
         )
 
       expected =
@@ -132,8 +128,7 @@ defmodule Scholar.Manifold.TrimapTest do
           key: key,
           num_inliers: 3,
           num_outliers: 1,
-          init_embeddings: init_embeddings,
-          algorithm: :nndescent
+          init_embeddings: init_embeddings
         )
 
       expected =
@@ -159,7 +154,7 @@ defmodule Scholar.Manifold.TrimapTest do
           num_inliers: 3,
           num_outliers: 1,
           metric: :manhattan,
-          algorithm: :nndescent
+          knn_algorithm: :nndescent
         )
 
       expected =
@@ -208,8 +203,7 @@ defmodule Scholar.Manifold.TrimapTest do
                        num_inliers: 3,
                        num_outliers: 1,
                        triplets: triplets,
-                       weights: weights,
-                       algorithm: :nndescent
+                       weights: weights
                      )
                    end
     end
