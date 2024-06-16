@@ -65,7 +65,7 @@ We start with Trimap. It's a manifold learning algorithm that is based of neares
 {tensor_data, key} = Nx.Random.shuffle(Nx.Random.key(42), tensor_data)
 
 trimap_res =
-  Scholar.Manifold.Trimap.embed(tensor_data[[0..10000, ..]],
+  Scholar.Manifold.Trimap.transform(tensor_data[[0..10000, ..]],
     key: Nx.Random.key(55),
     num_components: 2,
     num_inliers: 12,
