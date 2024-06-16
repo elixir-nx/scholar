@@ -303,7 +303,7 @@ defmodule Scholar.Manifold.Trimap do
     weight_temp = opts[:weight_temp]
     num_points = Nx.axis_size(inputs, 0)
 
-    num_extra = min(num_inliners + 50, num_points)
+    num_extra = min(num_inliers + 50, num_points)
 
     neighbors =
       case opts[:knn_algorithm] do
