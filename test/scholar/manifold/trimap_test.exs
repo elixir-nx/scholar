@@ -153,7 +153,7 @@ defmodule Scholar.Manifold.TrimapTest do
           key: key,
           num_inliers: 3,
           num_outliers: 1,
-          metric: :euclidean
+          metric: :euclidean,
           knn_algorithm: :nndescent
         )
 
