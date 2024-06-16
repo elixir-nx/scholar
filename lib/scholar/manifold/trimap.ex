@@ -133,10 +133,10 @@ defmodule Scholar.Manifold.Trimap do
   @opts_schema NimbleOptions.new!(opts_schema)
 
   defnp tempered_log(x, t) do
-    if Nx.abs(t - 1) < 1.0e-5 do
+    if Nx.abs(t - 1.0) < 1.0e-5 do
       Nx.log(x)
     else
-      (x ** (1 - t) - 1) * (1 / (1 - t))
+      1.0 / (1.0 - t) * (x ** (1.0 - t) - 1.0)
     end
   end
 
@@ -195,7 +195,7 @@ defmodule Scholar.Manifold.Trimap do
         {samples, key, _, _, _} =
           while {samples, key, discard, rejects, i}, Nx.any(discard) do
             {new_samples, key} = Nx.Random.randint(key, 0, opts[:maxval], shape: {elem(shape, 1)})
-            discard = in1d(new_samples, rejects[i])
+            discard = in1d(new_samples, rejects[i]) or in1d(new_samples, samples)
             samples = Nx.select(discard, samples, new_samples)
             {samples, key, in1d(samples, rejects[i]), rejects, i}
           end
@@ -245,9 +245,9 @@ defmodule Scholar.Manifold.Trimap do
     sim = triplets[[.., 1]]
     out = triplets[[.., 2]]
 
-    p_sim = handle_dist(inputs[anc], inputs[sim], opts) / (sig[anc] * sig[sim])
+    p_sim = -(handle_dist(inputs[anc], inputs[sim], opts) ** 2) / (sig[anc] * sig[sim])
 
-    p_out = handle_dist(inputs[anc], inputs[out], opts) / (sig[anc] * sig[out])
+    p_out = -(handle_dist(inputs[anc], inputs[out], opts) ** 2) / (sig[anc] * sig[out])
 
     flip = p_sim < p_out
     weights = p_sim - p_out
@@ -269,7 +269,7 @@ defmodule Scholar.Manifold.Trimap do
     hits = Nx.flatten(neighbors)
 
     distances =
-      handle_dist(inputs[anchors], inputs[hits], opts) |> Nx.reshape({num_points, :auto})
+      (handle_dist(inputs[anchors], inputs[hits], opts) ** 2) |> Nx.reshape({num_points, :auto})
 
     sigmas = Nx.max(Nx.mean(Nx.sqrt(distances[[.., 3..5]]), axes: [1]), 1.0e-10)
 
@@ -282,27 +282,28 @@ defmodule Scholar.Manifold.Trimap do
   end
 
   defnp find_triplet_weights(inputs, triplets, neighbors, sigmas, distances, opts \\ []) do
-    {num_points, num_inliners} = Nx.shape(neighbors)
+    {num_points, num_inliers} = Nx.shape(neighbors)
 
     p_sim = -Nx.flatten(distances)
 
-    num_outliers = div(Nx.axis_size(triplets, 0), num_points * num_inliners)
+    num_outliers = div(Nx.axis_size(triplets, 0), num_points * num_inliers)
 
     p_sim =
-      Nx.tile(Nx.reshape(p_sim, {num_points, num_inliners}), [1, num_outliers]) |> Nx.flatten()
+      Nx.tile(Nx.reshape(p_sim, {num_points, num_inliers}), [1, num_outliers]) |> Nx.flatten()
 
-    out_distances = handle_dist(inputs[triplets[[.., 0]]], inputs[triplets[[.., 2]]], opts)
+    out_distances = handle_dist(inputs[triplets[[.., 0]]], inputs[triplets[[.., 2]]], opts) ** 2
 
     p_out = -out_distances / (sigmas[triplets[[.., 0]]] * sigmas[triplets[[.., 2]]])
     p_sim - p_out
   end
 
   defnp generate_triplets(key, inputs, opts \\ []) do
-    num_inliners = opts[:num_inliers]
+    num_inliers = opts[:num_inliers]
     num_random = opts[:num_random]
     weight_temp = opts[:weight_temp]
     num_points = Nx.axis_size(inputs, 0)
-    num_extra = min(num_inliners + 50, num_points)
+
+    num_extra = min(num_inliers + 50, num_points)
 
     neighbors =
       case opts[:knn_algorithm] do
@@ -364,13 +365,13 @@ defmodule Scholar.Manifold.Trimap do
 
     {knn_distances, neighbors, sigmas} = find_scaled_neighbors(inputs, neighbors, opts)
 
-    neighbors = neighbors[[.., 0..num_inliners]]
-    knn_distances = knn_distances[[.., 0..num_inliners]]
+    neighbors = neighbors[[.., 0..num_inliers]]
+    knn_distances = knn_distances[[.., 0..num_inliers]]
 
     {triplets, key} =
       sample_knn_triplets(key, neighbors,
         num_outliers: opts[:num_outliers],
-        num_inliers: num_inliners,
+        num_inliers: num_inliers,
         num_points: num_points
       )
 
@@ -378,15 +379,15 @@ defmodule Scholar.Manifold.Trimap do
       find_triplet_weights(
         inputs,
         triplets,
-        neighbors[[.., 1..num_inliners]],
+        neighbors[[.., 1..num_inliers]],
         sigmas,
-        knn_distances[[.., 1..num_inliners]],
+        knn_distances[[.., 1..num_inliers]],
         opts
       )
 
     flip = weights < 0
     anchors = triplets[[.., 0]] |> Nx.reshape({:auto, 1})
-    pairs = triplets[[.., 1..2]]
+    pairs = triplets[[.., 1..-1//1]]
 
     pairs =
       Nx.select(
@@ -446,7 +447,7 @@ defmodule Scholar.Manifold.Trimap do
     {loss, num_violated}
   end
 
-  defn trimap_loss(embedding, triplets, weights) do
+  defn trimap_loss({embedding, triplets, weights}) do
     {loss, _} = trimap_metrics(embedding, triplets, weights)
     loss
   end
@@ -499,21 +500,18 @@ defmodule Scholar.Manifold.Trimap do
     {triplets, weights, key, applied_pca?} =
       case triplets do
         {} ->
-          inputs =
+          {inputs, applied_pca} =
             if num_components > @dim_pca do
               inputs = inputs - Nx.mean(inputs, axes: [0])
               {u, s, vt} = Nx.LinAlg.SVD.svd(inputs, full_matrices: false)
               inputs = Nx.dot(u[[.., 0..@dim_pca]] * s[0..@dim_pca], vt[[0..@dim_pca, ..]])
-
-              inputs = inputs - Nx.reduce_min(inputs)
-              inputs = inputs / Nx.reduce_max(inputs)
-              inputs - Nx.mean(inputs, axes: [0])
+              {inputs, Nx.u8(1)}
             else
-              inputs
+              {inputs, Nx.u8(0)}
             end
 
           {triplets, weights, key} = generate_triplets(key, inputs, opts)
-          {triplets, weights, key, Nx.u8(1)}
+          {triplets, weights, key, applied_pca}
 
         _ ->
           {triplets, weights, key, Nx.u8(0)}
@@ -535,7 +533,10 @@ defmodule Scholar.Manifold.Trimap do
 
             opts[:init_embedding_type] == 1 ->
               {random_embedding, _key} =
-                Nx.Random.normal(key, shape: {num_points, opts[:num_components]})
+                Nx.Random.normal(key,
+                  shape: {num_points, opts[:num_components]},
+                  type: to_float_type(inputs)
+                )
 
               random_embedding * @init_scale
           end
@@ -553,10 +554,12 @@ defmodule Scholar.Manifold.Trimap do
     {embeddings, _} =
       while {embeddings, {vel, gain, lr, triplets, weights, i = Nx.s64(0)}},
             i < opts[:num_iters] do
-        gamma = if i < @switch_iter, do: @final_momentum, else: @init_momentum
-        grad = trimap_loss(embeddings + gamma * vel, triplets, weights)
+        gamma = if i < @switch_iter, do: @init_momentum, else: @final_momentum
 
-        {embeddings, vel, gain} = update_embedding_dbd(embeddings, grad, vel, gain, lr, i)
+        gradient =
+          grad(embeddings + gamma * vel, fn x -> trimap_loss({x, triplets, weights}) end)
+
+        {embeddings, vel, gain} = update_embedding_dbd(embeddings, gradient, vel, gain, lr, i)
 
         {embeddings, {vel, gain, lr, triplets, weights, i + 1}}
       end

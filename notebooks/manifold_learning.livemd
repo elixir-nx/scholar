@@ -1,0 +1,149 @@
+<!-- livebook:{"persist_outputs":true} -->
+
+# Manifold Learning
+
+```elixir
+Mix.install([
+  {:scholar, github: "elixir-nx/scholar"},
+  {:explorer, "~> 0.8.2", override: true},
+  {:exla, "~> 0.7.2"},
+  {:nx, "~> 0.7.2"},
+  {:req, "~> 0.4.14"},
+  {:kino_vega_lite, "~> 0.1.11"},
+  {:kino, "~> 0.12.3"},
+  {:kino_explorer, "~> 0.1.18"},
+  {:tucan, "~> 0.3.1"}
+])
+```
+
+## Setup
+
+We will use `Explorer` in this notebook, so let's define an alias for its main module DataFrame:
+
+```elixir
+require Explorer.DataFrame, as: DF
+```
+
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
+Nx.global_default_backend(EXLA.Backend)
+Nx.Defn.global_default_options(compiler: EXLA)
+```
+
+## Testing Manifold Learning Functionalities
+
+In this notebook we test how manifold learning algorithms works and what results we can get from them.
+
+First, let's fetch the dataset that we experiment on. The data represents 3D coordinates of a mammoth. Below we include a figure of original dataset.
+
+![](files/mammoth.png)
+
+```elixir
+source = "https://raw.githubusercontent.com/MNoichl/UMAP-examples-mammoth-/master/mammoth_a.csv"
+
+data = Req.get!(source).body
+
+df = DF.load_csv!(data)
+```
+
+Now, convert the dataframe into tensor, so we can manipulate the data using `Scholar`.
+
+```elixir
+tensor_data = Nx.stack(df, axis: 1)
+```
+
+Since there is almost 1 million data points and they are sorted, we shuffle dataset and then use only the part of the dataset.
+
+<!-- livebook:{"branch_parent_index":1} -->
+
+## Trimap
+
+We start with Trimap. It's a manifold learning algorithm that is based of nearest neighbors. It preserves the global structure of dataset, but it doesn't handle in a poroper way the local structure. Let's look what will be the result of the Trimap on mammoth dataset.
+
+```elixir
+{tensor_data, key} = Nx.Random.shuffle(Nx.Random.key(42), tensor_data)
+
+trimap_res =
+  Scholar.Manifold.Trimap.transform(tensor_data[[0..10000, ..]],
+    key: Nx.Random.key(55),
+    num_components: 2,
+    num_inliers: 12,
+    num_outliers: 4,
+    weight_temp: 0.5,
+    learning_rate: 0.1,
+    metric: :squared_euclidean
+  )
+```
+
+Now, lets plot the results of Trimap algorithm
+
+```elixir
+coords = [
+  x: trimap_res[[.., 0]] |> Nx.to_flat_list(),
+  y: trimap_res[[.., 1]] |> Nx.to_flat_list()
+]
+
+Tucan.layers([
+  Tucan.scatter(coords, "x", "y", point_size: 1)
+])
+|> Tucan.set_size(300, 300)
+|> Tucan.set_title(
+  "Mammoth dataset with reduced dimensionality using Trimap",
+  offset: 25
+)
+```
+
+For sure, we can recognize mammoth on this picture. Trimap indeed preserved the global structure of data. Result is similar to the projection of 3D mammoth to the YZ plane. Now, plot this projection and compare these two plots.
+
+```elixir
+coords = [
+  x: tensor_data[[0..10000, 1]] |> Nx.to_flat_list(),
+  y: tensor_data[[0..10000, 2]] |> Nx.to_flat_list()
+]
+
+Tucan.layers([
+  Tucan.scatter(coords, "x", "y", point_size: 1)
+])
+|> Tucan.set_size(300, 300)
+|> Tucan.set_title(
+  "Mammoth data set with reduced dimensionality using trimap",
+  offset: 25
+)
+```
+
+These two plots are similiar but there are some important differences. Even if the second figure seems "prettier" it is less informative than the result of trimap. On the first figure, we can spot two tusks while one the second one they overlap and we see only one. Similarly, legs overlay on the first plot and one the second one they are spread and don't intersect with each other.
+
+## t-SNE
+
+Now, lets try different algorithm: t-SNE
+
+```elixir
+tsne_res =
+  Scholar.Manifold.TSNE.fit(tensor_data[[0..2000, ..]],
+    key: Nx.Random.key(55),
+    num_components: 2,
+    perplexity: 125,
+    exaggeration: 10.0,
+    learning_rate: 500,
+    metric: :squared_euclidean
+  )
+```
+
+```elixir
+coords = [
+  x: tsne_res[[.., 0]] |> Nx.to_flat_list(),
+  y: tsne_res[[.., 1]] |> Nx.to_flat_list()
+]
+
+Tucan.layers([
+  Tucan.scatter(coords, "x", "y", point_size: 1)
+])
+|> Tucan.set_size(300, 300)
+|> Tucan.set_title(
+  "Mammoth dataset with reduced dimensionality using Trimap",
+  offset: 25
+)
+```
+
+As we see, t-SNE gives completely different results than trimap. This is because t-SNE has a completely different mathematical background of computation. Also t-SNE is slower algorithm, so it can't be used on such big datasets as trimap. However, t-SNE preserves some features of mammoth like small tusks, feets, and corp. You can experiment with parameter *perplexity* which can substantially change the output of the algorithm.
