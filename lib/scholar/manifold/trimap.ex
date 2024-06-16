@@ -113,6 +113,20 @@ defmodule Scholar.Manifold.Trimap do
       doc: ~S"""
       Metric used to compute the distances.
       """
+    ],
+    knn_algorithm: [
+      type: {:in, [:auto, :nndescent, :large_vis, :brute]},
+      default: :auto,
+      doc: ~S"""
+      Algorithm used to compute the nearest neighbors. Possible values:
+      * `:nndescent` - Nearest Neighbors Descent. See `Scholar.Neighbors.NNDescent` for more details.
+
+      * `:large_vis` - LargeVis algorithm. See `Scholar.Neighbors.LargeVis` for more details.
+
+      * `:brute` - Brute force algorithm. See `Scholar.Neighbors.BruteKNN` for more details.
+
+      * `:auto` - Automatically selects the algorithm based on the number of points.
+      """
     ]
   ]
 
@@ -288,10 +302,64 @@ defmodule Scholar.Manifold.Trimap do
     num_random = opts[:num_random]
     weight_temp = opts[:weight_temp]
     num_points = Nx.axis_size(inputs, 0)
-    num_extra = min(num_inliers + 50, num_points)
 
-    {neighbors, _distances} =
-      Scholar.Neighbors.LargeVis.fit(inputs, num_neighbors: num_extra, metric: opts[:metric])
+    num_extra = min(num_inliners + 50, num_points)
+
+    neighbors =
+      case opts[:knn_algorithm] do
+        :brute ->
+          model =
+            Scholar.Neighbors.BruteKNN.fit(inputs,
+              num_neighbors: num_extra,
+              metric: opts[:metric]
+            )
+
+          {neighbors, _distances} = Scholar.Neighbors.BruteKNN.predict(model, inputs)
+          neighbors
+
+        :nndescent ->
+          nndescent =
+            Scholar.Neighbors.NNDescent.fit(inputs,
+              num_neighbors: num_extra,
+              tree_init?: false,
+              metric: opts[:metric],
+              tol: 1.0e-5,
+              key: key
+            )
+
+          nndescent.nearest_neighbors
+
+        :large_vis ->
+          {neighbors, _distances} =
+            Scholar.Neighbors.LargeVis.fit(inputs,
+              num_neighbors: num_extra,
+              metric: opts[:metric],
+              key: key
+            )
+
+          neighbors
+
+        :auto ->
+          if Nx.axis_size(inputs, 0) <= 500 do
+            model =
+              Scholar.Neighbors.BruteKNN.fit(inputs,
+                num_neighbors: num_extra,
+                metric: opts[:metric]
+              )
+
+            {neighbors, _distances} = Scholar.Neighbors.BruteKNN.predict(model, inputs)
+            neighbors
+          else
+            {neighbors, _distances} =
+              Scholar.Neighbors.LargeVis.fit(inputs,
+                num_neighbors: num_extra,
+                metric: opts[:metric],
+                key: key
+              )
+
+            neighbors
+          end
+      end
 
     neighbors = Nx.concatenate([Nx.iota({num_points, 1}), neighbors], axis: 1)
 
@@ -395,9 +463,9 @@ defmodule Scholar.Manifold.Trimap do
   ## Examples
 
       iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(42), shape: {30, 5})
-      iex> Scholar.Manifold.Trimap.embed(inputs, num_components: 2, num_inliers: 3, num_outliers: 1, key: key)
+      iex> Scholar.Manifold.Trimap.transform(inputs, num_components: 2, num_inliers: 3, num_outliers: 1, key: key, knn_algorithm: :nndescent)
   """
-  deftransform embed(inputs, opts \\ []) do
+  deftransform transform(inputs, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
     key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
     {triplets, opts} = Keyword.pop(opts, :triplets, {})

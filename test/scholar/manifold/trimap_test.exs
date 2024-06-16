@@ -7,7 +7,14 @@ defmodule Scholar.Manifold.TrimapTest do
     test "non default num_inliers and num_outliers" do
       x = Nx.iota({5, 6})
       key = Nx.Random.key(42)
-      res = Trimap.embed(x, num_components: 2, key: key, num_inliers: 3, num_outliers: 1)
+
+      res =
+        Trimap.transform(x,
+          num_components: 2,
+          key: key,
+          num_inliers: 3,
+          num_outliers: 1
+        )
 
       expected =
         Nx.tensor([
@@ -26,7 +33,7 @@ defmodule Scholar.Manifold.TrimapTest do
       key = Nx.Random.key(42)
 
       res =
-        Trimap.embed(x,
+        Trimap.transform(x,
           num_components: 2,
           key: key,
           num_inliers: 3,
@@ -53,7 +60,7 @@ defmodule Scholar.Manifold.TrimapTest do
       key = Nx.Random.key(42)
 
       res =
-        Trimap.embed(x,
+        Trimap.transform(x,
           num_components: 2,
           key: key,
           num_inliers: 3,
@@ -81,7 +88,7 @@ defmodule Scholar.Manifold.TrimapTest do
       weights = Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0])
 
       res =
-        Trimap.embed(x,
+        Trimap.transform(x,
           num_components: 2,
           key: key,
           num_inliers: 3,
@@ -116,7 +123,7 @@ defmodule Scholar.Manifold.TrimapTest do
         ])
 
       res =
-        Trimap.embed(x,
+        Trimap.transform(x,
           num_components: 2,
           key: key,
           num_inliers: 3,
@@ -141,12 +148,13 @@ defmodule Scholar.Manifold.TrimapTest do
       key = Nx.Random.key(42)
 
       res =
-        Trimap.embed(x,
+        Trimap.transform(x,
           num_components: 2,
           key: key,
           num_inliers: 3,
           num_outliers: 1,
           metric: :euclidean
+          knn_algorithm: :nndescent
         )
 
       expected =
@@ -170,7 +178,7 @@ defmodule Scholar.Manifold.TrimapTest do
       assert_raise ArgumentError,
                    "Number of points must be greater than 2",
                    fn ->
-                     Scholar.Manifold.Trimap.embed(x,
+                     Scholar.Manifold.Trimap.transform(x,
                        num_components: 2,
                        key: key,
                        num_inliers: 10,
@@ -189,7 +197,7 @@ defmodule Scholar.Manifold.TrimapTest do
                    "Triplets and weights must be either not initialized or have the same
       size of axis zero and rank of triplets must be 2 and rank of weights must be 1",
                    fn ->
-                     Trimap.embed(x,
+                     Trimap.transform(x,
                        num_components: 2,
                        key: key,
                        num_inliers: 3,
