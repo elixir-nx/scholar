@@ -64,7 +64,7 @@ To use Scholar inside code notebooks, run:
 
 ```elixir
 Mix.install([
-  {:scholar, "~> 0.2.1"},
+  {:scholar, "~> 0.3.0"},
   {:exla, ">= 0.0.0"}
 ])
 
