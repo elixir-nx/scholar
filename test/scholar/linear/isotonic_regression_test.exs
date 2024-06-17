@@ -91,6 +91,16 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       assert model.preprocess == {}
     end
 
+    @tag :wip
+    test "fit column vector" do
+      x = Nx.tensor([2.0, 2.0, 3.0, 4.0, 5.0])
+      y = Nx.tensor([2.0, 3.0, 7.0, 8.0, 9.0]) |> Nx.new_axis(-1)
+      sample_weights = Nx.tensor([1, 3, 2, 7, 4])
+      model = IsotonicRegression.fit(x, y, sample_weights: sample_weights)
+      IO.inspect(model)
+      assert false
+    end
+
     test "fit with sample_weights and :increasing? set to false" do
       x = Nx.tensor([2.0, 2.0, 3.0, 4.0, 5.0, 5.0, 6.0])
       y = Nx.tensor([11, 12, 9, 7, 5, 4, 2])

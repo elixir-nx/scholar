@@ -895,4 +895,17 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-3, atol: 1.0e-3)
     end
   end
+
+  describe "fit and predict with colum target" do
+    @tag :wip
+    test "test column target" do
+      x = Nx.tensor([[1], [2], [6], [8], [10]])
+      y = Nx.tensor([1, 2, 6, 8, 10]) |> Nx.new_axis(-1)
+      lr = LinearRegression.fit(x, y)
+      test = Nx.tensor([[1], [3], [4]])
+      expected = Nx.tensor([1, 3, 4]) |> Nx.new_axis(-1)
+      predicted = LinearRegression.predict(lr, test)
+      assert_all_close(expected, predicted, atol: 1.0e-1)
+    end
+  end
 end
