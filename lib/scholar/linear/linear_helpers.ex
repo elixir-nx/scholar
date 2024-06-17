@@ -33,7 +33,7 @@ defmodule Scholar.Linear.LinearHelpers do
   @doc false
   defn set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
     if fit_intercept? do
-      y_offset - Nx.dot(coeff, x_offset)
+      y_offset - Nx.dot(coeff, [-1], x_offset, [-1])
     else
       Nx.tensor(0.0, type: Nx.type(coeff))
     end
