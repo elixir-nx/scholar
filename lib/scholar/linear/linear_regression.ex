@@ -124,7 +124,7 @@ defmodule Scholar.Linear.LinearRegression do
       )
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
-    Nx.dot(x, coeff) + intercept
+    Nx.dot(x, [-1], coeff, [-1]) + intercept
   end
 
   # Implements ordinary least-squares by estimating the
