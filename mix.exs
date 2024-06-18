@@ -60,6 +60,7 @@ defmodule Scholar.MixProject do
         "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd",
         "notebooks/linear_regression.livemd",
+        "notebooks/manifold_learning.livemd",
         "notebooks/mds.livemd",
         "notebooks/nearest_neighbors.livemd"
       ],
