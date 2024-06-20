@@ -173,9 +173,7 @@ coords = [
   y: trimap_res[[.., 1]] |> Nx.to_flat_list()
 ]
 
-Tucan.layers([
-  Tucan.scatter(coords, "x", "y", point_size: 1)
-])
+Tucan.scatter(coords, "x", "y", point_size: 1)
 |> Tucan.set_size(300, 300)
 |> Tucan.set_title(
   "Mammoth dataset with reduced dimensionality using Trimap",
@@ -197,9 +195,7 @@ coords = [
   y: tensor_data[[0..10000, 2]] |> Nx.to_flat_list()
 ]
 
-Tucan.layers([
-  Tucan.scatter(coords, "x", "y", point_size: 1)
-])
+Tucan.scatter(coords, "x", "y", point_size: 1)
 |> Tucan.set_size(300, 300)
 |> Tucan.set_title(
   "Mammoth data set with reduced dimensionality using trimap",
@@ -286,9 +282,7 @@ coords = [
   y: tsne_res[[.., 1]] |> Nx.to_flat_list()
 ]
 
-Tucan.layers([
-  Tucan.scatter(coords, "x", "y", point_size: 1)
-])
+Tucan.scatter(coords, "x", "y", point_size: 1)
 |> Tucan.set_size(300, 300)
 |> Tucan.set_title(
   "Mammoth dataset with reduced dimensionality using Trimap",
