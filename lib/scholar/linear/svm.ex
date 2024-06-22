@@ -122,7 +122,9 @@ defmodule Scholar.Linear.SVM do
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
-    if Nx.rank(y) != 1 do
+    is_column_vector? = (elem(Nx.shape(y), 1) == 1) and (Nx.rank(y) == 2)
+    is_valid_target? =  (Nx.rank(y) == 1) or is_column_vector?
+    if not is_valid_target? do
       raise ArgumentError,
             "expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
     end
