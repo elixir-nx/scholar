@@ -122,7 +122,8 @@ defmodule Scholar.Linear.SVM do
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
-    is_column_vector? = (elem(Nx.shape(y), 1) == 1) and (Nx.rank(y) == 2)
+    {num_samples, _} = Nx.shape(x)
+    is_column_vector? = (Nx.shape(y) == {num_samples, 1}) and (Nx.rank(y) == 2)
     is_valid_target? =  (Nx.rank(y) == 1) or is_column_vector?
     if not is_valid_target? do
       raise ArgumentError,
@@ -187,7 +188,7 @@ defmodule Scholar.Linear.SVM do
           while {{coef, bias, has_converged, coef_optimizer_state, bias_optimizer_state},
                  {x, y, iterations, iter, eps, j = 0}},
                 j < num_classes do
-            y_j = y == j
+            y_j = (y |> Nx.flatten) == j
             coef_j = Nx.take(coef, j)
             bias_j = Nx.take(bias, j)
 
