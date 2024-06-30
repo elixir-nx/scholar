@@ -43,16 +43,12 @@ defmodule Scholar.Linear.SVMTest do
       Scholar.Linear.SVM.hinge_loss(y_pred, y_true, c: 1.0, margin: 150)
     end
 
+    y_train = Nx.new_axis(y_train, -1)
     y_train =
-      Nx.concatenate(
-        [y_train |> Nx.new_axis(-1), y_train |> Nx.new_axis(-1)],
-        axis: 1
-      )
-
-    {n_samples, _} = Nx.shape(x_train)
+      Nx.concatenate([y_train, y_train], axis: 1)
 
     message =
-      "Elixir.#{inspect(SVM)} expected y to have shape #{n_samples}, got tensor with shape: #{inspect(Nx.shape(y_train))}"
+      "Elixir.#{inspect(SVM)} expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y_train))}"
 
     assert_raise ArgumentError,
                  message,
