@@ -8,10 +8,13 @@ defmodule Scholar.Linear.LinearHelpers do
   @doc false
   def validate_y_shape(x, y, module_name) do
     {n_samples, _} = Nx.shape(x)
-    is_column_vector? = (Nx.shape(y) == {n_samples, 1}) and (Nx.rank(y) == 2)
-    is_valid_target? =  (Nx.rank(y) == 1) or is_column_vector?
+    is_column_vector? = Nx.shape(y) == {n_samples, 1} and Nx.rank(y) == 2
+    is_valid_target? = Nx.rank(y) == 1 or is_column_vector?
+
     if not is_valid_target? do
-      message = "#{module_name} expected y to have shape #{n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
+      message =
+        "#{module_name} expected y to have shape #{n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
+
       raise ArgumentError, message
     else
       y |> Nx.flatten()

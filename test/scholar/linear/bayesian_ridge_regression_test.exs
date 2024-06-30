@@ -25,7 +25,6 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     predicted = BayesianRidgeRegression.predict(clf, test)
     assert_all_close(expected, predicted, atol: 1.0e-1)
   end
-  
 
   test "ridge vs bayesian ridge: parameters" do
     x = Nx.tensor([[1, 1], [3, 4], [5, 7], [4, 1], [2, 6], [3, 10], [3, 2]])

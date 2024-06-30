@@ -19,7 +19,7 @@ defmodule Scholar.Linear.SVM do
   """
   import Nx.Defn
   import Scholar.Shared
-  alias Scholar.Linear.LinearHelpers  
+  alias Scholar.Linear.LinearHelpers
 
   @derive {Nx.Container, containers: [:coefficients, :bias]}
   defstruct [:coefficients, :bias]
@@ -183,7 +183,7 @@ defmodule Scholar.Linear.SVM do
           while {{coef, bias, has_converged, coef_optimizer_state, bias_optimizer_state},
                  {x, y, iterations, iter, eps, j = 0}},
                 j < num_classes do
-            y_j = (y |> Nx.flatten) == j
+            y_j = y |> Nx.flatten() == j
             coef_j = Nx.take(coef, j)
             bias_j = Nx.take(bias, j)
 
