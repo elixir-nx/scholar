@@ -123,7 +123,8 @@ defmodule Scholar.Linear.SVM do
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
-    y = LinearHelpers.validate_y_shape(x, y, __MODULE__)
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.validate_y_shape(y, n_samples, __MODULE__)
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
