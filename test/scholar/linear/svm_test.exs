@@ -44,6 +44,7 @@ defmodule Scholar.Linear.SVMTest do
     end
 
     y_train = Nx.new_axis(y_train, -1)
+
     y_train =
       Nx.concatenate([y_train, y_train], axis: 1)
 

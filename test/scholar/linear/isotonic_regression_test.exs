@@ -96,9 +96,8 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       y = Nx.tensor([2.0, 3.0, 7.0, 8.0, 9.0])
       sample_weights = Nx.tensor([1, 3, 2, 7, 4])
       model = IsotonicRegression.fit(x, y, sample_weights: sample_weights)
-      col_model = IsotonicRegression.fit(x, y |> Nx.new_axis(-1),
-                                         sample_weights: sample_weights)      
-      assert model == col_model 
+      col_model = IsotonicRegression.fit(x, y |> Nx.new_axis(-1), sample_weights: sample_weights)
+      assert model == col_model
     end
 
     test "fit 2 column target raises" do
@@ -107,13 +106,15 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       y = Nx.new_axis(y, -1)
       y = Nx.concatenate([y, y], axis: 1)
       sample_weights = Nx.tensor([1, 3, 2, 7, 4])
+
       message =
         "Elixir.#{inspect(IsotonicRegression)} expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
 
       assert_raise ArgumentError,
                    message,
                    fn ->
-                     IsotonicRegression.fit(x, y, sample_weights: sample_weights) end
+                     IsotonicRegression.fit(x, y, sample_weights: sample_weights)
+                   end
     end
 
     test "fit with sample_weights and :increasing? set to false" do

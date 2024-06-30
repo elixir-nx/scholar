@@ -146,7 +146,7 @@ defmodule Scholar.Linear.IsotonicRegression do
   deftransform fit(x, y, opts \\ []) do
     {n_samples} = Nx.shape(x)
     y = LinearHelpers.validate_y_shape(y, n_samples, __MODULE__)
-    
+
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     opts =
@@ -158,7 +158,7 @@ defmodule Scholar.Linear.IsotonicRegression do
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     x_type = to_float_type(x)
     x = to_float(x)
-    
+
     y = to_float(y)
 
     sample_weights =
