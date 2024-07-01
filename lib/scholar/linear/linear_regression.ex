@@ -68,6 +68,8 @@ defmodule Scholar.Linear.LinearRegression do
       >
   """
   deftransform fit(x, y, opts \\ []) do
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.flatten_column_vector(y, n_samples)
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     opts =
@@ -77,6 +79,8 @@ defmodule Scholar.Linear.LinearRegression do
         opts
 
     sample_weights = LinearHelpers.build_sample_weights(x, opts)
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.flatten_column_vector(y, n_samples)
 
     fit_n(x, y, sample_weights, opts)
   end
