@@ -525,6 +525,6 @@ defmodule Scholar.Linear.IsotonicRegression do
     x = Nx.new_axis(x, -1)
     y = Nx.new_axis(y, -1)
     model = Scholar.Linear.LinearRegression.fit(x, y)
-    model.coefficients[0][0] >= 0
+    model.coefficients[0] >= 0
   end
 end
