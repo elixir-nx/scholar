@@ -902,7 +902,10 @@ defmodule Scholar.Linear.LinearRegressionTest do
       
       lr = LinearRegression.fit(x, y)
       lr_column = LinearRegression.fit(x, y |> Nx.new_axis(-1))
+      pred = LinearRegression.predict(lr, x)
+      pred_col = LinearRegression.predict(lr_column, x)
       assert lr == lr_column
+      assert pred == pred_col
     end
   end
 end
