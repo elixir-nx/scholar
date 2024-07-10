@@ -141,12 +141,12 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       expected_coeff =
         Nx.tensor([
-            -0.3777002030151436,
-            -0.4445957357428203,
-            -0.14451413829286042,
-            0.31438593891571714,
-            -0.9484560114249797,
-            0.04914973264178196
+          -0.3777002030151436,
+          -0.4445957357428203,
+          -0.14451413829286042,
+          0.31438593891571714,
+          -0.9484560114249797,
+          0.04914973264178196
         ])
 
       expected_intercept = Nx.tensor([1.31901913])
@@ -899,7 +899,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
     test "test column target" do
       x = Nx.tensor([[1], [2], [6], [8], [10]])
       y = Nx.tensor([1, 2, 6, 8, 10])
-      
+
       lr = LinearRegression.fit(x, y)
       lr_column = LinearRegression.fit(x, y |> Nx.new_axis(-1))
       pred = LinearRegression.predict(lr, x)

@@ -7,12 +7,13 @@ defmodule Scholar.Linear.LinearHelpers do
 
   @doc false
   def valid_column_vector(y, n_samples) do
-    (Nx.shape(y) == {n_samples, 1}) and (Nx.rank(y) == 2)
+    Nx.shape(y) == {n_samples, 1} and Nx.rank(y) == 2
   end
-  
+
   @doc false
   def flatten_column_vector(y, n_samples) do
     is_column_vector? = valid_column_vector(y, n_samples)
+
     if is_column_vector? do
       y |> Nx.flatten()
     else
@@ -23,7 +24,7 @@ defmodule Scholar.Linear.LinearHelpers do
   @doc false
   def validate_y_shape(y, n_samples, module_name) do
     y = flatten_column_vector(y, n_samples)
-    is_valid_target? = Nx.rank(y) == 1 
+    is_valid_target? = Nx.rank(y) == 1
 
     if not is_valid_target? do
       message =
