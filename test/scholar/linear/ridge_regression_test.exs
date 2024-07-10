@@ -281,4 +281,16 @@ defmodule Scholar.Linear.RidgeRegressionTest do
       assert_all_close(expected_prediction, actual_prediction)
     end
   end
+
+  @tag :wip
+  test "toy ridge with column target" do
+    x = Nx.tensor([[1], [2], [6], [8], [10]])
+    y = Nx.tensor([1, 2, 6, 8, 10])
+    model = RidgeRegression.fit(x, y)
+    pred = RidgeRegression.predict(model, x)
+    col_model = RidgeRegression.fit(x, y |> Nx.new_axis(-1))
+    col_pred = RidgeRegression.predict(col_model, x)
+    assert model == col_model
+    assert pred == col_pred
+  end
 end
