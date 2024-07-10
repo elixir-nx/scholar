@@ -66,9 +66,7 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
     end
   end
 
-  describe "predict" do
-    test "predict when :fit_intercept? set to true, degree set to 2" do
-      a =
+  def a do
         Nx.tensor([
           [
             0.7731901407241821,
@@ -103,14 +101,23 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
             0.9986271858215332
           ]
         ])
+    
+  end
 
-      b =
+  def b do
         Nx.tensor([
           0.38682249188423157,
           0.8040792346000671,
           0.8069542646408081,
           0.3620224595069885
         ])
+  end
+
+  describe "predict" do
+    test "predict when :fit_intercept? set to true, degree set to 2" do
+      a = a()
+
+      b = b()
 
       sample_weights = [
         0.8669093251228333,
@@ -134,49 +141,8 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
     end
 
     test "predict when :fit_intercept? set to false, degree set to 3" do
-      a =
-        Nx.tensor([
-          [
-            0.7731901407241821,
-            0.5813425779342651,
-            0.8365984559059143,
-            0.2182593196630478,
-            0.06448899209499359,
-            0.9420031905174255
-          ],
-          [
-            0.6547101736068726,
-            0.05023770406842232,
-            0.657528281211853,
-            0.24924135208129883,
-            0.8238568902015686,
-            0.11182288080453873
-          ],
-          [
-            0.7693489193916321,
-            0.6696648001670837,
-            0.6877049803733826,
-            0.08740159869194031,
-            0.6053816676139832,
-            0.5419610142707825
-          ],
-          [
-            0.03419172018766403,
-            0.8298202753067017,
-            0.6097439527511597,
-            0.0184243805706501,
-            0.5578944087028503,
-            0.9986271858215332
-          ]
-        ])
-
-      b =
-        Nx.tensor([
-          0.38682249188423157,
-          0.8040792346000671,
-          0.8069542646408081,
-          0.3620224595069885
-        ])
+      a = a()
+      b = b()
 
       sample_weights = [
         0.8669093251228333,
