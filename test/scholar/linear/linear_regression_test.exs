@@ -895,7 +895,6 @@ defmodule Scholar.Linear.LinearRegressionTest do
   end
 
   describe "fit and predict with colum target" do
-    @tag :wip
     test "test column target" do
       x = Nx.tensor([[1], [2], [6], [8], [10]])
       y = Nx.tensor([1, 2, 6, 8, 10])
