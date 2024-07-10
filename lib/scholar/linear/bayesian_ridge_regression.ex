@@ -224,6 +224,9 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       >
   """
   deftransform fit(x, y, opts \\ []) do
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.validate_y_shape(y, n_samples, __MODULE__)
+
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     opts =
