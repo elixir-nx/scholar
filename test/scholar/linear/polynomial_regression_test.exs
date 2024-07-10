@@ -264,4 +264,34 @@ defmodule Scholar.Linear.PolynomialRegressionTest do
                expected
     end
   end
+
+  describe "column target tests" do
+    test "fit column target" do
+      a = a()
+      b = b()
+
+      sample_weights = [
+        0.8669093251228333,
+        0.10421276837587357,
+        0.996828556060791,
+        0.29747673869132996
+      ]
+
+      prediction_input = Nx.tensor([[1.0, 2.0, 3.0, 4.0, 5.0, 6.0]])
+      model = PolynomialRegression.fit(a, b,
+          degree: 2,
+          sample_weights: sample_weights,
+          fit_intercept?: true
+        )
+      prediction = PolynomialRegression.predict(model, prediction_input)
+      col_model = PolynomialRegression.fit(a, b |> Nx.new_axis(-1),
+          degree: 2,
+          sample_weights: sample_weights,
+          fit_intercept?: true
+        )
+      col_prediction = PolynomialRegression.predict(col_model, prediction_input)
+      assert model == col_model
+      assert prediction == col_prediction
+    end
+  end
 end
