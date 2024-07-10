@@ -6,6 +6,7 @@ defmodule Scholar.Linear.LogisticRegression do
   """
   import Nx.Defn
   import Scholar.Shared
+  alias Scholar.Linear.LinearHelpers
 
   @derive {Nx.Container, containers: [:coefficients, :bias]}
   defstruct [:coefficients, :bias]
@@ -94,10 +95,8 @@ defmodule Scholar.Linear.LogisticRegression do
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
-    if Nx.rank(y) != 1 do
-      raise ArgumentError,
-            "expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
-    end
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.validate_y_shape(y, n_samples, __MODULE__)
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
 

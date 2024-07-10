@@ -79,7 +79,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       y = Nx.tensor([[0, 1], [1, 0]])
 
       assert_raise ArgumentError,
-                   "expected y to have shape {n_samples}, got tensor with shape: {2, 2}",
+                   "Elixir.#{inspect(LogisticRegression)} expected y to have shape {n_samples}, got tensor with shape: {2, 2}",
                    fn -> LogisticRegression.fit(x, y, num_classes: 2) end
     end
   end
@@ -91,8 +91,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
 
       model = LogisticRegression.fit(x_train, y_train, num_classes: 3)
       pred = LogisticRegression.predict(model, x_train)
-      col_model = LogisticRegression.fit(x_train, y_train |> Nx.new_axis(-1),
-                                         num_classes: 3)
+      col_model = LogisticRegression.fit(x_train, y_train |> Nx.new_axis(-1), num_classes: 3)
       col_pred = LogisticRegression.predict(col_model, x_train)
       assert model == col_model
       assert pred == col_pred
