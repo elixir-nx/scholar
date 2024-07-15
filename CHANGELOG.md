@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.1 (2024-06-18)
+
+### Enhancements
+
+  * Add a notebook about manifold learning
+  * Make knn algorithm configurable on Trimap
+  * Add `d2_pinball_score` and `d2_absolute_error_score`
+
 ## v0.3.0 (2024-05-29)
 
 ### Enhancements

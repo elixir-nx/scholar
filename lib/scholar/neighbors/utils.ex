@@ -22,6 +22,14 @@ defmodule Scholar.Neighbors.Utils do
     {:ok, &Scholar.Metrics.Distance.pairwise_minkowski(&1, &2, p: p)}
   end
 
+  def pairwise_metric(:euclidean), do: {:ok, &Scholar.Metrics.Distance.pairwise_euclidean/2}
+
+  def pairwise_metric(:squared_euclidean),
+    do: {:ok, &Scholar.Metrics.Distance.pairwise_squared_euclidean/2}
+
+  def pairwise_metric(:manhattan),
+    do: {:ok, &Scholar.Metrics.Distance.pairwise_minkowski(&1, &2, p: 1)}
+
   def pairwise_metric(metric) when is_function(metric, 2), do: {:ok, metric}
 
   def pairwise_metric(metric) do

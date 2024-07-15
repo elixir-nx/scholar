@@ -2,7 +2,7 @@ defmodule Scholar.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-nx/scholar"
-  @version "0.3.0"
+  @version "0.3.1"
 
   def project do
     [
@@ -60,6 +60,7 @@ defmodule Scholar.MixProject do
         "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd",
         "notebooks/linear_regression.livemd",
+        "notebooks/manifold_learning.livemd",
         "notebooks/mds.livemd",
         "notebooks/nearest_neighbors.livemd"
       ],
