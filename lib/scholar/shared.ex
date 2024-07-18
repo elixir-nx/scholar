@@ -92,7 +92,8 @@ defmodule Scholar.Shared do
 
   defn get_batches(tensor, opts) do
     {size, dim} = Nx.shape(tensor)
-    batch_size = min(opts[:batch_size], size)
+    batch_size = min(size, opts[:batch_size])
+    min_batch_size = if opts[:min_batch_size], do: opts[:min_batch_size], else: 0
     num_batches = div(size, batch_size)
     leftover_size = rem(size, batch_size)
 
@@ -102,7 +103,7 @@ defmodule Scholar.Shared do
       |> Nx.reshape({num_batches, batch_size, dim})
 
     leftover =
-      if leftover_size > 0 do
+      if leftover_size > min_batch_size do
         Nx.slice_along_axis(tensor, num_batches * batch_size, leftover_size, axis: 0)
       else
         nil
