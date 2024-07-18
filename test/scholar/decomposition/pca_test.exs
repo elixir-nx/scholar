@@ -40,7 +40,7 @@ defmodule Scholar.Decomposition.PCATest do
     assert_all_close(model.singular_values, Nx.tensor([6.30061232, 0.54980396]), atol: 1.0e-3)
     assert model.mean == Nx.tensor([0.0, 0.0])
     assert model.num_components == 2
-    assert model.num_samples == 6
+    assert model.num_samples == Nx.u64(6)
     assert model.num_features == 2
   end
 
@@ -70,7 +70,7 @@ defmodule Scholar.Decomposition.PCATest do
     assert_all_close(model.singular_values, Nx.tensor([38.89730453491211]), atol: 1.0e-3)
     assert model.mean == Nx.tensor([28.5, 2.0, 3.5])
     assert model.num_components == 1
-    assert model.num_samples == 2
+    assert model.num_samples == Nx.u64(2)
     assert model.num_features == 3
   end
 
@@ -121,7 +121,7 @@ defmodule Scholar.Decomposition.PCATest do
 
     assert_all_close(model.mean, Nx.tensor([3.83333333, 0.33333333, 1.66666667]), atol: 1.0e-2)
     assert model.num_components == 2
-    assert model.num_samples == 6
+    assert model.num_samples == Nx.u64(6)
     assert model.num_features == 3
 
     assert_all_close(

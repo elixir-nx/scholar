@@ -15,9 +15,10 @@ defmodule Scholar.Decomposition.PCA do
   import Nx.Defn
 
   @derive {Nx.Container,
-           keep: [:num_components, :num_samples, :num_features],
+           keep: [:num_components, :num_features],
            containers: [
              :components,
+             :num_samples,
              :explained_variance,
              :explained_variance_ratio,
              :singular_values,
@@ -28,6 +29,8 @@ defmodule Scholar.Decomposition.PCA do
     :explained_variance,
     :explained_variance_ratio,
     :singular_values,
+    :num_samples,
+    :num_features,
     :mean,
     :num_components,
     :num_features,
@@ -124,7 +127,7 @@ defmodule Scholar.Decomposition.PCA do
         ),
         num_components: 2,
         num_features: 2,
-        num_samples: 6
+        num_samples: Nx.u64(6)
       }
   """
   deftransform fit(x, opts \\ []) do
@@ -166,8 +169,8 @@ defmodule Scholar.Decomposition.PCA do
       singular_values: singular_values[[0..(num_components - 1)]],
       mean: mean,
       num_components: num_components,
-      num_features: num_features,
-      num_samples: num_samples
+      num_features: Nx.u64(num_features),
+      num_samples: Nx.u64(num_samples)
     }
   end
 
