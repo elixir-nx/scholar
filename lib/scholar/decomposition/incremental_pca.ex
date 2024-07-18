@@ -118,7 +118,6 @@ defmodule Scholar.Decomposition.IncrementalPCA do
         nil
     end
 
-    # TODO: Check this!
     opts = Keyword.put(opts, :batch_size, batch_size)
 
     fit_n(x, opts)
@@ -165,7 +164,6 @@ defmodule Scholar.Decomposition.IncrementalPCA do
   """
   def fit(batches = %Stream{}, opts) do
     opts = NimbleOptions.validate!(opts, @stream_schema)
-    # This should not run the stream
     first_batch = Enum.at(batches, 0)
     model = fit_first_n(first_batch, opts)
     batches = Stream.drop(batches, 1)

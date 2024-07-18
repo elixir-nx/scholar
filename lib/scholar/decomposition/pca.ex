@@ -32,9 +32,7 @@ defmodule Scholar.Decomposition.PCA do
     :num_samples,
     :num_features,
     :mean,
-    :num_components,
-    :num_features,
-    :num_samples
+    :num_components
   ]
 
   fit_opts_schema = [
