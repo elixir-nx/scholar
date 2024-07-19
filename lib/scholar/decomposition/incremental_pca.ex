@@ -25,9 +25,9 @@ defmodule Scholar.Decomposition.IncrementalPCA do
            ]}
   defstruct [
     :num_components,
-    :num_samples_seen,
     :components,
     :singular_values,
+    :num_samples_seen,
     :mean,
     :variance,
     :explained_variance,
@@ -62,8 +62,8 @@ defmodule Scholar.Decomposition.IncrementalPCA do
         ]
       ]
 
-  @stream_schema NimbleOptions.new!(stream_opts)
   @tensor_schema NimbleOptions.new!(tensor_opts)
+  @stream_schema NimbleOptions.new!(stream_opts)
 
   @doc """
   Fits an Incremental PCA model.
@@ -124,13 +124,15 @@ defmodule Scholar.Decomposition.IncrementalPCA do
   end
 
   defn fit_n(x, opts) do
+    num_components = opts[:num_components]
     batch_size = opts[:batch_size]
 
     {batches, leftover} =
-      get_batches(x, batch_size: batch_size, min_batch_size: opts[:num_components])
+      get_batches(x, batch_size: batch_size, min_batch_size: num_components)
 
     num_batches = Nx.axis_size(batches, 0)
-    model = fit_first_n(batches[0], opts)
+
+    model = fit_head_n(batches[0], opts)
 
     {model, _} =
       while {
@@ -146,13 +148,10 @@ defmodule Scholar.Decomposition.IncrementalPCA do
         {model, {batches, i + 1}}
       end
 
-    model =
-      case leftover do
-        nil -> model
-        _ -> partial_fit_n(model, leftover)
-      end
-
-    model
+    case leftover do
+      nil -> model
+      _ -> partial_fit_n(model, leftover)
+    end
   end
 
   @doc """
@@ -164,43 +163,21 @@ defmodule Scholar.Decomposition.IncrementalPCA do
   """
   def fit(batches = %Stream{}, opts) do
     opts = NimbleOptions.validate!(opts, @stream_schema)
-    first_batch = Enum.at(batches, 0)
-    model = fit_first_n(first_batch, opts)
-    batches = Stream.drop(batches, 1)
 
     Enum.reduce(
       batches,
-      model,
-      # TODO: JIT
-      fn batch, model -> partial_fit(model, batch) end
+      nil,
+      fn batch, model -> fit_batch(model, batch, opts) end
     )
   end
 
-  deftransformp validate_batch(batch, opts) do
-    {batch_size, num_features} = Nx.shape(batch)
-    num_components = opts[:num_components]
+  defp fit_batch(nil, batch, opts), do: fit_head_n(batch, opts)
+  defp fit_batch(%__MODULE__{} = model, batch, _opts), do: partial_fit(model, batch)
 
-    cond do
-      num_components > batch_size ->
-        raise ArgumentError,
-              """
-              num_components must be less than or equal to \
-              batch_size = #{batch_size}, got #{num_components}
-              """
-
-      num_components > num_features ->
-        raise ArgumentError,
-              """
-              num_components must be less than or equal to \
-              num_features = #{num_features}, got #{num_components}
-              """
-    end
-  end
-
-  defnp fit_first_n(x, opts) do
+  defnp fit_head_n(x, opts) do
     # This is similar to Scholar.Decomposition.PCA.fit_n
-    num_samples = Nx.u64(Nx.axis_size(x, 0))
     num_components = opts[:num_components]
+    num_samples = Nx.u64(Nx.axis_size(x, 0))
     mean = Nx.mean(x, axes: [0])
     variance = Nx.variance(x, axes: [0])
     x_centered = x - mean
@@ -247,6 +224,9 @@ defmodule Scholar.Decomposition.IncrementalPCA do
               num_components must be less than or equal to \
               num_features = #{num_features}, got #{num_components}
               """
+
+      true ->
+        nil
     end
 
     partial_fit_n(model, x)
@@ -254,9 +234,10 @@ defmodule Scholar.Decomposition.IncrementalPCA do
 
   defnp partial_fit_n(model, x) do
     num_components = model.num_components
+    num_samples_seen = model.num_samples_seen
+
     components = model.components
     singular_values = model.singular_values
-    num_samples_seen = model.num_samples_seen
     mean = model.mean
     variance = model.variance
     {num_samples, _} = Nx.shape(x)
