@@ -102,6 +102,7 @@ defmodule Scholar.Decomposition.PCA do
     * `:num_samples` - Number of samples in the training data.
 
   ## Examples
+
       iex> x = Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
       iex> Scholar.Decomposition.PCA.fit(x)
       %Scholar.Decomposition.PCA{

@@ -2,7 +2,10 @@ defmodule Scholar.Decomposition.IncrementalPCA do
   @moduledoc """
   Incremental Principal Component Analysis.
 
-  Description goes here (elaborate on incremental approach)
+  Performs linear dimensionality reduction by processing the input data
+  in batches and incrementally updating the principal components.
+  This iterative approach is particularly suitable for datasets too large to fit in memory,
+  as its memory complexity is independent of the number of data samples.
 
   References:
 
@@ -13,7 +16,7 @@ defmodule Scholar.Decomposition.IncrementalPCA do
   require Nx
 
   @derive {Nx.Container,
-           keep: [:num_components, :whiten?],
+           keep: [:whiten?],
            containers: [
              :components,
              :singular_values,
@@ -24,7 +27,6 @@ defmodule Scholar.Decomposition.IncrementalPCA do
              :explained_variance_ratio
            ]}
   defstruct [
-    :num_components,
     :components,
     :singular_values,
     :num_samples_seen,
@@ -35,7 +37,7 @@ defmodule Scholar.Decomposition.IncrementalPCA do
     :whiten?
   ]
 
-  stream_opts = [
+  opts = [
     num_components: [
       required: true,
       type: :pos_integer,
@@ -53,116 +55,50 @@ defmodule Scholar.Decomposition.IncrementalPCA do
     ]
   ]
 
-  tensor_opts =
-    stream_opts ++
-      [
-        batch_size: [
-          type: :pos_integer,
-          doc: "The number of samples in a batch."
-        ]
-      ]
-
-  @tensor_schema NimbleOptions.new!(tensor_opts)
-  @stream_schema NimbleOptions.new!(stream_opts)
-
-  @doc """
-  Fits an Incremental PCA model.
-
-  ## Options
-
-  #{NimbleOptions.docs(@tensor_schema)}
-  """
-  deftransform fit(%Nx.Tensor{} = x, opts) do
-    if Nx.rank(x) != 2 do
-      raise ArgumentError,
-            "expected input tensor to have shape {num_samples, num_features},
-             got tensor with shape: #{inspect(Nx.shape(x))}"
-    end
-
-    opts = NimbleOptions.validate!(opts, @tensor_schema)
-
-    {num_samples, num_features} = Nx.shape(x)
-
-    batch_size =
-      if opts[:batch_size] do
-        opts[:batch_size]
-      else
-        5 * num_features
-      end
-
-    num_components = opts[:num_components]
-
-    cond do
-      num_components > batch_size ->
-        raise ArgumentError,
-              """
-              num_components must be less than or equal to \
-              batch_size = #{batch_size}, got #{num_components}
-              """
-
-      num_components > num_samples ->
-        raise ArgumentError,
-              """
-              num_components must be less than or equal to \
-              num_samples = #{num_samples}, got #{num_components}
-              """
-
-      num_components > num_features ->
-        raise ArgumentError,
-              """
-              num_components must be less than or equal to \
-              num_features = #{num_features}, got #{num_components}
-              """
-
-      true ->
-        nil
-    end
-
-    opts = Keyword.put(opts, :batch_size, batch_size)
-
-    fit_n(x, opts)
-  end
-
-  defn fit_n(x, opts) do
-    num_components = opts[:num_components]
-    batch_size = opts[:batch_size]
-
-    {batches, leftover} =
-      get_batches(x, batch_size: batch_size, min_batch_size: num_components)
-
-    num_batches = Nx.axis_size(batches, 0)
-
-    model = fit_head_n(batches[0], opts)
-
-    {model, _} =
-      while {
-              model,
-              {
-                batches,
-                i = Nx.u64(1)
-              }
-            },
-            i < num_batches do
-        batch = batches[i]
-        model = partial_fit_n(model, batch)
-        {model, {batches, i + 1}}
-      end
-
-    case leftover do
-      nil -> model
-      _ -> partial_fit_n(model, leftover)
-    end
-  end
+  @opts_schema NimbleOptions.new!(opts)
 
   @doc """
   Fits an Incremental PCA model on a stream of batches.
 
   ## Options
 
-  #{NimbleOptions.docs(@stream_schema)}
+  #{NimbleOptions.docs(@opts_schema)}
+
+  ## Return values
+
+  The function returns a struct with the following parameters:
+
+    * `:num_components` - The number of principal components.
+
+    * `:components` - Principal axes in feature space, representing the directions of maximum variance in the data.
+      Equivalently, the right singular vectors of the centered input data, parallel to its eigenvectors.
+      The components are sorted by decreasing `:explained_variance`.
+
+    * `:singular_values` - The singular values corresponding to each of the selected components.
+      The singular values are equal to the 2-norms of the `:num_components` variables in the lower-dimensional space.
+
+    * `:num_samples_seen` - The number of data samples processed.
+
+    * `:mean` - Per-feature empirical mean.
+
+    * `:variance` - Per-feature empirical variance.
+
+    * `:explained_variance` - Variance explained by each of the selected components.
+
+    * `:explained_variance_ratio` - Percentage of variance explained by each of the selected components.
+
+    * `:whiten?` - Whether to apply whitening.
+
+  ## Examples
+
+      iex> batches = Scidata.Iris.download() |> elem(0) |> Nx.tensor() |> Nx.to_batched(10)
+      iex> ipca = Scholar.Decomposition.IncrementalPCA.fit(batches, num_components: 2)
+      iex> ipca.components
+      iex> ipca.singular_values
   """
   def fit(batches = %Stream{}, opts) do
-    opts = NimbleOptions.validate!(opts, @stream_schema)
+    opts = NimbleOptions.validate!(opts, @opts_schema)
+    IO.puts("num_components: #{opts[:num_components]}")
 
     Enum.reduce(
       batches,
@@ -173,6 +109,29 @@ defmodule Scholar.Decomposition.IncrementalPCA do
 
   defp fit_batch(nil, batch, opts), do: fit_head_n(batch, opts)
   defp fit_batch(%__MODULE__{} = model, batch, _opts), do: partial_fit(model, batch)
+
+  deftransformp fit_head(x, opts) do
+    {num_samples, num_features} = Nx.shape(x)
+    num_components = opts[:num_componenets]
+
+    cond do
+      num_components > num_samples ->
+        raise ArgumentError,
+              """
+              num_components must be less than or equal to \
+              batch_size = #{num_samples}, got #{num_components}
+              """
+
+      num_components > num_features ->
+        raise ArgumentError,
+              """
+              num_components must be less than or equal to \
+              num_features = #{num_features}, got #{num_components}
+              """
+    end
+
+    fit_head_n(x, opts)
+  end
 
   defnp fit_head_n(x, opts) do
     # This is similar to Scholar.Decomposition.PCA.fit_n
@@ -191,10 +150,9 @@ defmodule Scholar.Decomposition.IncrementalPCA do
       (explained_variance / Nx.sum(explained_variance))[[0..(num_components - 1)]]
 
     %__MODULE__{
-      num_samples_seen: num_samples,
-      num_components: num_components,
       components: components,
       singular_values: singular_values,
+      num_samples_seen: num_samples,
       mean: mean,
       variance: variance,
       explained_variance: explained_variance[[0..(num_components - 1)]],
@@ -203,26 +161,24 @@ defmodule Scholar.Decomposition.IncrementalPCA do
     }
   end
 
-  @doc """
-  Updates an Incremental PCA model on samples `x`.
-  """
+  @doc false
   deftransform partial_fit(model, x) do
+    {num_components, num_features_seen} = Nx.shape(model.components)
     {num_samples, num_features} = Nx.shape(x)
-    num_components = model.num_components
 
     cond do
+      num_features_seen != num_features ->
+        raise ArgumentError,
+              """
+              each batch must have the same number of features, \
+              got #{num_features_seen} and #{num_features}
+              """
+
       num_components > num_samples ->
         raise ArgumentError,
               """
               num_components must be less than or equal to \
               batch_size = #{num_samples}, got #{num_components}
-              """
-
-      num_components > num_features ->
-        raise ArgumentError,
-              """
-              num_components must be less than or equal to \
-              num_features = #{num_features}, got #{num_components}
               """
 
       true ->
@@ -233,16 +189,15 @@ defmodule Scholar.Decomposition.IncrementalPCA do
   end
 
   defnp partial_fit_n(model, x) do
-    num_components = model.num_components
-    num_samples_seen = model.num_samples_seen
-
     components = model.components
+    num_components = Nx.axis_size(components, 0)
     singular_values = model.singular_values
+    num_samples_seen = model.num_samples_seen
     mean = model.mean
     variance = model.variance
     {num_samples, _} = Nx.shape(x)
 
-    {x_centered, x_mean, new_num_samples_seen, new_mean, new_variance} =
+    {x_mean, x_centered, new_num_samples_seen, new_mean, new_variance} =
       incremental_mean_and_variance(x, num_samples_seen, mean, variance)
 
     mean_correction =
@@ -270,7 +225,6 @@ defmodule Scholar.Decomposition.IncrementalPCA do
       singular_values * singular_values / Nx.sum(new_variance * new_num_samples_seen)
 
     %__MODULE__{
-      num_components: num_components,
       components: new_components,
       singular_values: new_singular_values,
       num_samples_seen: new_num_samples_seen,
@@ -305,11 +259,16 @@ defmodule Scholar.Decomposition.IncrementalPCA do
           (sum / last_over_new_count - x_sum) ** 2
 
     new_variance = new_unnormalized_variance / new_num_samples_seen
-    {x_centered, x_mean, new_num_samples_seen, new_mean, new_variance}
+    {x_mean, x_centered, new_num_samples_seen, new_mean, new_variance}
   end
 
   @doc """
-  Documentation goes here.
+  Applies dimensionality reduction to the data `x` using Incremental PCA `model`.
+
+  ## Examples
+
+      iex> batches = Scidata.Iris.download() |> elem(0) |> Nx.tensor() |> Nx.to_batched(10)
+      iex> ipca = Scholar.Decomposition.IncrementalPCA.fit(batches, num_components: 2)
   """
   deftransform transform(model, x) do
     transform_n(model, x)
@@ -324,7 +283,7 @@ defmodule Scholar.Decomposition.IncrementalPCA do
           } = _model,
           x
         ) do
-    # This is the same as Scholar.Decomposition.PCA.transform_n!
+    # This is literally the same as Scholar.Decomposition.PCA.transform_n!
     z = Nx.dot(x - mean, [1], components, [1])
 
     if whiten? do
