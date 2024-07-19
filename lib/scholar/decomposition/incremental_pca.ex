@@ -12,7 +12,6 @@ defmodule Scholar.Decomposition.IncrementalPCA do
   * [1] [Incremental Learning for Robust Visual Tracking](https://www.cs.toronto.edu/~dross/ivt/RossLimLinYang_ijcv.pdf)
   """
   import Nx.Defn
-  import Scholar.Shared
   require Nx
 
   @derive {Nx.Container,
