@@ -90,14 +90,22 @@ defmodule Scholar.Decomposition.IncrementalPCA do
 
   ## Examples
 
-      iex> batches = Scidata.Iris.download() |> elem(0) |> Nx.tensor() |> Nx.to_batched(10)
+      iex> {x, _} = Scidata.Iris.download()
+      iex> batches = x |> Nx.tensor() |> Nx.to_batched(10)
       iex> ipca = Scholar.Decomposition.IncrementalPCA.fit(batches, num_components: 2)
       iex> ipca.components
+      Nx.tensor(
+        f64[2][4]
+        [
+          [-0.333540033447479, 0.10489666948487557, -0.8618107080105579, -0.367464336197646],
+          [-0.586203017375807, -0.7916955422591979, 0.158744098990766, -0.06621559023520115]
+        ]
+      )
       iex> ipca.singular_values
+      Nx.tensor([77.05782028025969, 10.137862896272168])
   """
   def fit(batches = %Stream{}, opts) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    IO.puts("num_components: #{opts[:num_components]}")
 
     Enum.reduce(
       batches,
@@ -266,8 +274,23 @@ defmodule Scholar.Decomposition.IncrementalPCA do
 
   ## Examples
 
-      iex> batches = Scidata.Iris.download() |> elem(0) |> Nx.tensor() |> Nx.to_batched(10)
-      iex> ipca = Scholar.Decomposition.IncrementalPCA.fit(batches, num_components: 2)
+      iex> {x, _} = Scidata.Iris.download()
+      iex> batches = x |> Nx.tensor() |> Nx.to_batched(10)
+      iex> x = Nx.tensor(
+        [
+          [5.2, 2.6, 2.475, 0.7],
+          [6.1, 3.2, 3.95, 1.3],
+          [7.0, 3.8, 5.425, 1.9]
+        ]
+      )
+      iex> Scholar.Decomposition.IncrementalPCA.transform(ipca, x)
+      Nx.tensor(
+        [
+          [1.4564743682550334, 0.5657988895852432],
+          [-0.2724231831356622, -0.24238310361929516],
+          [-2.001320781438254, -1.050564912015664]
+        ]
+      )
   """
   deftransform transform(model, x) do
     transform_n(model, x)
