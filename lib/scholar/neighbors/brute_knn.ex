@@ -218,7 +218,10 @@ defmodule Scholar.Neighbors.BruteKNN do
   defn get_batches(tensor, opts) do
     {size, dim} = Nx.shape(tensor)
     batch_size = min(size, opts[:batch_size])
-    min_batch_size = if opts[:min_batch_size], do: opts[:min_batch_size], else: 0
+    min_batch_size = case opts[:min_batch_size] do
+      nil -> 0
+      b -> b
+    end
     num_batches = div(size, batch_size)
     leftover_size = rem(size, batch_size)
 

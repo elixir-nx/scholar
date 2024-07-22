@@ -168,7 +168,7 @@ defmodule Scholar.Decomposition.PCA do
       singular_values: singular_values[[0..(num_components - 1)]],
       mean: mean,
       num_components: num_components,
-      num_features: Nx.u64(num_features),
+      num_features: num_features,
       num_samples: Nx.u64(num_samples)
     }
   end

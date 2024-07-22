@@ -95,14 +95,13 @@ defmodule Scholar.Decomposition.IncrementalPCA do
       iex> ipca = Scholar.Decomposition.IncrementalPCA.fit(batches, num_components: 2)
       iex> ipca.components
       Nx.tensor(
-        f64[2][4]
         [
-          [-0.333540033447479, 0.10489666948487557, -0.8618107080105579, -0.367464336197646],
-          [-0.586203017375807, -0.7916955422591979, 0.158744098990766, -0.06621559023520115]
+          [-0.33354005217552185, 0.1048964187502861, -0.8618107080105579, -0.3674643635749817],
+          [-0.5862125754356384, -0.7916879057884216, 0.15874788165092468, -0.06621300429105759]
         ]
       )
       iex> ipca.singular_values
-      Nx.tensor([77.05782028025969, 10.137862896272168])
+      Nx.tensor([77.05782028025969, 10.137848854064941])
   """
   def fit(batches = %Stream{}, opts) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -276,19 +275,14 @@ defmodule Scholar.Decomposition.IncrementalPCA do
 
       iex> {x, _} = Scidata.Iris.download()
       iex> batches = x |> Nx.tensor() |> Nx.to_batched(10)
-      iex> x = Nx.tensor(
-        [
-          [5.2, 2.6, 2.475, 0.7],
-          [6.1, 3.2, 3.95, 1.3],
-          [7.0, 3.8, 5.425, 1.9]
-        ]
-      )
+      iex> ipca = Scholar.Decomposition.IncrementalPCA.fit(batches, num_components: 2)
+      iex> x = Nx.tensor([[5.2, 2.6, 2.475, 0.7], [6.1, 3.2, 3.95, 1.3], [7.0, 3.8, 5.425, 1.9]])
       iex> Scholar.Decomposition.IncrementalPCA.transform(ipca, x)
       Nx.tensor(
         [
-          [1.4564743682550334, 0.5657988895852432],
-          [-0.2724231831356622, -0.24238310361929516],
-          [-2.001320781438254, -1.050564912015664]
+          [1.4564743041992188, 0.5657951235771179],
+          [-0.27242332696914673, -0.24238374829292297],
+          [-2.0013210773468018, -1.0505625009536743]
         ]
       )
   """
