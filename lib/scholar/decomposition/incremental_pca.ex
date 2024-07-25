@@ -113,12 +113,12 @@ defmodule Scholar.Decomposition.IncrementalPCA do
     )
   end
 
-  defp fit_batch(nil, batch, opts), do: fit_head_n(batch, opts)
+  defp fit_batch(nil, batch, opts), do: fit_head(batch, opts)
   defp fit_batch(%__MODULE__{} = model, batch, _opts), do: partial_fit(model, batch)
 
   deftransformp fit_head(x, opts) do
     {num_samples, num_features} = Nx.shape(x)
-    num_components = opts[:num_componenets]
+    num_components = opts[:num_components]
 
     cond do
       num_components > num_samples ->
@@ -134,6 +134,8 @@ defmodule Scholar.Decomposition.IncrementalPCA do
               num_components must be less than or equal to \
               num_features = #{num_features}, got #{num_components}
               """
+
+      true -> nil
     end
 
     fit_head_n(x, opts)
