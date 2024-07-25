@@ -135,7 +135,8 @@ defmodule Scholar.Decomposition.IncrementalPCA do
               num_features = #{num_features}, got #{num_components}
               """
 
-      true -> nil
+      true ->
+        nil
     end
 
     fit_head_n(x, opts)
