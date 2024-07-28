@@ -5,8 +5,7 @@ defmodule Scholar.Linear.LinearHelpers do
 
   @moduledoc false
 
-  @doc false
-  def valid_column_vector(y, n_samples) do
+  defp valid_column_vector?(y, n_samples) do
     Nx.shape(y) == {n_samples, 1} and Nx.rank(y) == 2
   end
 
