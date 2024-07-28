@@ -109,7 +109,8 @@ defmodule Scholar.Linear.PolynomialRegression do
 
   @doc """
   Makes predictions with the given `model` on input `x`.
-  Output predictions have shape {n_samples}, when train target is shaped either {n_samples} or {n_samples, 1}.
+
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.    
   Otherwise, predictions match train target shape.  
 
   ## Examples

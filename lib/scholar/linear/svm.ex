@@ -250,7 +250,8 @@ defmodule Scholar.Linear.SVM do
 
   @doc """
   Makes predictions with the given model on inputs `x`.
-  Output predictions have shape {n_samples}, when train target is shaped either {n_samples} or {n_samples, 1}.
+
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.      
 
   ## Examples
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
