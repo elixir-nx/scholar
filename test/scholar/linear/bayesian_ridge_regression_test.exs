@@ -33,7 +33,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     y = Nx.concatenate([y, y], axis: 1)
 
     message =
-      "Elixir.#{inspect(BayesianRidgeRegression)} expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
+      "Scholar.Linear.BayesianRidgeRegression expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
 
     assert_raise ArgumentError,
                  message,

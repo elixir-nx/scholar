@@ -108,7 +108,7 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       sample_weights = Nx.tensor([1, 3, 2, 7, 4])
 
       message =
-        "Elixir.#{inspect(IsotonicRegression)} expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
+        "Scholar.Linear.IsotonicRegression expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
 
       assert_raise ArgumentError,
                    message,

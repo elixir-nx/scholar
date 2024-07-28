@@ -49,7 +49,7 @@ defmodule Scholar.Linear.SVMTest do
       Nx.concatenate([y_train, y_train], axis: 1)
 
     message =
-      "Elixir.#{inspect(SVM)} expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y_train))}"
+      "Scholar.Linear.SVM expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y_train))}"
 
     assert_raise ArgumentError,
                  message,
