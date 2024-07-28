@@ -28,7 +28,7 @@ defmodule Scholar.Linear.LinearHelpers do
 
     if not is_valid_target? do
       message =
-        "#{module_name} expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
+        "#{inspect(module_name)} expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
 
       raise ArgumentError, message
     else
