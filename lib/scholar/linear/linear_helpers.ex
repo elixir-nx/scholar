@@ -11,7 +11,7 @@ defmodule Scholar.Linear.LinearHelpers do
 
   @doc false
   def flatten_column_vector(y, n_samples) do
-    is_column_vector? = valid_column_vector(y, n_samples)
+    is_column_vector? = valid_column_vector?(y, n_samples)
 
     if is_column_vector? do
       y |> Nx.flatten()
