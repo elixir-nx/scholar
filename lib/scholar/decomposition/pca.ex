@@ -312,8 +312,8 @@ defmodule Scholar.Decomposition.PCA do
 
     {u, s, vt} = Nx.LinAlg.svd(matrix, full_matrices?: false)
     {_, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
-    updated_components = vt[[0..(num_components - 1)]]
-    updated_singular_values = s[[0..(num_components - 1)]]
+    updated_components = vt[0..(num_components - 1)]
+    updated_singular_values = s[0..(num_components - 1)]
 
     updated_explained_variance =
       singular_values * singular_values / (updated_num_samples_seen - 1)
@@ -426,6 +426,9 @@ defmodule Scholar.Decomposition.PCA do
 
   @doc """
   Fit the model with `x` and apply the dimensionality reduction on `x`.
+
+  This function is equivalent to calling `fit/2` and then
+  `transform/3`, but the result is computed more efficiently.
 
   #{NimbleOptions.docs(@opts_schema)}
 
