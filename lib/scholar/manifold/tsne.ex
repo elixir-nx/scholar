@@ -100,7 +100,7 @@ defmodule Scholar.Manifold.TSNE do
 
   ## Examples
 
-      iex> x = Nx.iota({4,5})
+      iex> x = Nx.iota({4, 5})
       iex> key = Nx.Random.key(42)
       iex> Scholar.Manifold.TSNE.fit(x, num_components: 2, key: key)
       #Nx.Tensor<

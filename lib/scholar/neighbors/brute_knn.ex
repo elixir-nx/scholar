@@ -217,7 +217,14 @@ defmodule Scholar.Neighbors.BruteKNN do
 
   defn get_batches(tensor, opts) do
     {size, dim} = Nx.shape(tensor)
-    batch_size = opts[:batch_size]
+    batch_size = min(size, opts[:batch_size])
+
+    min_batch_size =
+      case opts[:min_batch_size] do
+        nil -> 0
+        b -> b
+      end
+
     num_batches = div(size, batch_size)
     leftover_size = rem(size, batch_size)
 
@@ -227,7 +234,7 @@ defmodule Scholar.Neighbors.BruteKNN do
       |> Nx.reshape({num_batches, batch_size, dim})
 
     leftover =
-      if leftover_size > 0 do
+      if leftover_size > min_batch_size do
         Nx.slice_along_axis(tensor, num_batches * batch_size, leftover_size, axis: 0)
       else
         nil
