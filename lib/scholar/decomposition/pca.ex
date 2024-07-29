@@ -206,7 +206,7 @@ defmodule Scholar.Decomposition.PCA do
 
       iex> {x, _} = Scidata.Iris.download()
       iex> batches = x |> Nx.tensor() |> Nx.to_batched(10)
-      iex> pca = Scholar.Decomposition.IncrementalPCA.fit(batches, num_components: 2)
+      iex> pca = Scholar.Decomposition.PCA.incremental_fit(batches, num_components: 2)
       iex> pca.components
       Nx.tensor(
         [
