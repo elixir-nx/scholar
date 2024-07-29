@@ -2,7 +2,7 @@ defmodule Scholar.Neighbors.KNNClassifier do
   @moduledoc """
   K-Nearest Neighbors Classifier.
 
-  Performs classifiction by computing the (weighted) majority voting among k-nearest neighbors.
+  Performs classification by computing the (weighted) majority voting among k-nearest neighbors.
   """
 
   import Nx.Defn
@@ -25,7 +25,7 @@ defmodule Scholar.Neighbors.KNNClassifier do
 
         * `:random_projection_forest` - Random projection forest. See `Scholar.Neighbors.RandomProjectionForest` for more details.
 
-        * Module implementing `fit(data, opts)` and `predict(model, query)`. predict/2 must return tuple containing indices
+        * Module implementing `fit(data, opts)` and `predict(model, query)`. predict/2 must return a tuple containing indices
         of k-nearest neighbors of query points as well as distances between query points and their k-nearest neighbors.
       """
     ],

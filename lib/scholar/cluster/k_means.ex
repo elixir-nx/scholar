@@ -2,7 +2,7 @@ defmodule Scholar.Cluster.KMeans do
   @moduledoc """
   K-Means Algorithm.
 
-  K-Means is simple clustering method that works iteratively [1]. In the first iteration,
+  K-Means is a simple clustering method that works iteratively [1]. In the first iteration,
   centroids are chosen randomly from input data. It turned out that some initializations
   are especially effective. In 2007 David Arthur and Sergei Vassilvitskii proposed initialization
   called k-means++ which speed up convergence of algorithm drastically [2]. After initialization, from each centroid

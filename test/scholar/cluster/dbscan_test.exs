@@ -40,7 +40,7 @@ defmodule Scholar.Cluster.DBSCANTest do
       assert model.core_sample_indices == Nx.tensor([0, 1, 0, 1, 0, 1, 0, 1, 0, 0], type: :u8)
     end
 
-    test "test with artifically created 3 blobs" do
+    test "test with artificially created 3 blobs" do
       x =
         Nx.tensor([
           [0.21944999, 1.43491283],

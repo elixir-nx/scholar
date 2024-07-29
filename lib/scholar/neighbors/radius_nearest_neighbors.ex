@@ -40,7 +40,7 @@ defmodule Scholar.Neighbors.RadiusNearestNeighbors do
       doc: ~S"""
       The function that measures the pairwise distance between two points. Possible values:
 
-      * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
+      * `{:minkowski, p}` - Minkowski metric. By changing the value of `p` parameter (a positive number or `:infinity`)
       we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.

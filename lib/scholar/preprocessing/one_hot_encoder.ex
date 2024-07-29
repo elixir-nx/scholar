@@ -71,8 +71,8 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
   ## Examples
 
       iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> enoder = Scholar.Preprocessing.OneHotEncoder.fit(t, num_classes: 4)
-      iex> Scholar.Preprocessing.OneHotEncoder.transform(enoder, t)
+      iex> encoder = Scholar.Preprocessing.OneHotEncoder.fit(t, num_classes: 4)
+      iex> Scholar.Preprocessing.OneHotEncoder.transform(encoder, t)
       #Nx.Tensor<
         u8[7][4]
         [
@@ -87,9 +87,9 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
       >
 
       iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> enoder = Scholar.Preprocessing.OneHotEncoder.fit(t, num_classes: 4)
+      iex> encoder = Scholar.Preprocessing.OneHotEncoder.fit(t, num_classes: 4)
       iex> new_tensor = Nx.tensor([2, 3, 4, 3, 4, 56, 2])
-      iex> Scholar.Preprocessing.OneHotEncoder.transform(enoder, new_tensor)
+      iex> Scholar.Preprocessing.OneHotEncoder.transform(encoder, new_tensor)
       #Nx.Tensor<
         u8[7][4]
         [

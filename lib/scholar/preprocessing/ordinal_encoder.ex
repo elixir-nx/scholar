@@ -79,17 +79,17 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
   ## Examples
 
       iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> enoder = Scholar.Preprocessing.OrdinalEncoder.fit(t, num_classes: 4)
-      iex> Scholar.Preprocessing.OrdinalEncoder.transform(enoder, t)
+      iex> encoder = Scholar.Preprocessing.OrdinalEncoder.fit(t, num_classes: 4)
+      iex> Scholar.Preprocessing.OrdinalEncoder.transform(encoder, t)
       #Nx.Tensor<
         s64[7]
         [1, 0, 2, 3, 0, 2, 0]
       >
 
       iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> enoder = Scholar.Preprocessing.OrdinalEncoder.fit(t, num_classes: 4)
+      iex> encoder = Scholar.Preprocessing.OrdinalEncoder.fit(t, num_classes: 4)
       iex> new_tensor = Nx.tensor([2, 3, 4, 5, 4, 56, 2])
-      iex> Scholar.Preprocessing.OrdinalEncoder.transform(enoder, new_tensor)
+      iex> Scholar.Preprocessing.OrdinalEncoder.transform(encoder, new_tensor)
       #Nx.Tensor<
         s64[7]
         [0, 1, 2, -1, 2, 3, 0]
@@ -140,7 +140,7 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
   ## Examples
 
       iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> Scholar.Preprocessing.OridinalEncoder.fit_transform(t, num_classes: 4)
+      iex> Scholar.Preprocessing.OrdinalEncoder.fit_transform(t, num_classes: 4)
       #Nx.Tensor<
         s64[7]
         [1, 0, 2, 3, 0, 2, 0]
