@@ -19,6 +19,7 @@ defmodule Scholar.Linear.SVM do
   """
   import Nx.Defn
   import Scholar.Shared
+  alias Scholar.Linear.LinearHelpers
 
   @derive {Nx.Container, containers: [:coefficients, :bias]}
   defstruct [:coefficients, :bias]
@@ -122,10 +123,8 @@ defmodule Scholar.Linear.SVM do
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
-    if Nx.rank(y) != 1 do
-      raise ArgumentError,
-            "expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
-    end
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.validate_y_shape(y, n_samples, __MODULE__)
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
@@ -185,7 +184,7 @@ defmodule Scholar.Linear.SVM do
           while {{coef, bias, has_converged, coef_optimizer_state, bias_optimizer_state},
                  {x, y, iterations, iter, eps, j = 0}},
                 j < num_classes do
-            y_j = y == j
+            y_j = y |> Nx.flatten() == j
             coef_j = Nx.take(coef, j)
             bias_j = Nx.take(bias, j)
 
@@ -251,6 +250,8 @@ defmodule Scholar.Linear.SVM do
 
   @doc """
   Makes predictions with the given model on inputs `x`.
+
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.      
 
   ## Examples
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])

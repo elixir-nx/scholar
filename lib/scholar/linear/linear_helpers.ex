@@ -5,6 +5,36 @@ defmodule Scholar.Linear.LinearHelpers do
 
   @moduledoc false
 
+  defp valid_column_vector?(y, n_samples) do
+    Nx.shape(y) == {n_samples, 1} and Nx.rank(y) == 2
+  end
+
+  @doc false
+  def flatten_column_vector(y, n_samples) do
+    is_column_vector? = valid_column_vector?(y, n_samples)
+
+    if is_column_vector? do
+      y |> Nx.flatten()
+    else
+      y
+    end
+  end
+
+  @doc false
+  def validate_y_shape(y, n_samples, module_name) do
+    y = flatten_column_vector(y, n_samples)
+    is_valid_target? = Nx.rank(y) == 1
+
+    if not is_valid_target? do
+      message =
+        "#{inspect(module_name)} expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
+
+      raise ArgumentError, message
+    else
+      y
+    end
+  end
+
   @doc false
   def build_sample_weights(x, opts) do
     x_type = to_float_type(x)
@@ -33,7 +63,7 @@ defmodule Scholar.Linear.LinearHelpers do
   @doc false
   defn set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
     if fit_intercept? do
-      y_offset - Nx.dot(coeff, x_offset)
+      y_offset - Nx.dot(coeff, [-1], x_offset, [-1])
     else
       Nx.tensor(0.0, type: Nx.type(coeff))
     end

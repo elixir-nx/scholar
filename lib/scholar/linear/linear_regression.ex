@@ -68,6 +68,8 @@ defmodule Scholar.Linear.LinearRegression do
       >
   """
   deftransform fit(x, y, opts \\ []) do
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.flatten_column_vector(y, n_samples)
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     opts =
@@ -77,6 +79,8 @@ defmodule Scholar.Linear.LinearRegression do
         opts
 
     sample_weights = LinearHelpers.build_sample_weights(x, opts)
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.flatten_column_vector(y, n_samples)
 
     fit_n(x, y, sample_weights, opts)
   end
@@ -113,6 +117,9 @@ defmodule Scholar.Linear.LinearRegression do
   @doc """
   Makes predictions with the given `model` on input `x`.
 
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.  
+  Otherwise, predictions match train target shape.  
+
   ## Examples
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
@@ -124,7 +131,7 @@ defmodule Scholar.Linear.LinearRegression do
       )
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
-    Nx.dot(x, coeff) + intercept
+    Nx.dot(x, [-1], coeff, [-1]) + intercept
   end
 
   # Implements ordinary least-squares by estimating the

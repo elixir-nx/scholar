@@ -224,6 +224,9 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       >
   """
   deftransform fit(x, y, opts \\ []) do
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.validate_y_shape(y, n_samples, __MODULE__)
+
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     opts =
@@ -425,6 +428,9 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
   @doc """
   Makes predictions with the given `model` on input `x`.
+
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.
+
   ## Examples
 
       iex> x = Nx.tensor([[1], [2], [6], [8], [10]])
