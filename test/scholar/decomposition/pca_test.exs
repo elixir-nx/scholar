@@ -20,33 +20,29 @@ defmodule Scholar.Decomposition.PCATest do
   end
 
   test "fit test - all default options" do
-    model = PCA.fit(x())
+    model = PCA.fit(x(), num_components: 1)
 
     assert_all_close(
       model.components,
-      Nx.tensor([[-0.83849224, -0.54491354], [0.54491354, -0.83849224]]),
+      Nx.tensor([[-0.838727593421936, -0.5445511937141418]]),
       atol: 1.0e-3
     )
 
-    assert_all_close(model.explained_variance, Nx.tensor([7.9395432472229, 0.060456883162260056]),
-      atol: 1.0e-3
-    )
+    assert_all_close(model.singular_values, Nx.tensor([6.300611972808838]), atol: 1.0e-3)
 
-    assert_all_close(
-      model.explained_variance_ratio,
-      Nx.tensor([0.9924429059028625, 0.007557110395282507])
-    )
+    assert model.num_samples_seen == Nx.u64(6)
 
-    assert_all_close(model.singular_values, Nx.tensor([6.30061232, 0.54980396]), atol: 1.0e-3)
     assert model.mean == Nx.tensor([0.0, 0.0])
-    assert model.num_components == 2
-    assert model.num_samples == Nx.tensor(6)
-    assert model.num_features == Nx.tensor(2)
-  end
 
-  test "fit test - :num_components is integer" do
-    model = PCA.fit(x(), num_components: 1)
-    assert model.num_components == 1
+    assert_all_close(model.variance, Nx.tensor([5.599999904632568, 2.4000000953674316]),
+      atol: 1.0e-3
+    )
+
+    assert_all_close(model.explained_variance, Nx.tensor([7.939542293548584]), atol: 1.0e-3)
+
+    assert_all_close(model.explained_variance_ratio, Nx.tensor([0.9924428462982178]))
+
+    assert not model.whiten?
   end
 
   test "fit test - :num_components is integer and wide matrix" do
@@ -60,6 +56,14 @@ defmodule Scholar.Decomposition.PCATest do
       atol: 1.0e-3
     )
 
+    assert_all_close(model.singular_values, Nx.tensor([38.89730453491211]), atol: 1.0e-3)
+
+    assert model.num_samples_seen == Nx.u64(2)
+
+    assert model.mean == Nx.tensor([28.5, 2.0, 3.5])
+
+    assert model.variance == Nx.tensor([1512.5, 0.0, 0.5])
+
     assert_all_close(model.explained_variance, Nx.tensor([1513.000244140625]), atol: 1.0e-3)
 
     assert_all_close(
@@ -67,39 +71,49 @@ defmodule Scholar.Decomposition.PCATest do
       Nx.tensor([1.0])
     )
 
-    assert_all_close(model.singular_values, Nx.tensor([38.89730453491211]), atol: 1.0e-3)
-    assert model.mean == Nx.tensor([28.5, 2.0, 3.5])
-    assert model.num_components == 1
-    assert model.num_samples == Nx.tensor(2)
-    assert model.num_features == Nx.tensor(3)
+    assert not model.whiten?
   end
 
-  test "transform test - :whiten set to false" do
-    model = PCA.fit(x())
+  test "transform test - :num_components set to 1" do
+    model = PCA.fit(x(), num_components: 1)
 
     assert_all_close(
       PCA.transform(model, x()),
       Nx.tensor([
-        [1.3834056854248047, 0.2935786843299866],
-        [2.221898078918457, -0.2513348460197449],
-        [3.6053037643432617, 0.0422438383102417],
-        [-1.3834056854248047, -0.2935786843299866],
-        [-2.221898078918457, 0.2513348460197449],
-        [-3.6053037643432617, -0.0422438383102417]
+        [1.3832788467407227],
+        [2.222006320953369],
+        [3.605285167694092],
+        [-1.3832788467407227],
+        [-2.222006320953369],
+        [-3.605285167694092]
       ]),
       atol: 1.0e-2
     )
   end
 
-  test "transform test - :whiten set to false and and num components different than min(num_samples, num_components)" do
+  test "transform test - :num_components set to 2" do
     model = PCA.fit(x3(), num_components: 2)
 
     assert_all_close(
       model.components,
       Nx.tensor([
-        [0.98732591, 0.15474766, -0.03522361],
-        [-0.14912572, 0.98053261, 0.12773922085762024]
+        [0.9874106645584106, 0.1541961133480072, -0.035266418009996414],
+        [-0.14880891144275665, 0.9811362028121948, 0.1234002411365509]
       ]),
+      atol: 1.0e-2
+    )
+
+    assert_all_close(model.singular_values, Nx.tensor([20.272085189819336, 3.1355254650115967]),
+      atol: 1.0e-2
+    )
+
+    assert model.num_samples_seen == Nx.u64(6)
+
+    assert_all_close(model.mean, Nx.tensor([3.83333333, 0.33333333, 1.66666667]), atol: 1.0e-2)
+
+    assert_all_close(
+      model.variance,
+      Nx.tensor([80.16666412353516, 3.866666793823242, 0.6666666865348816]),
       atol: 1.0e-2
     )
 
@@ -115,38 +129,29 @@ defmodule Scholar.Decomposition.PCATest do
       atol: 1.0e-2
     )
 
-    assert_all_close(model.singular_values, Nx.tensor([20.272090911865234, 3.13554849]),
-      atol: 1.0e-2
-    )
-
-    assert_all_close(model.mean, Nx.tensor([3.83333333, 0.33333333, 1.66666667]), atol: 1.0e-2)
-    assert model.num_components == 2
-    assert model.num_samples == Nx.tensor(6)
-    assert model.num_features == Nx.tensor(3)
-
     assert_all_close(
       PCA.transform(model, x3()),
       Nx.tensor([
-        [-5.02537027, -0.41628357768058777],
-        [-5.977472305297852, -0.39489707350730896],
-        [-7.084321975708008, -1.3540430068969727],
-        [-0.6961240172386169, 0.6928002834320068],
-        [17.23049002, -1.010930061340332],
-        [1.5527995824813843, 2.48335338]
+        [-5.025101184844971, -0.42440494894981384],
+        [-5.977245330810547, -0.3989962935447693],
+        [-7.083585739135742, -1.3547236919403076],
+        [-0.6965337991714478, 0.6958313584327698],
+        [17.231054306030273, -1.001592755317688],
+        [1.5514134168624878, 2.483886241912842]
       ]),
       atol: 1.0e-2
     )
   end
 
   test "transform test - :whiten set to false and different data in fit and transform" do
-    model = PCA.fit(x(), num_components: 2)
+    model = PCA.fit(x(), num_components: 1)
 
     assert_all_close(
       PCA.transform(model, x2()),
       Nx.tensor([
-        [-3.018146276473999, -2.8090553283691406],
-        [-48.54806137084961, 24.394376754760742],
-        [-25.615192413330078, 8.298306465148926]
+        [-3.016932487487793],
+        [-48.558597564697266],
+        [-25.618776321411133]
       ]),
       atol: 1.0e-1,
       rtol: 1.0e-3
@@ -154,33 +159,33 @@ defmodule Scholar.Decomposition.PCATest do
   end
 
   test "transform test - :whiten set to true" do
-    model = PCA.fit(x())
+    model = PCA.fit(x(), num_components: 1, whiten?: true)
 
     assert_all_close(
-      PCA.transform(model, x(), whiten: true),
+      PCA.transform(model, x()),
       Nx.tensor([
-        [0.49096643924713135, 1.1939926147460938],
-        [0.7885448336601257, -1.0221858024597168],
-        [1.2795112133026123, 0.17180685698986053],
-        [-0.49096643924713135, -1.1939926147460938],
-        [-0.7885448336601257, 1.0221858024597168],
-        [-1.2795112133026123, -0.17180685698986053]
+        [0.4909214377403259],
+        [0.7885832190513611],
+        [1.279504656791687],
+        [-0.4909214377403259],
+        [-0.7885832190513611],
+        [-1.279504656791687]
       ]),
       atol: 1.0e-2
     )
   end
 
-  test "fit_transform test - :whiten set to false" do
-    model = PCA.fit(x())
+  test "fit_transform test - :whiten? set to false and num_components set to 1" do
+    model = PCA.fit(x(), num_components: 1)
 
     assert_all_close(
       PCA.transform(model, x()),
-      PCA.fit_transform(x()),
+      PCA.fit_transform(x(), num_components: 1),
       atol: 1.0e-2
     )
   end
 
-  test "fit_transform test - :whiten set to false and and num components different than min(num_samples, num_components)" do
+  test "fit_transform test - :whiten? set to false and num_components set to 2" do
     model = PCA.fit(x3(), num_components: 2)
 
     assert_all_close(
@@ -190,12 +195,12 @@ defmodule Scholar.Decomposition.PCATest do
     )
   end
 
-  test "fit_transform test - :whiten set to true" do
-    model = PCA.fit(x())
+  test "fit_transform test - :whiten? set to true" do
+    model = PCA.fit(x(), num_components: 1, whiten?: true)
 
     assert_all_close(
-      PCA.transform(model, x(), whiten: true),
-      PCA.fit_transform(x(), whiten: true),
+      PCA.transform(model, x()),
+      PCA.fit_transform(x(), num_components: 1, whiten?: true),
       atol: 1.0e-2
     )
   end
@@ -203,15 +208,21 @@ defmodule Scholar.Decomposition.PCATest do
   describe "errors" do
     test "input rank different than 2" do
       assert_raise ArgumentError,
-                   "expected x to have rank equal to: 2, got: 1",
+                   """
+                   expected input tensor to have shape {num_samples, num_features}, \
+                   got tensor with shape: {4}\
+                   """,
                    fn ->
-                     PCA.fit(Nx.tensor([1, 2, 3, 4]))
+                     PCA.fit(Nx.tensor([1, 2, 3, 4]), num_components: 1)
                    end
     end
 
-    test "fit test - :num_components bigger than min(num_samples, num_features)" do
+    test "fit test - :num_components bigger than num_features" do
       assert_raise ArgumentError,
-                   "expected :num_components to be integer in range 1 to 2, got: 4",
+                   """
+                   num_components must be less than or equal to \
+                   num_features = 2, got 4
+                   """,
                    fn ->
                      PCA.fit(x(), num_components: 4)
                    end
@@ -219,25 +230,46 @@ defmodule Scholar.Decomposition.PCATest do
 
     test "fit test - :num_components is atom" do
       assert_raise NimbleOptions.ValidationError,
-                   """
-                   expected :num_components option to match at least one given type, but didn't match any. Here are the reasons why it didn't match each of the allowed types:
-
-                     * invalid value for :num_components option: expected one of [nil], got: :two
-                     * invalid value for :num_components option: expected positive integer, got: :two\
-                   """,
+                   "invalid value for :num_components option: expected positive integer, got: :two",
                    fn ->
                      PCA.fit(x(), num_components: :two)
                    end
     end
 
-    test "transform test - :whiten is not boolean" do
+    test "transform test - :whiten? is not boolean" do
       assert_raise NimbleOptions.ValidationError,
-                   "invalid value for :whiten option: expected boolean, got: :yes",
+                   "invalid value for :whiten? option: expected boolean, got: :yes",
                    fn ->
-                     model = PCA.fit(x())
-
-                     PCA.transform(model, x(), whiten: :yes)
+                     PCA.fit(x(), num_components: 1, whiten?: :yes)
                    end
     end
+  end
+
+  test "partial_fit" do
+    model = PCA.fit(x()[0..2], num_components: 1)
+    model = PCA.partial_fit(model, x()[3..5])
+
+    assert Nx.shape(model.components) == {1, 2}
+    assert Nx.shape(model.singular_values) == {1}
+    assert model.num_samples_seen == Nx.u64(6)
+    assert model.mean == Nx.tensor([0.0, 0.0])
+    assert Nx.shape(model.variance) == {2}
+    assert Nx.shape(model.explained_variance) == {1}
+    assert Nx.shape(model.explained_variance_ratio) == {1}
+    assert not model.whiten?
+  end
+
+  test "incremental_fit" do
+    batches = Nx.to_batched(x(), 2)
+    model = PCA.incremental_fit(batches, num_components: 1)
+
+    assert Nx.shape(model.components) == {1, 2}
+    assert Nx.shape(model.singular_values) == {1}
+    assert model.num_samples_seen == Nx.u64(6)
+    assert model.mean == Nx.tensor([0.0, 0.0])
+    assert Nx.shape(model.variance) == {2}
+    assert Nx.shape(model.explained_variance) == {1}
+    assert Nx.shape(model.explained_variance_ratio) == {1}
+    assert not model.whiten?
   end
 end
