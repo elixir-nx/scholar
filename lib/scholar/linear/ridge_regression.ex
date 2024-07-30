@@ -14,7 +14,7 @@ defmodule Scholar.Linear.RidgeRegression do
 
   * $w$ is the model weights matrix
 
-  * $\alpha$ is the parameter that controls level of regularization
+  * $\alpha$ is the parameter that controls the level of regularization
 
   Time complexity is $O(N^2)$ for `:cholesky` solver and $O((N^2) * (K + N))$ for `:svd` solver,
   where $N$ is the number of observations and $K$ is the number of features.

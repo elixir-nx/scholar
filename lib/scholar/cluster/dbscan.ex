@@ -107,8 +107,8 @@ defmodule Scholar.Cluster.DBSCAN do
     {_dist, indices} =
       Scholar.Neighbors.RadiusNearestNeighbors.radius_neighbors(neighbor_model, x)
 
-    n_neigbors = Nx.sum(indices * weights, axes: [1])
-    core_samples = n_neigbors >= opts[:min_samples]
+    n_neighbors = Nx.sum(indices * weights, axes: [1])
+    core_samples = n_neighbors >= opts[:min_samples]
     labels = dbscan_inner(core_samples, indices)
 
     %__MODULE__{

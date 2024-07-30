@@ -40,7 +40,7 @@ defmodule Scholar.Manifold.Trimap do
       type: :pos_integer,
       default: 10,
       doc: ~S"""
-      Number of inliners to sample.
+      Number of inliers to sample.
       """
     ],
     num_outliers: [

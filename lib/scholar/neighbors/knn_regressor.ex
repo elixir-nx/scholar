@@ -23,7 +23,7 @@ defmodule Scholar.Neighbors.KNNRegressor do
 
         * `:random_projection_forest` - Random projection forest. See `Scholar.Neighbors.RandomProjectionForest` for more details.
 
-        * Module implementing `fit(data, opts)` and `predict(model, query)`. predict/2 must return tuple containing indices
+        * Module implementing `fit(data, opts)` and `predict(model, query)`. predict/2 must return a tuple containing indices
         of k-nearest neighbors of query points as well as distances between query points and their k-nearest neighbors.
       """
     ],

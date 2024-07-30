@@ -3,7 +3,7 @@ defmodule Scholar.IntegrateTest do
   alias Scholar.Integrate
   doctest Integrate
 
-  # Since the Simpson rule has corrner cases for small shapes, we need to test
+  # Since the Simpson rule has corner cases for small shapes, we need to test
   # it with a variety of shapes.
 
   describe "simpson_uniform" do

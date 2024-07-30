@@ -1,9 +1,9 @@
 defmodule Scholar.Preprocessing.MaxAbsScaler do
   @moduledoc """
-  Scales a tensor by dividing each sample in batch by maximum absolute value in the batch
+  Scales a tensor by dividing each sample in batch by the maximum absolute value in the batch.
 
   Centering and scaling happen independently on each feature by computing the relevant
-  statistics on the samples in the training set. Maximum absolute value then is
+  statistics on the samples in the training set. The maximum absolute value is then
   stored to be used on new samples.
   """
 

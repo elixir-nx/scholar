@@ -1,9 +1,9 @@
 defmodule Scholar.Cluster.AffinityPropagation do
   @moduledoc """
   Model representing affinity propagation clustering. The first dimension
-  of `:clusters_centers` is set to the number of samples in the dataset.
-  The artificial centers are filled with `:infinity` values. To fillter
-  them out use `prune` function.
+  of `:cluster_centers` is set to the number of samples in the dataset.
+  The artificial centers are filled with `:infinity` values. To filter
+  them out use the `prune` function.
 
   The algorithm has a time complexity of the order $O(N^2T)$, where $N$ is
   the number of samples and $T$ is the number of iterations until convergence.
@@ -91,7 +91,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
   The function returns a struct with the following parameters:
 
-    * `:clusters_centers` - Cluster centers from the initial data.
+    * `:cluster_centers` - Cluster centers from the initial data.
 
     * `:cluster_centers_indices` - Indices of cluster centers.
 

@@ -229,7 +229,7 @@ defmodule Scholar.Manifold.MDS do
   end
 
   @doc """
-  Fits MDS for sample inputs `x`. It is simpyfied version of `fit/3` function.
+  Fits MDS for sample inputs `x`. It is simplified version of `fit/3` function.
 
   ## Options
 
