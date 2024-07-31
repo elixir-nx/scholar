@@ -101,16 +101,19 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
   defn transform(%__MODULE__{ordinal_encoder: ordinal_encoder}, tensor) do
     num_categories = Nx.size(ordinal_encoder.categories)
     num_samples = Nx.size(tensor)
+
     encoded =
       ordinal_encoder
       |> Scholar.Preprocessing.OrdinalEncoder.transform(tensor)
       |> Nx.new_axis(1)
       |> Nx.broadcast({num_samples, num_categories})
+
     encoded == Nx.iota({num_samples, num_categories}, axis: 1)
   end
 
   @doc """
-  Apply encoding on the provided tensor directly. It's equivalent to `fit/2` and then `transform/2` on the same data.
+  Appl
+   encoding on the provided tensor directly. It's equivalent to `fit/2` and then `transform/2` on the same data.
 
   ## Examples
 
@@ -129,14 +132,29 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
         ]
       >
   """
-  defn fit_transform(tensor, opts) do
+  deftransform fit_transform(tensor, opts) do
+    if Nx.rank(tensor) != 1 do
+      raise ArgumentError,
+            """
+            expected input tensor to have shape {num_samples}, \
+            got tensor with shape: #{inspect(Nx.shape(tensor))}
+            """
+    end
+
+    opts = NimbleOptions.validate!(opts, @encode_schema)
+    fit_transform_n(tensor, opts)
+  end
+
+  defnp fit_transform_n(tensor, opts) do
     num_samples = Nx.size(tensor)
     num_categories = opts[:num_categories]
+
     encoded =
       tensor
       |> Scholar.Preprocessing.OrdinalEncoder.fit_transform()
       |> Nx.new_axis(1)
       |> Nx.broadcast({num_samples, num_categories})
+
     encoded == Nx.iota({num_samples, num_categories}, axis: 1)
   end
 end

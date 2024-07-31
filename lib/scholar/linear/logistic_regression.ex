@@ -147,6 +147,7 @@ defmodule Scholar.Linear.LogisticRegression do
     iterations = opts[:iterations]
     num_classes = opts[:num_classes]
     optimizer_update_fn = opts[:optimizer_update_fn]
+
     y_one_hot =
       y
       |> Nx.new_axis(1)
@@ -173,7 +174,8 @@ defmodule Scholar.Linear.LogisticRegression do
         has_converged = Nx.sum(Nx.abs(loss)) < Nx.size(x) * opts[:eps]
 
         {{coef, bias},
-         {x, iterations, y_one_hot, coef_optimizer_state, bias_optimizer_state, has_converged, iter + 1}}
+         {x, iterations, y_one_hot, coef_optimizer_state, bias_optimizer_state, has_converged,
+          iter + 1}}
       end
 
     %__MODULE__{
