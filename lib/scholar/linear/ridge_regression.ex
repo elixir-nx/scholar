@@ -109,6 +109,9 @@ defmodule Scholar.Linear.RidgeRegression do
       }
   """
   deftransform fit(x, y, opts \\ []) do
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.flatten_column_vector(y, n_samples)
+
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     sample_weights? = opts[:sample_weights] != nil
@@ -195,6 +198,9 @@ defmodule Scholar.Linear.RidgeRegression do
 
   @doc """
   Makes predictions with the given `model` on input `x`.
+
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.        
+  Otherwise, predictions match train target shape.  
 
   ## Examples
 

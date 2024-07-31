@@ -15,6 +15,33 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
     assert_all_close(expected, predicted, atol: 1.0e-1)
   end
 
+  test "toy bayesian ridge with column target" do
+    x = Nx.tensor([[1], [2], [6], [8], [10]])
+    y = Nx.tensor([1, 2, 6, 8, 10])
+    model = BayesianRidgeRegression.fit(x, y)
+    pred = BayesianRidgeRegression.predict(model, x)
+    col_model = BayesianRidgeRegression.fit(x, y |> Nx.new_axis(-1))
+    col_pred = BayesianRidgeRegression.predict(col_model, x)
+    assert model == col_model
+    assert pred == col_pred
+  end
+
+  test "2 column target raises" do
+    x = Nx.tensor([[1], [2], [6], [8], [10]])
+    y = Nx.tensor([1, 2, 6, 8, 10])
+    y = Nx.new_axis(y, -1)
+    y = Nx.concatenate([y, y], axis: 1)
+
+    message =
+      "Scholar.Linear.BayesianRidgeRegression expected y to have shape {n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
+
+    assert_raise ArgumentError,
+                 message,
+                 fn ->
+                   BayesianRidgeRegression.fit(x, y)
+                 end
+  end
+
   test "ridge vs bayesian ridge: parameters" do
     x = Nx.tensor([[1, 1], [3, 4], [5, 7], [4, 1], [2, 6], [3, 10], [3, 2]])
     y = Nx.tensor([1, 2, 3, 2, 0, 4, 5])
