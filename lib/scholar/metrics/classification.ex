@@ -1309,7 +1309,6 @@ defmodule Scholar.Metrics.Classification do
     num_samples = Nx.size(y_true)
     num_classes = opts[:num_classes]
 
-
     if Nx.axis_size(y_prob, 1) != num_classes do
       raise ArgumentError, "y_prob must have a size of num_classes along axis 1"
     end
