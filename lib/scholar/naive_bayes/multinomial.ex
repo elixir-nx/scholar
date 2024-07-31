@@ -72,7 +72,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
   @opts_schema NimbleOptions.new!(opts_schema)
 
   @doc """
-  Fits a naive Bayes model. The function assumes that targets `y` are integers
+  Fits a naive Bayes model. The function assumes that the targets `y` are integers
   between 0 and `num_classes` - 1 (inclusive). Otherwise, those samples will not
   contribute to `class_count`.
 
@@ -239,6 +239,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
     y_one_hot =
       y
       |> Nx.new_axis(1)
+      |> Nx.broadcast({num_samples, num_classes})
       |> Nx.equal(Nx.iota({num_samples, num_classes}, axis: 1))
       |> Nx.as_type(type)
 

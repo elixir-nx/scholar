@@ -11,7 +11,7 @@ defmodule Scholar.NaiveBayes.Complement do
 
   Reference:
 
-  * [1] - [Paper about Complement Naive Bayes Algorithm](https://cdn.aaai.org/ICML/2003/ICML03-081.pdf)
+  * [1] [Tackling the Poor Assumptions of Naive Bayes Text Classifiers](https://cdn.aaai.org/ICML/2003/ICML03-081.pdf)
   """
   import Nx.Defn
   import Scholar.Shared
@@ -93,8 +93,8 @@ defmodule Scholar.NaiveBayes.Complement do
   @opts_schema NimbleOptions.new!(opts_schema)
 
   @doc """
-  The multinomial Naive Bayes classifier is suitable for classification with
-  discrete features (e.g., word counts for text classification)
+  Fits a complement naive Bayes classifier. The function assumes that the targets `y` are integers
+  between 0 and `num_classes` - 1 (inclusive).
 
   ## Options
 
@@ -340,35 +340,49 @@ defmodule Scholar.NaiveBayes.Complement do
 
     classes_encoded = Nx.iota({num_classes})
 
-    classes =
+    y_one_hot =
       y
-      |> Scholar.Preprocessing.ordinal_encode(num_classes: num_classes)
-      |> Scholar.Preprocessing.one_hot_encode(num_classes: num_classes)
+      |> Nx.new_axis(1)
+      |> Nx.broadcast({num_samples, num_classes})
+      |> Nx.equal(Nx.iota({num_samples, num_classes}, axis: 1))
+      |> Nx.as_type(x_type)
 
-    {_, classes_features} = classes_shape = Nx.shape(classes)
-
-    classes =
-      cond do
-        classes_features == 1 and num_classes == 2 ->
-          Nx.concatenate([1 - classes, classes], axis: 1)
-
-        classes_features == 1 and num_classes != 2 ->
-          Nx.broadcast(1.0, classes_shape)
-
-        true ->
-          classes
-      end
-
-    classes =
+    y_weighted =
       if opts[:sample_weights_flag],
-        do: classes * Nx.reshape(sample_weights, {:auto, 1}),
-        else: classes
+        do: Nx.reshape(sample_weights, {num_samples, 1}) * y_one_hot,
+        else: y_one_hot
 
-    {_, n_classes} = Nx.shape(classes)
-    class_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes})
-    feature_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes, num_features})
-    feature_count = feature_count + Nx.dot(classes, [0], x, [0])
-    class_count = class_count + Nx.sum(classes, axes: [0])
+    # classes =
+    #   y
+    #   |> Scholar.Preprocessing.ordinal_encode(num_classes: num_classes)
+    #   |> Scholar.Preprocessing.one_hot_encode(num_classes: num_classes)
+
+    # {_, classes_features} = classes_shape = Nx.shape(classes)
+
+    # classes =
+    #   cond do
+    #     classes_features == 1 and num_classes == 2 ->
+    #       Nx.concatenate([1 - classes, classes], axis: 1)
+
+    #     classes_features == 1 and num_classes != 2 ->
+    #       Nx.broadcast(1.0, classes_shape)
+
+    #     true ->
+    #       classes
+    #   end
+
+    # classes =
+    #   if opts[:sample_weights_flag],
+    #     do: classes * Nx.reshape(sample_weights, {:auto, 1}),
+    #     else: classes
+
+    # {_, n_classes} = Nx.shape(classes)
+    # class_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes})
+    # class_count = class_count + Nx.sum(classes, axes: [0])
+    class_count = Nx.sum(y_weighted, axes: [0])
+    # feature_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes, num_features})
+    # feature_count = feature_count + Nx.dot(classes, [0], x, [0])
+    feature_count = Nx.dot(y_weighted, [0], x, [0])
     feature_all = Nx.sum(feature_count, axes: [0])
     alpha = check_alpha(alpha, opts[:force_alpha], num_features)
     complement_count = feature_all + alpha - feature_count

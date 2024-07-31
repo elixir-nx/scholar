@@ -1307,6 +1307,7 @@ defmodule Scholar.Metrics.Classification do
       raise ArgumentError, "y_true and y_prob must have the same size along axis 0"
     end
 
+    num_samples = Nx.size(y_true)
     num_classes = opts[:num_classes]
 
     if Nx.axis_size(y_prob, 1) != num_classes do
@@ -1321,8 +1322,10 @@ defmodule Scholar.Metrics.Classification do
       )
 
     y_true_onehot =
-      ordinal_encode(y_true, num_classes: num_classes)
-      |> one_hot_encode(num_classes: num_classes)
+      y_true
+      |> Nx.new_axis(1)
+      |> Nx.broadcast({num_samples, num_classes})
+      |> Nx.equal(Nx.iota({num_samples, num_classes}, axis: 1))
 
     y_prob = Nx.clip(y_prob, 0, 1)
 

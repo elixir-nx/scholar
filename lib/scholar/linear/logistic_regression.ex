@@ -143,17 +143,22 @@ defmodule Scholar.Linear.LogisticRegression do
   # Logistic Regression training loop
 
   defnp fit_n(x, y, coef, bias, coef_optimizer_state, bias_optimizer_state, opts) do
+    num_samples = Nx.axis_size(x, 0)
     iterations = opts[:iterations]
     num_classes = opts[:num_classes]
     optimizer_update_fn = opts[:optimizer_update_fn]
-    y = Scholar.Preprocessing.one_hot_encode(y, num_classes: num_classes)
+    y_one_hot =
+      y
+      |> Nx.new_axis(1)
+      |> Nx.broadcast({num_samples, num_classes})
+      |> Nx.equal(Nx.iota({num_samples, num_classes}, axis: 1))
 
     {{final_coef, final_bias}, _} =
       while {{coef, bias},
-             {x, iterations, y, coef_optimizer_state, bias_optimizer_state,
+             {x, iterations, y_one_hot, coef_optimizer_state, bias_optimizer_state,
               has_converged = Nx.u8(0), iter = 0}},
             iter < iterations and not has_converged do
-        {loss, {coef_grad, bias_grad}} = loss_and_grad(coef, bias, x, y)
+        {loss, {coef_grad, bias_grad}} = loss_and_grad(coef, bias, x, y_one_hot)
 
         {coef_updates, coef_optimizer_state} =
           optimizer_update_fn.(coef_grad, coef_optimizer_state, coef)
@@ -168,7 +173,7 @@ defmodule Scholar.Linear.LogisticRegression do
         has_converged = Nx.sum(Nx.abs(loss)) < Nx.size(x) * opts[:eps]
 
         {{coef, bias},
-         {x, iterations, y, coef_optimizer_state, bias_optimizer_state, has_converged, iter + 1}}
+         {x, iterations, y_one_hot, coef_optimizer_state, bias_optimizer_state, has_converged, iter + 1}}
       end
 
     %__MODULE__{
