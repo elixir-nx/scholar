@@ -13,7 +13,6 @@ defmodule Scholar.Metrics.Classification do
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
-  import Scholar.Preprocessing
   alias Scholar.Integrate
 
   general_schema = [
@@ -1309,6 +1308,7 @@ defmodule Scholar.Metrics.Classification do
 
     num_samples = Nx.size(y_true)
     num_classes = opts[:num_classes]
+
 
     if Nx.axis_size(y_prob, 1) != num_classes do
       raise ArgumentError, "y_prob must have a size of num_classes along axis 1"
