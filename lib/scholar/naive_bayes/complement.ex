@@ -94,7 +94,8 @@ defmodule Scholar.NaiveBayes.Complement do
 
   @doc """
   Fits a complement naive Bayes classifier. The function assumes that the targets `y` are integers
-  between 0 and `num_classes` - 1 (inclusive).
+  between 0 and `num_classes` - 1 (inclusive). Otherwise, those samples will not
+  contribute to `class_count`.
 
   ## Options
 
