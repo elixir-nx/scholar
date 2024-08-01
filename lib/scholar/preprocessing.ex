@@ -145,14 +145,14 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-      iex> Scholar.Preprocessing.ordinal_encode(Nx.tensor([3, 2, 4, 56, 2, 4, 2]), num_classes: 4)
+      iex> Scholar.Preprocessing.ordinal_encode(Nx.tensor([3, 2, 4, 56, 2, 4, 2]))
       #Nx.Tensor<
-        s64[7]
+        u64[7]
         [1, 0, 2, 3, 0, 2, 0]
       >
   """
-  defn ordinal_encode(tensor, opts \\ []) do
-    Scholar.Preprocessing.OrdinalEncoder.fit_transform(tensor, opts)
+  defn ordinal_encode(tensor) do
+    Scholar.Preprocessing.OrdinalEncoder.fit_transform(tensor)
   end
 
   @doc """
@@ -161,7 +161,7 @@ defmodule Scholar.Preprocessing do
 
   ## Examples
 
-      iex> Scholar.Preprocessing.one_hot_encode(Nx.tensor([2, 0, 3, 2, 1, 1, 0]), num_classes: 4)
+      iex> Scholar.Preprocessing.one_hot_encode(Nx.tensor([2, 0, 3, 2, 1, 1, 0]), num_categories: 4)
       #Nx.Tensor<
         u8[7][4]
         [
@@ -175,7 +175,7 @@ defmodule Scholar.Preprocessing do
         ]
       >
   """
-  defn one_hot_encode(tensor, opts \\ []) do
+  defn one_hot_encode(tensor, opts) do
     Scholar.Preprocessing.OneHotEncoder.fit_transform(tensor, opts)
   end
 

@@ -7,15 +7,15 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
   """
   import Nx.Defn
 
-  @derive {Nx.Container, containers: [:encoder, :one_hot]}
-  defstruct [:encoder, :one_hot]
+  @derive {Nx.Container, containers: [:ordinal_encoder]}
+  defstruct [:ordinal_encoder]
 
   encode_schema = [
-    num_classes: [
+    num_categories: [
       required: true,
       type: :pos_integer,
       doc: """
-      Number of classes to be encoded.
+      The number of categories to be encoded.
       """
     ]
   ]
@@ -31,37 +31,32 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
 
   ## Examples
 
-      iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> Scholar.Preprocessing.OneHotEncoder.fit(t, num_classes: 4)
+      iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
+      iex> Scholar.Preprocessing.OneHotEncoder.fit(tensor, num_categories: 4)
       %Scholar.Preprocessing.OneHotEncoder{
-        encoder: %Scholar.Preprocessing.OrdinalEncoder{
-          encoding_tensor: Nx.tensor(
-            [
-              [0, 2],
-              [1, 3],
-              [2, 4],
-              [3, 56]
-            ]
+        ordinal_encoder: %Scholar.Preprocessing.OrdinalEncoder{
+          categories: Nx.tensor([2, 3, 4, 56]
           )
-        },
-        one_hot: Nx.tensor(
-          [
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]
-          ], type: :u8
-        )
+        }
       }
   """
-  deftransform fit(tensor, opts \\ []) do
-    fit_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
+  deftransform fit(tensor, opts) do
+    if Nx.rank(tensor) != 1 do
+      raise ArgumentError,
+            """
+            expected input tensor to have shape {num_samples}, \
+            got tensor with shape: #{inspect(Nx.shape(tensor))}
+            """
+    end
+
+    opts = NimbleOptions.validate!(opts, @encode_schema)
+
+    fit_n(tensor, opts)
   end
 
   defnp fit_n(tensor, opts) do
-    encoder = Scholar.Preprocessing.OrdinalEncoder.fit(tensor, opts)
-    one_hot = Nx.iota({opts[:num_classes]}) == Nx.iota({opts[:num_classes], 1})
-    %__MODULE__{encoder: encoder, one_hot: one_hot}
+    ordinal_encoder = Scholar.Preprocessing.OrdinalEncoder.fit(tensor, opts)
+    %__MODULE__{ordinal_encoder: ordinal_encoder}
   end
 
   @doc """
@@ -70,9 +65,9 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
 
   ## Examples
 
-      iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> encoder = Scholar.Preprocessing.OneHotEncoder.fit(t, num_classes: 4)
-      iex> Scholar.Preprocessing.OneHotEncoder.transform(encoder, t)
+      iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
+      iex> encoder = Scholar.Preprocessing.OneHotEncoder.fit(tensor, num_categories: 4)
+      iex> Scholar.Preprocessing.OneHotEncoder.transform(encoder, tensor)
       #Nx.Tensor<
         u8[7][4]
         [
@@ -86,8 +81,8 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
         ]
       >
 
-      iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> encoder = Scholar.Preprocessing.OneHotEncoder.fit(t, num_classes: 4)
+      iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
+      iex> encoder = Scholar.Preprocessing.OneHotEncoder.fit(tensor, num_categories: 4)
       iex> new_tensor = Nx.tensor([2, 3, 4, 3, 4, 56, 2])
       iex> Scholar.Preprocessing.OneHotEncoder.transform(encoder, new_tensor)
       #Nx.Tensor<
@@ -103,18 +98,27 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
         ]
       >
   """
-  defn transform(%__MODULE__{encoder: encoder, one_hot: one_hot}, tensor) do
-    decoded = Scholar.Preprocessing.OrdinalEncoder.transform(encoder, tensor)
-    Nx.take(one_hot, decoded)
+  defn transform(%__MODULE__{ordinal_encoder: ordinal_encoder}, tensor) do
+    num_categories = Nx.size(ordinal_encoder.categories)
+    num_samples = Nx.size(tensor)
+
+    encoded =
+      ordinal_encoder
+      |> Scholar.Preprocessing.OrdinalEncoder.transform(tensor)
+      |> Nx.new_axis(1)
+      |> Nx.broadcast({num_samples, num_categories})
+
+    encoded == Nx.iota({num_samples, num_categories}, axis: 1)
   end
 
   @doc """
-  Apply encoding on the provided tensor directly. It's equivalent to `fit/2` and then `transform/2` on the same data.
+  Appl
+   encoding on the provided tensor directly. It's equivalent to `fit/2` and then `transform/2` on the same data.
 
   ## Examples
 
-      iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> Scholar.Preprocessing.OneHotEncoder.fit_transform(t, num_classes: 4)
+      iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
+      iex> Scholar.Preprocessing.OneHotEncoder.fit_transform(tensor, num_categories: 4)
       #Nx.Tensor<
         u8[7][4]
         [
@@ -128,9 +132,29 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
         ]
       >
   """
-  defn fit_transform(tensor, opts \\ []) do
-    tensor
-    |> fit(opts)
-    |> transform(tensor)
+  deftransform fit_transform(tensor, opts) do
+    if Nx.rank(tensor) != 1 do
+      raise ArgumentError,
+            """
+            expected input tensor to have shape {num_samples}, \
+            got tensor with shape: #{inspect(Nx.shape(tensor))}
+            """
+    end
+
+    opts = NimbleOptions.validate!(opts, @encode_schema)
+    fit_transform_n(tensor, opts)
+  end
+
+  defnp fit_transform_n(tensor, opts) do
+    num_samples = Nx.size(tensor)
+    num_categories = opts[:num_categories]
+
+    encoded =
+      tensor
+      |> Scholar.Preprocessing.OrdinalEncoder.fit_transform()
+      |> Nx.new_axis(1)
+      |> Nx.broadcast({num_samples, num_categories})
+
+    encoded == Nx.iota({num_samples, num_categories}, axis: 1)
   end
 end

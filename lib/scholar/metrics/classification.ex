@@ -13,7 +13,6 @@ defmodule Scholar.Metrics.Classification do
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
-  import Scholar.Preprocessing
   alias Scholar.Integrate
 
   general_schema = [
@@ -1263,8 +1262,10 @@ defmodule Scholar.Metrics.Classification do
   each class, from which the log loss is computed by averaging the negative log
   of the probability forecasted for the true class over a number of samples.
 
-  `y_true` should contain `num_classes` unique values, and the sum of `y_prob`
-  along axis 1 should be 1 to respect the law of total probability.
+  `y_true` should be a tensor of shape {num_samples} containing values
+  between 0 and num_classes - 1 (inclusive).
+  `y_prob` should be a tensor of shape {num_samples, num_classes} containing
+  predicted probability distributions over classes for each sample.
 
   ## Options
 
@@ -1307,6 +1308,7 @@ defmodule Scholar.Metrics.Classification do
       raise ArgumentError, "y_true and y_prob must have the same size along axis 0"
     end
 
+    num_samples = Nx.size(y_true)
     num_classes = opts[:num_classes]
 
     if Nx.axis_size(y_prob, 1) != num_classes do
@@ -1320,14 +1322,16 @@ defmodule Scholar.Metrics.Classification do
         type: to_float_type(y_prob)
       )
 
-    y_true_onehot =
-      ordinal_encode(y_true, num_classes: num_classes)
-      |> one_hot_encode(num_classes: num_classes)
+    y_one_hot =
+      y_true
+      |> Nx.new_axis(1)
+      |> Nx.broadcast({num_samples, num_classes})
+      |> Nx.equal(Nx.iota({num_samples, num_classes}, axis: 1))
 
     y_prob = Nx.clip(y_prob, 0, 1)
 
     sample_loss =
-      Nx.multiply(y_true_onehot, y_prob)
+      Nx.multiply(y_one_hot, y_prob)
       |> Nx.sum(axes: [-1])
       |> Nx.log()
       |> Nx.negate()

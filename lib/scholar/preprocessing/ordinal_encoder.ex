@@ -1,22 +1,22 @@
 defmodule Scholar.Preprocessing.OrdinalEncoder do
   @moduledoc """
   Implements encoder that converts integer value (substitute of categorical data in tensors) into other integer value.
-  The values assigned starts from `0` and go up to `num_classes - 1`.They are maintained in sorted manner.
+  The values assigned starts from `0` and go up to `num_categories - 1`. They are maintained in sorted manner.
   This means that for x < y => encoded_value(x) < encoded_value(y).
 
   Currently the module supports only 1D tensors.
   """
   import Nx.Defn
 
-  @derive {Nx.Container, containers: [:encoding_tensor]}
-  defstruct [:encoding_tensor]
+  @derive {Nx.Container, containers: [:categories]}
+  defstruct [:categories]
 
   encode_schema = [
-    num_classes: [
+    num_categories: [
       required: true,
       type: :pos_integer,
       doc: """
-      Number of classes to be encoded.
+      The number of categories to be encoded.
       """
     ]
   ]
@@ -32,62 +32,67 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
 
   ## Examples
 
-      iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> Scholar.Preprocessing.OrdinalEncoder.fit(t, num_classes: 4)
+      iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
+      iex> Scholar.Preprocessing.OrdinalEncoder.fit(tensor, num_categories: 4)
       %Scholar.Preprocessing.OrdinalEncoder{
-        encoding_tensor: Nx.tensor(
-          [
-            [0, 2],
-            [1, 3],
-            [2, 4],
-            [3, 56]
-          ]
-        )
+        categories: Nx.tensor([2, 3, 4, 56])
       }
   """
   deftransform fit(tensor, opts \\ []) do
-    fit_n(tensor, NimbleOptions.validate!(opts, @encode_schema))
+    if Nx.rank(tensor) != 1 do
+      raise ArgumentError,
+            """
+            expected input tensor to have shape {num_samples}, \
+            got tensor with shape: #{inspect(Nx.shape(tensor))}
+            """
+    end
+
+    opts = NimbleOptions.validate!(opts, @encode_schema)
+
+    fit_n(tensor, opts)
   end
 
   defnp fit_n(tensor, opts) do
-    sorted = Nx.sort(tensor)
-    num_classes = opts[:num_classes]
+    categories =
+      if Nx.size(tensor) > 1 do
+        sorted = Nx.sort(tensor)
+        num_categories = opts[:num_categories]
 
-    # A mask with a single 1 in every group of equal values
-    representative_mask =
-      Nx.concatenate([
-        sorted[0..-2//1] != sorted[1..-1//1],
-        Nx.tensor([1])
-      ])
+        # A mask with a single 1 in every group of equal values
+        representative_mask =
+          Nx.concatenate([
+            sorted[0..-2//1] != sorted[1..-1//1],
+            Nx.tensor([true])
+          ])
 
-    representative_indices =
-      representative_mask
-      |> Nx.argsort(direction: :desc)
-      |> Nx.slice_along_axis(0, num_classes)
+        representative_indices =
+          representative_mask
+          |> Nx.argsort(direction: :desc, stable: true)
+          |> Nx.slice_along_axis(0, num_categories)
 
-    representative_values = Nx.take(sorted, representative_indices) |> Nx.new_axis(-1)
+        Nx.take(sorted, representative_indices)
+      else
+        tensor
+      end
 
-    encoding_tensor =
-      Nx.concatenate([Nx.iota(Nx.shape(representative_values)), representative_values], axis: 1)
-
-    %__MODULE__{encoding_tensor: encoding_tensor}
+    %__MODULE__{categories: categories}
   end
 
   @doc """
-  Encodes a tensor's values into integers from range 0 to `:num_classes - 1` or -1 if the value did not occur in fitting process.
+  Encodes tensor elements into integers from range 0 to `:num_categories - 1` or -1 if the value did not occur in fitting process.
 
   ## Examples
 
-      iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> encoder = Scholar.Preprocessing.OrdinalEncoder.fit(t, num_classes: 4)
-      iex> Scholar.Preprocessing.OrdinalEncoder.transform(encoder, t)
+      iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
+      iex> encoder = Scholar.Preprocessing.OrdinalEncoder.fit(tensor, num_categories: 4)
+      iex> Scholar.Preprocessing.OrdinalEncoder.transform(encoder, tensor)
       #Nx.Tensor<
         s64[7]
         [1, 0, 2, 3, 0, 2, 0]
       >
 
-      iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> encoder = Scholar.Preprocessing.OrdinalEncoder.fit(t, num_classes: 4)
+      iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
+      iex> encoder = Scholar.Preprocessing.OrdinalEncoder.fit(tensor, num_categories: 4)
       iex> new_tensor = Nx.tensor([2, 3, 4, 5, 4, 56, 2])
       iex> Scholar.Preprocessing.OrdinalEncoder.transform(encoder, new_tensor)
       #Nx.Tensor<
@@ -95,16 +100,24 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
         [0, 1, 2, -1, 2, 3, 0]
       >
   """
-  defn transform(%__MODULE__{encoding_tensor: encoding_tensor}, tensor) do
-    tensor_size = Nx.axis_size(encoding_tensor, 0)
-    decode_size = Nx.axis_size(tensor, 0)
+  defn transform(%__MODULE__{categories: categories}, tensor) do
+    if Nx.rank(tensor) != 1 do
+      raise ArgumentError,
+            """
+            expected input tensor to have shape {num_samples}, \
+            got tensor with shape: #{inspect(Nx.shape(tensor))}
+            """
+    end
+
+    num_categories = Nx.size(categories)
+    size = Nx.size(tensor)
     input_vectorized_axes = tensor.vectorized_axes
 
     tensor =
-      Nx.revectorize(tensor, [x: decode_size], target_shape: {:auto})
+      Nx.revectorize(tensor, [x: size], target_shape: {:auto})
 
     left = 0
-    right = tensor_size - 1
+    right = num_categories - 1
     label = -1
 
     [left, right, label, tensor] =
@@ -116,22 +129,37 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
       ])
 
     {label, _} =
-      while {label, {left, right, tensor, encoding_tensor}}, left <= right do
+      while {label, {left, right, tensor, categories}}, left <= right do
         curr = Nx.quotient(left + right, 2)
 
         cond do
-          tensor[0] > encoding_tensor[curr][1] ->
-            {label, {curr + 1, right, tensor, encoding_tensor}}
+          tensor[0] > categories[curr] ->
+            {label, {curr + 1, right, tensor, categories}}
 
-          tensor[0] < encoding_tensor[curr][1] ->
-            {label, {left, curr - 1, tensor, encoding_tensor}}
+          tensor[0] < categories[curr] ->
+            {label, {left, curr - 1, tensor, categories}}
 
           true ->
-            {encoding_tensor[curr][0], {1, 0, tensor, encoding_tensor}}
+            {curr, {1, 0, tensor, categories}}
         end
       end
 
-    Nx.revectorize(label, input_vectorized_axes, target_shape: {decode_size})
+    Nx.revectorize(label, input_vectorized_axes, target_shape: {size})
+  end
+
+  @doc """
+  Decodes tensor elements into original categories seen during fitting.
+
+  ## Examples
+
+    iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
+    iex> encoder = Scholar.Preprocessing.OridinalEncoder.fit(tensor, num_categories: 4)
+    iex> encoded = Nx.tensor([1, 0, 2, 3, 1, 0, 2])
+    iex> Scholar.Preprocessing.OridinalEncoder.inverse_transform(encoder, encoded)
+    Nx.tensor([3, 2, 4, 56, 3, 2, 4])
+  """
+  deftransform inverse_transform(%__MODULE__{categories: categories}, encoded_tensor) do
+    Nx.take(categories, encoded_tensor)
   end
 
   @doc """
@@ -139,16 +167,49 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
 
   ## Examples
 
-      iex> t = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> Scholar.Preprocessing.OrdinalEncoder.fit_transform(t, num_classes: 4)
+      iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
+      iex> Scholar.Preprocessing.OridinalEncoder.fit_transform(tensor)
       #Nx.Tensor<
-        s64[7]
+        u64[7]
         [1, 0, 2, 3, 0, 2, 0]
       >
   """
-  defn fit_transform(tensor, opts \\ []) do
-    tensor
-    |> fit(opts)
-    |> transform(tensor)
+  deftransform fit_transform(tensor) do
+    if Nx.rank(tensor) != 1 do
+      raise ArgumentError,
+            """
+            expected input tensor to have shape {num_samples}, \
+            got tensor with shape: #{inspect(Nx.shape(tensor))}
+            """
+    end
+
+    fit_transform_n(tensor)
+  end
+
+  defnp fit_transform_n(tensor) do
+    size = Nx.size(tensor)
+    indices = Nx.argsort(tensor, type: :u64)
+    sorted = Nx.take(tensor, indices)
+
+    change_indices =
+      Nx.concatenate([
+        Nx.tensor([true]),
+        sorted[0..(size - 2)] != sorted[1..(size - 1)]
+      ])
+
+    ordinal_values =
+      change_indices
+      |> Nx.as_type(:u64)
+      |> Nx.cumulative_sum()
+      |> Nx.subtract(1)
+
+    inverse =
+      Nx.indexed_put(
+        Nx.broadcast(Nx.u64(0), {size}),
+        Nx.new_axis(indices, 1),
+        Nx.iota({size}, type: :u64)
+      )
+
+    Nx.take(ordinal_values, inverse)
   end
 end

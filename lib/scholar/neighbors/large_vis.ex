@@ -45,7 +45,7 @@ defmodule Scholar.Neighbors.LargeVis do
     ],
     num_iters: [
       type: :non_neg_integer,
-      default: 1,
+      default: 3,
       doc: "The number of times to perform neighborhood expansion."
     ],
     key: [
