@@ -352,36 +352,7 @@ defmodule Scholar.NaiveBayes.Complement do
         do: Nx.reshape(sample_weights, {num_samples, 1}) * y_one_hot,
         else: y_one_hot
 
-    # classes =
-    #   y
-    #   |> Scholar.Preprocessing.ordinal_encode(num_classes: num_classes)
-    #   |> Scholar.Preprocessing.one_hot_encode(num_classes: num_classes)
-
-    # {_, classes_features} = classes_shape = Nx.shape(classes)
-
-    # classes =
-    #   cond do
-    #     classes_features == 1 and num_classes == 2 ->
-    #       Nx.concatenate([1 - classes, classes], axis: 1)
-
-    #     classes_features == 1 and num_classes != 2 ->
-    #       Nx.broadcast(1.0, classes_shape)
-
-    #     true ->
-    #       classes
-    #   end
-
-    # classes =
-    #   if opts[:sample_weights_flag],
-    #     do: classes * Nx.reshape(sample_weights, {:auto, 1}),
-    #     else: classes
-
-    # {_, n_classes} = Nx.shape(classes)
-    # class_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes})
-    # class_count = class_count + Nx.sum(classes, axes: [0])
     class_count = Nx.sum(y_weighted, axes: [0])
-    # feature_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes, num_features})
-    # feature_count = feature_count + Nx.dot(classes, [0], x, [0])
     feature_count = Nx.dot(y_weighted, [0], x, [0])
     feature_all = Nx.sum(feature_count, axes: [0])
     alpha = check_alpha(alpha, opts[:force_alpha], num_features)
