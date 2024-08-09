@@ -77,7 +77,14 @@ defmodule Scholar.Cluster.OPTICS do
 
   defnp fit_p(x, opts \\ []) do
     {core_distances, reachability, _predecessor, ordering} = compute_optics_graph(x, opts)
-    eps = opts[:eps]
+
+    eps =
+      if Nx.equal(opts[:eps], Nx.Constants.nan()) do
+        opts[:max_eps]
+      else
+        opts[:eps]
+      end
+
     cluster_optics_dbscan(reachability, core_distances, ordering, eps: eps)
   end
 
