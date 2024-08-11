@@ -18,7 +18,7 @@ defmodule Scholar.Cluster.OPTICS do
         "The maximum distance between two samples for one to be considered as in the neighborhood of the other. Default value of Nx.Constants.infinity() will identify clusters across all scales "
     ],
     eps: [
-      default: Nx.Constants.nan(),
+      default: Nx.Constants.infinity(),
       type: {:custom, Scholar.Options, :beta, []},
       doc:
         "The maximum distance between two samples for one to be considered as in the neighborhood of the other. By default it assumes the same value as max_eps."
@@ -79,7 +79,7 @@ defmodule Scholar.Cluster.OPTICS do
     {core_distances, reachability, _predecessor, ordering} = compute_optics_graph(x, opts)
 
     eps =
-      if Nx.equal(opts[:eps], Nx.Constants.nan()) do
+      if opts[:eps] == Nx.Constants.infinity() do
         opts[:max_eps]
       else
         opts[:eps]
@@ -98,7 +98,7 @@ defmodule Scholar.Cluster.OPTICS do
     core_distances = compute_core_distances(x, neighbors, min_samples: min_samples)
 
     core_distances =
-      Nx.select(Nx.greater(core_distances, max_eps), Nx.Constants.infinity(), core_distances)
+      Nx.select(core_distances > max_eps, Nx.Constants.infinity(), core_distances)
 
     ordering = Nx.broadcast(0, {n_samples})
     processed = Nx.broadcast(0, {n_samples})
@@ -107,10 +107,10 @@ defmodule Scholar.Cluster.OPTICS do
       while {order_idx = 0, core_distances, reachability, predecessor, processed, ordering, x,
              max_eps},
             order_idx < n_samples do
-        unprocessed_mask = Nx.equal(processed, 0)
+        unprocessed_mask = processed == 0
         point = Nx.argmin(Nx.select(unprocessed_mask, reachability, Nx.Constants.infinity()))
-        processed = Nx.put_slice(processed, [point], Nx.broadcast(1, {1}))
-        ordering = Nx.put_slice(ordering, [order_idx], Nx.broadcast(point, {1}))
+        processed = Nx.put_slice(processed, [point], Nx.new_axis(1, 0))
+        ordering = Nx.put_slice(ordering, [order_idx], Nx.new_axis(point, 0))
 
         {reachability, predecessor} =
           set_reach_dist(core_distances, reachability, predecessor, point, processed, x,
@@ -123,7 +123,7 @@ defmodule Scholar.Cluster.OPTICS do
 
     reachability =
       Nx.select(
-        Nx.equal(reachability, Nx.Constants.max_finite({:f, 32})),
+        reachability == Nx.Constants.max_finite({:f, 32}),
         Nx.Constants.infinity(),
         reachability
       )
@@ -162,46 +162,45 @@ defmodule Scholar.Cluster.OPTICS do
 
     filtered_neighbors =
       Nx.select(
-        Nx.logical_or(are_neighbors_processed, Nx.greater(distances, max_eps)),
-        Nx.multiply(-1, neighbors),
+        are_neighbors_processed or distances > max_eps,
+        -1 * neighbors,
         neighbors
       )
 
     dists = Nx.flatten(Scholar.Metrics.Distance.pairwise_minkowski(p, x))
     core_distance = Nx.take(core_distances, point_index)
     rdists = Nx.max(dists, core_distance)
-    improved = Nx.less(rdists, reachability)
+    improved = rdists < reachability
     improved = Nx.select(improved, filtered_neighbors, -1)
 
     improved =
       Nx.select(
-        Nx.logical_and(Nx.equal(improved, -1), Nx.greater(filtered_neighbors, 0)),
+        improved == -1 and filtered_neighbors > 0,
         Nx.multiply(filtered_neighbors, -1),
         filtered_neighbors
       )
 
-    rdists = Nx.select(Nx.greater_equal(improved, 0), rdists, 0)
+    rdists = Nx.select(improved >= 0, rdists, 0)
     reversed_improved = Nx.max(Nx.multiply(improved, -1), 0)
 
     reachability =
-      Nx.select(Nx.less_equal(improved, 0), Nx.take(reachability, reversed_improved), rdists)
+      Nx.select(improved <= 0, Nx.take(reachability, reversed_improved), rdists)
 
     predecessor =
-      Nx.select(Nx.less_equal(improved, 0), Nx.take(predecessor, reversed_improved), point_index)
+      Nx.select(improved <= 0, Nx.take(predecessor, reversed_improved), point_index)
 
     {reachability, predecessor}
   end
 
   defnp cluster_optics_dbscan(reachability, core_distances, ordering, opts \\ []) do
     eps = opts[:eps]
-    far_reach = Nx.flatten(Nx.greater(reachability, eps))
-    near_core = Nx.flatten(Nx.less_equal(core_distances, eps))
-    far_and_not_near = Nx.multiply(far_reach, Nx.subtract(1, near_core))
+    far_reach = Nx.flatten(reachability > eps)
+    near_core = Nx.flatten(core_distances <= eps)
+    far_and_not_near = Nx.multiply(far_reach, 1 - near_core)
     far_reach = Nx.take(far_reach, ordering)
     near_core = Nx.take(near_core, ordering)
-    far_and_near = Nx.multiply(far_reach, near_core)
-    Nx.as_type(Nx.cumulative_sum(far_and_near), :s8)
-    labels = Nx.subtract(Nx.as_type(Nx.cumulative_sum(far_and_near), :s8), 1)
+    far_and_near = far_reach * near_core
+    labels = Nx.as_type(Nx.cumulative_sum(far_and_near), :s8) - 1
     labels = Nx.take(labels, Nx.argsort(ordering))
     Nx.select(far_and_not_near, -1, labels)
   end
