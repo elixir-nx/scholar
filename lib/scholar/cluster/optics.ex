@@ -1,10 +1,12 @@
 defmodule Scholar.Cluster.OPTICS do
   @moduledoc """
   OPTICS (Ordering Points To Identify the Clustering Structure) is an algorithm
-  for finding density-based clusters in spatial data. It is closely related
-  to DBSCAN, finds core sample of high density and expands clusters from them. 
-  Unlike DBSCAN, keeps cluster hierarchy for a variable neighborhood radius. 
-  Clusters are then extracted using a DBSCAN-like method.
+  for finding density-based clusters in spatial data.
+
+  It is closely related to DBSCAN, finds core sample of high density and expands
+  clusters from them.  Unlike DBSCAN, keeps cluster hierarchy for a variable
+  neighborhood radius.  Clusters are then extracted using a DBSCAN-like
+  method.
   """
   import Nx.Defn
   require Nx
