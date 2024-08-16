@@ -1,8 +1,7 @@
 defmodule Scholar.Cluster.OPTICS do
   @moduledoc """
-  OPTICS (Ordering Points To Identify the Clustering Structure) is an algorithm
+    OPTICS (Ordering Points To Identify the Clustering Structure) is an algorithm
   for finding density-based clusters in spatial data.
-
   It is closely related to DBSCAN, finds core sample of high density and expands
   clusters from them.  Unlike DBSCAN, keeps cluster hierarchy for a variable
   neighborhood radius.  Clusters are then extracted using a DBSCAN-like
@@ -10,6 +9,9 @@ defmodule Scholar.Cluster.OPTICS do
   """
   import Nx.Defn
   require Nx
+
+  @derive {Nx.Container, containers: [:labels, :min_samples, :max_eps, :eps, :algorithm]}
+  defstruct [:labels, :min_samples, :max_eps, :eps, :algorithm]
 
   opts = [
     min_samples: [
@@ -20,7 +22,6 @@ defmodule Scholar.Cluster.OPTICS do
       """
     ],
     max_eps: [
-      default: Nx.Constants.infinity(),
       type: {:custom, Scholar.Options, :beta, []},
       doc: """
         The maximum distance between two samples for one to be considered as in the neighborhood of the other. 
@@ -28,7 +29,6 @@ defmodule Scholar.Cluster.OPTICS do
       """
     ],
     eps: [
-      default: Nx.Constants.infinity(),
       type: {:custom, Scholar.Options, :beta, []},
       doc: """
         The maximum distance between two samples for one to be considered as in the neighborhood of the other. 
@@ -87,6 +87,11 @@ defmodule Scholar.Cluster.OPTICS do
         s64[6]
         [-1, 0, 0, 1, 1, -1]
       >
+      iex> Scholar.Cluster.OPTICS.fit(x, eps: 2, min_samples: 2, algorithm: :kd_tree, metric: {:minkowski, 1})
+      #Nx.Tensor<
+        s64[6]
+        [-1, 0, 0, 1, 1, -1]
+      >
       iex> Scholar.Cluster.OPTICS.fit(x, eps: 1, min_samples: 2)
       #Nx.Tensor<
         s64[6]
@@ -97,14 +102,9 @@ defmodule Scholar.Cluster.OPTICS do
         s64[6]
         [0, 0, 0, 1, 1, -1]
       >
-      iex> Scholar.Cluster.OPTICS.fit(x, max_eps: 2, min_samples: 1, algorithm: :kd_tree, metric: {:minkowski, 1})
-      #Nx.Tensor<
-        s64[6]
-        [0, 1, 1, 2, 2, 3]
-      >
   """
 
-  deftransform fit(x, opts \\ []) do
+  defn fit(x, opts \\ []) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
             """
@@ -112,9 +112,29 @@ defmodule Scholar.Cluster.OPTICS do
             got tensor with shape: #{inspect(Nx.shape(x))}
             """
     end
+
+    x = Scholar.Shared.to_float(x)
+    module = validate_options(x, opts)
+
+    %__MODULE__{
+      module
+      | labels: fit_p(x, module)
+    }
+  end
+
+  deftransformp validate_options(x, opts \\ []) do
     {opts, algorithm_opts} = Keyword.split(opts, [:min_samples, :max_eps, :eps, :algorithm])
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    algorithm_opts = Keyword.put(algorithm_opts, :num_neighbors, opts[:min_samples])
+    min_samples = opts[:min_samples]
+
+    if min_samples < 2 do
+      raise ArgumentError,
+            """
+            min_samples must be an int in the range [2, inf), got min_samples = #{inspect(min_samples)}
+            """
+    end
+
+    algorithm_opts = Keyword.put(algorithm_opts, :num_neighbors, min_samples)
 
     algorithm_module =
       case opts[:algorithm] do
@@ -130,39 +150,59 @@ defmodule Scholar.Cluster.OPTICS do
         module when is_atom(module) ->
           module
       end
+
     model = algorithm_module.fit(x, algorithm_opts)
-    {_neighbors, distances} = algorithm_module.predict(model, x)
-    fit_p(x, distances,  opts)
-  end
 
-  defnp fit_p(x, core_distances, opts \\ []) do
-    {core_distances, reachability, _predecessor, ordering} = compute_optics_graph(x, core_distances, opts)
-
-    eps =
-      if opts[:eps] == Nx.Constants.infinity() do
-        opts[:max_eps]
-      else
-        opts[:eps]
+    max_eps =
+      case opts[:max_eps] do
+        nil -> Nx.Constants.infinity(Nx.type(x))
+        any -> any
       end
 
-    cluster_optics_dbscan(reachability, core_distances, ordering, eps: eps)
+    eps =
+      case opts[:eps] do
+        nil -> max_eps
+        any -> any
+      end
+
+    if eps > max_eps do
+      raise ArgumentError,
+            """
+            eps can't be greater than max_eps, got eps = #{inspect(eps)} and max_eps = #{inspect(max_eps)}
+            """
+    end
+
+    %__MODULE__{
+      labels: Nx.broadcast(-1, {Nx.axis_size(x, 0)}),
+      min_samples: min_samples,
+      max_eps: max_eps,
+      eps: eps,
+      algorithm: model
+    }
   end
 
-  defnp compute_optics_graph(x, distances, opts \\ []) do
-    max_eps = opts[:max_eps]
+  defnp fit_p(x, module) do
+    {core_distances, reachability, _predecessor, ordering} = compute_optics_graph(x, module)
+
+    cluster_optics_dbscan(reachability, core_distances, ordering, module)
+  end
+
+  defnp compute_optics_graph(x, %__MODULE__{max_eps: max_eps, min_samples: min_samples} = module) do
     n_samples = Nx.axis_size(x, 0)
-    reachability = Nx.broadcast(Nx.Constants.max_finite({:f, 32}), {n_samples})
+    reachability = Nx.broadcast(Nx.Constants.max_finite(Nx.type(x)), {n_samples})
     predecessor = Nx.broadcast(-1, {n_samples})
-    core_distances = Nx.slice_along_axis(distances, opts[:min_samples] - 1, 1, axis: 1)
+    {_neighbors, distances} = run_knn(x, x, module)
+    core_distances = Nx.slice_along_axis(distances, min_samples - 1, 1, axis: 1)
+
     core_distances =
       Nx.select(core_distances > max_eps, Nx.Constants.infinity(), core_distances)
 
     ordering = Nx.broadcast(0, {n_samples})
     processed = Nx.broadcast(0, {n_samples})
 
-    {_order_idx, core_distances, reachability, predecessor, _processed, ordering, _x, _max_eps} =
+    {_order_idx, core_distances, reachability, predecessor, _processed, ordering, _x, _module} =
       while {order_idx = 0, core_distances, reachability, predecessor, processed, ordering, x,
-             max_eps},
+             module},
             order_idx < n_samples do
         unprocessed_mask = processed == 0
         point = Nx.argmin(Nx.select(unprocessed_mask, reachability, Nx.Constants.infinity()))
@@ -170,17 +210,14 @@ defmodule Scholar.Cluster.OPTICS do
         ordering = Nx.put_slice(ordering, [order_idx], Nx.new_axis(point, 0))
 
         {reachability, predecessor} =
-          set_reach_dist(core_distances, reachability, predecessor, point, processed, x,
-            max_eps: max_eps
-          )
+          set_reach_dist(core_distances, reachability, predecessor, point, processed, x, module)
 
-        {order_idx + 1, core_distances, reachability, predecessor, processed, ordering, x,
-         max_eps}
+        {order_idx + 1, core_distances, reachability, predecessor, processed, ordering, x, module}
       end
 
     reachability =
       Nx.select(
-        reachability == Nx.Constants.max_finite({:f, 32}),
+        reachability == Nx.Constants.max_finite(Nx.type(x)),
         Nx.Constants.infinity(),
         reachability
       )
@@ -195,16 +232,13 @@ defmodule Scholar.Cluster.OPTICS do
           point_index,
           processed,
           x,
-          opts \\ []
+          %__MODULE__{max_eps: max_eps} = module
         ) do
-    max_eps = opts[:max_eps]
     n_features = Nx.axis_size(x, 1)
     n_samples = Nx.axis_size(x, 0)
-    nbrs = Scholar.Neighbors.BruteKNN.fit(x, num_neighbors: n_samples)
     t = Nx.take(x, point_index, axis: 0)
     p = Nx.broadcast(t, {1, n_features})
-    {neighbors, distances} = Scholar.Neighbors.BruteKNN.predict(nbrs, p)
-
+    {neighbors, distances} = run_knn(x, p, %__MODULE__{module | min_samples: n_samples})
     neighbors = Nx.flatten(neighbors)
     distances = Nx.flatten(distances)
     indices_ngbrs = Nx.argsort(neighbors)
@@ -233,7 +267,7 @@ defmodule Scholar.Cluster.OPTICS do
       )
 
     rdists = Nx.select(improved >= 0, rdists, 0)
-    reversed_improved = Nx.max(Nx.multiply(improved, -1), 0)
+    reversed_improved = Nx.max(improved * -1, 0)
 
     reachability =
       Nx.select(improved <= 0, Nx.take(reachability, reversed_improved), rdists)
@@ -244,8 +278,17 @@ defmodule Scholar.Cluster.OPTICS do
     {reachability, predecessor}
   end
 
-  defnp cluster_optics_dbscan(reachability, core_distances, ordering, opts \\ []) do
-    eps = opts[:eps]
+  deftransformp run_knn(x, p, %__MODULE__{algorithm: algorithm_module, min_samples: k} = _module) do
+    nbrs = algorithm_module.__struct__.fit(x, num_neighbors: k)
+    algorithm_module.__struct__.predict(nbrs, p)
+  end
+
+  defnp cluster_optics_dbscan(
+          reachability,
+          core_distances,
+          ordering,
+          %__MODULE__{eps: eps} = _module
+        ) do
     far_reach = Nx.flatten(reachability > eps)
     near_core = Nx.flatten(core_distances <= eps)
     far_and_not_near = Nx.multiply(far_reach, 1 - near_core)
