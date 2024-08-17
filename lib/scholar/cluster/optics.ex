@@ -72,32 +72,32 @@ defmodule Scholar.Cluster.OPTICS do
   ## Examples
 
       iex> x = Nx.tensor([[1, 2], [2, 5], [3, 6], [8, 7], [8, 8], [7, 3]])
-      iex> Scholar.Cluster.OPTICS.fit(x, min_samples: 2)
+      iex> Scholar.Cluster.OPTICS.fit(x, min_samples: 2).labels
       #Nx.Tensor<
         s64[6]
         [-1, -1, -1, -1, -1, -1]
       >
-      iex> Scholar.Cluster.OPTICS.fit(x, eps: 4.5, min_samples: 2)
+      iex> Scholar.Cluster.OPTICS.fit(x, eps: 4.5, min_samples: 2).labels
       #Nx.Tensor<
         s64[6]
         [0, 0, 0, 1, 1, 1]
       >
-      iex> Scholar.Cluster.OPTICS.fit(x, eps: 2, min_samples: 2)
+      iex> Scholar.Cluster.OPTICS.fit(x, eps: 2, min_samples: 2).labels
       #Nx.Tensor<
         s64[6]
         [-1, 0, 0, 1, 1, -1]
       >
-      iex> Scholar.Cluster.OPTICS.fit(x, eps: 2, min_samples: 2, algorithm: :kd_tree, metric: {:minkowski, 1})
+      iex> Scholar.Cluster.OPTICS.fit(x, eps: 2, min_samples: 2, algorithm: :kd_tree, metric: {:minkowski, 1}).labels
       #Nx.Tensor<
         s64[6]
         [-1, 0, 0, 1, 1, -1]
       >
-      iex> Scholar.Cluster.OPTICS.fit(x, eps: 1, min_samples: 2)
+      iex> Scholar.Cluster.OPTICS.fit(x, eps: 1, min_samples: 2).labels
       #Nx.Tensor<
         s64[6]
         [-1, -1, -1, 0, 0, -1]
       >
-      iex> Scholar.Cluster.OPTICS.fit(x, eps: 4.5, min_samples: 3)
+      iex> Scholar.Cluster.OPTICS.fit(x, eps: 4.5, min_samples: 3).labels
       #Nx.Tensor<
         s64[6]
         [0, 0, 0, 1, 1, -1]
@@ -134,7 +134,7 @@ defmodule Scholar.Cluster.OPTICS do
             """
     end
 
-    algorithm_opts = Keyword.put(algorithm_opts, :num_neighbors, min_samples)
+    algorithm_opts = Keyword.put(algorithm_opts, :num_neighbors, 1)
 
     algorithm_module =
       case opts[:algorithm] do
