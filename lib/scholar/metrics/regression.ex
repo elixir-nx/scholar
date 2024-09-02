@@ -15,6 +15,16 @@ defmodule Scholar.Metrics.Regression do
   import Scholar.Shared
   import Scholar.Metrics.Distance
 
+  general_schema = [
+    axes: [
+      type: {:custom, Scholar.Options, :axes, []},
+      doc: """
+      Axes to calculate the distance over. By default the distance
+      is calculated between the whole tensors.
+      """
+    ]
+  ]
+
   r2_schema = [
     force_finite: [
       type: :boolean,
@@ -26,7 +36,8 @@ defmodule Scholar.Metrics.Regression do
     ]
   ]
 
-  @r2_schema NimbleOptions.new!(r2_schema)
+  @general_schema NimbleOptions.new!(general_schema)
+  @r2_schema NimbleOptions.new!(general_schema ++ r2_schema)
 
   # Standard Metrics
 
@@ -35,6 +46,10 @@ defmodule Scholar.Metrics.Regression do
   with respect to targets.
 
   $$MAE = \frac{\sum_{i=1}^{n} |\hat{y_i} - y_i|}{n}$$
+
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -45,13 +60,22 @@ defmodule Scholar.Metrics.Regression do
         f32
         0.5
       >
+      iex> Scholar.Metrics.Regression.mean_absolute_error(y_true, y_pred, axes: [0])
+      #Nx.Tensor<
+        f32[2]
+        [1.0, 0.0]
+      >
   """
-  defn mean_absolute_error(y_true, y_pred) do
+  deftransform mean_absolute_error(y_true, y_pred, opts \\ []) do
+    mean_absolute_error_n(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
+  end
+
+  defn mean_absolute_error_n(y_true, y_pred, opts \\ []) do
     assert_same_shape!(y_true, y_pred)
 
     (y_true - y_pred)
     |> Nx.abs()
-    |> Nx.mean()
+    |> Nx.mean(axes: opts[:axes])
   end
 
   @doc ~S"""
@@ -59,6 +83,10 @@ defmodule Scholar.Metrics.Regression do
   with respect to targets.
 
   $$MSE = \frac{\sum_{i=1}^{n} (\hat{y_i} - y_i)^2}{n}$$
+
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -69,9 +97,14 @@ defmodule Scholar.Metrics.Regression do
         f32
         0.5625
       >
+      iex> Scholar.Metrics.Regression.mean_square_error(y_true, y_pred, axes: [0])
+      #Nx.Tensor<
+        f32[2]
+        [0.625, 0.5]
+      >
   """
-  defn mean_square_error(y_true, y_pred) do
-    mean_tweedie_deviance_n(y_true, y_pred, 0)
+  deftransform mean_square_error(y_true, y_pred, opts \\ []) do
+    mean_tweedie_deviance_n(y_true, y_pred, 0, NimbleOptions.validate!(opts, @general_schema))
   end
 
   @doc ~S"""
@@ -79,6 +112,10 @@ defmodule Scholar.Metrics.Regression do
   with respect to targets.
 
   $$MSLE = \frac{\sum_{i=1}^{n} (\log(\hat{y_i} + 1) - \log(y_i + 1))^2}{n}$$
+
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -89,9 +126,16 @@ defmodule Scholar.Metrics.Regression do
         f32
         0.24022650718688965
       >
+      iex> Scholar.Metrics.Regression.mean_square_log_error(y_true, y_pred, axes: [0])
+      #Nx.Tensor<
+        f32[2]
+        [0.4804530143737793, 0.0]
+      >
   """
-  defn mean_square_log_error(y_true, y_pred) do
-    mean_square_error(Nx.log(y_true + 1), Nx.log(y_pred + 1))
+  deftransform mean_square_log_error(y_true, y_pred, opts \\ []) do
+    y_true = Nx.log(Nx.add(y_true, 1))
+    y_pred = Nx.log(Nx.add(y_pred, 1))
+    mean_square_error(y_true, y_pred, NimbleOptions.validate!(opts, @general_schema))
   end
 
   @doc ~S"""
@@ -100,6 +144,10 @@ defmodule Scholar.Metrics.Regression do
   to zero, it returns an arbitrarily large value.
 
   $$MAPE = \frac{\sum_{i=1}^{n} \frac{|\hat{y_i} - y_i|}{max(\epsilon, \hat{y_i})}}{n}$$
+
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -118,10 +166,25 @@ defmodule Scholar.Metrics.Regression do
         f32
         209715.28125
       >
+      iex> y_true = Nx.tensor([[0.5, 1], [-1, 1], [7, -6]])
+      iex> y_pred = Nx.tensor([[0, 2], [-1, 2], [8, -5]])
+      iex> Scholar.Metrics.Regression.mean_absolute_percentage_error(y_true, y_pred, axes: [0])
+      #Nx.Tensor<
+        f32[2]
+        [0.380952388048172, 0.7222222685813904]
+      >
   """
-  defn mean_absolute_percentage_error(y_true, y_pred) do
+  deftransform mean_absolute_percentage_error(y_true, y_pred, opts \\ []) do
     assert_same_shape!(y_true, y_pred)
 
+    mean_absolute_percentage_error_n(
+      y_true,
+      y_pred,
+      NimbleOptions.validate!(opts, @general_schema)
+    )
+  end
+
+  defnp mean_absolute_percentage_error_n(y_true, y_pred, opts \\ []) do
     eps =
       Nx.type(y_true)
       |> Nx.Type.merge(Nx.type(y_pred))
@@ -129,7 +192,7 @@ defmodule Scholar.Metrics.Regression do
       |> Nx.Constants.epsilon()
 
     (Nx.abs(y_true - y_pred) / Nx.max(eps, Nx.abs(y_true)))
-    |> Nx.mean()
+    |> Nx.mean(axes: opts[:axes])
   end
 
   @doc """
@@ -147,6 +210,10 @@ defmodule Scholar.Metrics.Regression do
   \end{cases}$$
   '''}
 
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
+
   ## Examples
 
       iex> y_true = Nx.tensor([1, 1, 1, 1, 1, 2, 2, 1, 3, 1], type: :u32)
@@ -156,9 +223,16 @@ defmodule Scholar.Metrics.Regression do
         f32
         0.18411168456077576
       >
+      iex> y_true = Nx.tensor([[1, 1, 1, 1], [1, 2, 2, 1]], type: :u32)
+      iex> y_pred = Nx.tensor([[2, 2, 1, 1], [2, 2, 2, 1]], type: :u32)
+      iex> Scholar.Metrics.Regression.mean_tweedie_deviance(y_true, y_pred, 1, axes: [0])
+      #Nx.Tensor<
+        f32[4]
+        [0.6137056350708008, 0.3068528175354004, 0.0, 0.0]
+      >
   """
-  defn mean_tweedie_deviance(y_true, y_pred, power) do
-    mean_tweedie_deviance_n(y_true, y_pred, power)
+  deftransform mean_tweedie_deviance(y_true, y_pred, power, opts \\ []) do
+    mean_tweedie_deviance_n(y_true, y_pred, power, NimbleOptions.validate!(opts, @general_schema))
   end
 
   @doc """
@@ -166,6 +240,10 @@ defmodule Scholar.Metrics.Regression do
   inputs cannot be used with the given power argument.
 
   Note: This function cannot be used in `defn`.
+
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -177,7 +255,7 @@ defmodule Scholar.Metrics.Regression do
         0.18411168456077576
       >
   """
-  def mean_tweedie_deviance!(y_true, y_pred, power) do
+  def mean_tweedie_deviance!(y_true, y_pred, power, opts \\ []) do
     message = "mean Tweedie deviance with power=#{power} can only be used on "
 
     case check_tweedie_deviance_power(y_true, y_pred, power) |> Nx.to_number() do
@@ -188,10 +266,10 @@ defmodule Scholar.Metrics.Regression do
       100 -> raise "something went wrong, branch should never appear"
     end
 
-    mean_tweedie_deviance_n(y_true, y_pred, power)
+    mean_tweedie_deviance(y_true, y_pred, power, opts)
   end
 
-  defnp mean_tweedie_deviance_n(y_true, y_pred, power) do
+  defnp mean_tweedie_deviance_n(y_true, y_pred, power, opts \\ []) do
     deviance =
       cond do
         power < 0 ->
@@ -226,7 +304,7 @@ defmodule Scholar.Metrics.Regression do
             )
       end
 
-    Nx.mean(deviance)
+    Nx.mean(deviance, axes: opts[:axes])
   end
 
   defnp check_tweedie_deviance_power(y_true, y_pred, power) do
@@ -264,6 +342,10 @@ defmodule Scholar.Metrics.Regression do
   Calculates the mean Poisson deviance of predictions
   with respect to targets.
 
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
+
   ## Examples
 
       iex> y_true = Nx.tensor([1, 1, 1, 1, 1, 2, 2, 1, 3, 1], type: :u32)
@@ -273,14 +355,26 @@ defmodule Scholar.Metrics.Regression do
         f32
         0.18411168456077576
       >
+
+      iex> y_true = Nx.tensor([[1, 1, 1, 1], [1, 2, 2, 1]], type: :u32)
+      iex> y_pred = Nx.tensor([[2, 2, 1, 1], [2, 2, 2, 1]], type: :u32)
+      iex> Scholar.Metrics.Regression.mean_poisson_deviance(y_true, y_pred, axes: [1])
+      #Nx.Tensor<
+        f32[2]
+        [0.3068528175354004, 0.1534264087677002]
+      >
   """
-  defn mean_poisson_deviance(y_true, y_pred) do
-    mean_tweedie_deviance_n(y_true, y_pred, 1)
+  deftransform mean_poisson_deviance(y_true, y_pred, opts \\ []) do
+    mean_tweedie_deviance_n(y_true, y_pred, 1, NimbleOptions.validate!(opts, @general_schema))
   end
 
   @doc """
   Calculates the mean Gamma deviance of predictions
   with respect to targets.
+
+  ## Options
+
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Examples
 
@@ -291,9 +385,16 @@ defmodule Scholar.Metrics.Regression do
         f32
         0.115888312458992
       >
+      iex> y_true = Nx.tensor([[1, 1, 1, 1, 1], [2, 2, 1, 3, 1]], type: :u32)
+      iex> y_pred = Nx.tensor([[2, 2, 1, 1, 2], [2, 2, 1, 3, 1]], type: :u32)
+      iex> Scholar.Metrics.Regression.mean_gamma_deviance(y_true, y_pred, axes: [0])
+      #Nx.Tensor<
+        f32[5]
+        [0.1931471824645996, 0.1931471824645996, 0.0, 0.0, 0.1931471824645996]
+      >
   """
-  defn mean_gamma_deviance(y_true, y_pred) do
-    mean_tweedie_deviance_n(y_true, y_pred, 2)
+  deftransform mean_gamma_deviance(y_true, y_pred, opts \\ []) do
+    mean_tweedie_deviance_n(y_true, y_pred, 2, NimbleOptions.validate!(opts, @general_schema))
   end
 
   @doc """
@@ -315,6 +416,14 @@ defmodule Scholar.Metrics.Regression do
       #Nx.Tensor<
         f32
         0.9486081600189209
+      >
+
+      iex> y_true = Nx.tensor([[3, -0.5], [2, 7]], type: {:f, 32})
+      iex>y_pred = Nx.tensor([[2.5, 0.0], [2, 8]], type: {:f, 32})
+      iex> Scholar.Metrics.Regression.r2_score(y_true, y_pred, axes: [0])
+      #Nx.Tensor<
+        f32[2]
+        [0.6800000071525574, 0.9559956192970276]
       >
 
       iex> y_true = Nx.tensor([-2.0, -2.0, -2.0], type: :f64)
@@ -354,11 +463,11 @@ defmodule Scholar.Metrics.Regression do
   end
 
   defnp r2_score_n(y_true, y_pred, opts) do
-    check_shape(y_true, y_pred)
-    ssr = squared_euclidean(y_true, y_pred)
+    assert_same_shape!(y_true, y_pred)
+    ssr = squared_euclidean(y_true, y_pred, axes: opts[:axes])
 
     y_mean = Nx.broadcast(Nx.mean(y_true), Nx.shape(y_true))
-    sst = squared_euclidean(y_true, y_mean)
+    sst = squared_euclidean(y_true, y_mean, axes: opts[:axes])
 
     handle_non_finite(ssr, sst, opts)
   end
@@ -413,6 +522,14 @@ defmodule Scholar.Metrics.Regression do
         f32
         1.0
       >
+
+      iex> y_true = Nx.tensor([[3, -0.5], [2, 7]], type: {:f, 32})
+      iex> y_pred = Nx.tensor([[2.5, 0.0], [2, 8]], type: {:f, 32})
+      iex> Scholar.Metrics.Regression.explained_variance_score(y_true, y_pred, axes: [0])
+      #Nx.Tensor<
+        f32[2]
+        [0.75, 0.995555579662323]
+      >
   """
   deftransform explained_variance_score(y_true, y_pred, opts \\ []) do
     explained_variance_score_n(
@@ -423,13 +540,14 @@ defmodule Scholar.Metrics.Regression do
   end
 
   defnp explained_variance_score_n(y_true, y_pred, opts) do
-    y_diff_avg = Nx.mean(y_true - y_pred, axes: [0])
+    axes = opts[:axes]
+    y_diff_avg = Nx.mean(y_true - y_pred, axes: axes)
     sample_size = Nx.axis_size(y_true, 0)
 
-    numerator = squared_euclidean(y_true, y_pred + y_diff_avg, axes: [0]) / sample_size
+    numerator = squared_euclidean(y_true, y_pred + y_diff_avg, axes: axes) / sample_size
 
-    y_true_avg = Nx.mean(y_true, axes: [0])
-    denominator = Nx.mean((y_true - y_true_avg) ** 2, axes: [0])
+    y_true_avg = Nx.mean(y_true, axes: axes)
+    denominator = Nx.mean((y_true - y_true_avg) ** 2, axes: axes)
     handle_non_finite(numerator, denominator, opts)
   end
 
@@ -516,6 +634,10 @@ defmodule Scholar.Metrics.Regression do
   """
   defn max_residual_error(y_true, y_pred) do
     check_shape(y_true, y_pred)
+    max_residual_error_n(y_true, y_pred)
+  end
+
+  defnp max_residual_error_n(y_true, y_pred) do
     Nx.reduce_max(Nx.abs(y_true - y_pred))
   end
 
@@ -576,6 +698,8 @@ defmodule Scholar.Metrics.Regression do
 
   The residual error is defined as $$|y - \hat{y}|$$ where $y$ is a true value
   and $\hat{y}$ is a predicted value.
+
+  ## Options
 
   #{NimbleOptions.docs(@mean_pinball_loss_schema)}
 
