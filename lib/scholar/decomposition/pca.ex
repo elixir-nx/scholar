@@ -151,7 +151,7 @@ defmodule Scholar.Decomposition.PCA do
     x_centered = x - mean
     variance = Nx.sum(x_centered * x_centered / (num_samples - 1), axes: [0])
     {u, s, vt} = Nx.LinAlg.svd(x_centered, full_matrices?: false)
-    {_, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
+    {_, vt} = flip_svd(u, vt)
     components = vt[0..(num_components - 1)]
     explained_variance = s * s / (num_samples - 1)
 
@@ -311,7 +311,7 @@ defmodule Scholar.Decomposition.PCA do
       )
 
     {u, s, vt} = Nx.LinAlg.svd(matrix, full_matrices?: false)
-    {_, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
+    {_, vt} = flip_svd(u, vt)
     updated_components = vt[0..(num_components - 1)]
     updated_singular_values = s[0..(num_components - 1)]
 
