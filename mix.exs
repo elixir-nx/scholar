@@ -96,7 +96,8 @@ defmodule Scholar.MixProject do
           Scholar.Neighbors.KNNRegressor,
           Scholar.Neighbors.LargeVis,
           Scholar.Neighbors.NNDescent,
-          Scholar.Neighbors.RadiusNearestNeighbors,
+          Scholar.Neighbors.RNNClassifier,
+          Scholar.Neighbors.RNNRegressor,
           Scholar.Neighbors.RandomProjectionForest
         ],
         Utilities: [
