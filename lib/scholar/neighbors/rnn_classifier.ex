@@ -1,4 +1,4 @@
-defmodule Scholar.Neighbors.RNNClassifier do
+defmodule Scholar.Neighbors.RadiusNNClassifier do
   @moduledoc """
   The Radius Nearest Neighbors.
 
@@ -83,8 +83,8 @@ defmodule Scholar.Neighbors.RNNClassifier do
 
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
-      iex> Scholar.Neighbors.RNNClassifier.fit(x, y, num_classes: 2)
-      %Scholar.Neighbors.RNNClassifier{
+      iex> Scholar.Neighbors.RadiusNNClassifier.fit(x, y, num_classes: 2)
+      %Scholar.Neighbors.RadiusNNClassifier{
         data: Nx.tensor([
           [1, 2],
           [2, 4],
@@ -143,8 +143,8 @@ defmodule Scholar.Neighbors.RNNClassifier do
 
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
-      iex> model = Scholar.Neighbors.RNNClassifier.fit(x, y, num_classes: 2)
-      iex> Scholar.Neighbors.RNNClassifier.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      iex> model = Scholar.Neighbors.RadiusNNClassifier.fit(x, y, num_classes: 2)
+      iex> Scholar.Neighbors.RadiusNNClassifier.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       #Nx.Tensor<
         s64[2]
         [0, 1]
@@ -169,8 +169,8 @@ defmodule Scholar.Neighbors.RNNClassifier do
 
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
-      iex> model = Scholar.Neighbors.RNNClassifier.fit(x, y, num_classes: 2)
-      iex> {probs, mask} = Scholar.Neighbors.RNNClassifier.predict_probability(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      iex> model = Scholar.Neighbors.RadiusNNClassifier.fit(x, y, num_classes: 2)
+      iex> {probs, mask} = Scholar.Neighbors.RadiusNNClassifier.predict_probability(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       iex> probs
       #Nx.Tensor<
         f32[2][2]
@@ -230,8 +230,8 @@ defmodule Scholar.Neighbors.RNNClassifier do
 
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
-      iex> model = Scholar.Neighbors.RNNClassifier.fit(x, y, num_classes: 2)
-      iex> {distances, mask} = Scholar.Neighbors.RNNClassifier.radius_neighbors(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      iex> model = Scholar.Neighbors.RadiusNNClassifier.fit(x, y, num_classes: 2)
+      iex> {distances, mask} = Scholar.Neighbors.RadiusNNClassifier.radius_neighbors(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       iex> distances
       #Nx.Tensor<
         f32[2][4]

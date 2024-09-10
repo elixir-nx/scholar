@@ -98,14 +98,14 @@ defmodule Scholar.Cluster.DBSCAN do
     y_dummy = Nx.broadcast(Nx.tensor(0), {num_samples})
 
     neighbor_model =
-      Scholar.Neighbors.RNNClassifier.fit(x, y_dummy,
+      Scholar.Neighbors.RadiusNNClassifier.fit(x, y_dummy,
         num_classes: 1,
         radius: opts[:eps],
         metric: opts[:metric]
       )
 
     {_dist, indices} =
-      Scholar.Neighbors.RNNClassifier.radius_neighbors(neighbor_model, x)
+      Scholar.Neighbors.RadiusNNClassifier.radius_neighbors(neighbor_model, x)
 
     n_neighbors = Nx.sum(indices * weights, axes: [1])
     core_samples = n_neighbors >= opts[:min_samples]

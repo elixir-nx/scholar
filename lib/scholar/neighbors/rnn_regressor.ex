@@ -1,4 +1,4 @@
-defmodule Scholar.Neighbors.RNNRegressor do
+defmodule Scholar.Neighbors.RadiusNNRegressor do
   @moduledoc """
   The Radius Nearest Neighbors.
 
@@ -80,8 +80,8 @@ defmodule Scholar.Neighbors.RNNRegressor do
 
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
-      iex> Scholar.Neighbors.RNNRegressor.fit(x, y, num_classes: 2)
-      %Scholar.Neighbors.RNNRegressor{
+      iex> Scholar.Neighbors.RadiusNNRegressor.fit(x, y, num_classes: 2)
+      %Scholar.Neighbors.RadiusNNRegressor{
         data: Nx.tensor(
           [
             [1, 2],
@@ -142,8 +142,8 @@ defmodule Scholar.Neighbors.RNNRegressor do
 
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
-      iex> model = Scholar.Neighbors.RNNRegressor.fit(x, y, num_classes: 2)
-      iex> Scholar.Neighbors.RNNRegressor.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      iex> model = Scholar.Neighbors.RadiusNNRegressor.fit(x, y, num_classes: 2)
+      iex> Scholar.Neighbors.RadiusNNRegressor.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       #Nx.Tensor<
         f32[2]
         [0.5, 1.0]
@@ -196,8 +196,8 @@ defmodule Scholar.Neighbors.RNNRegressor do
 
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
-      iex> model = Scholar.Neighbors.RNNRegressor.fit(x, y, num_classes: 2)
-      iex> {distances, mask} = Scholar.Neighbors.RNNRegressor.radius_neighbors(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+      iex> model = Scholar.Neighbors.RadiusNNRegressor.fit(x, y, num_classes: 2)
+      iex> {distances, mask} = Scholar.Neighbors.RadiusNNRegressor.radius_neighbors(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       iex> distances
       #Nx.Tensor<
         f32[2][4]

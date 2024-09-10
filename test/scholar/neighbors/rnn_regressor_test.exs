@@ -1,7 +1,7 @@
-defmodule Scholar.Neighbors.RNNRegressorTest do
+defmodule Scholar.Neighbors.RadiusNNRegressorTest do
   use Scholar.Case, async: true
-  alias Scholar.Neighbors.RNNRegressor
-  doctest RNNRegressor
+  alias Scholar.Neighbors.RadiusNNRegressor
+  doctest RadiusNNRegressor
 
   defp x do
     Nx.tensor([
@@ -29,26 +29,26 @@ defmodule Scholar.Neighbors.RNNRegressorTest do
   describe "predict" do
     test "predict with weights set to :distance" do
       model =
-        RNNRegressor.fit(x(), y(),
+        RadiusNNRegressor.fit(x(), y(),
           num_classes: 2,
           radius: 10,
           weights: :distance
         )
 
-      predictions = RNNRegressor.predict(model, x_pred())
+      predictions = RadiusNNRegressor.predict(model, x_pred())
       assert_all_close(predictions, Nx.tensor([0.69033845, 0.71773642, 0.68217609, 0.75918273]))
     end
 
     test "predict with weights set to :distance and with specific metric" do
       model =
-        RNNRegressor.fit(x(), y(),
+        RadiusNNRegressor.fit(x(), y(),
           num_classes: 2,
           radius: 10,
           weights: :distance,
           metric: :cosine
         )
 
-      predictions = RNNRegressor.predict(model, x_pred())
+      predictions = RadiusNNRegressor.predict(model, x_pred())
       assert_all_close(predictions, Nx.tensor([0.683947, 0.54694187, 0.59806132, 0.86398641]))
     end
 
@@ -57,14 +57,14 @@ defmodule Scholar.Neighbors.RNNRegressorTest do
         Nx.tensor([[1, 4], [0, 3], [2, 5], [0, 3], [0, 3], [1, 4], [2, 5], [0, 3], [1, 4], [2, 5]])
 
       model =
-        RNNRegressor.fit(x(), y,
+        RadiusNNRegressor.fit(x(), y,
           num_classes: 3,
           radius: 10,
           weights: :distance,
           metric: :cosine
         )
 
-      predictions = RNNRegressor.predict(model, x_pred())
+      predictions = RadiusNNRegressor.predict(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -87,7 +87,7 @@ defmodule Scholar.Neighbors.RNNRegressorTest do
                    "expected input tensor to have shape {n_samples, n_features} or {num_samples, num_samples},
              got tensor with shape: {5}",
                    fn ->
-                     RNNRegressor.fit(x, y, num_classes: 5)
+                     RadiusNNRegressor.fit(x, y, num_classes: 5)
                    end
     end
 
@@ -99,7 +99,7 @@ defmodule Scholar.Neighbors.RNNRegressorTest do
                    "expected labels to have shape {num_samples} or {num_samples, num_outputs},
             got tensor with shape: {1, 1, 5}",
                    fn ->
-                     RNNRegressor.fit(x, y, num_classes: 5)
+                     RadiusNNRegressor.fit(x, y, num_classes: 5)
                    end
     end
 
@@ -111,7 +111,7 @@ defmodule Scholar.Neighbors.RNNRegressorTest do
                    "expected labels to have the same size of the first axis as data,
       got: 6 != 5",
                    fn ->
-                     RNNRegressor.fit(x, y, num_classes: 5)
+                     RadiusNNRegressor.fit(x, y, num_classes: 5)
                    end
     end
   end

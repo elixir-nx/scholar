@@ -1,7 +1,7 @@
-defmodule Scholar.Neighbors.RNNClassifierTest do
+defmodule Scholar.Neighbors.RadiusNNClassifierTest do
   use Scholar.Case, async: true
-  alias Scholar.Neighbors.RNNClassifier
-  doctest RNNClassifier
+  alias Scholar.Neighbors.RadiusNNClassifier
+  doctest RadiusNNClassifier
 
   defp x do
     Nx.tensor([
@@ -28,7 +28,7 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
 
   describe "fit" do
     test "fit with default parameters - :num_classes set to 2" do
-      model = RNNClassifier.fit(x(), y(), num_classes: 2)
+      model = RadiusNNClassifier.fit(x(), y(), num_classes: 2)
 
       assert model.weights == :uniform
       assert model.num_classes == 2
@@ -39,51 +39,51 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
 
   describe "predict" do
     test "predict with default values" do
-      model = RNNClassifier.fit(x(), y(), num_classes: 2)
-      predictions = RNNClassifier.predict(model, x_pred())
+      model = RadiusNNClassifier.fit(x(), y(), num_classes: 2)
+      predictions = RadiusNNClassifier.predict(model, x_pred())
       assert predictions == Nx.tensor([-1, -1, -1, -1])
     end
 
     test "predict with radius set to 10" do
-      model = RNNClassifier.fit(x(), y(), num_classes: 2, radius: 10)
-      predictions = RNNClassifier.predict(model, x_pred())
+      model = RadiusNNClassifier.fit(x(), y(), num_classes: 2, radius: 10)
+      predictions = RadiusNNClassifier.predict(model, x_pred())
       assert predictions == Nx.tensor([1, 1, 1, 1])
     end
 
     test "predict with weights set to :distance - classification task" do
-      model = RNNClassifier.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
+      model = RadiusNNClassifier.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
 
-      predictions = RNNClassifier.predict(model, x_pred())
+      predictions = RadiusNNClassifier.predict(model, x_pred())
       assert predictions == Nx.tensor([1, 1, 1, 1])
     end
 
     test "predict with weights set to :distance and with specific metric" do
       model =
-        RNNClassifier.fit(x(), y(),
+        RadiusNNClassifier.fit(x(), y(),
           num_classes: 2,
           radius: 10,
           weights: :distance,
           metric: {:minkowski, 1.5}
         )
 
-      predictions = RNNClassifier.predict(model, x_pred())
+      predictions = RadiusNNClassifier.predict(model, x_pred())
       assert predictions == Nx.tensor([1, 1, 1, 1])
     end
 
     test "predict with weights set to :distance and with x_pred that contains sample with zero-distance" do
       x_pred = Nx.tensor([[3, 6, 7, 5], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
 
-      model = RNNClassifier.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
+      model = RadiusNNClassifier.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
 
-      predictions = RNNClassifier.predict(model, x_pred)
+      predictions = RadiusNNClassifier.predict(model, x_pred)
       assert predictions == Nx.tensor([0, 1, 1, 1])
     end
   end
 
   describe "predict_proba" do
     test "predict_proba with default values except radius set to 10" do
-      model = RNNClassifier.fit(x(), y(), num_classes: 2, radius: 10)
-      {predictions, outliers_mask} = RNNClassifier.predict_probability(model, x_pred())
+      model = RadiusNNClassifier.fit(x(), y(), num_classes: 2, radius: 10)
+      {predictions, outliers_mask} = RadiusNNClassifier.predict_probability(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -94,9 +94,9 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
     end
 
     test "predict_proba with weights set to :distance" do
-      model = RNNClassifier.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
+      model = RadiusNNClassifier.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
 
-      {predictions, outliers_mask} = RNNClassifier.predict_probability(model, x_pred())
+      {predictions, outliers_mask} = RadiusNNClassifier.predict_probability(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -113,14 +113,14 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
 
     test "predict_proba with weights set to :distance and with specific metric" do
       model =
-        RNNClassifier.fit(x(), y(),
+        RadiusNNClassifier.fit(x(), y(),
           num_classes: 2,
           radius: 10,
           weights: :distance,
           metric: {:minkowski, 1.5}
         )
 
-      {predictions, outliers_mask} = RNNClassifier.predict_probability(model, x_pred())
+      {predictions, outliers_mask} = RadiusNNClassifier.predict_probability(model, x_pred())
 
       assert_all_close(
         predictions,
@@ -138,9 +138,9 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
     test "predict_proba with weights set to :distance and with x_pred that contains sample with zero-distance" do
       x_pred = Nx.tensor([[3, 6, 7, 5], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
 
-      model = RNNClassifier.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
+      model = RadiusNNClassifier.fit(x(), y(), num_classes: 2, radius: 10, weights: :distance)
 
-      {predictions, outliers_mask} = RNNClassifier.predict_probability(model, x_pred)
+      {predictions, outliers_mask} = RadiusNNClassifier.predict_probability(model, x_pred)
 
       assert_all_close(
         predictions,
@@ -158,8 +158,8 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
 
   describe "radius_neighbors" do
     test "radius_neighbors with default values except radius set to 10" do
-      model = RNNClassifier.fit(x(), y(), num_classes: 2, radius: 10)
-      {distances, indices} = RNNClassifier.radius_neighbors(model, x_pred())
+      model = RadiusNNClassifier.fit(x(), y(), num_classes: 2, radius: 10)
+      {distances, indices} = RadiusNNClassifier.radius_neighbors(model, x_pred())
 
       assert_all_close(
         distances,
@@ -229,13 +229,13 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
 
     test "radius_neighbors with specific metric" do
       model =
-        RNNClassifier.fit(x(), y(),
+        RadiusNNClassifier.fit(x(), y(),
           num_classes: 2,
           radius: 10,
           metric: {:minkowski, 1.5}
         )
 
-      {distances, indices} = RNNClassifier.radius_neighbors(model, x_pred())
+      {distances, indices} = RadiusNNClassifier.radius_neighbors(model, x_pred())
 
       assert_all_close(
         distances,
@@ -313,7 +313,7 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
                    "expected input tensor to have shape {n_samples, n_features} or {num_samples, num_samples},
              got tensor with shape: {5}",
                    fn ->
-                     RNNClassifier.fit(x, y, num_classes: 5)
+                     RadiusNNClassifier.fit(x, y, num_classes: 5)
                    end
     end
 
@@ -325,7 +325,7 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
                    "expected labels to have shape {num_samples} or {num_samples, num_outputs},
             got tensor with shape: {1, 1, 5}",
                    fn ->
-                     RNNClassifier.fit(x, y, num_classes: 5)
+                     RadiusNNClassifier.fit(x, y, num_classes: 5)
                    end
     end
 
@@ -337,7 +337,7 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
                    "expected labels to have the same size of the first axis as data,
       got: 6 != 5",
                    fn ->
-                     RNNClassifier.fit(x, y, num_classes: 5)
+                     RadiusNNClassifier.fit(x, y, num_classes: 5)
                    end
     end
 
@@ -348,7 +348,7 @@ defmodule Scholar.Neighbors.RNNClassifierTest do
       assert_raise NimbleOptions.ValidationError,
                    "required :num_classes option not found, received options: []",
                    fn ->
-                     RNNClassifier.fit(x, y)
+                     RadiusNNClassifier.fit(x, y)
                    end
     end
   end
