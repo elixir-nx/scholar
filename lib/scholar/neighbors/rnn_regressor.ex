@@ -81,6 +81,7 @@ defmodule Scholar.Neighbors.RNNRegressor do
       iex> x = Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]])
       iex> y = Nx.tensor([1, 0, 1, 1])
       iex> Scholar.Neighbors.RNNRegressor.fit(x, y, num_classes: 2)
+      
       %Scholar.Neighbors.RNNRegressor{
         data: #Nx.Tensor<
           s64[4][2]
@@ -202,6 +203,7 @@ defmodule Scholar.Neighbors.RNNRegressor do
       iex> y = Nx.tensor([1, 0, 1, 1])
       iex> model = Scholar.Neighbors.RNNRegressor.fit(x, y, num_classes: 2)
       iex> Scholar.Neighbors.RNNRegressor.radius_neighbors(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
+
       {#Nx.Tensor<
         f32[2][4]
         [
