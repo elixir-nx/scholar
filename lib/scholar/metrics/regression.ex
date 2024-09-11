@@ -34,10 +34,10 @@ defmodule Scholar.Metrics.Regression do
       (1.0 if prediction is perfect, 0.0 otherwise)
       """
     ]
-  ]
+  ] ++ general_schema
 
   @general_schema NimbleOptions.new!(general_schema)
-  @r2_schema NimbleOptions.new!(general_schema ++ r2_schema)
+  @r2_schema NimbleOptions.new!(r2_schema)
 
   # Standard Metrics
 
@@ -662,31 +662,8 @@ defmodule Scholar.Metrics.Regression do
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
       """
-    ],
-    multioutput: [
-      type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :weights, []},
-           {:in, [:raw_values, :uniform_average]}
-         ]},
-      default: :uniform_average,
-      doc: """
-      Defines aggregating of multiple output values.
-      Array-like value defines weights used to average errors.
-      Defaults to `:uniform_average`.
-
-        `:raw_values` :
-            Returns a full set of errors in case of multioutput input.
-
-        `:uniform_average` :
-            Errors of all outputs are averaged with uniform weight.
-
-      The weights for each observation. If not provided,
-      all observations are assigned equal weight.
-      """
     ]
-  ]
+  ] ++ general_schema
 
   @mean_pinball_loss_schema NimbleOptions.new!(mean_pinball_loss_opts)
 
@@ -714,7 +691,7 @@ defmodule Scholar.Metrics.Regression do
       >
       iex> y_true = Nx.tensor([[1, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 1]])
       iex> y_pred = Nx.tensor([[0, 0, 0, 1], [1, 0, 1, 1], [0, 0, 0, 1]])
-      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, multioutput: :raw_values)
+      iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, axes: [0])
       #Nx.Tensor<
         f32[4]
         [0.5, 0.3333333432674408, 0.0, 0.0]
@@ -727,64 +704,24 @@ defmodule Scholar.Metrics.Regression do
   defnp mean_pinball_loss_n(y_true, y_pred, opts) do
     assert_same_shape!(y_true, y_pred)
     alpha = opts[:alpha]
-
+    weights = case opts[:sample_weights] do 
+      nil -> Nx.broadcast(1, y_true)
+      sample_weights -> sample_weights
+    end
     # Formula adapted from sklearn:
     # https://github.com/scikit-learn/scikit-learn/blob/128e40ed593c57e8b9e57a4109928d58fa8bf359/sklearn/metrics/_regression.py#L299
     diff = y_true - y_pred
     sign = diff >= 0
     loss = alpha * sign * diff - (1 - alpha) * (1 - sign) * diff
 
-    output_errors = handle_sample_weights(loss, opts, axes: [0])
-    # mimics the sklearn behavior
-    case opts[:multioutput] do
-      # raw_values returns plain output errors. One value per channel.
-      :raw_values ->
-        output_errors
-
-      # uniform_average returns the mean of the above. Note how they are averaged.
-      :uniform_average ->
-        output_errors
-        |> Nx.mean()
-
-      # pass `:multioutput` as sample weights to average the error of each output
-      multi_output_weights ->
-        handle_sample_weights(output_errors, sample_weights: multi_output_weights)
-    end
-  end
-
-  defnp handle_sample_weights(loss, opts, mean_opts \\ []) do
-    case opts[:sample_weights] do
-      nil ->
-        Nx.mean(loss, mean_opts)
-
-      weights ->
-        Nx.weighted_mean(loss, weights, mean_opts)
-    end
+    output_errors = Nx.weighted_mean(loss, weights, axes: [0], keep_axes: true)
+    Nx.mean(output_errors, axes: opts[:axes])
   end
 
   defnp check_shape(y_true, y_pred) do
     assert_rank!(y_true, 1)
     assert_same_shape!(y_true, y_pred)
   end
-
-  d2_absolute_error_score_opts = [
-    multioutput: [
-      type: {:in, [:raw_values, :uniform_average]},
-      default: :uniform_average,
-      doc: """
-      Defines aggregating of multiple output values.
-      Defaults to `:uniform_average`.
-
-        `:raw_values` :
-            Returns a full set of errors in case of multioutput input.
-
-        `:uniform_average` :
-            Errors of all outputs are averaged with uniform weight.
-      """
-    ]
-  ]
-
-  @d2_absolute_error_score_schema NimbleOptions.new!(d2_absolute_error_score_opts)
 
   @doc ~S"""
   `D^2` regression score function, fraction of absolute error explained.
@@ -796,7 +733,7 @@ defmodule Scholar.Metrics.Regression do
 
   ## Options
 
-  #{NimbleOptions.docs(@d2_absolute_error_score_opts)}
+  #{NimbleOptions.docs(@general_schema)}
 
   ## Return Values
 
@@ -832,16 +769,16 @@ defmodule Scholar.Metrics.Regression do
         f32
         0.7647058963775635
       >
-      iex> y_true = Nx.tensor([[0.5, 1], [-1, 1], [7, -6]])
-      iex> y_pred = Nx.tensor([[0, 2], [-1, 2], [8, -5]])
+      iex> y_true = Nx.tensor([[0.5, 1], [-1, 1], [7, -6]], type: {:f, 64})
+      iex> y_pred = Nx.tensor([[0, 2], [-1, 2], [8, -5]], type: {:f, 64})
       iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred)
       #Nx.Tensor<
-        f32
-        0.6919642686843872
+        f64
+        0.6919642857142856
       >
       iex> y_true = Nx.tensor([[0.5, 1], [-1, 1], [7, -6]])
       iex> y_pred = Nx.tensor([[0, 2], [-1, 2], [8, -5]])
-      iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred, multioutput: :raw_values)
+      iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred, axes: [0])
       #Nx.Tensor<
         f32[2]
         [0.8125, 0.5714285373687744]
@@ -852,12 +789,12 @@ defmodule Scholar.Metrics.Regression do
     d2_absolute_error_score_n(
       y_true,
       y_pred,
-      NimbleOptions.validate!(opts, @d2_absolute_error_score_schema)
+      NimbleOptions.validate!(opts, @general_schema)
     )
   end
 
   defn d2_absolute_error_score_n(y_true, y_pred, opts \\ []) do
-    d2_pinball_score(y_true, y_pred, alpha: 0.5, multioutput: opts[:multioutput])
+    d2_pinball_score(y_true, y_pred, alpha: 0.5, axes: opts[:axes])
   end
 
   d2_pinball_score_opts = [
@@ -869,22 +806,8 @@ defmodule Scholar.Metrics.Regression do
       This loss is equivalent to $$mean_absolute_error$$ when $$\alpha$$ is 0.5,
       $$\alpha = 0.95$$ is minimized by estimators of the 95th percentile.
       """
-    ],
-    multioutput: [
-      type: {:in, [:raw_values, :uniform_average]},
-      default: :uniform_average,
-      doc: """
-      Defines aggregating of multiple output values.
-      Defaults to `:uniform_average`.
-
-        `:raw_values` :
-            Returns a full set of errors in case of multioutput input.
-
-        `:uniform_average` :
-            Errors of all outputs are averaged with uniform weight.
-      """
     ]
-  ]
+  ] ++ general_schema
 
   @d2_pinball_score_schema NimbleOptions.new!(d2_pinball_score_opts)
 
@@ -898,7 +821,7 @@ defmodule Scholar.Metrics.Regression do
 
   ## Options
 
-  #{NimbleOptions.docs(@d2_pinball_score_opts)}
+  #{NimbleOptions.docs(@d2_pinball_score_schema)}
 
   ## Return Values
 
@@ -923,6 +846,13 @@ defmodule Scholar.Metrics.Regression do
         f32
         1.0
       >
+      iex> y_true = Nx.tensor([[0.5, 1], [-1, 1], [7, -6]])
+      iex> y_pred = Nx.tensor([[0, 2], [-1, 2], [8, -5]])
+      iex> Scholar.Metrics.Regression.d2_pinball_score(y_true, y_pred, axes: [0])
+      #Nx.Tensor<
+        f32[2]
+        [0.8125, 0.5714285373687744]
+      >
   """
 
   deftransform d2_pinball_score(y_true, y_pred, opts \\ []) do
@@ -944,10 +874,10 @@ defmodule Scholar.Metrics.Regression do
         shape |> elem(1)
       end
 
-    numerator = mean_pinball_loss(y_true, y_pred, alpha: alpha, multioutput: :raw_values)
+    numerator = mean_pinball_loss(y_true, y_pred, alpha: alpha, axes: [0])
 
     y_quantile = Nx.broadcast(quantile(y_true, alpha), shape)
-    denominator = mean_pinball_loss(y_true, y_quantile, alpha: alpha, multioutput: :raw_values)
+    denominator = mean_pinball_loss(y_true, y_quantile, alpha: alpha, axes: [0])
 
     nonzero_numerator = numerator != 0
     nonzero_denominator = denominator != 0
@@ -960,12 +890,9 @@ defmodule Scholar.Metrics.Regression do
     output_scores =
       Nx.select(valid_score, Nx.subtract(1, Nx.divide(numerator, denominator)), output_scores)
 
-    output_scores = Nx.select(invalid_score, 0.0, output_scores)
-
-    case opts[:multioutput] do
-      :uniform_average -> Nx.mean(output_scores)
-      :raw_values -> output_scores
-    end
+    loss = Nx.select(invalid_score, 0.0, output_scores)
+    |> Nx.broadcast(shape)
+    Nx.mean(loss, axes: opts[:axes])
   end
 
   defn quantile(tensor, q) do
