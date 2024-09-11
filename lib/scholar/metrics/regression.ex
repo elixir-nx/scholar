@@ -25,16 +25,17 @@ defmodule Scholar.Metrics.Regression do
     ]
   ]
 
-  r2_schema = [
-    force_finite: [
-      type: :boolean,
-      default: true,
-      doc: """
-      Flag indicating if NaN and -Inf scores resulting from constant data should be replaced with real numbers
-      (1.0 if prediction is perfect, 0.0 otherwise)
-      """
-    ]
-  ] ++ general_schema
+  r2_schema =
+    [
+      force_finite: [
+        type: :boolean,
+        default: true,
+        doc: """
+        Flag indicating if NaN and -Inf scores resulting from constant data should be replaced with real numbers
+        (1.0 if prediction is perfect, 0.0 otherwise)
+        """
+      ]
+    ] ++ general_schema
 
   @general_schema NimbleOptions.new!(general_schema)
   @r2_schema NimbleOptions.new!(r2_schema)
@@ -641,29 +642,30 @@ defmodule Scholar.Metrics.Regression do
     Nx.reduce_max(Nx.abs(y_true - y_pred))
   end
 
-  mean_pinball_loss_opts = [
-    alpha: [
-      type: :float,
-      default: 0.5,
-      doc: """
-      The slope of the pinball loss, default=0.5,
-      This loss is equivalent to $$mean_absolute_error$$ when $$\alpha$$ is 0.5,
-      $$\alpha = 0.95$$ is minimized by estimators of the 95th percentile.
-      """
-    ],
-    sample_weights: [
-      type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :weights, []},
-           {:custom, Scholar.Options, :multi_weights, []}
-         ]},
-      doc: """
-      The weights for each observation. If not provided,
-      all observations are assigned equal weight.
-      """
-    ]
-  ] ++ general_schema
+  mean_pinball_loss_opts =
+    [
+      alpha: [
+        type: :float,
+        default: 0.5,
+        doc: """
+        The slope of the pinball loss, default=0.5,
+        This loss is equivalent to $$mean_absolute_error$$ when $$\alpha$$ is 0.5,
+        $$\alpha = 0.95$$ is minimized by estimators of the 95th percentile.
+        """
+      ],
+      sample_weights: [
+        type:
+          {:or,
+           [
+             {:custom, Scholar.Options, :weights, []},
+             {:custom, Scholar.Options, :multi_weights, []}
+           ]},
+        doc: """
+        The weights for each observation. If not provided,
+        all observations are assigned equal weight.
+        """
+      ]
+    ] ++ general_schema
 
   @mean_pinball_loss_schema NimbleOptions.new!(mean_pinball_loss_opts)
 
@@ -704,10 +706,13 @@ defmodule Scholar.Metrics.Regression do
   defnp mean_pinball_loss_n(y_true, y_pred, opts) do
     assert_same_shape!(y_true, y_pred)
     alpha = opts[:alpha]
-    weights = case opts[:sample_weights] do 
-      nil -> Nx.broadcast(1, y_true)
-      sample_weights -> sample_weights
-    end
+
+    weights =
+      case opts[:sample_weights] do
+        nil -> Nx.broadcast(1, y_true)
+        sample_weights -> sample_weights
+      end
+
     # Formula adapted from sklearn:
     # https://github.com/scikit-learn/scikit-learn/blob/128e40ed593c57e8b9e57a4109928d58fa8bf359/sklearn/metrics/_regression.py#L299
     diff = y_true - y_pred
@@ -797,17 +802,18 @@ defmodule Scholar.Metrics.Regression do
     d2_pinball_score(y_true, y_pred, alpha: 0.5, axes: opts[:axes])
   end
 
-  d2_pinball_score_opts = [
-    alpha: [
-      type: :float,
-      default: 0.5,
-      doc: """
-      The slope of the pinball loss, default=0.5,
-      This loss is equivalent to $$mean_absolute_error$$ when $$\alpha$$ is 0.5,
-      $$\alpha = 0.95$$ is minimized by estimators of the 95th percentile.
-      """
-    ]
-  ] ++ general_schema
+  d2_pinball_score_opts =
+    [
+      alpha: [
+        type: :float,
+        default: 0.5,
+        doc: """
+        The slope of the pinball loss, default=0.5,
+        This loss is equivalent to $$mean_absolute_error$$ when $$\alpha$$ is 0.5,
+        $$\alpha = 0.95$$ is minimized by estimators of the 95th percentile.
+        """
+      ]
+    ] ++ general_schema
 
   @d2_pinball_score_schema NimbleOptions.new!(d2_pinball_score_opts)
 
@@ -890,8 +896,10 @@ defmodule Scholar.Metrics.Regression do
     output_scores =
       Nx.select(valid_score, Nx.subtract(1, Nx.divide(numerator, denominator)), output_scores)
 
-    loss = Nx.select(invalid_score, 0.0, output_scores)
-    |> Nx.broadcast(shape)
+    loss =
+      Nx.select(invalid_score, 0.0, output_scores)
+      |> Nx.broadcast(shape)
+
     Nx.mean(loss, axes: opts[:axes])
   end
 
