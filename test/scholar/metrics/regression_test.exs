@@ -82,30 +82,7 @@ defmodule Scholar.Metrics.RegressionTest do
       assert Regression.mean_pinball_loss(y_true, y_pred_2, alpha: 0.4) == Nx.tensor(0.4)
     end
 
-    test "mean_pinball_loss with sample weight" do
-      y_true = Nx.tensor([1, 2, 3, 4, 5, 6])
-      y_pred = Nx.tensor([2, 3, 4, 6, 7, 8])
-      sample_weights = Nx.tensor([1.5, 1.5, 1.5, 0.5, 0.5, 0.5])
-      wrong_sample_weights = Nx.tensor([1.5, 1.5, 1.5, 0.5, 0.5, 0.5, 1, 1, 1])
-
-      assert Regression.mean_pinball_loss(y_true, y_pred) == Nx.tensor(0.75)
-
-      assert Regression.mean_pinball_loss(
-               y_true,
-               y_pred,
-               alpha: 0.5,
-               sample_weights: sample_weights
-             ) == Nx.tensor(0.625)
-
-      assert_raise ArgumentError, fn ->
-        Regression.mean_pinball_loss(y_true, y_pred,
-          alpha: 0.5,
-          sample_weights: wrong_sample_weights
-        )
-      end
-    end
-
-    test "mean_pinball_loss with multioutput" do
+    test "mean_pinball_loss with axes" do
       y_true = Nx.tensor([[1, 0, 0, 1], [0, 1, 1, 1], [1, 1, 0, 1]])
       y_pred = Nx.tensor([[0, 0, 0, 1], [1, 0, 1, 1], [0, 0, 0, 1]])
 
@@ -123,19 +100,18 @@ defmodule Scholar.Metrics.RegressionTest do
         Regression.mean_pinball_loss(
           y_true,
           y_pred,
-          alpha: 0.5,
-          multioutput: :uniform_average
+          alpha: 0.5
         )
 
       assert_all_close(mpbl, expected_error)
-      mpbl = Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, multioutput: :raw_values)
+      mpbl = Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, axes: [0])
       assert_all_close(mpbl, expected_raw_values_tensor)
 
       mpbl =
         Regression.mean_pinball_loss(y_true, y_pred,
           alpha: 0.5,
           sample_weights: sample_weight,
-          multioutput: :raw_values
+          axes: [0]
         )
 
       assert_all_close(mpbl, expected_raw_values_weighted_tensor)
@@ -143,21 +119,10 @@ defmodule Scholar.Metrics.RegressionTest do
       mpbl =
         Regression.mean_pinball_loss(y_true, y_pred,
           alpha: 0.5,
-          sample_weights: sample_weight,
-          multioutput: :uniform_average
+          sample_weights: sample_weight
         )
 
       assert_all_close(mpbl, Nx.tensor(0.225))
-
-      mpbl =
-        Regression.mean_pinball_loss(y_true, y_pred,
-          alpha: 0.5,
-          multioutput: Nx.tensor([1, 2, 3, 4])
-        )
-
-      assert_all_close(mpbl, Nx.tensor(0.1166666))
-      mpbl = Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, multioutput: nil)
-      assert_all_close(mpbl, expected_error)
     end
   end
 end
