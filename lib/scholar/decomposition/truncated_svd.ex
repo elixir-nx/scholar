@@ -12,13 +12,13 @@ defmodule Scholar.Decomposition.TruncatedSVD do
              :components,
              :explained_variance,
              :explained_variance_ratio,
-             :singular_values,
+             :singular_values
            ]}
   defstruct [
     :components,
     :explained_variance,
     :explained_variance_ratio,
-    :singular_values,
+    :singular_values
   ]
 
   tsvd_schema = [
@@ -40,7 +40,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     seed: [
       default: 0,
       type: :integer,
-      doc: "Seed for random number generation"
+      doc: "Seed for random tensor generation."
     ]
   ]
 
@@ -130,15 +130,16 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     end
 
     n_components = opts[:n_components]
-    {n_samples, n_features} = Nx.shape(x)
-    
-    cond do 
+    {_n_samples, n_features} = Nx.shape(x)
+
+    cond do
       n_components > n_features ->
-          raise ArgumentError,
-                """
-                n_components must be less than or equal to \
-                n_features = #{n_features}, got #{n_components}
-                """
+        raise ArgumentError,
+              """
+              n_components must be less than or equal to \
+              n_features = #{n_features}, got #{n_components}
+              """
+
       true ->
         nil
     end
@@ -173,7 +174,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
 
     transpose = n_samples < n_components
 
-    m = 
+    m =
       if Nx.equal(transpose, 1) do
         Nx.transpose(m)
       else
@@ -202,7 +203,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     n_iter = opts[:n_iter]
     seed = opts[:seed]
 
-    key = Nx.Random.key(seed) 
+    key = Nx.Random.key(seed)
 
     {_, a_cols} = Nx.shape(a)
     {q, _} = Nx.Random.normal(key, shape: {a_cols, size})
@@ -222,29 +223,3 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     q
   end
 end
-
-# x = Nx.tensor([[0, 0], [1, 0], [1, 1], [3, 3], [4, 4.5]])
-# tsvd = Scholar.Decomposition.TruncatedSVD.fit(x, n_components: 1)
-#OUTPUT: 
-# {#Nx.Tensor<
-#    f64[5][1]
-#    [
-#      [0.0],
-#      [0.6871101145887069],
-#      [1.4136634095574203],
-#      [4.240990228672261],
-#      [6.017930285714038]
-#    ]
-#  >,
-#  #Nx.Tensor<
-#    f64[1]
-#    [5.223928048654531]
-#  >,
-#  #Nx.Tensor<
-#    f64[1]
-#    [0.9819413625290471]
-#  >,
-#  #Nx.Tensor<
-#    f64[1]
-#    [7.5280803030880605]
-#  >}
