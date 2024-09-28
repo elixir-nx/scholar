@@ -37,11 +37,6 @@ defmodule Scholar.Decomposition.TruncatedSVD do
       type: :pos_integer,
       doc: "Number of oversamples for randomized SVD solver."
     ],
-    transpose: [
-      default: :auto,
-      type: {:in, [:true, :false, :auto]},
-      doc: "Whether to transpose the input matrix"
-    ],
     seed: [
       default: 0,
       type: :integer,
@@ -78,7 +73,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
   ## Examples
 
       iex> x = Nx.tensor([[0, 0], [1, 0], [1, 1], [3, 3], [4, 4.5]])
-      iex> tsvd = Scholar.Decomposition.TruncatedSVD.fit(x, transpose: false, n_components: 2)
+      iex> tsvd = Scholar.Decomposition.TruncatedSVD.fit(x, n_components: 2)
       iex> tsvd.components
       #Nx.Tensor<
         f32[2][2]
@@ -112,7 +107,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
   ## Examples
 
       iex> x = Nx.tensor([[0, 0], [1, 0], [1, 1], [3, 3], [4, 4.5]])
-      iex> Scholar.Decomposition.TruncatedSVD.fit_transform(x, transpose: false, n_components: 2)
+      iex> Scholar.Decomposition.TruncatedSVD.fit_transform(x, n_components: 2)
       #Nx.Tensor<
         f32[5][2]
         [
@@ -136,7 +131,6 @@ defmodule Scholar.Decomposition.TruncatedSVD do
 
     n_components = opts[:n_components]
     {n_samples, n_features} = Nx.shape(x)
-    transpose = n_samples < n_components
     
     cond do 
       n_components > n_features ->
@@ -150,7 +144,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     end
 
     {u, sigma, vt} = randomized_svd(x, opts)
-    {_u, vt} = svd_flip(u, vt)
+    {_u, vt} = Scholar.Decomposition.PCA.flip_svd(u, vt)
 
     x_transformed = Nx.dot(x, Nx.transpose(vt))
     explained_variance = Nx.variance(x_transformed, axes: [0])
@@ -179,10 +173,11 @@ defmodule Scholar.Decomposition.TruncatedSVD do
 
     transpose = n_samples < n_components
 
-    m =
-      case transpose do
-        true -> Nx.transpose(m)
-        false -> m
+    m = 
+      if Nx.equal(transpose, 1) do
+        Nx.transpose(m)
+      else
+        m
       end
 
     q = randomized_range_finder(m, size: n_random, n_iter: n_iter, seed: opts[:seed])
@@ -195,9 +190,10 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     s = Nx.slice(s, [0], [n_components])
     u = Nx.slice(u, [0, 0], [n_samples, n_components])
 
-    case transpose do
-      true -> {Nx.transpose(vt), s, Nx.transpose(u)}
-      false -> {u, s, vt}
+    if Nx.equal(transpose, 1) do
+      {Nx.transpose(vt), s, Nx.transpose(u)}
+    else
+      {u, s, vt}
     end
   end
 
@@ -225,30 +221,10 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     {q, _} = Nx.LinAlg.qr(Nx.dot(a, q))
     q
   end
-
-  defnp svd_flip(u, v) do
-    base = v
-
-    max_abs_cols = base 
-      |> Nx.abs()
-      |> Nx.argmax(axis: 1)
-
-    {rows, cols} = Nx.shape(base)
-    shift = Nx.iota({rows})
-    indices = max_abs_cols + shift * cols
-
-    signs = base
-      |> Nx.flatten()
-      |> Nx.take(indices)
-      |> Nx.sign()
-
-    {u * Nx.new_axis(signs, 1), v * Nx.new_axis(signs, 0)}
-  end
 end
 
-# Test the updated TruncatedSVD with seed
 # x = Nx.tensor([[0, 0], [1, 0], [1, 1], [3, 3], [4, 4.5]])
-# tsv = Scholar.Decomposition.TruncatedSVD.fit(x, transpose: false, n_components: 1)
+# tsvd = Scholar.Decomposition.TruncatedSVD.fit(x, n_components: 1)
 #OUTPUT: 
 # {#Nx.Tensor<
 #    f64[5][1]
