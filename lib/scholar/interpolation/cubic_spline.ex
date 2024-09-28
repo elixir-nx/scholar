@@ -88,12 +88,11 @@ defmodule Scholar.Interpolation.CubicSpline do
               "expected y to have shape #{inspect(x_shape)}, got: #{inspect(y_shape)}"
     end
 
-    dx = Nx.diff(x)
-
     sort_idx = Nx.argsort(x)
     x = Nx.take(x, sort_idx)
     y = Nx.take(y, sort_idx)
 
+    dx = Nx.diff(x)
     dy = Nx.diff(y)
 
     slope = dy / dx

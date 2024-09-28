@@ -66,7 +66,6 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
       assert_all_close(model.class_log_priors, expected_class_log_priors)
 
-      assert model.classes == Nx.tensor([0, 1, 2, 3])
       assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
     end
 
@@ -132,7 +131,6 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
       assert_all_close(model.class_log_priors, expected_class_log_priors)
 
-      assert model.classes == Nx.tensor([0, 1, 2, 3])
       assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
     end
 
@@ -198,15 +196,14 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
       assert_all_close(model.class_log_priors, expected_class_log_priors)
 
-      assert model.classes == Nx.tensor([0, 1, 2, 3])
       assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
     end
 
-    test "fit test - :priors are set as a list" do
+    test "fit test - :class_priors are set as a list" do
       x = Nx.iota({5, 6})
       y = Nx.tensor([1, 2, 0, 3, 1])
 
-      model = Multinomial.fit(x, y, num_classes: 4, priors: [0.15, 0.25, 0.4, 0.2])
+      model = Multinomial.fit(x, y, num_classes: 4, class_priors: [0.15, 0.25, 0.4, 0.2])
 
       assert model.feature_count ==
                Nx.tensor([
@@ -264,18 +261,17 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
       assert_all_close(model.class_log_priors, expected_class_log_priors)
 
-      assert model.classes == Nx.tensor([0, 1, 2, 3])
       assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
     end
 
-    test "fit test - :priors are set as a tensor" do
+    test "fit test - :class_priors are set as a tensor" do
       x = Nx.iota({5, 6})
       y = Nx.tensor([1, 2, 0, 3, 1])
 
       model =
         Multinomial.fit(x, y,
           num_classes: 4,
-          priors: Nx.tensor([0.15, 0.25, 0.4, 0.2])
+          class_priors: Nx.tensor([0.15, 0.25, 0.4, 0.2])
         )
 
       assert model.feature_count ==
@@ -334,7 +330,6 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
       assert_all_close(model.class_log_priors, expected_class_log_priors)
 
-      assert model.classes == Nx.tensor([0, 1, 2, 3])
       assert model.class_count == Nx.tensor([1.0, 2.0, 1.0, 1.0])
     end
 
@@ -400,7 +395,6 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
       assert_all_close(model.class_log_priors, expected_class_log_priors)
 
-      assert model.classes == Nx.tensor([0, 1, 2, 3])
       assert model.class_count == Nx.tensor([2.0, 5.5, 4.0, 7.0])
     end
 
@@ -470,7 +464,6 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
       assert_all_close(model.class_log_priors, expected_class_log_priors)
 
-      assert model.classes == Nx.tensor([0, 1, 2, 3])
       assert model.class_count == Nx.tensor([2.0, 5.5, 4.0, 7.0])
     end
   end
@@ -478,7 +471,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
   describe "errors" do
     test "wrong input rank" do
       assert_raise ArgumentError,
-                   "wrong input rank. Expected x to be rank 2 got: 1",
+                   "expected x to have shape {num_samples, num_features}, got tensor with shape: {4}",
                    fn ->
                      Multinomial.fit(
                        Nx.tensor([1, 2, 5, 8]),
@@ -490,7 +483,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
     test "wrong target rank" do
       assert_raise ArgumentError,
-                   "wrong target rank. Expected target to be rank 1 got: 2",
+                   "expected y to have shape {num_samples}, got tensor with shape: {1, 4}",
                    fn ->
                      Multinomial.fit(
                        Nx.tensor([[1, 2, 5, 8]]),
@@ -502,7 +495,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
     test "wrong input shape" do
       assert_raise ArgumentError,
-                   "wrong input shape. Expected x to have the same first dimension as y, got: 1 for x and 4 for y",
+                   "expected first dimension of x and y to be of same size, got: 1 and 4",
                    fn ->
                      Multinomial.fit(
                        Nx.tensor([[1, 2, 5, 8]]),
@@ -514,20 +507,20 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
     test "wrong prior size" do
       assert_raise ArgumentError,
-                   "number of priors must match number of classes. Number of priors: 3 does not match number of classes: 2",
+                   "expected class_priors to be list of length num_classes = 2, got: 3",
                    fn ->
                      Multinomial.fit(
                        Nx.tensor([[1, 2, 5, 8], [2, 5, 7, 3]]),
                        Nx.tensor([1, 0]),
                        num_classes: 2,
-                       priors: [0.4, 0.4, 0.2]
+                       class_priors: [0.4, 0.4, 0.2]
                      )
                    end
     end
 
     test "wrong sample_weights size" do
       assert_raise ArgumentError,
-                   "number of weights must match number of samples. Number of weights: 3 does not match number of samples: 2",
+                   "expected sample_weights to be list of length num_samples = 2, got: 3",
                    fn ->
                      Multinomial.fit(
                        Nx.tensor([[1, 2, 5, 8], [2, 5, 7, 3]]),
@@ -540,7 +533,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
     test "wrong alpha size" do
       assert_raise ArgumentError,
-                   "when alpha is a list it should contain num_features values",
+                   "when alpha is list it should have length equal to num_features = 4, got: 3",
                    fn ->
                      Multinomial.fit(
                        Nx.tensor([[1, 2, 5, 8], [2, 5, 7, 3]]),
@@ -553,7 +546,7 @@ defmodule Scholar.NaiveBayes.MultinomialTest do
 
     test "wrong input shape in training process" do
       assert_raise ArgumentError,
-                   "wrong input shape. Expected x to have the same second dimension as the data for fitting process, got: 3 for x and 4 for training data",
+                   "expected x to have same second dimension as data used for fitting model, got: 3 for x and 4 for training data",
                    fn ->
                      model =
                        Multinomial.fit(

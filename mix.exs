@@ -2,7 +2,7 @@ defmodule Scholar.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/elixir-nx/scholar"
-  @version "0.2.1"
+  @version "0.3.1"
 
   def project do
     [
@@ -11,9 +11,8 @@ defmodule Scholar.MixProject do
       version: @version,
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
-      start_permanent: Mix.env() == :prod,
       deps: deps(),
-      docs: docs(),
+      docs: &docs/0,
       package: package()
     ]
   end
@@ -29,19 +28,19 @@ defmodule Scholar.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.30", only: :docs},
-      # {:nx, "~> 0.6.4 or ~> 0.7", override: true},
-      {:nx, github: "elixir-nx/nx", sparse: "nx", override: true},
+      {:ex_doc, "~> 0.34", only: :docs},
+      {:nx, "~> 0.7"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
-      {:exla, "~> 0.6.3 or ~> 0.7", optional: true},
+      {:exla, ">= 0.0.0", only: :test},
       {:polaris, "~> 0.1"},
-      {:benchee, "~> 1.0", only: :dev}
+      {:benchee, "~> 1.0", only: :dev},
+      {:scidata, "~> 0.1.11", only: :test}
     ]
   end
 
   defp package do
     [
-      maintainers: ["Mateusz Słuszniak"],
+      maintainers: ["Mateusz Słuszniak", "Krsto Proroković"],
       description: "Traditional machine learning on top of Nx",
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url}
@@ -52,16 +51,19 @@ defmodule Scholar.MixProject do
     [
       main: "readme",
       source_url: @source_url,
+      assets: %{"notebooks/files" => "files"},
       logo: "images/scholar_simplified.png",
       extra_section: "Guides",
       extras: [
-        # "notebooks/hierarchical_clustering.livemd",
         "README.md",
-        "notebooks/linear_regression.livemd",
+        "notebooks/cv_gradient_boosting_tree.livemd",
+        # "notebooks/hierarchical_clustering.livemd",
         "notebooks/k_means.livemd",
         "notebooks/k_nearest_neighbors.livemd",
-        "notebooks/cv_gradient_boosting_tree.livemd",
-        "notebooks/mds.livemd"
+        "notebooks/linear_regression.livemd",
+        "notebooks/manifold_learning.livemd",
+        "notebooks/mds.livemd",
+        "notebooks/nearest_neighbors.livemd"
       ],
       groups_for_modules: [
         Models: [
@@ -75,6 +77,7 @@ defmodule Scholar.MixProject do
           Scholar.Interpolation.BezierSpline,
           Scholar.Interpolation.CubicSpline,
           Scholar.Interpolation.Linear,
+          Scholar.Linear.BayesianRidgeRegression,
           Scholar.Linear.IsotonicRegression,
           Scholar.Linear.LinearRegression,
           Scholar.Linear.LogisticRegression,
@@ -82,24 +85,38 @@ defmodule Scholar.MixProject do
           Scholar.Linear.RidgeRegression,
           Scholar.Linear.SVM,
           Scholar.Manifold.MDS,
+          Scholar.Manifold.Trimap,
           Scholar.Manifold.TSNE,
           Scholar.NaiveBayes.Complement,
           Scholar.NaiveBayes.Gaussian,
           Scholar.NaiveBayes.Multinomial,
+          Scholar.Neighbors.BruteKNN,
           Scholar.Neighbors.KDTree,
-          Scholar.Neighbors.KNearestNeighbors,
-          Scholar.Neighbors.RadiusNearestNeighbors
+          Scholar.Neighbors.KNNClassifier,
+          Scholar.Neighbors.KNNRegressor,
+          Scholar.Neighbors.LargeVis,
+          Scholar.Neighbors.NNDescent,
+          Scholar.Neighbors.RadiusNNClassifier,
+          Scholar.Neighbors.RadiusNNRegressor,
+          Scholar.Neighbors.RandomProjectionForest
         ],
         Utilities: [
           Scholar.Impute.SimpleImputer,
           Scholar.Metrics.Classification,
           Scholar.Metrics.Clustering,
           Scholar.Metrics.Distance,
+          Scholar.Metrics.Neighbors,
           Scholar.Metrics.Ranking,
           Scholar.Metrics.Regression,
           Scholar.Metrics.Similarity,
           Scholar.ModelSelection,
           Scholar.Preprocessing,
+          Scholar.Preprocessing.MaxAbsScaler,
+          Scholar.Preprocessing.MinMaxScaler,
+          Scholar.Preprocessing.Normalizer,
+          Scholar.Preprocessing.OneHotEncoder,
+          Scholar.Preprocessing.OrdinalEncoder,
+          Scholar.Preprocessing.StandardScaler,
           Scholar.Stats
         ]
       ],

@@ -12,7 +12,7 @@ defmodule Scholar.Linear.PolynomialRegression do
 
   opts = [
     sample_weights: [
-      type: {:list, {:custom, Scholar.Options, :positive_number, []}},
+      type: {:custom, Scholar.Options, :weights, []},
       doc: """
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
@@ -67,12 +67,12 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> model.coefficients
       #Nx.Tensor<
         f32[2]
-        [-0.49724727869033813, -0.7010392546653748]
+        [-0.49724647402763367, -0.7010394930839539]
       >
       iex> model.intercept
       #Nx.Tensor<
         f32
-        5.896470069885254
+        5.8964691162109375
       >
       iex> model.degree
       1
@@ -83,7 +83,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> model.coefficients
       #Nx.Tensor<
         f32[5]
-        [-0.021396497264504433, -0.004854594357311726, -0.0884987860918045, -0.062211357057094574, -0.04369127005338669]
+        [-0.021396614611148834, -0.004854436963796616, -0.08849868923425674, -0.06221142038702965, -0.04369127005338669]
       >
       iex> model.intercept
       #Nx.Tensor<
@@ -110,6 +110,9 @@ defmodule Scholar.Linear.PolynomialRegression do
   @doc """
   Makes predictions with the given `model` on input `x`.
 
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.    
+  Otherwise, predictions match train target shape.  
+
   ## Examples
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
@@ -118,7 +121,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> Scholar.Linear.PolynomialRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
       #Nx.Tensor<
         f32[1]
-        [3.8487603664398193]
+        [3.8487606048583984]
       >
   """
   deftransform predict(model, x) do

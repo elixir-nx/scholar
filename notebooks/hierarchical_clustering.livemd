@@ -1,4 +1,4 @@
-# Hierarchical Clustering
+# Hierarchical clustering
 
 ```elixir
 app_root = Path.join(__DIR__, "..")
@@ -12,6 +12,15 @@ Mix.install(
   config_path: Path.join(app_root, "config/config.exs"),
   lockfile: Path.join(app_root, "mix.lock")
 )
+```
+
+## Setup
+
+Let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
+Nx.global_default_backend(EXLA.Backend)
+Nx.Defn.global_default_options(compiler: EXLA)
 ```
 
 ## Introduction

@@ -158,8 +158,7 @@ defmodule Scholar.Cluster.Hierarchical do
 
     dendrogram_fun =
       case linkage do
-        # TODO: :centroid, :median
-        # TODO: :ward
+        # TODO: :centroid, :median, :ward
         l when l in [:average, :complete, :single, :weighted] ->
           &parallel_nearest_neighbor/3
       end

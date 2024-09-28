@@ -14,7 +14,7 @@ defmodule Scholar.Linear.RidgeRegression do
 
   * $w$ is the model weights matrix
 
-  * $\alpha$ is the parameter that controls level of regularization
+  * $\alpha$ is the parameter that controls the level of regularization
 
   Time complexity is $O(N^2)$ for `:cholesky` solver and $O((N^2) * (K + N))$ for `:svd` solver,
   where $N$ is the number of observations and $K$ is the number of features.
@@ -22,19 +22,14 @@ defmodule Scholar.Linear.RidgeRegression do
   require Nx
   import Nx.Defn
   import Scholar.Shared
+  alias Scholar.Linear.LinearHelpers
 
   @derive {Nx.Container, containers: [:coefficients, :intercept]}
   defstruct [:coefficients, :intercept]
 
   opts = [
     sample_weights: [
-      type:
-        {:or,
-         [
-           {:custom, Scholar.Options, :non_negative_number, []},
-           {:list, {:custom, Scholar.Options, :non_negative_number, []}},
-           {:custom, Scholar.Options, :weights, []}
-         ]},
+      type: {:custom, Scholar.Options, :weights, []},
       doc: """
       The weights for each observation. If not provided,
       all observations are assigned equal weight.
@@ -106,14 +101,17 @@ defmodule Scholar.Linear.RidgeRegression do
       iex> Scholar.Linear.RidgeRegression.fit(x, y)
       %Scholar.Linear.RidgeRegression{
         coefficients: Nx.tensor(
-          [-0.42378732562065125, -0.6891375780105591]
+          [-0.4237867593765259, -0.6891377568244934]
         ),
         intercept: Nx.tensor(
-          5.656937599182129
+          5.6569366455078125
         )
       }
   """
   deftransform fit(x, y, opts \\ []) do
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.flatten_column_vector(y, n_samples)
+
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     sample_weights? = opts[:sample_weights] != nil
@@ -126,13 +124,9 @@ defmodule Scholar.Linear.RidgeRegression do
       ] ++
         opts
 
-    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     x_type = to_float_type(x)
 
-    sample_weights =
-      if Nx.is_tensor(sample_weights),
-        do: Nx.as_type(sample_weights, x_type),
-        else: Nx.tensor(sample_weights, type: x_type)
+    sample_weights = LinearHelpers.build_sample_weights(x, opts)
 
     {alpha, opts} = Keyword.pop!(opts, :alpha)
     alpha = Nx.tensor(alpha, type: x_type) |> Nx.flatten()
@@ -160,7 +154,7 @@ defmodule Scholar.Linear.RidgeRegression do
 
     {a_offset, b_offset} =
       if opts[:fit_intercept?] do
-        preprocess_data(a, b, sample_weights, opts)
+        LinearHelpers.preprocess_data(a, b, sample_weights, opts)
       else
         a_offset_shape = Nx.axis_size(a, 1)
         b_reshaped = if Nx.rank(b) > 1, do: b, else: Nx.reshape(b, {:auto, 1})
@@ -175,7 +169,7 @@ defmodule Scholar.Linear.RidgeRegression do
 
     {a, b} =
       if opts[:rescale_flag] do
-        rescale(a, b, sample_weights)
+        LinearHelpers.rescale(a, b, sample_weights)
       else
         {a, b}
       end
@@ -198,12 +192,15 @@ defmodule Scholar.Linear.RidgeRegression do
       end
 
     coeff = if flatten?, do: Nx.flatten(coeff), else: coeff
-    intercept = set_intercept(coeff, a_offset, b_offset, opts[:fit_intercept?])
+    intercept = LinearHelpers.set_intercept(coeff, a_offset, b_offset, opts[:fit_intercept?])
     %__MODULE__{coefficients: coeff, intercept: intercept}
   end
 
   @doc """
   Makes predictions with the given `model` on input `x`.
+
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.        
+  Otherwise, predictions match train target shape.  
 
   ## Examples
 
@@ -220,20 +217,6 @@ defmodule Scholar.Linear.RidgeRegression do
     coeff = if original_rank == 1, do: Nx.new_axis(coeff, 0), else: coeff
     res = Nx.dot(x, [-1], coeff, [-1]) + intercept
     if original_rank <= 1, do: Nx.squeeze(res, axes: [1]), else: res
-  end
-
-  # Implements sample weighting by rescaling inputs and
-  # targets by sqrt(sample_weight).
-  defnp rescale(a, b, sample_weights) do
-    case Nx.shape(sample_weights) do
-      {} = scalar ->
-        scalar = Nx.sqrt(scalar)
-        {scalar * a, scalar * b}
-
-      _ ->
-        scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
-        {Nx.dot(scale, a), Nx.dot(scale, b)}
-    end
   end
 
   defnp solve_cholesky_kernel(kernel, b, alpha, sample_weights, opts) do
@@ -324,21 +307,5 @@ defmodule Scholar.Linear.RidgeRegression do
     uty = Nx.dot(u, [0], b, [0])
     d_uty = d * uty
     Nx.dot(d_uty, [0], vt, [0])
-  end
-
-  defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
-    if fit_intercept? do
-      y_offset - Nx.dot(coeff, x_offset)
-    else
-      Nx.tensor(0.0, type: Nx.type(coeff))
-    end
-  end
-
-  defnp preprocess_data(a, b, sample_weights, opts) do
-    if opts[:sample_weights_flag],
-      do:
-        {Nx.weighted_mean(a, sample_weights, axes: [0]),
-         Nx.weighted_mean(b, sample_weights, axes: [0])},
-      else: {Nx.mean(a, axes: [0]), Nx.mean(b, axes: [0])}
   end
 end

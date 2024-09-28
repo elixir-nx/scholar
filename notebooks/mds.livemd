@@ -1,4 +1,4 @@
-# MDS
+# Multidimensional scaling (MDS)
 
 ```elixir
 Mix.install([
@@ -6,9 +6,10 @@ Mix.install([
   {:kino, "~> 0.11.3", override: true},
   {:kino_vega_lite, "~> 0.1.9"},
   {:exla, "~> 0.6.4"},
-  {:tucan, "~> 0.2.1"},
+  {:tucan, "~> 0.3.0"},
   {:explorer, "~> 0.7.1"},
-  {:req, "~> 0.4.5"}
+  {:req, "~> 0.4.5"},
+  {:nx, git: "https://github.com/elixir-nx/nx.git", sparse: "nx", override: true}
 ])
 ```
 
@@ -20,15 +21,24 @@ alias VegaLite, as: Vl
 alias Explorer.DataFrame, as: DF
 ```
 
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
+Nx.global_default_backend(EXLA.Backend)
+Nx.Defn.global_default_options(compiler: EXLA)
+```
+
 <!-- livebook:{"branch_parent_index":0} -->
 
-## Swiss Roll
+## Swiss roll
+
+Multidimensional scaling (MDS) seeks a low-dimensional representation of the data in which the distances respect well the distances in the original high-dimensional space.
 
 The first example demonstrating MDS will use so-called Swiss Roll dataset. It's call as such because it resembles a popular sponge cake. Let's have a look on this dataset.
 
 | ![Skewness](https://scikit-learn.org/stable/_images/sphx_glr_plot_swissroll_001.png)                        |
 | :---------------------------------------------------------------------------------------------------------: |
-| Figure 1: Swiss Roll   (Source: https://scikit-learn.org/stable/auto_examples/manifold/plot_swissroll.html) |
+| Figure 1: Swiss Roll (Source: https://scikit-learn.org/stable/auto_examples/manifold/plot_swissroll.html)   |
 
 <!-- livebook:{"break_markdown":true} -->
 
@@ -1040,11 +1050,11 @@ swiss_roll =
   ])
 ```
 
-Now we will call `MDS.fit/1` on our dataset. To speed up calculations we'll use `EXLA.jit_apply/2` that JITs the computations and make them faster.
+Now we will call `MDS.fit/1` on our dataset:
 
 ```elixir
 key = Nx.Random.key(42)
-embedding = EXLA.jit_apply(&MDS.fit(&1, key: &2), [swiss_roll, key])
+embedding = MDS.fit(swiss_roll, key: key)
 ```
 
 Extract only embedded data from struct
@@ -1071,7 +1081,7 @@ As we see, MDS collapsed one dimension and what we see is similar to a cross sec
 
 <!-- livebook:{"branch_parent_index":0} -->
 
-## Digits Dataset
+## Digits dataset
 
 In the next section we change dataset to Digits dataset. It consists of almost 1800 8x8 images with digits.
 
@@ -1097,11 +1107,15 @@ labels
 Let's look how one of the images look like
 
 ```elixir
-digits_data[[1234, ..]] |> Nx.reshape({image_height, image_width}) |> Nx.to_heatmap()
+image =
+  Nx.reshape(digits_data[[1234, ..]], {image_height, image_width})
+  |> Nx.as_type({:u, 8})
+
+Tucan.imshow(image, width: 200, height: 200, color_scheme: :greys, reverse: true)
 ```
 
 ```elixir
-embedding = EXLA.jit_apply(&MDS.fit(&1, key: &2), [digits_data, key])
+embedding = MDS.fit(digits_data, key: key)
 embedded_data = embedding.embedding
 ```
 

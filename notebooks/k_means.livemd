@@ -1,6 +1,6 @@
 <!-- livebook:{"persist_outputs":true} -->
 
-# K-means clustering
+# k-means clustering
 
 ```elixir
 Mix.install([
@@ -13,18 +13,24 @@ Mix.install([
   {:req, "~> 0.3.9"},
   {:kino, "~> 0.10.0"},
   {:kino_vega_lite, "~> 0.1.9"},
-  {:tucan, "~> 0.2.1"}
+  {:tucan, "~> 0.3.0"}
 ])
 ```
 
-## Introduction
+## Setup
 
-The main purpose of this livebook is to introduce the **KMeans** clustering algorithm. We will explore KMeans in three different use cases.
+This notebook introduces the **KMeans** clustering algorithm. We will explore KMeans in three different use cases. Let's setup some aliases:
 
 ```elixir
 alias Scholar.Cluster.KMeans
 require Explorer.DataFrame, as: DF
+```
+
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
 Nx.global_default_backend(EXLA.Backend)
+Nx.Defn.global_default_options(compiler: EXLA)
 key = Nx.Random.key(42)
 ```
 

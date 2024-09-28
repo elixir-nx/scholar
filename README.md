@@ -23,7 +23,7 @@ Add to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:scholar, "~> 0.2.1"}
+    {:scholar, "~> 0.3.0"}
   ]
 end
 ```
@@ -34,7 +34,7 @@ such as EXLA:
 ```elixir
 def deps do
   [
-    {:scholar, "~> 0.2.1"},
+    {:scholar, "~> 0.3.0"},
     {:exla, ">= 0.0.0"}
   ]
 end
@@ -64,12 +64,12 @@ To use Scholar inside code notebooks, run:
 
 ```elixir
 Mix.install([
-  {:scholar, "~> 0.2.1"},
+  {:scholar, "~> 0.3.0"},
   {:exla, ">= 0.0.0"}
 ])
 
 Nx.global_default_backend(EXLA.Backend)
-# Client can also be set to :cuda / :romc
+# Client can also be set to :cuda / :rocm
 Nx.Defn.global_default_options(compiler: EXLA, client: :host)
 ```
 

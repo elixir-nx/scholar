@@ -4,10 +4,10 @@ defmodule Scholar.Linear.LinearRegressionTest do
   doctest LinearRegression
 
   describe "fit" do
-    test "matches sklearn for shapes {1, 1}, {1, 1} and type {:f, 32}" do
+    test "test for shapes {1, 1}, {1, 1} and type {:f, 32}" do
       a = Nx.tensor([[0.5666993856430054]])
       b = Nx.tensor([[0.8904717564582825]])
-      expected_coeff = Nx.tensor([[0.0]])
+      expected_coeff = Nx.tensor([0.0])
       expected_intercept = Nx.tensor([0.89047176])
 
       %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
@@ -17,7 +17,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_intercept, actual_intercept)
     end
 
-    test "matches sklearn for shapes {4, 6}, {4} and type {:f, 32}" do
+    test "test for shapes {4, 6}, {4} and type {:f, 32}" do
       a =
         Nx.tensor([
           [
@@ -76,7 +76,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-2, atol: 1.0e-3)
     end
 
-    test "matches sklearn for shapes {6, 6}, {6, 1} and type {:f, 64}" do
+    test "test for shapes {6, 6}, {6, 1} and type {:f, 64}" do
       a =
         Nx.tensor([
           [
@@ -141,14 +141,12 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       expected_coeff =
         Nx.tensor([
-          [
-            -0.3777002030151436,
-            -0.4445957357428203,
-            -0.14451413829286042,
-            0.31438593891571714,
-            -0.9484560114249797,
-            0.04914973264178196
-          ]
+          -0.3777002030151436,
+          -0.4445957357428203,
+          -0.14451413829286042,
+          0.31438593891571714,
+          -0.9484560114249797,
+          0.04914973264178196
         ])
 
       expected_intercept = Nx.tensor([1.31901913])
@@ -160,7 +158,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-2, atol: 1.0e-3)
     end
 
-    test "matches sklearn for shapes {8, 6}, {8, 4} and type {:f, 32}" do
+    test "test for shapes {8, 6}, {8, 4} and type {:f, 32}" do
       a =
         Nx.tensor([
           [
@@ -286,11 +284,11 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-1, atol: 1.0e-2)
     end
 
-    test "matches sklearn for shapes {1, 1}, {1, 1} and type {:f, 32} and sample_weights" do
+    test "test for shapes {1, 1}, {1, 1} and type {:f, 32} and sample_weights" do
       a = Nx.tensor([[0.3166404366493225]])
       b = Nx.tensor([[0.6253954172134399]])
       sample_weights = [0.2065236121416092]
-      expected_coeff = Nx.tensor([[0.0]])
+      expected_coeff = Nx.tensor([0.0])
       expected_intercept = Nx.tensor([0.62539542])
 
       %LinearRegression{coefficients: actual_coeff, intercept: actual_intercept} =
@@ -364,7 +362,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-3, atol: 1.0e-2)
     end
 
-    test "matches sklearn for shapes {6, 6}, {6, 1} and type {:f, 64} and sample_weight" do
+    test "test for shapes {6, 6}, {6, 1} and type {:f, 64} and sample_weight" do
       a =
         Nx.tensor([
           [
@@ -437,7 +435,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       ]
 
       expected_coeff =
-        Nx.tensor([[-1.252728, 0.33221864, -0.23523702, -0.53585187, 0.00157968, -0.24489391]])
+        Nx.tensor([-1.252728, 0.33221864, -0.23523702, -0.53585187, 0.00157968, -0.24489391])
 
       expected_intercept = Nx.tensor([1.52024138])
 
@@ -448,7 +446,7 @@ defmodule Scholar.Linear.LinearRegressionTest do
       assert_all_close(expected_intercept, actual_intercept, rtol: 1.0e-2, atol: 1.0e-3)
     end
 
-    test "matches sklearn for shapes {8, 6}, {8, 4} and type {:f, 32} and sample_weight" do
+    test "test for shapes {8, 6}, {8, 4} and type {:f, 32} and sample_weight" do
       a =
         Nx.tensor([
           [
@@ -893,6 +891,20 @@ defmodule Scholar.Linear.LinearRegressionTest do
 
       actual_prediction = LinearRegression.predict(model, prediction_input)
       assert_all_close(expected_prediction, actual_prediction, rtol: 1.0e-3, atol: 1.0e-3)
+    end
+  end
+
+  describe "fit and predict with colum target" do
+    test "test column target" do
+      x = Nx.tensor([[1], [2], [6], [8], [10]])
+      y = Nx.tensor([1, 2, 6, 8, 10])
+
+      lr = LinearRegression.fit(x, y)
+      lr_column = LinearRegression.fit(x, y |> Nx.new_axis(-1))
+      pred = LinearRegression.predict(lr, x)
+      pred_col = LinearRegression.predict(lr_column, x)
+      assert lr == lr_column
+      assert pred == pred_col
     end
   end
 end

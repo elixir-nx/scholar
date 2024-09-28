@@ -1,27 +1,35 @@
-# Using cross-validation with gradient boosting trees
+# Cross-validation with gradient boosting trees
 
 ```elixir
 Mix.install([
   {:scholar, "~> 0.2.0"},
-  {:explorer, "~> 0.6.1"},
-  {:exla, "~> 0.6.0"},
-  {:nx, "~> 0.6.0", override: true},
-  {:exgboost, "~> 0.3"},
+  {:exgboost, "~> 0.5"},
   {:req, "~> 0.3.9"},
   {:kino_vega_lite, "~> 0.1.9"},
   {:kino, "~> 0.10.0"},
-  {:kino_explorer, "~> 0.1.7"}
+  {:kino_explorer, "~> 0.1.7"},
+  {:nx, "~> 0.7.2"},
+  {:explorer, "~> 0.8.2"}
 ])
 ```
 
 ## Setup
+
+We will use Explorer in this notebook, so let's define aliases for its main modules:
 
 ```elixir
 require Explorer.DataFrame, as: DF
 require Explorer.Series, as: S
 ```
 
-In this notebook we are going to work with [Medical Cost Personal Datasets](https://www.kaggle.com/datasets/mirichoi0218/insurance) to predict medical charges that were applied to each person from the dataset.
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
+Nx.global_default_backend(EXLA.Backend)
+Nx.Defn.global_default_options(compiler: EXLA)
+```
+
+We are going to work with [Medical Cost Personal Datasets](https://www.kaggle.com/datasets/mirichoi0218/insurance) to predict medical charges that were applied to each person from the dataset. Let's download it:
 
 ```elixir
 data =

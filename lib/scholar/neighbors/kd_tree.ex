@@ -1,23 +1,13 @@
 defmodule Scholar.Neighbors.KDTree do
   @moduledoc """
-  Implements a kd-tree, a space-partitioning data structure for organizing points
+  Implements a k-d tree, a space-partitioning data structure for organizing points
   in a k-dimensional space.
+
+  It can be used to predict the K-Nearest Neighbors of a given input.
 
   This is implemented as one-dimensional tensor with indices pointed to highest
   dimension of the given tensor. Traversal starts by calling `root/0` and then
   accessing the `left_child/1` and `right_child/1`. The tree is left-balanced.
-
-  Two construction modes are available:
-
-    * `fit_bounded/2` - the tensor has min and max values with an amplitude given by `max - min`.
-      It is also guaranteed that the `amplitude * levels(tensor) + 1` does not overflow
-      the tensor. See `amplitude/1` to verify if this holds. This implementation happens
-      fully within `defn`. This version is orders of magnitude faster than the `unbounded/2`
-      one.
-
-    * `fit_unbounded/2` - there are no known bounds (min and max values) to the tensor.
-      This implementation is recursive and goes in and out of the `defn`, therefore
-      it cannot be called inside `defn`.
 
   Each level traverses over the last axis of tensor, the index for a level can be
   computed as: `rem(level, Nx.axis_size(tensor, -1))`.
@@ -28,177 +18,92 @@ defmodule Scholar.Neighbors.KDTree do
   """
 
   import Nx.Defn
-  alias Scholar.Metrics.Distance
+  import Scholar.Shared
 
-  @derive {Nx.Container, keep: [:levels], containers: [:indices, :data]}
-  @enforce_keys [:levels, :indices, :data]
-  defstruct [:levels, :indices, :data]
+  @derive {Nx.Container, keep: [:levels, :num_neighbors, :metric], containers: [:indices, :data]}
+  @enforce_keys [:levels, :indices, :data, :num_neighbors, :metric]
+  defstruct [:levels, :indices, :data, :num_neighbors, :metric]
 
   opts = [
-    k: [
+    num_neighbors: [
       type: :pos_integer,
       default: 3,
       doc: "The number of neighbors to use by default for `k_neighbors` queries"
     ],
     metric: [
-      type: {:custom, Scholar.Options, :metric, []},
-      default: {:minkowski, 2},
+      type: {:custom, Scholar.Neighbors.Utils, :metric, []},
+      default: &Scholar.Metrics.Distance.minkowski/2,
       doc: ~S"""
-      Name of the metric. Possible values:
+      The function that measures the distance between two points. Possible values:
 
       * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
-        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
+      we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
+
+      * Anonymous function of arity 2 that takes two rank-1 tensors and returns a scalar.
       """
     ]
   ]
 
-  @predict_schema NimbleOptions.new!(opts)
+  @opts_schema NimbleOptions.new!(opts)
 
   @doc """
-  Builds a KDTree without known min-max bounds.
-
-  If your tensor has known bounds (for example, -1 and 1),
-  consider using the `bounded/2` version which is often orders of
-  magnitude more efficient.
-
-  ## Options
-
-    * `:compiler` - the default compiler to use for internal defn operations
+  Builds a KDTree.
 
   ## Examples
 
-      iex> Scholar.Neighbors.KDTree.fit_unbounded(Nx.iota({5, 2}), compiler: EXLA)
-      %Scholar.Neighbors.KDTree{
-        data: Nx.iota({5, 2}),
-        levels: 3,
-        indices: Nx.u32([3, 1, 4, 0, 2])
-      }
-
+      iex> tree = Scholar.Neighbors.KDTree.fit(Nx.iota({5, 2}))
+      iex> tree.data
+      Nx.tensor(
+        [
+          [0, 1],
+          [2, 3],
+          [4, 5],
+          [6, 7],
+          [8, 9]
+        ]
+      )
+      iex> tree.levels
+      3
+      iex> tree.indices
+      Nx.u32([3, 1, 4, 0, 2])
   """
-  def fit_unbounded(tensor, opts \\ []) do
-    levels = levels(tensor)
-    {size, _dims} = Nx.shape(tensor)
+  deftransform fit(tensor, opts \\ []) do
+    opts = NimbleOptions.validate!(opts, @opts_schema)
 
-    indices =
-      if size > 2 do
-        subtree_size = unbounded_subtree_size(1, levels, size)
-        {left, mid, right} = Nx.Defn.jit_apply(&root_slice(&1, subtree_size), [tensor], opts)
-
-        acc = <<Nx.to_number(mid)::32-unsigned-native-integer>>
-        acc = recur([{1, left}, {2, right}], [], acc, tensor, 1, levels, opts)
-        Nx.from_binary(acc, :u32)
-      else
-        Nx.argsort(tensor[[.., 0]], direction: :desc, type: :u32)
-      end
-
-    %__MODULE__{levels: levels, indices: indices, data: tensor}
+    %__MODULE__{
+      levels: levels(tensor),
+      indices: fit_n(tensor),
+      data: tensor,
+      num_neighbors: opts[:num_neighbors],
+      metric: opts[:metric]
+    }
   end
 
-  defp recur([{_i, %Nx.Tensor{shape: {1}} = leaf} | rest], next, acc, tensor, level, levels, opts) do
-    [leaf] = Nx.to_flat_list(leaf)
-    acc = <<acc::binary, leaf::32-unsigned-native-integer>>
-    recur(rest, next, acc, tensor, level, levels, opts)
-  end
-
-  defp recur([{i, %Nx.Tensor{shape: {2}} = node} | rest], next, acc, tensor, level, levels, opts) do
-    acc = <<acc::binary, Nx.to_number(node[1])::32-unsigned-native-integer>>
-    next = [{left_child(i), Nx.slice(node, [0], [1])} | next]
-    recur(rest, next, acc, tensor, level, levels, opts)
-  end
-
-  defp recur([{i, indices} | rest], next, acc, tensor, level, levels, opts) do
-    %Nx.Tensor{shape: {size, dims}} = tensor
-    k = rem(level, dims)
-    subtree_size = unbounded_subtree_size(left_child(i), levels, size)
-
-    {left, mid, right} =
-      Nx.Defn.jit_apply(&recur_slice(&1, &2, &3, subtree_size), [tensor, indices, k], opts)
-
-    next = [{right_child(i), right}, {left_child(i), left} | next]
-    acc = <<acc::binary, Nx.to_number(mid)::32-unsigned-native-integer>>
-    recur(rest, next, acc, tensor, level, levels, opts)
-  end
-
-  defp recur([], [], acc, _tensor, _level, _levels, _opts) do
-    acc
-  end
-
-  defp recur([], next, acc, tensor, level, levels, opts) do
-    recur(Enum.reverse(next), [], acc, tensor, level + 1, levels, opts)
-  end
-
-  defp root_slice(tensor, subtree_size) do
-    indices = Nx.argsort(tensor[[.., 0]], type: :u32)
-
-    {Nx.slice(indices, [0], [subtree_size]), indices[subtree_size],
-     Nx.slice(indices, [subtree_size + 1], [Nx.size(indices) - subtree_size - 1])}
-  end
-
-  defp recur_slice(tensor, indices, k, subtree_size) do
-    sorted = Nx.argsort(Nx.take(tensor, indices)[[.., k]], type: :u32)
-    indices = Nx.take(indices, sorted)
-
-    {Nx.slice(indices, [0], [subtree_size]), indices[subtree_size],
-     Nx.slice(indices, [subtree_size + 1], [Nx.size(indices) - subtree_size - 1])}
-  end
-
-  defp unbounded_subtree_size(i, levels, size) do
-    import Bitwise
-    diff = levels - unbounded_level(i) - 1
-    shifted = 1 <<< diff
-    fllc_s = (i <<< diff) + shifted - 1
-    shifted - 1 + min(max(0, size - fllc_s), shifted)
-  end
-
-  defp unbounded_level(i) when is_integer(i), do: floor(:math.log2(i + 1))
-
-  @doc """
-  Builds a KDTree with known min-max bounds entirely within `defn`.
-
-  This requires the amplitude `|max - min|` of the tensor to be given
-  such that `max + (amplitude + 1) * (size - 1)` does not overflow the
-  maximum tensor type.
-
-  For example, a tensor where all values are between 0 and 1 has amplitude
-  1. Values between -1 and 1 has amplitude 2. If your tensor is normalized
-  to floating points, then it is most likely bounded (given their high
-  precision). You can use `amplitude/1` to check your assumptions.
-
-  ## Examples
-
-      iex> Scholar.Neighbors.KDTree.fit_bounded(Nx.iota({5, 2}), 10)
-      %Scholar.Neighbors.KDTree{
-        data: Nx.iota({5, 2}),
-        levels: 3,
-        indices: Nx.u32([3, 1, 4, 0, 2])
-      }
-  """
-  deftransform fit_bounded(tensor, amplitude) do
-    %__MODULE__{levels: levels(tensor), indices: fit_bounded_n(tensor, amplitude), data: tensor}
-  end
-
-  defnp fit_bounded_n(tensor, amplitude) do
+  defnp fit_n(tensor) do
     levels = levels(tensor)
     {size, dims} = Nx.shape(tensor)
-    band = amplitude + 1
     tags = Nx.broadcast(Nx.u32(0), {size})
+    tensor = Nx.argsort(tensor, type: :u32, stable: true)
 
-    {level, tags, _tensor, _band} =
-      while {level = Nx.u32(0), tags, tensor, band}, level < levels - 1 do
+    {level, tags, _tensor} =
+      while {level = Nx.u32(0), tags, tensor}, level < levels - 1 do
         k = rem(level, dims)
-        indices = Nx.argsort(tensor[[.., k]] + band * tags, type: :u32, stable: true)
-        tags = update_tags(tags, indices, level, levels, size)
-        {level + 1, tags, tensor, band}
+        indices = tensor[[.., k]]
+        order = Nx.argsort(tags[indices], type: :u32, stable: true)
+        tags = update_tags(tags, indices[order], level, levels, size)
+        {level + 1, tags, tensor}
       end
 
     k = rem(level, dims)
-    Nx.argsort(tensor[[.., k]] + band * tags, type: :u32, stable: true)
+    indices = tensor[[.., k]]
+    order = Nx.argsort(tags[indices], type: :u32)
+    indices[order]
   end
 
   defnp update_tags(tags, indices, level, levels, size) do
-    pos = Nx.argsort(indices, type: :u32)
+    pos = inverse_permutation(indices)
 
     pivot =
       bounded_segment_begin(tags, levels, size) +
@@ -216,6 +121,17 @@ defmodule Scholar.Neighbors.KDTree do
           tags
         )
       )
+    )
+  end
+
+  defnp inverse_permutation(indices) do
+    shape = Nx.shape(indices)
+    type = Nx.type(indices)
+
+    Nx.indexed_put(
+      Nx.broadcast(Nx.tensor(0, type: type), shape),
+      Nx.new_axis(indices, -1),
+      Nx.iota(shape, type: type)
     )
   end
 
@@ -242,39 +158,6 @@ defmodule Scholar.Neighbors.KDTree do
   # Since this property relies on u32, let's check the tensor type.
   deftransformp bounded_level(%Nx.Tensor{type: {:u, 32}} = i) do
     Nx.subtract(31, Nx.count_leading_zeros(Nx.add(i, 1)))
-  end
-
-  @doc """
-  Returns the amplitude of a bounded tensor.
-
-  If -1 is returned, it means the tensor cannot use the `fit_bounded` algorithm
-  to generate a KDTree and `fit_unbounded/2` must be used instead.
-
-  This cannot be invoked inside a `defn`.
-
-  ## Examples
-
-      iex> Scholar.Neighbors.KDTree.amplitude(Nx.iota({10, 2}))
-      19
-      iex> Scholar.Neighbors.KDTree.amplitude(Nx.iota({20, 2}, type: :f32))
-      39.0
-      iex> Scholar.Neighbors.KDTree.amplitude(Nx.iota({20, 2}, type: :u8))
-      -1
-      iex> Scholar.Neighbors.KDTree.amplitude(Nx.negate(Nx.iota({10, 2})))
-      19
-
-  """
-  def amplitude(tensor) do
-    max = tensor |> Nx.reduce_max() |> Nx.to_number()
-    min = tensor |> Nx.reduce_min() |> Nx.to_number()
-    amplitude = abs(max - min)
-    limit = tensor.type |> Nx.Constants.max_finite() |> Nx.to_number()
-
-    if max + (amplitude + 1) * (Nx.axis_size(tensor, 0) - 1) > limit do
-      -1
-    else
-      amplitude
-    end
   end
 
   @doc """
@@ -382,8 +265,9 @@ defmodule Scholar.Neighbors.KDTree do
 
       iex> x = Nx.iota({10, 2})
       iex> x_predict = Nx.tensor([[2, 5], [1, 9], [6, 4]])
-      iex> kdtree = Scholar.Neighbors.KDTree.fit_bounded(x, 20)
-      iex> Scholar.Neighbors.KDTree.predict(kdtree, x_predict, k: 3)
+      iex> kdtree = Scholar.Neighbors.KDTree.fit(x, num_neighbors: 3)
+      iex> {indices, distances} = Scholar.Neighbors.KDTree.predict(kdtree, x_predict)
+      iex> indices
       #Nx.Tensor<
         s64[3][3]
         [
@@ -392,7 +276,21 @@ defmodule Scholar.Neighbors.KDTree do
           [2, 3, 1]
         ]
       >
-      iex> Scholar.Neighbors.KDTree.predict(kdtree, x_predict, k: 3, metric: {:minkowski, 1})
+      iex> distances
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [2.0, 2.0, 4.4721360206604],
+          [5.0, 5.385164737701416, 6.082762718200684],
+          [2.2360680103302, 3.0, 4.123105525970459]
+        ]
+      >
+
+      iex> x = Nx.iota({10, 2})
+      iex> x_predict = Nx.tensor([[2, 5], [1, 9], [6, 4]])
+      iex> kdtree = Scholar.Neighbors.KDTree.fit(x, num_neighbors: 3, metric: {:minkowski, 1})
+      iex> {indices, distances} = Scholar.Neighbors.KDTree.predict(kdtree, x_predict)
+      iex> indices
       #Nx.Tensor<
         s64[3][3]
         [
@@ -401,13 +299,35 @@ defmodule Scholar.Neighbors.KDTree do
           [2, 3, 1]
         ]
       >
+      iex> distances
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [2.0, 2.0, 6.0],
+          [7.0, 7.0, 7.0],
+          [3.0, 3.0, 5.0]
+        ]
+      >
   """
-  deftransform predict(tree, data, opts \\ []) do
-    predict_n(tree, data, NimbleOptions.validate!(opts, @predict_schema))
-  end
+  deftransform predict(tree, data) do
+    if Nx.rank(data) != 2 do
+      raise ArgumentError,
+            """
+            expected query tensor to have shape {num_queries, num_features}, \
+            got tensor with shape: #{inspect(Nx.shape(data))}
+            """
+    end
 
-  defnp predict_n(tree, data, opts) do
-    query_points(data, tree, opts)
+    if Nx.axis_size(tree.data, 1) != Nx.axis_size(data, 1) do
+      raise ArgumentError,
+            """
+            expected query tensor to have same number of features as tensor used to fit the tree, \
+            got #{inspect(Nx.axis_size(data, 1))} \
+            and #{inspect(Nx.axis_size(tree.data, 1))}
+            """
+    end
+
+    predict_n(tree, data)
   end
 
   defnp sort_by_distances(distances, point_indices) do
@@ -415,16 +335,9 @@ defmodule Scholar.Neighbors.KDTree do
     {Nx.take(distances, indices), Nx.take(point_indices, indices)}
   end
 
-  defnp compute_distance(x1, x2, opts) do
-    case opts[:metric] do
-      {:minkowski, 2} -> Distance.squared_euclidean(x1, x2)
-      {:minkowski, p} -> Distance.minkowski(x1, x2, p: p)
-      :cosine -> Distance.cosine(x1, x2)
-    end
-  end
-
   defnp update_knn(nearest_neighbors, distances, data, indices, curr_node, point, k, opts) do
-    curr_dist = compute_distance(data[[indices[curr_node]]], point, opts)
+    metric = opts[:metric]
+    curr_dist = metric.(data[[indices[curr_node]]], point)
 
     if curr_dist < distances[[-1]] do
       nearest_neighbors =
@@ -450,8 +363,8 @@ defmodule Scholar.Neighbors.KDTree do
     end
   end
 
-  defnp query_points(point, tree, opts) do
-    k = opts[:k]
+  defnp predict_n(tree, point) do
+    k = tree.num_neighbors
     node = Nx.as_type(root(), :s64)
 
     input_vectorized_axes = point.vectorized_axes
@@ -463,16 +376,15 @@ defmodule Scholar.Neighbors.KDTree do
       )
 
     {size, dims} = Nx.shape(tree.data)
-    nearest_neighbors = Nx.broadcast(Nx.s64(0), {k})
-    distances = Nx.broadcast(Nx.Constants.infinity(), {k})
+    nearest_neighbors = Nx.broadcast(Nx.s64(-1), {k})
+    distances = Nx.broadcast(Nx.Constants.infinity(to_float_type(tree.data)), {k})
     visited = Nx.broadcast(Nx.u8(0), {size})
 
     indices = tree.indices |> Nx.as_type(:s64)
     data = tree.data
+    metric = tree.metric
 
-    down = 0
-    up = 1
-    mode = down
+    mode = down()
     i = Nx.s64(0)
 
     [nearest_neighbors, node, distances, visited, i, mode, point] =
@@ -486,28 +398,28 @@ defmodule Scholar.Neighbors.KDTree do
         point
       ])
 
-    {nearest_neighbors, _} =
-      while {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}},
+    {{nearest_neighbors, distances}, _} =
+      while {{nearest_neighbors, distances}, {node, data, indices, point, visited, i, mode}},
             node != -1 and i >= 0 do
         coord_indicator = rem(i, dims)
 
         {node, i, visited, nearest_neighbors, distances, mode} =
           cond do
             node >= size ->
-              {parent(node), i - 1, visited, nearest_neighbors, distances, up}
+              {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
 
-            mode == down and
+            mode == down() and
                 point[[coord_indicator]] < data[[indices[node], coord_indicator]] ->
-              {left_child(node), i + 1, visited, nearest_neighbors, distances, down}
+              {left_child(node), i + 1, visited, nearest_neighbors, distances, down()}
 
-            mode == down and
+            mode == down() and
                 point[[coord_indicator]] >= data[[indices[node], coord_indicator]] ->
-              {right_child(node), i + 1, visited, nearest_neighbors, distances, down}
+              {right_child(node), i + 1, visited, nearest_neighbors, distances, down()}
 
-            mode == up ->
+            mode == up() ->
               cond do
                 visited[indices[node]] ->
-                  {parent(node), i - 1, visited, nearest_neighbors, distances, up}
+                  {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
 
                 (left_child(node) >= size and right_child(node) >= size) or
                   (left_child(node) < size and visited[indices[left_child(node)]] and
@@ -525,10 +437,10 @@ defmodule Scholar.Neighbors.KDTree do
                       indices,
                       point,
                       k,
-                      opts
+                      metric: metric
                     )
 
-                  {parent(node), i - 1, visited, nearest_neighbors, distances, up}
+                  {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
 
                 left_child(node) < size and visited[indices[left_child(node)]] and
                   right_child(node) < size and
@@ -543,20 +455,19 @@ defmodule Scholar.Neighbors.KDTree do
                       indices,
                       point,
                       k,
-                      opts
+                      metric: metric
                     )
 
                   if Nx.any(
-                       compute_distance(
+                       metric.(
                          point[[coord_indicator]],
-                         data[[indices[right_child(node)], coord_indicator]],
-                         opts
+                         data[[indices[right_child(node)], coord_indicator]]
                        ) <
                          distances
                      ) do
-                    {right_child(node), i + 1, visited, nearest_neighbors, distances, down}
+                    {right_child(node), i + 1, visited, nearest_neighbors, distances, down()}
                   else
-                    {parent(node), i - 1, visited, nearest_neighbors, distances, up}
+                    {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
                   end
 
                 ((right_child(node) < size and visited[indices[right_child(node)]]) or
@@ -572,35 +483,39 @@ defmodule Scholar.Neighbors.KDTree do
                       indices,
                       point,
                       k,
-                      opts
+                      metric: metric
                     )
 
                   if Nx.any(
-                       compute_distance(
+                       metric.(
                          point[[coord_indicator]],
-                         data[[indices[left_child(node)], coord_indicator]],
-                         opts
+                         data[[indices[left_child(node)], coord_indicator]]
                        ) <
                          distances
                      ) do
-                    {left_child(node), i + 1, visited, nearest_neighbors, distances, down}
+                    {left_child(node), i + 1, visited, nearest_neighbors, distances, down()}
                   else
-                    {parent(node), i - 1, visited, nearest_neighbors, distances, up}
+                    {parent(node), i - 1, visited, nearest_neighbors, distances, up()}
                   end
 
                 # Should be not reachable
                 true ->
-                  {node, i, visited, nearest_neighbors, distances, mode}
+                  {node, i, visited, nearest_neighbors, distances, none()}
               end
 
             # Should be not reachable
             true ->
-              {node, i, visited, nearest_neighbors, distances, mode}
+              {node, i, visited, nearest_neighbors, distances, none()}
           end
 
-        {nearest_neighbors, {node, data, indices, point, distances, visited, i, mode}}
+        {{nearest_neighbors, distances}, {node, data, indices, point, visited, i, mode}}
       end
 
-    Nx.revectorize(nearest_neighbors, input_vectorized_axes, target_shape: {num_points, k})
+    {Nx.revectorize(nearest_neighbors, input_vectorized_axes, target_shape: {num_points, k}),
+     Nx.revectorize(distances, input_vectorized_axes, target_shape: {num_points, k})}
   end
+
+  defnp down(), do: Nx.u8(0)
+  defnp up(), do: Nx.u8(1)
+  defnp none(), do: Nx.u8(2)
 end

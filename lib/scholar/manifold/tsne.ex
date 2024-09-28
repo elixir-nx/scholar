@@ -100,16 +100,16 @@ defmodule Scholar.Manifold.TSNE do
 
   ## Examples
 
-      iex> x = Nx.iota({4,5})
+      iex> x = Nx.iota({4, 5})
       iex> key = Nx.Random.key(42)
       iex> Scholar.Manifold.TSNE.fit(x, num_components: 2, key: key)
       #Nx.Tensor<
         f32[4][2]
         [
-          [-2197.154296875, 0.0],
-          [-1055.148681640625, 0.0],
-          [1055.148681640625, 0.0],
-          [2197.154296875, 0.0]
+          [2197.156005859375, 0.0],
+          [1055.1444091796875, 0.0],
+          [-1055.1444091796875, 0.0],
+          [-2197.156005859375, 0.0]
         ]
       >
   """

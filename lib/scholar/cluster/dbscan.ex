@@ -32,15 +32,17 @@ defmodule Scholar.Cluster.DBSCAN do
       type: :integer
     ],
     metric: [
-      type: {:custom, Scholar.Options, :metric, []},
-      default: {:minkowski, 2},
+      type: {:custom, Scholar.Neighbors.Utils, :pairwise_metric, []},
+      default: &Scholar.Metrics.Distance.pairwise_minkowski/2,
       doc: ~S"""
-      Name of the metric. Possible values:
+      The function that measures the pairwise distance between two points. Possible values:
 
       * `{:minkowski, p}` - Minkowski metric. By changing value of `p` parameter (a positive number or `:infinity`)
-        we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
+      we can set Manhattan (`1`), Euclidean (`2`), Chebyshev (`:infinity`), or any arbitrary $L_p$ metric.
 
       * `:cosine` - Cosine metric.
+
+      * Anonymous function of arity 2 that takes two rank-2 tensors.
       """
     ],
     weights: [
@@ -96,17 +98,17 @@ defmodule Scholar.Cluster.DBSCAN do
     y_dummy = Nx.broadcast(Nx.tensor(0), {num_samples})
 
     neighbor_model =
-      Scholar.Neighbors.RadiusNearestNeighbors.fit(x, y_dummy,
+      Scholar.Neighbors.RadiusNNClassifier.fit(x, y_dummy,
         num_classes: 1,
         radius: opts[:eps],
         metric: opts[:metric]
       )
 
     {_dist, indices} =
-      Scholar.Neighbors.RadiusNearestNeighbors.radius_neighbors(neighbor_model, x)
+      Scholar.Neighbors.RadiusNNClassifier.radius_neighbors(neighbor_model, x)
 
-    n_neigbors = Nx.sum(indices * weights, axes: [1])
-    core_samples = n_neigbors >= opts[:min_samples]
+    n_neighbors = Nx.sum(indices * weights, axes: [1])
+    core_samples = n_neighbors >= opts[:min_samples]
     labels = dbscan_inner(core_samples, indices)
 
     %__MODULE__{

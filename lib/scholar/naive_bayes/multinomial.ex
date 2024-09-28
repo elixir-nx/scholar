@@ -2,6 +2,9 @@ defmodule Scholar.NaiveBayes.Multinomial do
   @moduledoc """
   Naive Bayes classifier for multinomial models.
 
+  The multinomial Naive Bayes classifier is suitable for classification with
+  discrete features (e.g., word counts for text classification)
+
   Time complexity is $O(K * N * C)$ where $N$ is the number of samples and $K$ is the number of features,
   and $C$ is the number of classes.
   """
@@ -13,12 +16,18 @@ defmodule Scholar.NaiveBayes.Multinomial do
              :feature_count,
              :class_count,
              :class_log_priors,
-             :classes,
              :feature_log_probability
            ]}
-  defstruct [:feature_count, :class_count, :class_log_priors, :classes, :feature_log_probability]
+  defstruct [:feature_count, :class_count, :class_log_priors, :feature_log_probability]
 
   opts_schema = [
+    num_classes: [
+      type: :pos_integer,
+      required: true,
+      doc: ~S"""
+      Number of different classes used in training.
+      """
+    ],
     alpha: [
       type: {:or, [:float, {:list, :float}]},
       default: 1.0,
@@ -44,24 +53,17 @@ defmodule Scholar.NaiveBayes.Multinomial do
       If `false`, a uniform prior will be used.
       """
     ],
-    priors: [
+    class_priors: [
       type: {:custom, Scholar.Options, :weights, []},
       doc: ~S"""
       Prior probabilities of the classes. If specified, the priors are not
       adjusted according to the data.
       """
     ],
-    num_classes: [
-      type: :pos_integer,
-      required: true,
-      doc: ~S"""
-      Number of different classes used in training.
-      """
-    ],
     sample_weights: [
       type: {:custom, Scholar.Options, :weights, []},
       doc: ~S"""
-      List of `n_samples` elements.
+      List of `num_samples` elements.
       A list of 1.0 values is used if none is given.
       """
     ]
@@ -70,8 +72,9 @@ defmodule Scholar.NaiveBayes.Multinomial do
   @opts_schema NimbleOptions.new!(opts_schema)
 
   @doc """
-  The multinomial Naive Bayes classifier is suitable for classification with
-  discrete features (e.g., word counts for text classification)
+  Fits a naive Bayes model. The function assumes that the targets `y` are integers
+  between 0 and `num_classes` - 1 (inclusive). Otherwise, those samples will not
+  contribute to `class_count`.
 
   ## Options
 
@@ -81,19 +84,17 @@ defmodule Scholar.NaiveBayes.Multinomial do
 
   The function returns a struct with the following parameters:
 
-    * `:feature_log_probability` - Empirical log probability of features
-        given a class, ``P(x_i|y)``.
-
     * `:class_count` - Number of samples encountered for each class during fitting. This
         value is weighted by the sample weight when provided.
 
     * `:class_log_priors` - Smoothed empirical log probability for each class.
 
-    * `:classes` - class labels known to the classifier.
-
     * `:feature_count` - Number of samples encountered for each (class, feature)
         during fitting. This value is weighted by the sample weight when
         provided.
+
+    * `:feature_log_probability` - Empirical log probability of features
+        given a class, ``P(x_i|y)``.
 
   ## Examples
 
@@ -101,67 +102,184 @@ defmodule Scholar.NaiveBayes.Multinomial do
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> Scholar.NaiveBayes.Multinomial.fit(x, y, num_classes: 3)
       %Scholar.NaiveBayes.Multinomial{
-        feature_log_probability: Nx.tensor(
-          [
-            [-1.232143759727478, -1.0986123085021973, -0.9808292388916016],
-            [-1.7917594909667969, -1.0986123085021973, -0.6931471824645996],
-            [-1.241713285446167, -1.0986123085021973, -0.9734492301940918]
-          ]
-        ),
-        class_count: Nx.tensor([1.0, 1.0, 2.0]),
-        class_log_priors: Nx.tensor([-1.3862943649291992, -1.3862943649291992, -0.6931471824645996]),
-        classes: Nx.tensor([0, 1, 2]),
         feature_count: Nx.tensor(
           [
             [6.0, 7.0, 8.0],
             [0.0, 1.0, 2.0],
             [12.0, 14.0, 16.0]
           ]
+        ),
+        class_count: Nx.tensor(
+          [1.0, 1.0, 2.0]
+        ),
+        class_log_priors: Nx.tensor(
+          [-1.3862943649291992, -1.3862943649291992, -0.6931471824645996]
+        ),
+        feature_log_probability: Nx.tensor(
+          [
+            [-1.232143759727478, -1.0986123085021973, -0.9808292388916016],
+            [-1.7917594909667969, -1.0986123085021973, -0.6931471824645996],
+            [-1.241713285446167, -1.0986123085021973, -0.9734492301940918]
+          ]
         )
       }
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> Scholar.NaiveBayes.Multinomial.fit(x, y, num_classes: 3, sample_weights: [1, 6, 2, 3])
       %Scholar.NaiveBayes.Multinomial{
-        feature_log_probability: Nx.tensor(
-          [
-            [-1.241713285446167, -1.0986123085021973, -0.9734492301940918],
-            [-1.7917594909667969, -1.0986123085021973, -0.6931471824645996],
-            [-1.2773041725158691, -1.0986123085021973, -0.9470624923706055]
-          ]
-        ),
-        class_count: Nx.tensor([2.0, 1.0, 9.0]),
-        class_log_priors: Nx.tensor([-1.7917594909667969, -2.4849066734313965, -0.28768205642700195]),
-        classes: Nx.tensor([0, 1, 2]),
         feature_count: Nx.tensor(
           [
             [12.0, 14.0, 16.0],
             [0.0, 1.0, 2.0],
             [45.0, 54.0, 63.0]
           ]
+        ),
+        class_count: Nx.tensor(
+          [2.0, 1.0, 9.0]
+        ),
+        class_log_priors: Nx.tensor(
+          [-1.7917594909667969, -2.4849066734313965, -0.28768205642700195]
+        ),
+        feature_log_probability: Nx.tensor(
+          [
+            [-1.241713285446167, -1.0986123085021973, -0.9734492301940918],
+            [-1.7917594909667969, -1.0986123085021973, -0.6931471824645996],
+            [-1.2773041725158691, -1.0986123085021973, -0.9470624923706055]
+          ]
         )
       }
   """
   deftransform fit(x, y, opts \\ []) do
+    if Nx.rank(x) != 2 do
+      raise ArgumentError,
+            """
+            expected x to have shape {num_samples, num_features}, \
+            got tensor with shape: #{inspect(Nx.shape(x))}\
+            """
+    end
+
+    if Nx.rank(y) != 1 do
+      raise ArgumentError,
+            """
+            expected y to have shape {num_samples}, \
+            got tensor with shape: #{inspect(Nx.shape(y))}\
+            """
+    end
+
+    {num_samples, num_features} = Nx.shape(x)
+
+    if num_samples != Nx.axis_size(y, 0) do
+      raise ArgumentError,
+            """
+            expected first dimension of x and y to be of same size, \
+            got: #{num_samples} and #{Nx.axis_size(y, 0)}\
+            """
+    end
+
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
-    opts =
-      [
-        sample_weights_flag: opts[:sample_weights] != nil,
-        priors_flag: opts[:priors] != nil
-      ] ++ opts
+    type = to_float_type(x)
 
-    x_type = to_float_type(x)
-
-    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, Nx.tensor(1.0, type: x_type))
-    sample_weights = Nx.tensor(sample_weights, type: x_type)
-
-    {priors, opts} = Keyword.pop(opts, :priors, Nx.tensor(0.0, type: x_type))
-    class_priors = Nx.tensor(priors)
     {alpha, opts} = Keyword.pop!(opts, :alpha)
-    alpha = Nx.tensor(alpha, type: x_type)
+    alpha = Nx.tensor(alpha, type: type)
 
-    fit_n(x, y, sample_weights, class_priors, alpha, opts)
+    if Nx.shape(alpha) not in [{}, {num_features}] do
+      raise ArgumentError,
+            """
+            when alpha is list it should have length equal to num_features = #{num_features}, \
+            got: #{Nx.size(alpha)}\
+            """
+    end
+
+    num_classes = opts[:num_classes]
+
+    priors_flag = opts[:class_priors] != nil
+
+    {class_priors, opts} = Keyword.pop(opts, :class_priors, :nan)
+    class_priors = Nx.tensor(class_priors)
+
+    if priors_flag and Nx.size(class_priors) != num_classes do
+      raise ArgumentError,
+            """
+            expected class_priors to be list of length num_classes = #{num_classes}, \
+            got: #{Nx.size(class_priors)}\
+            """
+    end
+
+    sample_weights_flag = opts[:sample_weights] != nil
+
+    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, :nan)
+    sample_weights = Nx.tensor(sample_weights, type: type)
+
+    if sample_weights_flag and Nx.shape(sample_weights) != {num_samples} do
+      raise ArgumentError,
+            """
+            expected sample_weights to be list of length num_samples = #{num_samples}, \
+            got: #{Nx.size(sample_weights)}\
+            """
+    end
+
+    opts =
+      opts ++
+        [
+          type: type,
+          priors_flag: priors_flag,
+          sample_weights_flag: sample_weights_flag
+        ]
+
+    fit_n(x, y, class_priors, sample_weights, alpha, opts)
+  end
+
+  defnp fit_n(x, y, class_priors, sample_weights, alpha, opts) do
+    type = opts[:type]
+    num_samples = Nx.axis_size(x, 0)
+    num_classes = opts[:num_classes]
+
+    y_one_hot =
+      y
+      |> Nx.new_axis(1)
+      |> Nx.broadcast({num_samples, num_classes})
+      |> Nx.equal(Nx.iota({num_samples, num_classes}, axis: 1))
+      |> Nx.as_type(type)
+
+    y_weighted =
+      if opts[:sample_weights_flag],
+        do: Nx.reshape(sample_weights, {num_samples, 1}) * y_one_hot,
+        else: y_one_hot
+
+    alpha_lower_bound = Nx.tensor(1.0e-10, type: type)
+
+    alpha =
+      if opts[:force_alpha], do: alpha, else: Nx.max(alpha, alpha_lower_bound)
+
+    class_count = Nx.sum(y_weighted, axes: [0])
+    feature_count = Nx.dot(y_weighted, [0], x, [0])
+    smoothed_feature_count = feature_count + alpha
+    smoothed_cumulative_count = Nx.sum(smoothed_feature_count, axes: [1])
+
+    feature_log_probability =
+      Nx.log(smoothed_feature_count) -
+        Nx.log(Nx.reshape(smoothed_cumulative_count, {num_classes, 1}))
+
+    class_log_priors =
+      cond do
+        opts[:priors_flag] ->
+          Nx.log(class_priors)
+
+        opts[:fit_priors] ->
+          Nx.log(class_count) - Nx.log(Nx.sum(class_count))
+
+        true ->
+          Nx.broadcast(-Nx.log(num_classes), {num_classes})
+      end
+
+    %__MODULE__{
+      class_count: class_count,
+      class_log_priors: class_log_priors,
+      feature_count: feature_count,
+      feature_log_probability: feature_log_probability
+    }
   end
 
   @doc """
@@ -178,10 +296,10 @@ defmodule Scholar.NaiveBayes.Multinomial do
         [2, 2]
       >
   """
-  defn predict(%__MODULE__{classes: classes} = model, x) do
-    check_input(model, x)
+  defn predict(%__MODULE__{} = model, x) do
+    check_dim(x, Nx.axis_size(model.feature_count, 1))
     jll = joint_log_likelihood(model, x)
-    Nx.take(classes, Nx.argmax(jll, axis: 1))
+    Nx.argmax(jll, axis: 1)
   end
 
   @doc """
@@ -202,15 +320,13 @@ defmodule Scholar.NaiveBayes.Multinomial do
       >
   """
   defn predict_log_probability(%__MODULE__{} = model, x) do
-    check_input(model, x)
+    check_dim(x, Nx.axis_size(model.feature_count, 1))
     jll = joint_log_likelihood(model, x)
 
     log_proba_x =
       jll
-      |> Nx.exp()
-      |> Nx.sum(axes: [1])
-      |> Nx.log()
-      |> Nx.reshape({:auto, 1})
+      |> Nx.logsumexp(axes: [1])
+      |> Nx.new_axis(1)
       |> Nx.broadcast(jll)
 
     jll - log_proba_x
@@ -255,124 +371,20 @@ defmodule Scholar.NaiveBayes.Multinomial do
       >
   """
   defn predict_joint_log_probability(%__MODULE__{} = model, x) do
-    check_input(model, x)
+    check_dim(x, Nx.axis_size(model.feature_count, 1))
     joint_log_likelihood(model, x)
   end
 
-  defnp fit_n(x, y, sample_weights, class_priors, alpha, opts) do
-    x_type = Nx.Type.merge(to_float_type(x), {:f, 32})
-    input_rank = Nx.rank(x)
-    targets_rank = Nx.rank(y)
+  defnp check_dim(x, dim) do
+    num_features = Nx.axis_size(x, 1)
 
-    if input_rank != 2 do
+    if num_features != dim do
       raise ArgumentError,
-            "wrong input rank. Expected x to be rank 2 got: #{input_rank}"
+            """
+            expected x to have same second dimension as data used for fitting model, \
+            got: #{num_features} for x and #{dim} for training data\
+            """
     end
-
-    if targets_rank != 1 do
-      raise ArgumentError,
-            "wrong target rank. Expected target to be rank 1 got: #{targets_rank}"
-    end
-
-    {num_samples, num_features} = Nx.shape(x)
-    {num_targets} = Nx.shape(y)
-
-    if num_samples != num_targets do
-      raise ArgumentError,
-            "wrong input shape. Expected x to have the same first dimension as y, got: #{num_samples} for x and #{num_targets} for y"
-    end
-
-    num_classes = opts[:num_classes]
-
-    class_priors =
-      case Nx.shape(class_priors) do
-        {} ->
-          Nx.broadcast(class_priors, {num_classes})
-
-        {^num_classes} ->
-          class_priors
-
-        _ ->
-          raise ArgumentError,
-                "number of priors must match number of classes. Number of priors: #{Nx.size(class_priors)} does not match number of classes: #{num_classes}"
-      end
-
-    sample_weights =
-      case Nx.shape(sample_weights) do
-        {} ->
-          Nx.broadcast(sample_weights, {num_samples})
-
-        {^num_samples} ->
-          sample_weights
-
-        _ ->
-          raise ArgumentError,
-                "number of weights must match number of samples. Number of weights: #{Nx.size(sample_weights)} does not match number of samples: #{num_samples}"
-      end
-
-    classes_encoded = Nx.iota({num_classes})
-
-    classes =
-      y
-      |> Scholar.Preprocessing.ordinal_encode(num_classes: num_classes)
-      |> Scholar.Preprocessing.one_hot_encode(num_classes: num_classes)
-
-    {_, classes_features} = Nx.shape(classes)
-
-    classes =
-      cond do
-        classes_features == 1 and num_classes == 2 ->
-          Nx.concatenate([1 - classes, classes], axis: 1)
-
-        classes_features == 1 and num_classes != 2 ->
-          Nx.broadcast(1.0, Nx.shape(classes))
-
-        true ->
-          classes
-      end
-
-    classes =
-      if opts[:sample_weights_flag],
-        do: classes * Nx.reshape(sample_weights, {:auto, 1}),
-        else: classes
-
-    {_, n_classes} = Nx.shape(classes)
-    class_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes})
-    feature_count = Nx.broadcast(Nx.tensor(0.0, type: x_type), {n_classes, num_features})
-    feature_count = feature_count + Nx.dot(classes, [0], x, [0])
-    class_count = class_count + Nx.sum(classes, axes: [0])
-    alpha = check_alpha(alpha, opts[:force_alpha], num_features)
-    smoothed_feature_count = feature_count + alpha
-    smoothed_cumulative_count = Nx.sum(smoothed_feature_count, axes: [1])
-
-    feature_log_probability =
-      Nx.log(smoothed_feature_count) - Nx.log(Nx.reshape(smoothed_cumulative_count, {:auto, 1}))
-
-    {class_priors_length} = Nx.shape(class_priors)
-
-    if num_classes != class_priors_length do
-      raise ArgumentError, "Number of priors must match number of classes."
-    end
-
-    class_log_priors =
-      cond do
-        opts[:priors_flag] ->
-          Nx.log(class_priors)
-
-        opts[:fit_priors] ->
-          Nx.log(class_count) - Nx.log(Nx.sum(class_count))
-
-        true ->
-          Nx.broadcast(-Nx.log(num_classes), {num_classes})
-      end
-
-    %__MODULE__{
-      classes: classes_encoded,
-      class_count: class_count,
-      feature_log_probability: feature_log_probability,
-      feature_count: feature_count,
-      class_log_priors: class_log_priors
-    }
   end
 
   defnp joint_log_likelihood(
@@ -383,28 +395,5 @@ defmodule Scholar.NaiveBayes.Multinomial do
           x
         ) do
     Nx.dot(x, [1], feature_log_probability, [1]) + class_log_priors
-  end
-
-  defnp check_alpha(alpha, force_alpha, num_features) do
-    type = Nx.Type.merge(Nx.type(alpha), {:f, 32})
-    alpha_lower_bound = Nx.tensor(1.0e-10, type: type)
-
-    case Nx.shape(alpha) do
-      {} -> nil
-      {^num_features} -> nil
-      _ -> raise ArgumentError, "when alpha is a list it should contain num_features values"
-    end
-
-    if force_alpha, do: alpha, else: Nx.max(alpha, alpha_lower_bound)
-  end
-
-  defnp check_input(%__MODULE__{feature_count: feature_count}, x) do
-    num_features = Nx.axis_size(feature_count, 1)
-    x_num_features = Nx.axis_size(x, 1)
-
-    if num_features != x_num_features do
-      raise ArgumentError,
-            "wrong input shape. Expected x to have the same second dimension as the data for fitting process, got: #{x_num_features} for x and #{num_features} for training data"
-    end
   end
 end

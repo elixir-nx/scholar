@@ -1,10 +1,7 @@
 defmodule Scholar.Manifold.MDS do
   @moduledoc """
-  TSNE (t-Distributed Stochastic Neighbor Embedding) is a nonlinear dimensionality reduction technique.
-
-  ## References
-
-  * [t-SNE: t-Distributed Stochastic Neighbor Embedding](http://www.jmlr.org/papers/volume9/vandermaaten08a/vandermaaten08a.pdf)
+  Multidimensional scaling (MDS) seeks a low-dimensional representation of the data
+  in which the distances respect well the distances in the original high-dimensional space.
   """
   import Nx.Defn
   import Scholar.Shared
@@ -232,7 +229,7 @@ defmodule Scholar.Manifold.MDS do
   end
 
   @doc """
-  Fits MDS for sample inputs `x`. It is simpyfied version of `fit/3` function.
+  Fits MDS for sample inputs `x`. It is simplified version of `fit/3` function.
 
   ## Options
 

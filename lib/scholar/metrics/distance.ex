@@ -17,20 +17,20 @@ defmodule Scholar.Metrics.Distance do
     ]
   ]
 
-  minkowski_schema =
-    general_schema ++
-      [
-        p: [
-          type: {:or, [{:custom, Scholar.Options, :positive_number, []}, {:in, [:infinity]}]},
-          default: 2.0,
-          doc: """
-          A positive parameter of Minkowski distance or :infinity (then Chebyshev metric computed).
-          """
-        ]
+  pairwise_minkowski_schema =
+    [
+      p: [
+        type: {:or, [{:custom, Scholar.Options, :positive_number, []}, {:in, [:infinity]}]},
+        default: 2.0,
+        doc: """
+        A positive parameter of Minkowski distance or :infinity (then Chebyshev metric computed).
+        """
       ]
+    ]
 
   @general_schema NimbleOptions.new!(general_schema)
-  @minkowski_schema NimbleOptions.new!(minkowski_schema)
+  @minkowski_schema NimbleOptions.new!(general_schema ++ pairwise_minkowski_schema)
+  @pairwise_minkowski_schema NimbleOptions.new!(pairwise_minkowski_schema)
 
   @doc """
   Standard euclidean distance ($L_{2}$ distance).
@@ -362,6 +362,40 @@ defmodule Scholar.Metrics.Distance do
   end
 
   @doc """
+  Computes the pairwise Minkowski distance.
+
+  ## Examples
+
+      iex> x = Nx.iota({2, 3})
+      iex> y = Nx.reverse(x)
+      iex> Scholar.Metrics.Distance.pairwise_minkowski(x, y)
+      #Nx.Tensor<
+        f32[2][2]
+        [
+          [5.916079998016357, 2.8284270763397217],
+          [2.8284270763397217, 5.916079998016357]
+        ]
+      >
+  """
+  deftransform pairwise_minkowski(x, y, opts \\ []) do
+    pairwise_minkowski_n(x, y, NimbleOptions.validate!(opts, @pairwise_minkowski_schema))
+  end
+
+  defnp pairwise_minkowski_n(x, y, opts) do
+    p = opts[:p]
+
+    cond do
+      p == 2 ->
+        pairwise_euclidean(x, y)
+
+      true ->
+        x = Nx.new_axis(x, 1)
+        y = Nx.new_axis(y, 0)
+        minkowski_n(x, y, axes: [-1], p: p)
+    end
+  end
+
+  @doc """
   Cosine distance.
 
   $$
@@ -607,18 +641,14 @@ defmodule Scholar.Metrics.Distance do
 
   ## Examples
 
-      iex> x = Nx.iota({6, 6})
+      iex> x = Nx.iota({2, 3})
       iex> y = Nx.reverse(x)
       iex> Scholar.Metrics.Distance.pairwise_euclidean(x, y)
       #Nx.Tensor<
-        f32[6][6]
+        f32[2][2]
         [
-          [73.9594497680664, 59.380130767822266, 44.87761306762695, 30.561412811279297, 16.911535263061523, 8.366600036621094],
-          [59.380130767822266, 44.87761306762695, 30.561412811279297, 16.911535263061523, 8.366600036621094, 16.911535263061523],
-          [44.87761306762695, 30.561412811279297, 16.911535263061523, 8.366600036621094, 16.911535263061523, 30.561412811279297],
-          [30.561412811279297, 16.911535263061523, 8.366600036621094, 16.911535263061523, 30.561412811279297, 44.87761306762695],
-          [16.911535263061523, 8.366600036621094, 16.911535263061523, 30.561412811279297, 44.87761306762695, 59.380130767822266],
-          [8.366600036621094, 16.911535263061523, 30.561412811279297, 44.87761306762695, 59.380130767822266, 73.9594497680664]
+          [5.916079998016357, 2.8284270763397217],
+          [2.8284270763397217, 5.916079998016357]
         ]
       >
   """

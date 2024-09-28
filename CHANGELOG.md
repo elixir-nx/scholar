@@ -1,6 +1,37 @@
 # Changelog
 
-## v0.2.2-dev
+## v0.3.1 (2024-06-18)
+
+### Enhancements
+
+  * Add a notebook about manifold learning
+  * Make knn algorithm configurable on Trimap
+  * Add `d2_pinball_score` and `d2_absolute_error_score`
+
+## v0.3.0 (2024-05-29)
+
+### Enhancements
+
+  * Add LargeVis for visualization of large-scale and high-dimensional data in a low-dimensional (typically 2D or 3D) space
+  * Add `Scholar.Neighbors.KDTree` and `Scholar.Neighbors.RandomProjectionForest`
+  * Add `Scholar.Metrics.Neighbors`
+  * Add `Scholar.Linear.BayesianRidgeRegression`
+  * Add `Scholar.Cluster.Hierarchical`
+  * Add `Scholar.Manifold.Trimap`
+  * Add Mean Pinball Loss function
+  * Add Matthews Correlation Coefficient function
+  * Add D2 Tweedie Score function
+  * Add Mean Tweedie Deviance function
+  * Add Discounted Cumulative Gain function
+  * Add Precision Recall f-score function
+  * Add f-beta score function
+  * Add convergence check to AffinityPropagation
+  * Default Affinity Propagation preference to `reduce_min` and make it customizable
+  * Move preprocessing functionality to their own modules with `fit` and `fit_transform` callbacks
+
+### Breaking changes
+
+  * Split `KNearestNeighbors` into `KNNClassifier` and `KNNRegressor` with custom algorithm support
 
 ## v0.2.1 (2023-08-30)
 
@@ -21,7 +52,7 @@ This version requires Elixir v1.14+.
   * Add `t-SNE`
   * Add `Polynomial Regression`
   * Replace seeds with `Random.key`
-  * Add 'unrolling loops' option 
+  * Add 'unrolling loops' option
   * Add support for custom optimizers in `Logistic Regression`
   * Add `Trapezoidal Integration`
   * Add `AUC-ROC`, `AUC`, and `ROC Curve`

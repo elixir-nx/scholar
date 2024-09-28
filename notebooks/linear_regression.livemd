@@ -1,6 +1,6 @@
 <!-- livebook:{"persist_outputs":true} -->
 
-# Linear Regression in Practice
+# Linear regression in practice
 
 ```elixir
 Mix.install([
@@ -12,11 +12,11 @@ Mix.install([
   {:kino_vega_lite, "~> 0.1.9"},
   {:kino, "~> 0.10.0"},
   {:kino_explorer, "~> 0.1.7"},
-  {:tucan, "~> 0.2.1"}
+  {:tucan, "~> 0.3.0"}
 ])
 ```
 
-## Introduction
+## Setup
 
 In the livebook, we will cover the typical use cases of linear regression on practical examples.
 
@@ -27,17 +27,15 @@ alias Scholar.Linear.LinearRegression, as: LR
 alias Scholar.Linear.PolynomialRegression, as: PR
 alias Scholar.Impute.SimpleImputer
 alias Scholar.Metrics.Regression
+```
+
+And let's configure `EXLA` as our default backend (where our tensors are stored) and compiler (which compiles Scholar code) across the notebook and all branched sections:
+
+```elixir
 Nx.global_default_backend(EXLA.Backend)
+Nx.Defn.global_default_options(compiler: EXLA)
 seed = 42
 key = Nx.Random.key(42)
-```
-
-<!-- livebook:{"output":true} -->
-
-```
-
-02:37:23.509 [info] TfrtCpuClient created.
-
 ```
 
 <!-- livebook:{"output":true} -->
@@ -52,7 +50,7 @@ key = Nx.Random.key(42)
 
 <!-- livebook:{"branch_parent_index":0} -->
 
-## Linear Regression on Synthetic Data
+## Linear regression on synthetic data
 
 Before we dive into real-life use cases of linear regression, we start with a simpler one. We will generate data with a linear pattern and then use `Scholar.Linear.LinearRegression` to compute regression.
 
@@ -227,7 +225,7 @@ x_b |> Nx.LinAlg.pinv() |> Nx.dot(y)
 
 <!-- livebook:{"branch_parent_index":0} -->
 
-## Polynomial Regression on Synthetic Data
+## Polynomial regression on synthetic data
 
 Before moving on to a more complex example, this section will briefly show how to use another regression method. While not strictly linear, the approach and calculations that go into it is similar enough that it makes sense for it to be explained alongside linear regression.
 
@@ -474,13 +472,11 @@ sample = DF.sample(df, 0.2, seed: seed)
 
 histograms =
   for name <- List.delete(df.names, "ocean_proximity") do
-    Tucan.new()
-    |> Tucan.histogram(name, maxbins: 50, fill_opacity: 1.0)
+    Tucan.histogram(sample, name, maxbins: 50, fill_opacity: 1.0, only: [name])
     |> Tucan.Axes.put_options(:x, ticks: false)
   end
 
-Tucan.new(sample, columns: 3)
-|> Tucan.concat(histograms)
+Tucan.concat(histograms, columns: 3)
 |> Tucan.set_title("Univariate Histograms of all features", anchor: :middle)
 |> Tucan.set_size(500, 500)
 ```

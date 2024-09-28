@@ -13,7 +13,6 @@ defmodule Scholar.Metrics.Classification do
 
   import Nx.Defn, except: [assert_shape: 2, assert_shape_pattern: 2]
   import Scholar.Shared
-  import Scholar.Preprocessing
   alias Scholar.Integrate
 
   general_schema = [
@@ -1082,7 +1081,7 @@ defmodule Scholar.Metrics.Classification do
     -Nx.sum(Nx.diff(recall) * precision[0..-2//1])
   end
 
-  # TODO implement :drop_intermediate option when dynamic shapes will be available
+  # TODO Implement :drop_intermediate option when dynamic shapes will be available
   @doc ~S"""
   Compute Receiver operating characteristic (ROC).
 
@@ -1263,8 +1262,10 @@ defmodule Scholar.Metrics.Classification do
   each class, from which the log loss is computed by averaging the negative log
   of the probability forecasted for the true class over a number of samples.
 
-  `y_true` should contain `num_classes` unique values, and the sum of `y_prob`
-  along axis 1 should be 1 to respect the law of total probability.
+  `y_true` should be a tensor of shape {num_samples} containing values
+  between 0 and num_classes - 1 (inclusive).
+  `y_prob` should be a tensor of shape {num_samples, num_classes} containing
+  predicted probability distributions over classes for each sample.
 
   ## Options
 
@@ -1307,6 +1308,7 @@ defmodule Scholar.Metrics.Classification do
       raise ArgumentError, "y_true and y_prob must have the same size along axis 0"
     end
 
+    num_samples = Nx.size(y_true)
     num_classes = opts[:num_classes]
 
     if Nx.axis_size(y_prob, 1) != num_classes do
@@ -1320,14 +1322,16 @@ defmodule Scholar.Metrics.Classification do
         type: to_float_type(y_prob)
       )
 
-    y_true_onehot =
-      ordinal_encode(y_true, num_classes: num_classes)
-      |> one_hot_encode(num_classes: num_classes)
+    y_one_hot =
+      y_true
+      |> Nx.new_axis(1)
+      |> Nx.broadcast({num_samples, num_classes})
+      |> Nx.equal(Nx.iota({num_samples, num_classes}, axis: 1))
 
     y_prob = Nx.clip(y_prob, 0, 1)
 
     sample_loss =
-      Nx.multiply(y_true_onehot, y_prob)
+      Nx.multiply(y_one_hot, y_prob)
       |> Nx.sum(axes: [-1])
       |> Nx.log()
       |> Nx.negate()
@@ -1485,5 +1489,71 @@ defmodule Scholar.Metrics.Classification do
         mcc_numerator / mcc_denominator
       )
     end
+  end
+
+  @doc """
+  Compute error rates for different probability thresholds (DET).
+
+  Note: This metric is used for evaluation of ranking and error tradeoffs of
+  a binary classification task.
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([0, 0, 1, 1])
+      iex> y_score = Nx.tensor([0.1, 0.4, 0.35, 0.8])
+      iex> distinct_value_indices = Scholar.Metrics.Classification.distinct_value_indices(y_score)
+      iex> {fpr, fnr, thresholds} = Scholar.Metrics.Classification.det_curve(y_true, y_score, distinct_value_indices)
+      iex> fpr
+      #Nx.Tensor<
+        f32[4]
+        [1.0, 0.5, 0.5, 0.0]
+      >
+      iex> fnr
+      #Nx.Tensor<
+        f32[4]
+        [0.0, 0.0, 0.5, 0.5]
+      >
+      iex> thresholds
+      #Nx.Tensor<
+        f32[4]
+        [0.10000000149011612, 0.3499999940395355, 0.4000000059604645, 0.800000011920929]
+      >
+
+      iex> y_true = Nx.tensor([0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1])
+      iex> y_score = Nx.tensor([0.1, 0.1, 0.2, 0.2, 0.3, 0.3, 0.4, 0.4, 0.5, 0.5, 0.6, 0.7, 0.7, 0.8, 0.9])
+      iex> distinct_value_indices = Scholar.Metrics.Classification.distinct_value_indices(y_score)
+      iex> {fpr, fnr, thresholds} = Scholar.Metrics.Classification.det_curve(y_true, y_score, distinct_value_indices)
+      iex> fpr
+      #Nx.Tensor<
+        f32[9]
+        [1.0, 0.6666666865348816, 0.6666666865348816, 0.6666666865348816, 0.3333333432674408, 0.3333333432674408, 0.1666666716337204, 0.1666666716337204, 0.0]
+      >
+      iex> fnr
+      #Nx.Tensor<
+        f32[9]
+        [0.0, 0.0, 0.2222222238779068, 0.4444444477558136, 0.4444444477558136, 0.6666666865348816, 0.6666666865348816, 0.8888888955116272, 0.8888888955116272]
+      >
+      iex> thresholds
+      #Nx.Tensor<
+        f32[9]
+        [0.10000000149011612, 0.20000000298023224, 0.30000001192092896, 0.4000000059604645, 0.5, 0.6000000238418579, 0.699999988079071, 0.800000011920929, 0.8999999761581421]
+      >
+  """
+  defn det_curve(y_true, y_score, distinct_value_indices, weights \\ 1.0) do
+    num_samples = Nx.axis_size(y_true, 0)
+
+    weights = validate_weights(weights, num_samples, type: to_float_type(y_true))
+
+    check_shape(y_true, y_score)
+
+    {fps, tps, thresholds} =
+      binary_clf_curve(y_true, y_score, distinct_value_indices, weights)
+
+    positive_count = tps[[-1]]
+    negative_count = fps[[-1]]
+
+    fns = positive_count - tps
+
+    {Nx.reverse(fps) / negative_count, Nx.reverse(fns) / positive_count, Nx.reverse(thresholds)}
   end
 end

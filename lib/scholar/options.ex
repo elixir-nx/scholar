@@ -83,6 +83,16 @@ defmodule Scholar.Options do
     end
   end
 
+  def multi_weights(weights) do
+    if is_nil(weights) or
+         (Nx.is_tensor(weights) and Nx.rank(weights) > 1) do
+      {:ok, weights}
+    else
+      {:error,
+       "expected weights to be a tensor with rank greater than 1, got: #{inspect(weights)}"}
+    end
+  end
+
   def key(key) do
     if Nx.is_tensor(key) and Nx.type(key) == {:u, 32} and Nx.shape(key) == {2} do
       {:ok, key}
@@ -91,21 +101,11 @@ defmodule Scholar.Options do
     end
   end
 
-  def metric(:cosine), do: {:ok, :cosine}
-
-  def metric({:minkowski, p}) when p == :infinity or (is_number(p) and p > 0),
-    do: {:ok, {:minkowski, p}}
-
-  def metric(metric) do
-    {:error,
-     "expected metric to be a :cosine or tuple {:minkowski, p} where p is a positive number or :infinity, got: #{inspect(metric)}"}
-  end
-
   def beta(beta) do
     if (is_number(beta) and beta >= 0) or (Nx.is_tensor(beta) and Nx.rank(beta) == 0) do
       {:ok, beta}
     else
-      {:error, "expect 'beta' to be in the range [0, inf]"}
+      {:error, "expected 'beta' to be in the range [0, inf]"}
     end
   end
 end

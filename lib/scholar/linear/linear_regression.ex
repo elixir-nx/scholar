@@ -8,6 +8,7 @@ defmodule Scholar.Linear.LinearRegression do
   require Nx
   import Nx.Defn
   import Scholar.Shared
+  alias Scholar.Linear.LinearHelpers
 
   @derive {Nx.Container, containers: [:coefficients, :intercept]}
   defstruct [:coefficients, :intercept]
@@ -58,15 +59,17 @@ defmodule Scholar.Linear.LinearRegression do
       iex> model.coefficients
       #Nx.Tensor<
         f32[2]
-        [-0.49724727869033813, -0.7010392546653748]
+        [-0.49724647402763367, -0.7010394930839539]
       >
       iex> model.intercept
       #Nx.Tensor<
         f32
-        5.896470069885254
+        5.8964691162109375
       >
   """
   deftransform fit(x, y, opts \\ []) do
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.flatten_column_vector(y, n_samples)
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     opts =
@@ -75,13 +78,9 @@ defmodule Scholar.Linear.LinearRegression do
       ] ++
         opts
 
-    {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
-    x_type = to_float_type(x)
-
-    sample_weights =
-      if Nx.is_tensor(sample_weights),
-        do: Nx.as_type(sample_weights, x_type),
-        else: Nx.tensor(sample_weights, type: x_type)
+    sample_weights = LinearHelpers.build_sample_weights(x, opts)
+    {n_samples, _} = Nx.shape(x)
+    y = LinearHelpers.flatten_column_vector(y, n_samples)
 
     fit_n(x, y, sample_weights, opts)
   end
@@ -92,7 +91,7 @@ defmodule Scholar.Linear.LinearRegression do
 
     {a_offset, b_offset} =
       if opts[:fit_intercept?] do
-        preprocess_data(a, b, sample_weights, opts)
+        LinearHelpers.preprocess_data(a, b, sample_weights, opts)
       else
         a_offset_shape = Nx.axis_size(a, 1)
         b_reshaped = if Nx.rank(b) > 1, do: b, else: Nx.reshape(b, {:auto, 1})
@@ -106,7 +105,7 @@ defmodule Scholar.Linear.LinearRegression do
 
     {a, b} =
       if opts[:sample_weights_flag] do
-        rescale(a, b, sample_weights)
+        LinearHelpers.rescale(a, b, sample_weights)
       else
         {a, b}
       end
@@ -118,6 +117,9 @@ defmodule Scholar.Linear.LinearRegression do
   @doc """
   Makes predictions with the given `model` on input `x`.
 
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.  
+  Otherwise, predictions match train target shape.  
+
   ## Examples
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
@@ -125,25 +127,11 @@ defmodule Scholar.Linear.LinearRegression do
       iex> model = Scholar.Linear.LinearRegression.fit(x, y)
       iex> Scholar.Linear.LinearRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
       Nx.tensor(
-        [4.200936317443848]
+        [4.200936794281006]
       )
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
-    Nx.dot(x, coeff) + intercept
-  end
-
-  # Implements sample weighting by rescaling inputs and
-  # targets by sqrt(sample_weight).
-  defnp rescale(x, y, sample_weights) do
-    case Nx.shape(sample_weights) do
-      {} = scalar ->
-        scalar = Nx.sqrt(scalar)
-        {scalar * x, scalar * y}
-
-      _ ->
-        scale = sample_weights |> Nx.sqrt() |> Nx.make_diagonal()
-        {Nx.dot(scale, x), Nx.dot(scale, y)}
-    end
+    Nx.dot(x, [-1], coeff, [-1]) + intercept
   end
 
   # Implements ordinary least-squares by estimating the
@@ -151,23 +139,7 @@ defmodule Scholar.Linear.LinearRegression do
   defnp lstsq(a, b, a_offset, b_offset, fit_intercept?) do
     pinv = Nx.LinAlg.pinv(a)
     coeff = Nx.dot(b, [0], pinv, [1])
-    intercept = set_intercept(coeff, a_offset, b_offset, fit_intercept?)
+    intercept = LinearHelpers.set_intercept(coeff, a_offset, b_offset, fit_intercept?)
     {coeff, intercept}
-  end
-
-  defnp set_intercept(coeff, x_offset, y_offset, fit_intercept?) do
-    if fit_intercept? do
-      y_offset - Nx.dot(coeff, x_offset)
-    else
-      Nx.tensor(0.0, type: Nx.type(coeff))
-    end
-  end
-
-  defnp preprocess_data(x, y, sample_weights, opts) do
-    if opts[:sample_weights_flag],
-      do:
-        {Nx.weighted_mean(x, sample_weights, axes: [0]),
-         Nx.weighted_mean(y, sample_weights, axes: [0])},
-      else: {Nx.mean(x, axes: [0]), Nx.mean(y, axes: [0])}
   end
 end
