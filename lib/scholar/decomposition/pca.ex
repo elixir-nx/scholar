@@ -471,6 +471,7 @@ defmodule Scholar.Decomposition.PCA do
     end
   end
 
+  @doc false
   defn flip_svd(u, v) do
     max_abs_cols_idx = u |> Nx.abs() |> Nx.argmax(axis: 0, keep_axis: true)
     signs = u |> Nx.take_along_axis(max_abs_cols_idx, axis: 0) |> Nx.sign() |> Nx.squeeze()
