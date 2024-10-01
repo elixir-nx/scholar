@@ -147,7 +147,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     {u, sigma, vt} = randomized_svd(x, opts)
     {_u, vt} = Scholar.Decomposition.PCA.flip_svd(u, vt)
 
-    x_transformed = Nx.dot(x, Nx.transpose(vt))
+    x_transformed = Nx.dot(x, [1], vt, [0])
     explained_variance = Nx.variance(x_transformed, axes: [0])
     full_variance = Nx.variance(x, axes: [0]) |> Nx.sum()
     explained_variance_ratio = explained_variance / full_variance
@@ -162,7 +162,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
 
   defnp fit_transform_n(x, opts) do
     module = fit_n(x, opts)
-    Nx.dot(x, Nx.transpose(module.components))
+    Nx.dot(x, [1], module.components, [0])
   end
 
   defnp randomized_svd(m, opts) do
@@ -212,11 +212,11 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     {q, _} = Nx.LinAlg.qr(Nx.dot(a, q))
     {q, _} = Nx.LinAlg.qr(Nx.dot(a_t, q))
 
-    {q, _a, _a_t, _i, _n_iter} =
-      while {q, a, a_t, i = Nx.tensor(1), n_iter}, Nx.less(i, n_iter) do
+    {q, _} =
+      while {q, {a, a_t, i = Nx.tensor(1), n_iter}}, Nx.less(i, n_iter) do
         {q, _} = Nx.LinAlg.qr(Nx.dot(a, q))
         {q, _} = Nx.LinAlg.qr(Nx.dot(a_t, q))
-        {q, a, a_t, i + 1, n_iter}
+        {q, {a, a_t, i + 1, n_iter}}
       end
 
     {q, _} = Nx.LinAlg.qr(Nx.dot(a, q))
