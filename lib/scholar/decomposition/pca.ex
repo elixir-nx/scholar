@@ -151,7 +151,7 @@ defmodule Scholar.Decomposition.PCA do
     x_centered = x - mean
     variance = Nx.sum(x_centered * x_centered / (num_samples - 1), axes: [0])
     {u, s, vt} = Nx.LinAlg.svd(x_centered, full_matrices?: false)
-    {_, vt} = flip_svd(u, vt)
+    {_, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
     components = vt[0..(num_components - 1)]
     explained_variance = s * s / (num_samples - 1)
 
@@ -311,7 +311,7 @@ defmodule Scholar.Decomposition.PCA do
       )
 
     {u, s, vt} = Nx.LinAlg.svd(matrix, full_matrices?: false)
-    {_, vt} = flip_svd(u, vt)
+    {_, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
     updated_components = vt[0..(num_components - 1)]
     updated_singular_values = s[0..(num_components - 1)]
 
@@ -461,7 +461,7 @@ defmodule Scholar.Decomposition.PCA do
     mean = Nx.mean(x, axes: [0])
     x_centered = x - mean
     {u, s, vt} = Nx.LinAlg.svd(x_centered, full_matrices?: false)
-    {u, _} = flip_svd(u, vt)
+    {u, _} = Scholar.Decomposition.Utils.flip_svd(u, vt)
     u = u[[.., 0..(num_components - 1)]]
 
     if opts[:whiten?] do
@@ -469,13 +469,5 @@ defmodule Scholar.Decomposition.PCA do
     else
       u * s[0..(num_components - 1)]
     end
-  end
-
-  defnp flip_svd(u, v) do
-    max_abs_cols_idx = u |> Nx.abs() |> Nx.argmax(axis: 0, keep_axis: true)
-    signs = u |> Nx.take_along_axis(max_abs_cols_idx, axis: 0) |> Nx.sign() |> Nx.squeeze()
-    u = u * signs
-    v = v * Nx.new_axis(signs, -1)
-    {u, v}
   end
 end
