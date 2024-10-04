@@ -37,10 +37,12 @@ defmodule Scholar.Decomposition.TruncatedSVD do
       type: :pos_integer,
       doc: "Number of oversamples for randomized SVD solver."
     ],
-    seed: [
-      default: 0,
-      type: :integer,
-      doc: "Seed for random tensor generation."
+    key: [
+      type: {:custom, Scholar.Options, :key, []},
+      doc: """
+      Key for random tensor generation.
+      If the key is not provided, it is set to `Nx.Random.key(System.system_time())`.
+      """
     ]
   ]
 
@@ -57,7 +59,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
 
   The function returns a struct with the following parameters:
 
-    * `:components` - tensor of shape `{num_components, n_features}`
+    * `:components` - tensor of shape `{num_components, num_features}`
         The right singular vectors of the input data.
 
     * `:explained_variance` - tensor of shape `{num_components}`
@@ -72,8 +74,9 @@ defmodule Scholar.Decomposition.TruncatedSVD do
 
   ## Examples
 
+      iex> key = Nx.Random.key(0)
       iex> x = Nx.tensor([[0, 0], [1, 0], [1, 1], [3, 3], [4, 4.5]])
-      iex> tsvd = Scholar.Decomposition.TruncatedSVD.fit(x, num_components: 2)
+      iex> tsvd = Scholar.Decomposition.TruncatedSVD.fit(x, num_components: 2, key: key)
       iex> tsvd.components
       #Nx.Tensor<
         f32[2][2]
@@ -90,7 +93,9 @@ defmodule Scholar.Decomposition.TruncatedSVD do
   """
 
   deftransform fit(x, opts \\ []) do
-    fit_n(x, NimbleOptions.validate!(opts, @tsvd_schema))
+    opts = NimbleOptions.validate!(opts, @tsvd_schema)
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
+    fit_n(x, key, opts)
   end
 
   @doc """
@@ -102,12 +107,13 @@ defmodule Scholar.Decomposition.TruncatedSVD do
 
   ## Return Values
 
-    X_new tensor of shape `{n_samples, num_components}` - reduced version of X. 
+    X_new tensor of shape `{num_samples, num_components}` - reduced version of X. 
 
   ## Examples
 
+      iex> key = Nx.Random.key(0)
       iex> x = Nx.tensor([[0, 0], [1, 0], [1, 1], [3, 3], [4, 4.5]])
-      iex> Scholar.Decomposition.TruncatedSVD.fit_transform(x, num_components: 2)
+      iex> Scholar.Decomposition.TruncatedSVD.fit_transform(x, num_components: 2, key: key)
       #Nx.Tensor<
         f32[5][2]
         [
@@ -121,30 +127,39 @@ defmodule Scholar.Decomposition.TruncatedSVD do
   """
 
   deftransform fit_transform(x, opts \\ []) do
-    fit_transform_n(x, NimbleOptions.validate!(opts, @tsvd_schema))
+    opts = NimbleOptions.validate!(opts, @tsvd_schema)
+    key = Keyword.get_lazy(opts, :key, fn -> Nx.Random.key(System.system_time()) end)
+    fit_transform_n(x, key, opts)
   end
 
-  defnp fit_n(x, opts) do
+  defnp fit_n(x, key, opts) do
     if Nx.rank(x) != 2 do
       raise ArgumentError, "expected x to have rank equal to: 2, got: #{inspect(Nx.rank(x))}"
     end
 
     num_components = opts[:num_components]
-    {_n_samples, n_features} = Nx.shape(x)
+    {num_samples, num_features} = Nx.shape(x)
 
     cond do
-      num_components > n_features ->
+      num_components > num_features ->
         raise ArgumentError,
               """
               num_components must be less than or equal to \
-              n_features = #{n_features}, got #{num_components}
+              num_features = #{num_features}, got #{num_components}
+              """
+
+      num_components > num_samples ->
+        raise ArgumentError,
+              """
+              num_components must be less than or equal to \
+              num_samples = #{num_samples}, got #{num_components}
               """
 
       true ->
         nil
     end
 
-    {u, sigma, vt} = randomized_svd(x, opts)
+    {u, sigma, vt} = randomized_svd(x, key, opts)
     {_u, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
 
     x_transformed = Nx.dot(x, [1], vt, [0])
@@ -160,19 +175,19 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     }
   end
 
-  defnp fit_transform_n(x, opts) do
-    module = fit_n(x, opts)
+  defnp fit_transform_n(x, key, opts) do
+    module = fit_n(x, key, opts)
     Nx.dot(x, [1], module.components, [0])
   end
 
-  defnp randomized_svd(m, opts) do
+  defnp randomized_svd(m, key, opts) do
     num_components = opts[:num_components]
     num_oversamples = opts[:num_oversamples]
     num_iter = opts[:num_iter]
     n_random = num_components + num_oversamples
-    {n_samples, n_features} = Nx.shape(m)
+    {num_samples, num_features} = Nx.shape(m)
 
-    transpose = n_samples < num_components
+    transpose = num_samples < num_components
 
     m =
       if Nx.equal(transpose, 1) do
@@ -181,15 +196,14 @@ defmodule Scholar.Decomposition.TruncatedSVD do
         m
       end
 
-    q = randomized_range_finder(m, size: n_random, num_iter: num_iter, seed: opts[:seed])
+    q = randomized_range_finder(m, key, size: n_random, num_iter: num_iter)
 
-    q_t = Nx.transpose(q)
-    b = Nx.dot(q_t, m)
+    b = Nx.dot(q, [-2], m, [-2])
     {uhat, s, vt} = Nx.LinAlg.svd(b)
     u = Nx.dot(q, uhat)
-    vt = Nx.slice(vt, [0, 0], [num_components, n_features])
+    vt = Nx.slice(vt, [0, 0], [num_components, num_features])
     s = Nx.slice(s, [0], [num_components])
-    u = Nx.slice(u, [0, 0], [n_samples, num_components])
+    u = Nx.slice(u, [0, 0], [num_samples, num_components])
 
     if Nx.equal(transpose, 1) do
       {Nx.transpose(vt), s, Nx.transpose(u)}
@@ -198,12 +212,9 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     end
   end
 
-  defn randomized_range_finder(a, opts) do
+  defn randomized_range_finder(a, key, opts) do
     size = opts[:size]
     num_iter = opts[:num_iter]
-    seed = opts[:seed]
-
-    key = Nx.Random.key(seed)
 
     {_, a_cols} = Nx.shape(a)
     {q, _} = Nx.Random.normal(key, shape: {a_cols, size})
