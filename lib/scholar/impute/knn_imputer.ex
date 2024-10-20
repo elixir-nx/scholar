@@ -46,11 +46,10 @@ defmodule Scholar.Impute.KNNImputer do
     [`Nx.Constant.nan/0`](https://hexdocs.pm/nx/Nx.Constants.html#nan/0) values.
 
   ## Examples
-
-      iex> x = Nx.tensor([[40.0, 2.0],[4.0, 5.0],[7.0, :nan],[:nan, 8.0],[11.0, 11.0]])
-      iex> Scholar.Impute.KNNImputer.fit(x, number_of_neighbors: 2)
-      %Scholar.Impute.KNNImputer{
-      statistics: #Nx.Tensor<
+  iex> x = Nx.tensor([[40.0, 2.0],[4.0, 5.0],[7.0, :nan],[:nan, 8.0],[11.0, 11.0]])
+  iex> Scholar.Impute.KNNImputer.fit(x, number_of_neighbors: 2)
+  %Scholar.Impute.KNNImputer{
+  statistics: #Nx.Tensor<
         f32[5][2]
         [
             [NaN, NaN],
@@ -59,10 +58,9 @@ defmodule Scholar.Impute.KNNImputer do
             [7.5, NaN],
             [NaN, NaN]
           ]
-      >,
-      missing_values: :nan
-      }
-
+  >,
+  missing_values: :nan
+  }
   """
 
   deftransform fit(x, opts \\ []) do
@@ -93,7 +91,6 @@ defmodule Scholar.Impute.KNNImputer do
 
     {rows, cols} = Nx.shape(x)
 
-    # TODO calculate all nan rows
     row_nan_count = Nx.sum(Nx.is_nan(x), axes: [1])
     # row with only 1 non nan value is also considered as all nan row
     all_nan_rows =
@@ -125,7 +122,6 @@ defmodule Scholar.Impute.KNNImputer do
       iex> imputer = Scholar.Impute.KNNImputer.fit(x, strategy: :mean)
       iex> Scholar.Impute.KNNImputer.transform(imputer, x)
       Nx.tensor(
-         f32[5][2]
         [
           [40.0, 2.0],
           [4.0, 5.0],
