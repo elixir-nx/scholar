@@ -121,7 +121,7 @@ defmodule Scholar.Impute.KNNImputer do
   ## Examples
 
       iex> x = Nx.tensor([[40.0, 2.0],[4.0, 5.0],[7.0, :nan],[:nan, 8.0],[11.0, 11.0]])
-      iex> imputer = Scholar.Impute.KNNImputer.fit(x, strategy: :mean)
+      iex> imputer = Scholar.Impute.KNNImputer.fit(x, number_of_neighbors: 2)
       iex> Scholar.Impute.KNNImputer.transform(imputer, x)
       Nx.tensor(
         [
