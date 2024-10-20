@@ -103,7 +103,9 @@ defmodule Scholar.Impute.KNNImputer do
             "Number of neighbors rows must be less than number valid of rows - 1 (valid row is row with more than 1 non nan value)"
     end
 
-    statistics = knn_impute(x, num_neighbors: num_neighbors)
+    placeholder_value = Nx.Constants.nan() |> Nx.tensor()
+
+    statistics = knn_impute(x, placeholder_value, num_neighbors: num_neighbors)
     #     statistics = all_nan_rows_count
     missing_values = opts[:missing_values]
     %__MODULE__{statistics: statistics, missing_values: missing_values}
@@ -136,13 +138,12 @@ defmodule Scholar.Impute.KNNImputer do
     Nx.select(mask, statistics, x)
   end
 
-  defn knn_impute(x, opts \\ []) do
+  defnp knn_impute(x, placeholder_value, opts \\ []) do
     mask = Nx.is_nan(x)
     {num_rows, num_cols} = Nx.shape(x)
     num_neighbors = opts[:num_neighbors]
 
-    placeholder_value = Nx.Constants.nan()
-    values_to_impute = Nx.broadcast(Nx.tensor(placeholder_value), x)
+    values_to_impute = Nx.broadcast(placeholder_value, x)
 
     {_, values_to_impute} =
       while {{row = 0, mask, num_neighbors, num_rows, x}, values_to_impute},
