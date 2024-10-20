@@ -73,15 +73,15 @@ defmodule Scholar.Impute.KNNImputer do
     end
 
     if opts[:missing_values] != :nan and
-       Nx.any(Nx.is_nan(x)) == Nx.tensor(1, type: :u8) do
+         Nx.any(Nx.is_nan(x)) == Nx.tensor(1, type: :u8) do
       raise ArgumentError,
             ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array"
     end
 
     x =
       if opts[:missing_values] != :nan,
-         do: Nx.select(Nx.equal(x, opts[:missing_values]), Nx.Constants.nan(), x),
-         else: x
+        do: Nx.select(Nx.equal(x, opts[:missing_values]), Nx.Constants.nan(), x),
+        else: x
 
     num_neighbors = opts[:number_of_neighbors]
 
