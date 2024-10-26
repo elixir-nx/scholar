@@ -34,7 +34,7 @@ defmodule Scholar.Covariance.LedoitWolf do
   @doc """
 
   Estimate the shrunk Ledoit-Wolf covariance matrix.
-  
+
   ## Options
 
   #{NimbleOptions.docs(@opts_schema)}
@@ -113,8 +113,10 @@ defmodule Scholar.Covariance.LedoitWolf do
 
   defnp fit_n(x, opts) do
     {x, location} = center(x, opts)
-    {covariance, shrinkage} = 
+
+    {covariance, shrinkage} =
       ledoit_wolf(x, opts)
+
     %__MODULE__{
       covariance: covariance,
       shrinkage: shrinkage,
@@ -123,7 +125,7 @@ defmodule Scholar.Covariance.LedoitWolf do
   end
 
   defnp center(x, opts) do
-    location = 
+    location =
       if opts[:assume_centered] do
         Nx.broadcast(0, {Nx.axis_size(x, 1)})
       else
@@ -135,13 +137,16 @@ defmodule Scholar.Covariance.LedoitWolf do
 
   defnp ledoit_wolf(x, opts) do
     case Nx.shape(x) do
-      {_n, 1}  -> {
-        Nx.pow(x, 2) 
-        |> Nx.mean()
-        |> Nx.broadcast({1,1}), 
-        0.0
-      }
-      _       -> ledoit_wolf_complex(x, opts)
+      {_n, 1} ->
+        {
+          Nx.pow(x, 2)
+          |> Nx.mean()
+          |> Nx.broadcast({1, 1}),
+          0.0
+        }
+
+      _ ->
+        ledoit_wolf_complex(x, opts)
     end
   end
 
@@ -149,7 +154,8 @@ defmodule Scholar.Covariance.LedoitWolf do
     n_features = Nx.axis_size(x, 1)
     shrinkage = ledoit_wolf_shrinkage(x, opts)
     emp_cov = empirical_covariance(x, opts)
-    mu = Nx.sum(trace(emp_cov)) / n_features#git
+    # git
+    mu = Nx.sum(trace(emp_cov)) / n_features
     shrunk_cov = (1.0 - shrinkage) * emp_cov
     mask = Nx.iota(Nx.shape(shrunk_cov))
     selector = Nx.remainder(mask, n_features + 1) == 0
@@ -158,14 +164,18 @@ defmodule Scholar.Covariance.LedoitWolf do
   end
 
   defnp empirical_covariance(x, _opts) do
-    x = case Nx.shape(x) do
-      {n} -> Nx.broadcast(x, {n, 1})
-      _ -> x
-    end
+    x =
+      case Nx.shape(x) do
+        {n} -> Nx.broadcast(x, {n, 1})
+        _ -> x
+      end
+
     n = Nx.axis_size(x, 0)
-    covariance = Nx.transpose(x) 
-                  |> Nx.dot(x)
-                  |> Nx.divide(n)
+
+    covariance =
+      Nx.transpose(x)
+      |> Nx.dot(x)
+      |> Nx.divide(n)
 
     case Nx.shape(covariance) do
       {} -> Nx.reshape(covariance, {1, 1})
@@ -175,17 +185,23 @@ defmodule Scholar.Covariance.LedoitWolf do
 
   defnp trace(x) do
     n = Nx.axis_size(x, 0)
+
     Nx.eye(n)
     |> Nx.multiply(x)
-    |> Nx.sum() 
+    |> Nx.sum()
   end
 
   defnp ledoit_wolf_shrinkage(x, opts) do
     case Nx.shape(x) do
-      {_, 1} -> 0
-      {n} -> Nx.broadcast(x, {1, n}) 
+      {_, 1} ->
+        0
+
+      {n} ->
+        Nx.broadcast(x, {1, n})
         |> ledoit_wolf_shrinkage_complex(opts)
-      _ -> ledoit_wolf_shrinkage_complex(x, opts)
+
+      _ ->
+        ledoit_wolf_shrinkage_complex(x, opts)
     end
   end
 
@@ -193,7 +209,7 @@ defmodule Scholar.Covariance.LedoitWolf do
     {n_samples, n_features} = Nx.shape(x)
     {_, size} = Nx.type(x)
     block_size = opts[:block_size]
-    n_splits = n_features / block_size |> Nx.floor() |> Nx.as_type({:s, size})
+    n_splits = (n_features / block_size) |> Nx.floor() |> Nx.as_type({:s, size})
 
     x2 = Nx.pow(x, 2)
     emp_cov_trace = Nx.sum(x2, axes: [0]) / n_samples
@@ -202,11 +218,13 @@ defmodule Scholar.Covariance.LedoitWolf do
     delta = Nx.tensor(0.0, type: {:f, size})
     i = Nx.tensor(0)
     block = Nx.iota({block_size})
-    if n_splits > 0 do 
+
+    if n_splits > 0 do
       {beta, delta, _} =
         while {beta, delta, {x, x2, block, i, n_splits}}, i < n_splits do
           {block_size} = Nx.shape(block)
           j = Nx.tensor(0)
+
           {beta, delta, _} =
             while {beta, delta, {x, x2, block, i, j, n_splits}}, j < n_splits do
               {block_size} = Nx.shape(block)
@@ -214,82 +232,114 @@ defmodule Scholar.Covariance.LedoitWolf do
               cols_from = block_size * j
               x2_t = Nx.transpose(x2)
               x_t = Nx.transpose(x)
-              to_beta = Nx.slice_along_axis(x2_t, rows_from, block_size, axis: 0)
-                        |> Nx.dot(Nx.slice_along_axis(x2, cols_from, block_size, axis: 1))
-                        |> Nx.sum()
+
+              to_beta =
+                Nx.slice_along_axis(x2_t, rows_from, block_size, axis: 0)
+                |> Nx.dot(Nx.slice_along_axis(x2, cols_from, block_size, axis: 1))
+                |> Nx.sum()
+
               beta = beta + to_beta
-              to_delta = Nx.slice_along_axis(x_t, rows_from, block_size, axis: 0)
-                          |> Nx.dot(Nx.slice_along_axis(x, cols_from, block_size, axis: 1))
-                          |> Nx.pow(2)
-                          |> Nx.sum()
+
+              to_delta =
+                Nx.slice_along_axis(x_t, rows_from, block_size, axis: 0)
+                |> Nx.dot(Nx.slice_along_axis(x, cols_from, block_size, axis: 1))
+                |> Nx.pow(2)
+                |> Nx.sum()
+
               delta = delta + to_delta
 
               {beta, delta, {x, x2, block, i, j + 1, n_splits}}
             end
-            rows_from = block_size * i
-            x2_t = Nx.transpose(x2)
-            x_t = Nx.transpose(x)
-            {m, n} = Nx.shape(x2)
-            mask = Nx.iota({1, n}) |> Nx.tile([m]) |> Nx.reshape({m, n})
-            mask = Nx.select(mask >= block_size * n_splits, 1, 0)
 
-            to_beta = Nx.slice_along_axis(x2_t, rows_from, block_size, axis: 0)
-                        |> Nx.dot(Nx.multiply(x2, mask))
-                        |> Nx.sum()
-            beta = beta + to_beta
-            to_delta = Nx.slice_along_axis(x_t, rows_from, block_size, axis: 0)
-                        |> Nx.dot(Nx.multiply(x, mask))
-                        |> Nx.pow(2)
-                        |> Nx.sum()
-            delta = delta + to_delta
+          rows_from = block_size * i
+          x2_t = Nx.transpose(x2)
+          x_t = Nx.transpose(x)
+          {m, n} = Nx.shape(x2)
+          mask = Nx.iota({1, n}) |> Nx.tile([m]) |> Nx.reshape({m, n})
+          mask = Nx.select(mask >= block_size * n_splits, 1, 0)
+
+          to_beta =
+            Nx.slice_along_axis(x2_t, rows_from, block_size, axis: 0)
+            |> Nx.dot(Nx.multiply(x2, mask))
+            |> Nx.sum()
+
+          beta = beta + to_beta
+
+          to_delta =
+            Nx.slice_along_axis(x_t, rows_from, block_size, axis: 0)
+            |> Nx.dot(Nx.multiply(x, mask))
+            |> Nx.pow(2)
+            |> Nx.sum()
+
+          delta = delta + to_delta
 
           {beta, delta, {x, x2, block, i + 1, n_splits}}
         end
+
       j = Nx.tensor(0)
-      {beta, delta, _} = 
+
+      {beta, delta, _} =
         while {beta, delta, {x, x2, block, j, n_splits}}, j < n_splits do
           {block_size} = Nx.shape(block)
           cols_from = block_size * j
           x2_t = Nx.transpose(x2)
           x_t = Nx.transpose(x)
           {rows, cols} = Nx.shape(x)
-          mask = Nx.iota({1, cols}) |> Nx.tile([rows]) |> Nx.reshape({rows, cols}) |> Nx.transpose()
+
+          mask =
+            Nx.iota({1, cols}) |> Nx.tile([rows]) |> Nx.reshape({rows, cols}) |> Nx.transpose()
+
           mask = Nx.select(mask >= block_size * n_splits, 1, 0)
-          to_beta = Nx.multiply(x2_t, mask)
-                    |> Nx.dot(Nx.slice_along_axis(x2, cols_from, block_size, axis: 1))
-                    |> Nx.sum()
+
+          to_beta =
+            Nx.multiply(x2_t, mask)
+            |> Nx.dot(Nx.slice_along_axis(x2, cols_from, block_size, axis: 1))
+            |> Nx.sum()
+
           beta = beta + to_beta
-          to_delta = Nx.multiply(x_t, mask)
-                      |> Nx.dot(Nx.slice_along_axis(x, cols_from, block_size, axis: 1))
-                      |> Nx.pow(2)
-                      |> Nx.sum()
+
+          to_delta =
+            Nx.multiply(x_t, mask)
+            |> Nx.dot(Nx.slice_along_axis(x, cols_from, block_size, axis: 1))
+            |> Nx.pow(2)
+            |> Nx.sum()
+
           delta = delta + to_delta
           {beta, delta, {x, x2, block, j + 1, n_splits}}
         end
+
       {beta, delta}
     else
       {beta, delta}
     end
+
     x2_t = Nx.transpose(x2)
     x_t = Nx.transpose(x)
     {rows, cols} = Nx.shape(x)
-    mask = Nx.iota({1, cols}) |> Nx.tile([rows]) |> Nx.reshape({rows, cols}) 
+    mask = Nx.iota({1, cols}) |> Nx.tile([rows]) |> Nx.reshape({rows, cols})
     mask = Nx.select(mask >= block_size * n_splits, 1, 0)
     mask_t = Nx.transpose(mask)
-    to_delta = Nx.multiply(x_t, mask_t)
-              |> Nx.dot(Nx.multiply(x, mask))
-              |> Nx.pow(2)
-              |> Nx.sum()
+
+    to_delta =
+      Nx.multiply(x_t, mask_t)
+      |> Nx.dot(Nx.multiply(x, mask))
+      |> Nx.pow(2)
+      |> Nx.sum()
+
     delta = delta + to_delta
     delta = delta / Nx.pow(n_samples, 2)
-    to_beta = Nx.multiply(x2_t, mask_t)
-              |> Nx.dot(Nx.multiply(x2, mask))
-              |> Nx.sum()
+
+    to_beta =
+      Nx.multiply(x2_t, mask_t)
+      |> Nx.dot(Nx.multiply(x2, mask))
+      |> Nx.sum()
+
     beta = beta + to_beta
     beta = 1.0 / (n_features * n_samples) * (beta / n_samples - delta)
     delta = delta - 2.0 * mu * Nx.sum(emp_cov_trace) + n_features * Nx.pow(mu, 2)
     delta = delta / n_features
     beta = Nx.min(beta, delta)
+
     case beta do
       0 -> 0
       _ -> beta / delta
