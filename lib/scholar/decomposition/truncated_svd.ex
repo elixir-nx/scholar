@@ -90,6 +90,11 @@ defmodule Scholar.Decomposition.TruncatedSVD do
         f32[2]
         [7.528080940246582, 0.7601959705352783]
       >
+      iex> key = Nx.Random.key(0)
+      iex> x = Nx.tensor([[0, 0, 3], [1, 0, 3], [1, 1, 3], [3, 3, 3], [4, 4.5, 3]])
+      iex> tsvd = Scholar.Decomposition.TruncatedSVD.fit(x, num_components: 2, key: key)
+      iex> tsvd.components
+
   """
 
   deftransform fit(x, opts \\ []) do
@@ -162,7 +167,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     {u, sigma, vt} = randomized_svd(x, key, opts)
     {_u, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
 
-    x_transformed = Nx.dot(x, [1], vt, [0])
+    x_transformed = Nx.dot(x, Nx.transpose(vt))
     explained_variance = Nx.variance(x_transformed, axes: [0])
     full_variance = Nx.variance(x, axes: [0]) |> Nx.sum()
     explained_variance_ratio = explained_variance / full_variance
@@ -177,7 +182,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
 
   defnp fit_transform_n(x, key, opts) do
     module = fit_n(x, key, opts)
-    Nx.dot(x, [1], module.components, [0])
+    Nx.dot(x, Nx.transpose(module.components))
   end
 
   defnp randomized_svd(m, key, opts) do
@@ -198,7 +203,8 @@ defmodule Scholar.Decomposition.TruncatedSVD do
 
     q = randomized_range_finder(m, key, size: n_random, num_iter: num_iter)
 
-    b = Nx.dot(q, [-2], m, [-2])
+    q_t = Nx.transpose(q)
+    b = Nx.dot(q_t, m)
     {uhat, s, vt} = Nx.LinAlg.svd(b)
     u = Nx.dot(q, uhat)
     vt = Nx.slice(vt, [0, 0], [num_components, num_features])
