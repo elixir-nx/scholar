@@ -1,34 +1,110 @@
 defmodule Scholar.Covariance.LedoitWolf do
+  @moduledoc """
+  Ledoit-Wolf is a particular form of shrinkage covariance estimator, where the shrinkage coefficient is computed using O.
+
+  Ledoit and M. Wolf's formula as
+  described in "A Well-Conditioned Estimator for Large-Dimensional
+  Covariance Matrices", Ledoit and Wolf, Journal of Multivariate
+  Analysis, Volume 88, Issue 2, February 2004, pages 365-411.
+  """
   import Nx.Defn
 
-  opts = [
+  @derive {Nx.Container, containers: [:covariance, :shrinkage, :location]}
+  defstruct [:covariance, :shrinkage, :location]
+
+  opts_schema = [
     block_size: [
       default: 1000,
-      type: {:custom, Scholar.Options, :positive_number, []}
+      type: {:custom, Scholar.Options, :positive_number, []},
+      doc: "Size of blocks into which the covariance matrix will be split."
     ],
+    assume_centered: [
+      default: false,
+      type: :boolean,
+      doc: """
+        If `true`, data will not be centered before computation.
+        Useful when working with data whose mean is almost, but not exactly
+        zero.
+        If `false`, data will be centered before computation.
+      """
+    ]
   ]
 
-  @opts_schema NimbleOptions.new!(opts)
+  @opts_schema NimbleOptions.new!(opts_schema)
   @doc """
+
+  Estimate the shrunk Ledoit-Wolf covariance matrix.
+  
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
+
+  ## Return Values
+
+    The function returns a struct with the following parameters:
+
+    * `:covariance` - Tensor of shape `{n_features, n_features}`. Estimated covariance matrix.
+
+    * `:shrinkage` - Coefficient in the convex combination used for the computation of the shrunk estimate. Range is `[0, 1]`.
+
+    * `:location` - Tensor of shape `{n_features,}`.
+      Estimated location, i.e. the estimated mean.
+
   ## Examples
 
       iex> key = Nx.Random.key(0)
       iex> {x, _new_key} = Nx.Random.multivariate_normal(key, Nx.tensor([0.0, 0.0]), Nx.tensor([[0.4, 0.2], [0.2, 0.8]]), shape: {50}, type: :f32)
       iex> Scholar.Covariance.LedoitWolf.fit(x)
-      {#Nx.Tensor<
-        f32[2][2]
-        [
-          [0.355768620967865, 0.17340737581253052],
-          [0.17340737581253052, 1.0300586223602295]
-        ]
-      >,
-      #Nx.Tensor<
-        f32
-        0.15034136176109314
-      >}
-      iex> {x, _new_key} = Nx.Random.normal(key, 1, 6, shape: {10, 2}, type: :f32)
+      %Scholar.Covariance.LedoitWolf{
+        covariance: #Nx.Tensor<
+          f32[2][2]
+          [
+            [0.355768620967865, 0.17340737581253052],
+            [0.17340737581253052, 1.0300586223602295]
+          ]
+        >,
+        shrinkage: #Nx.Tensor<
+          f32
+          0.15034136176109314
+        >,
+        location: #Nx.Tensor<
+          f32[2]
+          [0.17184630036354065, 0.3276958167552948]
+        >
+      }
+      iex> key = Nx.Random.key(0)
+      iex> {x, _new_key} = Nx.Random.multivariate_normal(key, Nx.tensor([0.0, 0.0, 0.0]), Nx.tensor([[3.0, 2.0, 1.0], [1.0, 2.0, 3.0], [1.3, 1.0, 2.2]]), shape: {10}, type: :f32)
       iex> Scholar.Covariance.LedoitWolf.fit(x)
-      iex> 
+      %Scholar.Covariance.LedoitWolf{
+        covariance: #Nx.Tensor<
+          f32[3][3]
+          [
+            [2.5945029258728027, 1.507835865020752, 1.1623677015304565],
+            [1.507835865020752, 2.106797218322754, 1.181215524673462],
+            [1.1623677015304565, 1.181215524673462, 1.460626482963562]
+          ]
+        >,
+        shrinkage: #Nx.Tensor<
+          f32
+          0.1908363550901413
+        >,
+        location: #Nx.Tensor<
+          f32[3]
+          [1.1228725910186768, 0.5419300198554993, 0.8678852319717407]
+        >
+      }
+      iex> key = Nx.Random.key(0)
+      iex> {x, _new_key} = Nx.Random.multivariate_normal(key, Nx.tensor([0.0, 0.0, 0.0]), Nx.tensor([[3.0, 2.0, 1.0], [1.0, 2.0, 3.0], [1.3, 1.0, 2.2]]), shape: {10}, type: :f32)
+      iex> cov = Scholar.Covariance.LedoitWolf.fit(x, assume_centered: true)
+      iex> cov.covariance
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [3.8574986457824707, 2.2048025131225586, 2.1504499912261963],
+          [2.2048025131225586, 2.4572863578796387, 1.7215262651443481],
+          [2.1504499912261963, 1.7215262651443481, 2.154898166656494]
+        ]
+      >
   """
 
   deftransform fit(x, opts \\ []) do
@@ -36,9 +112,25 @@ defmodule Scholar.Covariance.LedoitWolf do
   end
 
   defnp fit_n(x, opts) do
-    location = Nx.mean(x, axes: [0])
+    {x, location} = center(x, opts)
     {covariance, shrinkage} = 
-      ledoit_wolf(x - Nx.broadcast(location, x), opts)
+      ledoit_wolf(x, opts)
+    %__MODULE__{
+      covariance: covariance,
+      shrinkage: shrinkage,
+      location: location
+    }
+  end
+
+  defnp center(x, opts) do
+    location = 
+      if opts[:assume_centered] do
+        Nx.broadcast(0, {Nx.axis_size(x, 1)})
+      else
+        Nx.mean(x, axes: [0])
+      end
+
+    {x - Nx.broadcast(location, x), location}
   end
 
   defnp ledoit_wolf(x, opts) do
