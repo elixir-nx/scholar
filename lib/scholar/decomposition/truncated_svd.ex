@@ -90,10 +90,6 @@ defmodule Scholar.Decomposition.TruncatedSVD do
         f32[2]
         [7.528080940246582, 0.7601959705352783]
       >
-      iex> key = Nx.Random.key(0)
-      iex> x = Nx.tensor([[0, 0, 3], [1, 0, 3], [1, 1, 3], [3, 3, 3], [4, 4.5, 3]])
-      iex> tsvd = Scholar.Decomposition.TruncatedSVD.fit(x, num_components: 2, key: key)
-      iex> tsvd.components
 
   """
 
@@ -127,6 +123,19 @@ defmodule Scholar.Decomposition.TruncatedSVD do
           [1.413663387298584, 0.039442360401153564],
           [4.240990161895752, 0.1183270812034607],
           [6.017930030822754, -0.18578583002090454]
+        ]
+      >
+      iex> key = Nx.Random.key(0)
+      iex> x = Nx.tensor([[0, 0, 3], [1, 0, 3], [1, 1, 3], [3, 3, 3], [4, 4.5, 3]])
+      iex> tsvd = Scholar.Decomposition.TruncatedSVD.fit_transform(x, num_components: 2, key: key)
+      #Nx.Tensor<
+        f32[5][2]
+        [
+          [1.9478826522827148, 2.260593891143799],
+          [2.481153964996338, 1.906071662902832],
+          [3.023407220840454, 1.352442979812622],
+          [5.174456596374512, -0.46385863423347473],
+          [6.521108150482178, -1.6488237380981445]
         ]
       >
   """
