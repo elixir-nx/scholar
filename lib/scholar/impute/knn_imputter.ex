@@ -194,7 +194,7 @@ defmodule Scholar.Impute.KNNImputter do
 
         distance =
           if i == nan_row do
-            Nx.Constants.infinity({:f, 32})
+            Nx.Constants.infinity(Nx.type(row_with_value_to_fill))
           else
             nan_euclidian(row_with_value_to_fill, nan_col, potential_donor)
           end
@@ -223,12 +223,18 @@ defmodule Scholar.Impute.KNNImputter do
     # if potential neighbor has nan in nan_col, we don't want to calculate distance and the case if potential_neighbour is the row to impute
     {potential_neighbor} =
       if Nx.is_nan(potential_neighbor[nan_col]) do
-        potential_neighbor = Nx.broadcast(Nx.Constants.infinity({:f, 32}), potential_neighbor)
+        potential_neighbor =
+          Nx.broadcast(Nx.Constants.infinity(Nx.type(potential_neighbor)), potential_neighbor)
+
         {potential_neighbor}
       else
         # inputes zeros in nan_col to calculate distance with squared_euclidean - distance will be 0 so no change to the distance value
         potential_neighbor =
-          Nx.indexed_put(potential_neighbor, Nx.new_axis(nan_col, 0), Nx.tensor(0))
+          Nx.indexed_put(
+            potential_neighbor,
+            Nx.new_axis(nan_col, 0),
+            Nx.tensor(0, type: Nx.type(row))
+          )
 
         {potential_neighbor}
       end
@@ -239,7 +245,9 @@ defmodule Scholar.Impute.KNNImputter do
     # if row has all nans we skip it
     {weight, potential_neighbor} =
       if present_coordinates == 0 do
-        potential_neighbor = Nx.broadcast(Nx.Constants.infinity({:f, 32}), potential_neighbor)
+        potential_neighbor =
+          Nx.broadcast(Nx.Constants.infinity(Nx.type(potential_neighbor)), potential_neighbor)
+
         weight = 0
         {weight, potential_neighbor}
       else
@@ -252,6 +260,6 @@ defmodule Scholar.Impute.KNNImputter do
     distance = Nx.sqrt(weight * squared_euclidean(new_row, potential_neighbor))
 
     # return inf if potential_row is row to impute
-    Nx.select(Nx.is_nan(distance), Nx.Constants.infinity({:f, 32}), distance)
+    Nx.select(Nx.is_nan(distance), Nx.Constants.infinity(Nx.type(distance)), distance)
   end
 end
