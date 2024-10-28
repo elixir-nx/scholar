@@ -18,6 +18,8 @@ defmodule Scholar.Impute.KNNImputter do
       default: :nan,
       doc: ~S"""
       The placeholder for the missing values. All occurrences of `:missing_values` will be imputed.
+
+      The default value expects there are no NaNs in the input tensor.
       """
     ],
     number_of_neighbors: [
@@ -30,7 +32,12 @@ defmodule Scholar.Impute.KNNImputter do
   @opts_schema NimbleOptions.new!(opts_schema)
 
   @doc """
-  Imputer for completing missing values using k-Nearest Neighbors.
+  Imputter for completing missing values using k-Nearest Neighbors.
+
+  Preconditions:
+    * `number_of_neighbors` is a positive integer.
+    *  number of neighbors must be less than number valid of rows - 1 (valid row is row with more than 1 non nan value) otherwise it is better to use simple imputter
+    *  when you set a value different than :nan in `missing_values` there should be no NaNs in the input tensor
 
   ## Options
 
@@ -52,11 +59,11 @@ defmodule Scholar.Impute.KNNImputter do
       %Scholar.Impute.KNNImputter{
         statistics: Nx.tensor(
           [
-                  [NaN, NaN],
-                  [NaN, NaN],
-                  [NaN, 8.0],
-                  [7.5, NaN],
-                  [NaN, NaN]
+                  [:nan, :nan],
+                  [:nan, :nan],
+                  [:nan, 8.0],
+                  [7.5, :nan],
+                  [:nan, :nan]
                 ]
         ),
         missing_values: :nan
@@ -73,12 +80,6 @@ defmodule Scholar.Impute.KNNImputter do
       raise ArgumentError, "Wrong input rank. Expected: 2, got: #{inspect(input_rank)}"
     end
 
-    if opts[:missing_values] != :nan and
-         Nx.any(Nx.is_nan(x)) == Nx.tensor(1, type: :u8) do
-      raise ArgumentError,
-            ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array"
-    end
-
     x =
       if opts[:missing_values] != :nan,
         do: Nx.select(Nx.equal(x, opts[:missing_values]), Nx.Constants.nan(), x),
@@ -86,28 +87,9 @@ defmodule Scholar.Impute.KNNImputter do
 
     num_neighbors = opts[:number_of_neighbors]
 
-    if num_neighbors < 1 do
-      raise ArgumentError, "Number of neighbors must be greater than 0"
-    end
-
-    {rows, cols} = Nx.shape(x)
-
-    row_nan_count = Nx.sum(Nx.is_nan(x), axes: [1])
-    # row with only 1 non nan value is also considered as all nan row
-    all_nan_rows =
-      Nx.select(Nx.greater_equal(row_nan_count, cols - 1), Nx.tensor(1), Nx.tensor(0))
-
-    all_nan_rows_count = Nx.sum(all_nan_rows)
-
-    if num_neighbors > rows - 1 - Nx.to_number(all_nan_rows_count) do
-      raise ArgumentError,
-            "Number of neighbors rows must be less than number valid of rows - 1 (valid row is row with more than 1 non nan value)"
-    end
-
     placeholder_value = Nx.Constants.nan() |> Nx.tensor()
 
     statistics = knn_impute(x, placeholder_value, num_neighbors: num_neighbors)
-    #     statistics = all_nan_rows_count
     missing_values = opts[:missing_values]
     %__MODULE__{statistics: statistics, missing_values: missing_values}
   end
