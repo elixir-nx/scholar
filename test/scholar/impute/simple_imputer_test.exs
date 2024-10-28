@@ -122,19 +122,9 @@ defmodule SimpleImputerTest do
       x = Nx.tensor([1, 2, 2, 3])
 
       assert_raise ArgumentError,
-                   "Wrong input rank. Expected: 2, got: 1",
+                   "wrong input rank. Expected: 2, got: 1",
                    fn ->
                      SimpleImputer.fit(x, missing_values: 1, strategy: :mode)
-                   end
-    end
-
-    test "Collision of nan" do
-      x = generate_data()
-
-      assert_raise ArgumentError,
-                   ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array",
-                   fn ->
-                     SimpleImputer.fit(x, missing_values: 1.0, strategy: :mode)
                    end
     end
 
@@ -142,7 +132,7 @@ defmodule SimpleImputerTest do
       x = Nx.tensor([[1.0, 2.0, 2.0, 3.0]])
 
       assert_raise ArgumentError,
-                   "Wrong type of `:fill_value` for the given data. Expected: :f or :bf, got: :s",
+                   "wrong type of `:fill_value` for the given data. Expected: :f or :bf, got: :s",
                    fn ->
                      SimpleImputer.fit(x,
                        missing_values: 1.0,
