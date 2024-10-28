@@ -134,7 +134,7 @@ defmodule Scholar.Covariance.LedoitWolf do
         {_} -> Nx.new_axis(x, 1)
         _ -> x
       end
-    
+
     location =
       if opts[:assume_centered] do
         Nx.broadcast(0, {Nx.axis_size(x, 1)})
