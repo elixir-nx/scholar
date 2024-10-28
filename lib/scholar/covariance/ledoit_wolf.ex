@@ -54,45 +54,49 @@ defmodule Scholar.Covariance.LedoitWolf do
 
       iex> key = Nx.Random.key(0)
       iex> {x, _new_key} = Nx.Random.multivariate_normal(key, Nx.tensor([0.0, 0.0]), Nx.tensor([[0.4, 0.2], [0.2, 0.8]]), shape: {50}, type: :f32)
-      iex> Scholar.Covariance.LedoitWolf.fit(x)
-      %Scholar.Covariance.LedoitWolf{
-        covariance: #Nx.Tensor<
-          f32[2][2]
-          [
-            [0.355768620967865, 0.17340737581253052],
-            [0.17340737581253052, 1.0300586223602295]
-          ]
-        >,
-        shrinkage: #Nx.Tensor<
-          f32
-          0.15034136176109314
-        >,
-        location: #Nx.Tensor<
-          f32[2]
-          [0.17184630036354065, 0.3276958167552948]
-        >
-      }
+      iex> model = Scholar.Covariance.LedoitWolf.fit(x)
+      iex> model.covariance
+      #Nx.Tensor<
+        f32[2][2]
+        [
+          [0.355768620967865, 0.17340737581253052],
+          [0.17340737581253052, 1.0300586223602295]
+        ]
+      >
+      iex> model.shrinkage
+      #Nx.Tensor<
+        f32
+        0.15034136176109314
+      >
+      iex> model.location
+      #Nx.Tensor<
+        f32[2]
+        [0.17184630036354065, 0.3276958167552948]
+      >
+      
       iex> key = Nx.Random.key(0)
       iex> {x, _new_key} = Nx.Random.multivariate_normal(key, Nx.tensor([0.0, 0.0, 0.0]), Nx.tensor([[3.0, 2.0, 1.0], [1.0, 2.0, 3.0], [1.3, 1.0, 2.2]]), shape: {10}, type: :f32)
-      iex> Scholar.Covariance.LedoitWolf.fit(x)
-      %Scholar.Covariance.LedoitWolf{
-        covariance: #Nx.Tensor<
-          f32[3][3]
-          [
-            [2.5945029258728027, 1.507835865020752, 1.1623677015304565],
-            [1.507835865020752, 2.106797218322754, 1.181215524673462],
-            [1.1623677015304565, 1.181215524673462, 1.460626482963562]
-          ]
-        >,
-        shrinkage: #Nx.Tensor<
-          f32
-          0.1908363550901413
-        >,
-        location: #Nx.Tensor<
-          f32[3]
-          [1.1228725910186768, 0.5419300198554993, 0.8678852319717407]
-        >
-      }
+      iex> model = Scholar.Covariance.LedoitWolf.fit(x)
+      iex> model.covariance
+      #Nx.Tensor<
+        f32[3][3]
+        [
+          [2.5945029258728027, 1.507835865020752, 1.1623677015304565],
+          [1.507835865020752, 2.106797218322754, 1.181215524673462],
+          [1.1623677015304565, 1.181215524673462, 1.460626482963562]
+        ]
+      >
+      iex> model.shrinkage
+      #Nx.Tensor<
+        f32
+        0.1908363550901413
+      >
+      iex> model.location 
+      #Nx.Tensor<
+        f32[3]
+        [1.1228725910186768, 0.5419300198554993, 0.8678852319717407]
+      >
+
       iex> key = Nx.Random.key(0)
       iex> {x, _new_key} = Nx.Random.multivariate_normal(key, Nx.tensor([0.0, 0.0, 0.0]), Nx.tensor([[3.0, 2.0, 1.0], [1.0, 2.0, 3.0], [1.3, 1.0, 2.2]]), shape: {10}, type: :f32)
       iex> cov = Scholar.Covariance.LedoitWolf.fit(x, assume_centered: true)
@@ -125,6 +129,12 @@ defmodule Scholar.Covariance.LedoitWolf do
   end
 
   defnp center(x, opts) do
+    x =
+      case Nx.shape(x) do
+        {_} -> Nx.new_axis(x, 1)
+        _ -> x
+      end
+    
     location =
       if opts[:assume_centered] do
         Nx.broadcast(0, {Nx.axis_size(x, 1)})
@@ -164,12 +174,6 @@ defmodule Scholar.Covariance.LedoitWolf do
   end
 
   defnp empirical_covariance(x, _opts) do
-    x =
-      case Nx.shape(x) do
-        {n} -> Nx.broadcast(x, {n, 1})
-        _ -> x
-      end
-
     n = Nx.axis_size(x, 0)
 
     covariance =
