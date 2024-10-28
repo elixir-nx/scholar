@@ -14,6 +14,8 @@ defmodule Scholar.Impute.SimpleImputer do
       default: :nan,
       doc: ~S"""
       The placeholder for the missing values. All occurrences of `:missing_values` will be imputed.
+
+      The default value expects there are no NaNs in the input tensor.
       """
     ],
     strategy: [
@@ -72,17 +74,10 @@ defmodule Scholar.Impute.SimpleImputer do
   """
   deftransform fit(x, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-
     input_rank = Nx.rank(x)
 
     if input_rank != 2 do
-      raise ArgumentError, "Wrong input rank. Expected: 2, got: #{inspect(input_rank)}"
-    end
-
-    if opts[:missing_values] != :nan and
-         Nx.any(Nx.is_nan(x)) == Nx.tensor(1, type: :u8) do
-      raise ArgumentError,
-            ":missing_values other than :nan possible only if there is no Nx.Constant.nan() in the array"
+      raise ArgumentError, "wrong input rank. Expected: 2, got: #{inspect(input_rank)}"
     end
 
     {type, _num_bits} = x_type = Nx.type(x)
@@ -98,7 +93,7 @@ defmodule Scholar.Impute.SimpleImputer do
           {fill_value_type, _} = Nx.type(opts[:fill_value])
 
           raise ArgumentError,
-                "Wrong type of `:fill_value` for the given data. Expected: :f or :bf, got: #{inspect(fill_value_type)}"
+                "wrong type of `:fill_value` for the given data. Expected: :f or :bf, got: #{inspect(fill_value_type)}"
 
         true ->
           x
