@@ -68,10 +68,6 @@ defmodule Scholar.Linear.LogisticRegression do
 
     * `:bias` - Bias added to the decision function.
 
-    * `:mode` - Indicates whether the problem is binary classification (`:num_classes` set to 2)
-      or multinomial (`:num_classes` is bigger than 2). For binary classification set to `:binary`, otherwise
-      set to `:multinomial`.
-
   ## Examples
 
       iex> x = Nx.tensor([[1.0, 2.0], [3.0, 2.0], [4.0, 7.0]])
