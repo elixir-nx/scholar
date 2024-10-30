@@ -80,19 +80,29 @@ defmodule Scholar.NaiveBayes.Bernoulli do
   Fits a naive Bayes model. The function assumes that the targets `y` are integers
   between 0 and `num_classes` - 1 (inclusive). Otherwise, those samples will not
   contribute to `class_count`.
+
   ## Options
+
   #{NimbleOptions.docs(@opts_schema)}
+
   ## Return Values
+
   The function returns a struct with the following parameters:
+
     * `:class_count` - Number of samples encountered for each class during fitting. This
         value is weighted by the sample weight when provided.
+
     * `:class_log_priors` - Smoothed empirical log probability for each class.
+
     * `:feature_count` - Number of samples encountered for each (class, feature)
         during fitting. This value is weighted by the sample weight when
         provided.
+
     * `:feature_log_probability` - Empirical log probability of features
         given a class, ``P(x_i|y)``.
+
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> Scholar.NaiveBayes.Bernoulli.fit(x, y, num_classes: 3, binarize: 1.0)
@@ -118,6 +128,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
               ]
             )
           }
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> Scholar.NaiveBayes.Bernoulli.fit(x, y, num_classes: 3, force_alpha: false, alpha: 0.0)
@@ -144,6 +155,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
             )
           }
   """
+
   deftransform fit(x, y, opts \\ []) do
     if Nx.rank(x) != 2 do
       raise ArgumentError,
@@ -173,11 +185,6 @@ defmodule Scholar.NaiveBayes.Bernoulli do
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
     type = to_float_type(x)
-
-    x_binarize =
-      if opts[:binarize] != nil,
-        do: Scholar.Preprocessing.Binarizer.fit_transform(x, threshold: opts[:binarize]),
-        else: x
 
     {alpha, opts} = Keyword.pop!(opts, :alpha)
     alpha = Nx.tensor(alpha, type: type)
@@ -226,7 +233,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
           sample_weights_flag: sample_weights_flag
         ]
 
-    fit_n(x_binarize, y, class_priors, sample_weights, alpha, opts)
+    fit_n(x, y, class_priors, sample_weights, alpha, opts)
   end
 
   defnp fit_n(x, y, class_priors, sample_weights, alpha, opts) do
@@ -234,6 +241,12 @@ defmodule Scholar.NaiveBayes.Bernoulli do
     num_samples = Nx.axis_size(x, 0)
 
     num_classes = opts[:num_classes]
+
+    x =
+      case opts[:binarize] do
+        nil -> x
+        binarize ->Scholar.Preprocessing.Binarizer.fit_transform(x, threshold: binarize)
+      end
 
     y_one_hot = Scholar.Preprocessing.OneHotEncoder.fit_transform(y, num_categories: num_classes)
     y_one_hot = Nx.select(y_one_hot, Nx.tensor(1, type: type), Nx.tensor(0, type: type))
@@ -281,7 +294,9 @@ defmodule Scholar.NaiveBayes.Bernoulli do
   @doc """
   Perform classification on an array of test vectors `x` using `model`.
   You need to add sorted classes from the training data as the second argument.
+
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> model = Scholar.NaiveBayes.Bernoulli.fit(x, y, num_classes: 3)
@@ -291,6 +306,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
         [2, 2]
       >
   """
+
   defn predict(%__MODULE__{} = model, x, classes) do
     check_dim(x, Nx.axis_size(model.feature_count, 1))
 
@@ -316,7 +332,9 @@ defmodule Scholar.NaiveBayes.Bernoulli do
 
   @doc """
   Return log-probability estimates for the test vector `x` using `model`.
+
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> model = Scholar.NaiveBayes.Bernoulli.fit(x, y, num_classes: 3)
@@ -329,6 +347,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
         ]
       >
   """
+
   defn predict_log_probability(%__MODULE__{} = model, x) do
     check_dim(x, Nx.axis_size(model.feature_count, 1))
     jll = joint_log_likelihood(model, x)
@@ -344,7 +363,9 @@ defmodule Scholar.NaiveBayes.Bernoulli do
 
   @doc """
   Return probability estimates for the test vector `x` using `model`.
+
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> model = Scholar.NaiveBayes.Bernoulli.fit(x, y, num_classes: 3)
@@ -357,13 +378,16 @@ defmodule Scholar.NaiveBayes.Bernoulli do
         ]
       >
   """
+
   defn predict_probability(%__MODULE__{} = model, x) do
     Nx.exp(predict_log_probability(model, x))
   end
 
   @doc """
   Return joint log probability estimates for the test vector `x` using `model`.
+
   ## Examples
+
       iex> x = Nx.iota({4, 3})
       iex> y = Nx.tensor([1, 2, 0, 2])
       iex> model = Scholar.NaiveBayes.Bernoulli.fit(x, y, num_classes: 3)
@@ -376,6 +400,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
         ]
       >
   """
+
   defn predict_joint_log_probability(%__MODULE__{} = model, x) do
     check_dim(x, Nx.axis_size(model.feature_count, 1))
     joint_log_likelihood(model, x)
