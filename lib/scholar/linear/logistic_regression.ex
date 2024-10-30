@@ -34,7 +34,7 @@ defmodule Scholar.Linear.LogisticRegression do
     ],
     optimizer: [
       type: {:custom, Scholar.Options, :optimizer, []},
-      default: :sgd,
+      default: :adam,
       doc: """
       The optimizer name or {init, update} pair of functions (see `Polaris.Optimizers` for more details).
       """
