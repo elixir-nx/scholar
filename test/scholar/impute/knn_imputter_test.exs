@@ -72,7 +72,8 @@ defmodule KNNImputterTest do
 
     test "missing values different than :nan" do
       x = generate_data()
-      x = Nx.select(Nx.is_nan(x), Nx.tensor(19.0), x)
+      x = Nx.select(Nx.is_nan(x), 19.0, x)
+#      x = Nx.select(Nx.equal(x,19), :nan, x)
       jit_fit = Nx.Defn.jit(&KNNImputter.fit/2)
       jit_transform = Nx.Defn.jit(&KNNImputter.transform/2)
 
@@ -103,17 +104,17 @@ defmodule KNNImputterTest do
   end
 
   describe "errors" do
-    test "Wrong impute rank" do
+    test "invalid impute rank" do
       x = Nx.tensor([1, 2, 2, 3])
 
       assert_raise ArgumentError,
-                   "Wrong input rank. Expected: 2, got: 1",
+                   "wrong input rank. Expected: 2, got: 1",
                    fn ->
                      KNNImputter.fit(x, missing_values: 1, number_of_neighbors: 2)
                    end
     end
 
-    test "Invalid n_neighbors value" do
+    test "invalid n_neighbors value" do
       x = generate_data()
 
       jit_fit = Nx.Defn.jit(&KNNImputter.fit/2)

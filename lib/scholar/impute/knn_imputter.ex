@@ -3,8 +3,8 @@ defmodule Scholar.Impute.KNNImputter do
   Imputer for completing missing values using k-Nearest Neighbors.
 
   Each sample's missing values are imputed using the mean value from
-    `n_neighbors` nearest neighbors found in the training set. Two samples are
-    close if the features that neither is missing are close.
+  `n_neighbors` nearest neighbors found in the training set. Two samples are
+  close if the features that neither is missing are close.
   """
   import Nx.Defn
   import Scholar.Metrics.Distance
@@ -36,7 +36,8 @@ defmodule Scholar.Impute.KNNImputter do
 
   Preconditions:
     * `number_of_neighbors` is a positive integer.
-    *  number of neighbors must be less than number valid of rows - 1 (valid row is row with more than 1 non nan value) otherwise it is better to use simple imputter
+    *  number of neighbors must be less than number valid of rows - 1
+  (valid row is row with more than 1 non nan value) otherwise it is better to use simple imputter
     *  when you set a value different than :nan in `missing_values` there should be no NaNs in the input tensor
 
   ## Options
@@ -77,20 +78,18 @@ defmodule Scholar.Impute.KNNImputter do
     input_rank = Nx.rank(x)
 
     if input_rank != 2 do
-      raise ArgumentError, "Wrong input rank. Expected: 2, got: #{inspect(input_rank)}"
+      raise ArgumentError, "wrong input rank. Expected: 2, got: #{inspect(input_rank)}"
     end
 
-    x =
-      if opts[:missing_values] != :nan,
-        do: Nx.select(Nx.equal(x, opts[:missing_values]), Nx.Constants.nan(), x),
-        else: x
-
-    num_neighbors = opts[:number_of_neighbors]
-
-    placeholder_value = Nx.Constants.nan() |> Nx.tensor()
-
-    statistics = knn_impute(x, placeholder_value, num_neighbors: num_neighbors)
     missing_values = opts[:missing_values]
+
+    x =
+      if missing_values != :nan,
+         do: Nx.select(Nx.equal(x, missing_values), :nan, x),
+         else: x
+
+
+    statistics = knn_impute(x, num_neighbors: opts[:number_of_neighbors], missing_values: missing_values)
     %__MODULE__{statistics: statistics, missing_values: missing_values}
   end
 
@@ -121,10 +120,12 @@ defmodule Scholar.Impute.KNNImputter do
     Nx.select(mask, statistics, x)
   end
 
-  defnp knn_impute(x, placeholder_value, opts \\ []) do
+  defnp knn_impute(x, opts \\ []) do
     mask = Nx.is_nan(x)
     {num_rows, num_cols} = Nx.shape(x)
     num_neighbors = opts[:num_neighbors]
+
+    placeholder_value = Nx.tensor(:nan)
 
     values_to_impute = Nx.broadcast(placeholder_value, x)
 
