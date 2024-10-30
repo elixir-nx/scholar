@@ -61,32 +61,28 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
 
     The function returns fitted estimator represented by struct with the following parameters:
 
-    * `:x_mean` - tensor of shape `{num_features}` with `x` tensor mean values aggregated by axis 0.
+    * `:x_mean` - tensor of shape `{num_features}` which represents `x` tensor mean values calculated along axis 0.
 
-    * `:y_mean` - tensor of shape `{num_features}` with `x` tensor mean values aggregated by axis 0.
+    * `:y_mean` - tensor of shape `{num_targets}` which represents `x` tensor mean values calculated along axis 0.
 
-    * `:x_std` - tensor of shape `{num_components}`
-        Percentage of variance explained by each of the selected components.
+    * `:x_std` - tensor of shape `{num_features}` which represents `x` tensor standard deviation values calculated along axis 0.
 
-    * `:y_std` -  ndarray of shape `{num_components}`
-        The singular values corresponding to each of the selected components.
+    * `:y_std` -  tensor of shape `{num_targets}` which represents `y` tensor standard deviation values calculated along axis 0.
 
-    * `:x_weights` -  ndarray of shape `{num_components}`
-        The singular values corresponding to each of the selected components.
+    * `:x_weights` -  tensor of shape `{num_features, num_components}` the left singular vectors of the SVD of the cross-covariance matrix.
 
-    * `:y_weights` -  ndarray of shape `{num_components}`
-        The singular values corresponding to each of the selected components.
+    * `:y_weights` -  tensor of shape `{num_targets, num_components}` the right singular vectors of the SVD of the cross-covariance matrix.
 
   ## Examples
 
       iex> x = Nx.tensor([[0.0, 0.0, 1.0],
-                          [1.0, 0.0, 0.0],
-                          [2.0, 2.0, 2.0],
-                          [2.0, 5.0, 4.0]])
+      ...>                [1.0, 0.0, 0.0],
+      ...>                [2.0, 2.0, 2.0],
+      ...>                [2.0, 5.0, 4.0]])
       iex> y = Nx.tensor([[0.1, -0.2],
-                          [0.9, 1.1],
-                          [6.2, 5.9],
-                          [11.9, 12.3]])
+      ...>                [0.9, 1.1],
+      ...>                [6.2, 5.9],
+      ...>                [11.9, 12.3]])
       iex> model = Scholar.CrossDecomposition.PLSSVD.fit(x, y)
       iex> model.x_mean
       #Nx.Tensor<
@@ -166,16 +162,17 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
   ## Examples
 
       iex> x = Nx.tensor([[0.0, 0.0, 1.0],
-                          [1.0, 0.0, 0.0],
-                          [2.0, 2.0, 2.0],
-                          [2.0, 5.0, 4.0]])
+      ...>                [1.0, 0.0, 0.0],
+      ...>                [2.0, 2.0, 2.0],
+      ...>                [2.0, 5.0, 4.0]])
       iex> y = Nx.tensor([[0.1, -0.2],
-                          [0.9, 1.1],
-                          [6.2, 5.9],
-                          [11.9, 12.3]])
+      ...>                [0.9, 1.1],
+      ...>                [6.2, 5.9],
+      ...>                [11.9, 12.3]])
       iex> model = Scholar.CrossDecomposition.PLSSVD.fit(x, y)
-      iex> Scholar.CrossDecomposition.PLSSVD.transform(model, x, y)
-      {#Nx.Tensor<
+      iex> {x, y} = Scholar.CrossDecomposition.PLSSVD.transform(model, x, y)
+      iex> x
+      #Nx.Tensor<
         f32[4][2]
         [
           [-1.397004246711731, -0.10283949971199036],
@@ -183,7 +180,8 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
           [0.5603229403495789, -0.10849219560623169],
           [2.0334696769714355, 0.039741579443216324]
         ]
-      >,
+      >
+      iex> y
       #Nx.Tensor<
         f32[4][2]
         [
@@ -192,7 +190,7 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
           [0.3249155580997467, -0.04311027377843857],
           [1.8613981008529663, 0.022262824699282646]
         ]
-      >}
+      >
 
   """
   deftransform transform(model, x, y, opts \\ []) do
@@ -245,15 +243,16 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
   ## Examples
 
       iex> x = Nx.tensor([[0.0, 0.0, 1.0],
-                          [1.0, 0.0, 0.0],
-                          [2.0, 2.0, 2.0],
-                          [2.0, 5.0, 4.0]])
+      ...>                [1.0, 0.0, 0.0],
+      ...>                [2.0, 2.0, 2.0],
+      ...>                [2.0, 5.0, 4.0]])
       iex> y = Nx.tensor([[0.1, -0.2],
-                          [0.9, 1.1],
-                          [6.2, 5.9],
-                          [11.9, 12.3]])
-      iex> Scholar.CrossDecomposition.PLSSVD.fit_transform(x, y)
-      {#Nx.Tensor<
+      ...>                [0.9, 1.1],
+      ...>                [6.2, 5.9],
+      ...>                [11.9, 12.3]])
+      iex> {x, y} = Scholar.CrossDecomposition.PLSSVD.fit_transform(x, y)
+      iex> x
+      #Nx.Tensor<
         f32[4][2]
         [
           [-1.397004246711731, -0.10283949971199036],
@@ -261,7 +260,8 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
           [0.5603229403495789, -0.10849219560623169],
           [2.0334696769714355, 0.039741579443216324]
         ]
-      >,
+      >
+      iex> y
       #Nx.Tensor<
         f32[4][2]
         [
@@ -270,7 +270,7 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
           [0.3249155580997467, -0.04311027377843857],
           [1.8613981008529663, 0.022262824699282646]
         ]
-      >}
+      >
 
   """
 
