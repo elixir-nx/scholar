@@ -245,7 +245,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
     x =
       case opts[:binarize] do
         nil -> x
-        binarize ->Scholar.Preprocessing.Binarizer.fit_transform(x, threshold: binarize)
+        binarize -> Scholar.Preprocessing.Binarizer.fit_transform(x, threshold: binarize)
       end
 
     y_one_hot = Scholar.Preprocessing.OneHotEncoder.fit_transform(y, num_categories: num_classes)
