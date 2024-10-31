@@ -1,13 +1,11 @@
 defmodule Scholar.CrossDecomposition.PLSSVD do
   @moduledoc """
-  Partial Least Square SVD. This transformer simply performs a SVD on the cross-covariance matrix.
+  Partial Least Square SVD.
 
+  This transformer simply performs a SVD on the cross-covariance matrix.
   It is able to project both the training data `x` and the targets
   `y`. The training data `x` is projected on the left singular vectors, while
   the targets are projected on the right singular vectors.
-
-
-
   """
   import Nx.Defn
 
