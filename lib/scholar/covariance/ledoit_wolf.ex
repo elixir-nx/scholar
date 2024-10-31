@@ -32,7 +32,6 @@ defmodule Scholar.Covariance.LedoitWolf do
 
   @opts_schema NimbleOptions.new!(opts_schema)
   @doc """
-
   Estimate the shrunk Ledoit-Wolf covariance matrix.
 
   ## Options
