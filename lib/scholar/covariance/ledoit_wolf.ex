@@ -216,8 +216,7 @@ defmodule Scholar.Covariance.LedoitWolf do
     x2 = Nx.pow(x, 2)
     emp_cov_trace = Nx.sum(x2, axes: [0]) / n_samples
     mu = Nx.sum(emp_cov_trace) / n_features
-    beta = Nx.tensor(0.0, type: {:f, size})
-    delta = Nx.tensor(0.0, type: {:f, size})
+    delta = beta = Nx.tensor(0.0, type: {:f, size})
     i = Nx.tensor(0)
     block = Nx.iota({block_size})
 
