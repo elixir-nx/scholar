@@ -219,8 +219,9 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
   end
 
   @doc """
-    Learn and apply the dimensionality reduction.
-    Takes as arguments: 
+  Learn and apply the dimensionality reduction.
+  
+  The arguments are:
     
     * `x` - training samples, `{num_samples, num_features}` shaped tensor
     
