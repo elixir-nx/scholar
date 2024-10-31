@@ -69,7 +69,7 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
 
     * `:x_weights` -  tensor of shape `{num_features, num_components}` the left singular vectors of the SVD of the cross-covariance matrix.
 
-    * `:y_weights` -  tensor of shape `{num_targets, num_components}` the right singular vectors of the SVD of the cross-covariance matrix.
+    * `:y_weights` -  tensor of shape `{num_components, num_targets}` the transposed right singular vectors of the SVD of the cross-covariance matrix.
 
   ## Examples
 
@@ -112,18 +112,15 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
     num_components = opts[:num_components]
     {x, y, x_mean, y_mean, x_std, y_std} = center_scale_x_y(x, y, opts)
 
-    c =
-      Nx.transpose(x)
-      |> Nx.dot(y)
+    c = Nx.dot(x, [0], y, [0])
 
     {u, _s, vt} = Nx.LinAlg.svd(c, full_matrices?: false)
     u = Nx.slice_along_axis(u, 0, num_components, axis: 1)
     vt = Nx.slice_along_axis(vt, 0, num_components, axis: 0)
     {u, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
-    v = Nx.transpose(vt)
 
     x_weights = u
-    y_weights = v
+    y_weights = vt
 
     %__MODULE__{
       x_mean: x_mean,
@@ -214,7 +211,7 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
     x_scores = Nx.dot(xr, x_weights)
 
     yr = (y - y_mean) / y_std
-    y_scores = Nx.dot(yr, y_weights)
+    y_scores = Nx.dot(yr, [1], y_weights, [1])
     {x_scores, y_scores}
   end
 
