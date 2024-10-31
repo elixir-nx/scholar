@@ -44,7 +44,7 @@ defmodule Scholar.Covariance.LedoitWolf do
 
     * `:covariance` - Tensor of shape `{n_features, n_features}`. Estimated covariance matrix.
 
-    * `:shrinkage` - Coefficient in the convex combination used for the computation of the shrunk estimate. Range is `[0, 1]`.
+    * `:shrinkage` - Coefficient in the convex combination used for the computation of the shrunken estimate. Range is `[0, 1]`.
 
     * `:location` - Tensor of shape `{n_features,}`.
       Estimated location, i.e. the estimated mean.
