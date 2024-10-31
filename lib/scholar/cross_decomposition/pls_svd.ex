@@ -220,7 +220,7 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
 
   @doc """
   Learn and apply the dimensionality reduction.
-  
+
   The arguments are:
     
     * `x` - training samples, `{num_samples, num_features}` shaped tensor
