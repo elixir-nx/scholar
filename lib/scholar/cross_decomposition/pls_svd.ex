@@ -232,7 +232,7 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
 
   ## Return Values
 
-    Returns tuple with transformed data `{x_transformed, y_transformed}` where:
+  Returns tuple with transformed data `{x_transformed, y_transformed}` where:
 
     * `x_transformed` is `{num_samples, num_features}` shaped tensor.
     
