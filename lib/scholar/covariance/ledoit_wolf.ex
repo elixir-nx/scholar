@@ -163,7 +163,6 @@ defmodule Scholar.Covariance.LedoitWolf do
     n_features = Nx.axis_size(x, 1)
     shrinkage = ledoit_wolf_shrinkage(x, opts)
     emp_cov = empirical_covariance(x, opts)
-    # git
     mu = Nx.sum(trace(emp_cov)) / n_features
     shrunk_cov = (1.0 - shrinkage) * emp_cov
     mask = Nx.iota(Nx.shape(shrunk_cov))
