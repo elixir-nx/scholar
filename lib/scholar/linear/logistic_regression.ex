@@ -25,13 +25,6 @@ defmodule Scholar.Linear.LogisticRegression do
       regression.
       """
     ],
-    learning_loop_unroll: [
-      type: :boolean,
-      default: false,
-      doc: ~S"""
-      If `true`, the learning loop is unrolled.
-      """
-    ],
     optimizer: [
       type: {:custom, Scholar.Options, :optimizer, []},
       default: :adam,
@@ -91,8 +84,8 @@ defmodule Scholar.Linear.LogisticRegression do
             "expected x to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
     end
 
-    {n_samples, _} = Nx.shape(x)
-    y = LinearHelpers.validate_y_shape(y, n_samples, __MODULE__)
+    {num_samples, num_features} = Nx.shape(x)
+    y = LinearHelpers.validate_y_shape(y, num_samples, __MODULE__)
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
@@ -104,13 +97,12 @@ defmodule Scholar.Linear.LogisticRegression do
         {f1, f2} -> {f1, f2}
       end
 
-    n = Nx.axis_size(x, -1)
     num_classes = opts[:num_classes]
 
     coef =
       Nx.broadcast(
         Nx.tensor(1.0, type: to_float_type(x)),
-        {n, num_classes}
+        {num_features, num_classes}
       )
 
     bias = Nx.broadcast(Nx.tensor(0, type: to_float_type(x)), {num_classes})
@@ -181,7 +173,14 @@ defmodule Scholar.Linear.LogisticRegression do
 
   defnp loss_and_grad(coeff, bias, xs, ys) do
     value_and_grad({coeff, bias}, fn {coeff, bias} ->
-      -Nx.sum(ys * log_softmax(Nx.dot(xs, coeff) + bias), axes: [-1])
+      xs
+      |> Nx.dot(coeff)
+      |> Nx.add(bias)
+      |> log_softmax()
+      |> Nx.multiply(ys)
+      |> Nx.sum(axes: [1])
+      |> Nx.negate()
+      |> Nx.mean()
     end)
   end
 
@@ -242,6 +241,6 @@ defmodule Scholar.Linear.LogisticRegression do
       >
   """
   defn predict_probability(%__MODULE__{coefficients: coeff, bias: bias} = _model, x) do
-    softmax(Nx.dot(x, [1], coeff, [0]) + bias)
+    softmax(Nx.dot(x, coeff) + bias)
   end
 end
