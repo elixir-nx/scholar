@@ -1,6 +1,6 @@
 defmodule Scholar.Covariance.LedoitWolf do
   @moduledoc """
-  Ledoit-Wolf is a particular form of shrinkage covariance estimator, where the shrinkage coefficient is computed using O.
+  Ledoit-Wolf is a particular form of shrinkage covariance estimator, where the shrinkage coefficient is computed using O. Ledoit and M. Wolf’s formula.
 
   Ledoit and M. Wolf's formula as
   described in "A Well-Conditioned Estimator for Large-Dimensional
