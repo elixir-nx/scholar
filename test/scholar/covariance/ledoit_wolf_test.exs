@@ -69,7 +69,7 @@ defmodule Scholar.Covariance.LedoitWolfTest do
     assert_all_close(model.location, Nx.tensor([0, 0, 0]), atol: 1.0e-3)
   end
 
-  test "fit test - set :block_size" do
+  test "fit test 2" do
     key = key()
 
     {x, _new_key} =
@@ -81,7 +81,7 @@ defmodule Scholar.Covariance.LedoitWolfTest do
         type: :f32
       )
 
-    model = LedoitWolf.fit(x, block_size: 20)
+    model = LedoitWolf.fit(x)
 
     assert_all_close(
       model.covariance,
