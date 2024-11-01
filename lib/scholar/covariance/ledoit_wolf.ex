@@ -13,11 +13,6 @@ defmodule Scholar.Covariance.LedoitWolf do
   defstruct [:covariance, :shrinkage, :location]
 
   opts_schema = [
-    block_size: [
-      default: 1000,
-      type: {:custom, Scholar.Options, :positive_number, []},
-      doc: "Size of blocks into which the covariance matrix will be split."
-    ],
     assume_centered: [
       default: false,
       type: :boolean,
@@ -42,11 +37,11 @@ defmodule Scholar.Covariance.LedoitWolf do
 
     The function returns a struct with the following parameters:
 
-    * `:covariance` - Tensor of shape `{n_features, n_features}`. Estimated covariance matrix.
+    * `:covariance` - Tensor of shape `{num_features, num_features}`. Estimated covariance matrix.
 
     * `:shrinkage` - Coefficient in the convex combination used for the computation of the shrunken estimate. Range is `[0, 1]`.
 
-    * `:location` - Tensor of shape `{n_features,}`.
+    * `:location` - Tensor of shape `{num_features,}`.
       Estimated location, i.e. the estimated mean.
 
   ## Examples
@@ -58,14 +53,14 @@ defmodule Scholar.Covariance.LedoitWolf do
       #Nx.Tensor<
         f32[2][2]
         [
-          [0.355768620967865, 0.17340737581253052],
+          [0.3557686507701874, 0.17340737581253052],
           [0.17340737581253052, 1.0300586223602295]
         ]
       >
       iex> model.shrinkage
       #Nx.Tensor<
         f32
-        0.15034136176109314
+        0.15034137666225433
       >
       iex> model.location
       #Nx.Tensor<
@@ -80,15 +75,15 @@ defmodule Scholar.Covariance.LedoitWolf do
       #Nx.Tensor<
         f32[3][3]
         [
-          [2.5945029258728027, 1.507835865020752, 1.1623677015304565],
-          [1.507835865020752, 2.106797218322754, 1.181215524673462],
-          [1.1623677015304565, 1.181215524673462, 1.460626482963562]
+          [2.5945029258728027, 1.5078359842300415, 1.1623677015304565],
+          [1.5078359842300415, 2.106797456741333, 1.1812156438827515],
+          [1.1623677015304565, 1.1812156438827515, 1.4606266021728516]
         ]
       >
       iex> model.shrinkage
       #Nx.Tensor<
         f32
-        0.1908363550901413
+        0.1908363401889801
       >
       iex> model.location 
       #Nx.Tensor<
@@ -118,7 +113,7 @@ defmodule Scholar.Covariance.LedoitWolf do
     {x, location} = center(x, opts)
 
     {covariance, shrinkage} =
-      ledoit_wolf(x, opts)
+      ledoit_wolf(x)
 
     %__MODULE__{
       covariance: covariance,
@@ -140,32 +135,21 @@ defmodule Scholar.Covariance.LedoitWolf do
       else
         Nx.mean(x, axes: [0])
       end
+
     {x - location, location}
   end
 
-  defnp ledoit_wolf(x, opts) do
+  defnp ledoit_wolf(x) do
     case Nx.shape(x) do
       {_n, 1} ->
         {Nx.mean(x ** 2) |> Nx.reshape({1, 1}), 0.0}
 
       _ ->
-        ledoit_wolf_complex(x, opts)
+        ledoit_wolf_shrinkage(x)
     end
   end
 
-  defnp ledoit_wolf_complex(x, opts) do
-    n_features = Nx.axis_size(x, 1)
-    shrinkage = ledoit_wolf_shrinkage(x, opts)
-    emp_cov = empirical_covariance(x, opts)
-    mu = Nx.sum(trace(emp_cov)) / n_features
-    shrunk_cov = (1.0 - shrinkage) * emp_cov
-    mask = Nx.iota(Nx.shape(shrunk_cov))
-    selector = Nx.remainder(mask, n_features + 1) == 0
-    shrunk_cov = Nx.select(selector, shrunk_cov + shrinkage * mu, shrunk_cov)
-    {shrunk_cov, shrinkage}
-  end
-
-  defnp empirical_covariance(x, _opts) do
+  defnp empirical_covariance(x) do
     n = Nx.axis_size(x, 0)
 
     covariance = Nx.dot(x, [0], x, [0]) / n
@@ -182,129 +166,57 @@ defmodule Scholar.Covariance.LedoitWolf do
     |> Nx.sum()
   end
 
-  defnp ledoit_wolf_shrinkage(x, opts) do
+  defnp ledoit_wolf_shrinkage(x) do
     case Nx.shape(x) do
       {_, 1} ->
         0
 
       {n} ->
         Nx.reshape(x, {1, n})
-        |> ledoit_wolf_shrinkage_complex(opts)
+        |> ledoit_wolf_shrinkage_complex()
 
       _ ->
-        ledoit_wolf_shrinkage_complex(x, opts)
+        ledoit_wolf_shrinkage_complex(x)
     end
   end
 
-  defnp ledoit_wolf_shrinkage_complex(x, opts) do
-    {n_samples, n_features} = Nx.shape(x)
-    {_, size} = Nx.type(x)
-    block_size = opts[:block_size]
-    n_splits = (n_features / block_size) |> Nx.floor() |> Nx.as_type({:s, size})
+  defnp ledoit_wolf_shrinkage_complex(x) do
+    {num_samples, num_features} = Nx.shape(x)
+    emp_cov = empirical_covariance(x)
 
-    x2 = Nx.pow(x, 2)
-    emp_cov_trace = Nx.sum(x2, axes: [0]) / n_samples
-    mu = Nx.sum(emp_cov_trace) / n_features
-    beta = Nx.tensor(0.0, type: {:f, size})
-    i = Nx.tensor(0)
-    block = Nx.iota({block_size})
+    emp_cov_trace = trace(emp_cov)
+    mu = Nx.sum(emp_cov_trace) / num_features
 
-    beta = if n_splits > 0 do
-      {beta, _} =
-        while {beta, {x, x2, block, i, n_splits}}, i < n_splits do
-          {block_size} = Nx.shape(block)
-          j = Nx.tensor(0)
+    flatten_delta = Nx.flatten(emp_cov)
 
-          {beta, _} =
-            while {beta, {x, x2, block, i, j, n_splits}}, j < n_splits do
-              {block_size} = Nx.shape(block)
-              rows_from = block_size * i
-              cols_from = block_size * j
+    indices =
+      Nx.shape(flatten_delta)
+      |> Nx.iota()
 
-              to_beta =
-                Nx.slice_along_axis(x2, rows_from, block_size, axis: 1)
-                |> Nx.dot([0], Nx.slice_along_axis(x2, cols_from, block_size, axis: 1), [0])
-                |> Nx.sum()
+    subtract = Nx.select(Nx.remainder(indices, num_features + 1) == 0, mu, 0)
 
-              beta = beta + to_beta
-
-              {beta, {x, x2, block, i, j + 1, n_splits}}
-            end
-
-          rows_from = block_size * i
-          x2_t = Nx.transpose(x2)
-          {m, n} = Nx.shape(x2)
-          mask = Nx.iota({1, n}) |> Nx.tile([m]) |> Nx.reshape({m, n})
-          mask = Nx.select(mask >= block_size * n_splits, 1, 0)
-
-          to_beta =
-            Nx.slice_along_axis(x2_t, rows_from, block_size, axis: 0)
-            |> Nx.dot(Nx.multiply(x2, mask))
-            |> Nx.sum()
-
-          beta = beta + to_beta
-
-          {beta, {x, x2, block, i + 1, n_splits}}
-        end
-
-      j = Nx.tensor(0)
-
-      {beta, _} =
-        while {beta, {x, x2, block, j, n_splits}}, j < n_splits do
-          {block_size} = Nx.shape(block)
-          cols_from = block_size * j
-          x2_t = Nx.transpose(x2)
-          {rows, cols} = Nx.shape(x)
-
-          mask =
-            Nx.iota({1, cols}) |> Nx.tile([rows]) |> Nx.reshape({rows, cols}) |> Nx.transpose()
-
-          mask = Nx.select(mask >= block_size * n_splits, 1, 0)
-
-          to_beta =
-            Nx.multiply(x2_t, mask)
-            |> Nx.dot(Nx.slice_along_axis(x2, cols_from, block_size, axis: 1))
-            |> Nx.sum()
-
-          beta = beta + to_beta
-
-          {beta, {x, x2, block, j + 1, n_splits}}
-        end
-      beta
-    else
-      beta
-    end
-    delta = beta
-    x2_t = Nx.transpose(x2)
-    x_t = Nx.transpose(x)
-    {rows, cols} = Nx.shape(x)
-    mask = Nx.iota({1, cols}) |> Nx.tile([rows]) |> Nx.reshape({rows, cols})
-    mask = Nx.select(mask >= block_size * n_splits, 1, 0)
-    mask_t = Nx.transpose(mask)
-
-    to_delta =
-      Nx.multiply(x_t, mask_t)
-      |> Nx.dot(Nx.multiply(x, mask))
+    delta =
+      (flatten_delta - subtract)
       |> Nx.pow(2)
       |> Nx.sum()
 
-    delta = delta + to_delta
-    delta = delta / Nx.pow(n_samples, 2)
+    delta = delta / num_features
 
-    to_beta =
-      Nx.multiply(x2_t, mask_t)
-      |> Nx.dot(Nx.multiply(x2, mask))
+    x2 = Nx.pow(x, 2)
+
+    beta =
+      (Nx.dot(x2, [0], x2, [0]) / num_samples - emp_cov ** 2)
       |> Nx.sum()
+      |> Nx.divide(num_features * num_samples)
 
-    beta = beta + to_beta
-    beta = 1.0 / (n_features * n_samples) * (beta / n_samples - delta)
-    delta = delta - 2.0 * mu * Nx.sum(emp_cov_trace) + n_features * Nx.pow(mu, 2)
-    delta = delta / n_features
     beta = Nx.min(beta, delta)
+    shrinkage = beta / delta
 
-    case beta do
-      0 -> 0
-      _ -> beta / delta
-    end
+    shrunk_cov = (1.0 - shrinkage) * emp_cov
+    mask = Nx.iota(Nx.shape(shrunk_cov))
+    selector = Nx.remainder(mask, num_features + 1) == 0
+    shrunk_cov = Nx.select(selector, shrunk_cov + shrinkage * mu, shrunk_cov)
+
+    {shrunk_cov, shrinkage}
   end
 end
