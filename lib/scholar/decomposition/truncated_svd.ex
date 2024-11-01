@@ -174,7 +174,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
     end
 
     {u, sigma, vt} = randomized_svd(x, key, opts)
-    {_u, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
+    {_u, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt, false)
 
     x_transformed = Nx.dot(x, Nx.transpose(vt))
     explained_variance = Nx.variance(x_transformed, axes: [0])
