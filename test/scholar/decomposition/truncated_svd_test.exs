@@ -24,7 +24,7 @@ defmodule Scholar.Decomposition.TruncatedSVDTest do
         type: :f32
       )
 
-    tsvd = Scholar.Decomposition.TruncatedSVD.fit(x, key: key)
+    model = Scholar.Decomposition.TruncatedSVD.fit(x, key: key)
 
     assert_all_close(
       model.components,
@@ -80,7 +80,7 @@ defmodule Scholar.Decomposition.TruncatedSVDTest do
     x_reduced = Scholar.Decomposition.TruncatedSVD.fit_transform(x, key: key)
 
     assert_all_close(
-      model.singular_values,
+      x_reduced,
       Nx.tensor([
         [4.441530227661133, -1.5630521774291992],
         [-2.187946081161499, -1.2309558391571045],
@@ -117,7 +117,7 @@ defmodule Scholar.Decomposition.TruncatedSVDTest do
     x_reduced = Scholar.Decomposition.TruncatedSVD.fit_transform(x, key: key, num_components: 3)
 
     assert_all_close(
-      model.singular_values,
+      x_reduced,
       Nx.tensor([
         [4.441530704498291, -1.5630513429641724, 0.08955635130405426],
         [-2.1879451274871826, -1.2309576272964478, 1.2222723960876465],
@@ -154,7 +154,7 @@ defmodule Scholar.Decomposition.TruncatedSVDTest do
     x_reduced = Scholar.Decomposition.TruncatedSVD.fit_transform(x, key: key, num_oversamples: 20)
 
     assert_all_close(
-      model.singular_values,
+      x_reduced,
       Nx.tensor([
         [4.441530227661133, -1.5630521774291992],
         [-2.187946081161499, -1.2309565544128418],
@@ -191,7 +191,7 @@ defmodule Scholar.Decomposition.TruncatedSVDTest do
     x_reduced = Scholar.Decomposition.TruncatedSVD.fit_transform(x, key: key, num_iter: 20)
 
     assert_all_close(
-      model.singular_values,
+      x_reduced,
       Nx.tensor([
         [4.441530227661133, -1.5630522966384888],
         [-2.18794584274292, -1.2309566736221313],

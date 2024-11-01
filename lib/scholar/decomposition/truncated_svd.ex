@@ -127,7 +127,7 @@ defmodule Scholar.Decomposition.TruncatedSVD do
       >
       iex> key = Nx.Random.key(0)
       iex> x = Nx.tensor([[0, 0, 3], [1, 0, 3], [1, 1, 3], [3, 3, 3], [4, 4.5, 3]])
-      iex> tsvd = Scholar.Decomposition.TruncatedSVD.fit_transform(x, num_components: 2, key: key)
+      iex> Scholar.Decomposition.TruncatedSVD.fit_transform(x, num_components: 2, key: key)
       #Nx.Tensor<
         f32[5][2]
         [
