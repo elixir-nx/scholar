@@ -3,9 +3,16 @@ defmodule Scholar.Decomposition.Utils do
   import Nx.Defn
   require Nx
 
-  defn flip_svd(u, v) do
-    max_abs_cols_idx = u |> Nx.abs() |> Nx.argmax(axis: 0, keep_axis: true)
-    signs = u |> Nx.take_along_axis(max_abs_cols_idx, axis: 0) |> Nx.sign() |> Nx.squeeze()
+  defn flip_svd(u, v, u_based \\ true) do
+    base =
+      if u_based do
+        u
+      else
+        Nx.transpose(v)
+      end
+
+    max_abs_cols_idx = base |> Nx.abs() |> Nx.argmax(axis: 0, keep_axis: true)
+    signs = base |> Nx.take_along_axis(max_abs_cols_idx, axis: 0) |> Nx.sign() |> Nx.squeeze()
     u = u * signs
     v = v * Nx.new_axis(signs, -1)
     {u, v}
