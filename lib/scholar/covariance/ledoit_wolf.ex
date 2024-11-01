@@ -136,23 +136,17 @@ defmodule Scholar.Covariance.LedoitWolf do
 
     location =
       if opts[:assume_centered] do
-        Nx.broadcast(0, {Nx.axis_size(x, 1)})
+        0
       else
         Nx.mean(x, axes: [0])
       end
-
-    {x - Nx.broadcast(location, x), location}
+    {x - location, location}
   end
 
   defnp ledoit_wolf(x, opts) do
     case Nx.shape(x) do
       {_n, 1} ->
-        {
-          Nx.pow(x, 2)
-          |> Nx.mean()
-          |> Nx.broadcast({1, 1}),
-          0.0
-        }
+        {Nx.mean(x ** 2) |> Nx.reshape({1, 1}), 0.0}
 
       _ ->
         ledoit_wolf_complex(x, opts)
@@ -174,10 +168,7 @@ defmodule Scholar.Covariance.LedoitWolf do
   defnp empirical_covariance(x, _opts) do
     n = Nx.axis_size(x, 0)
 
-    covariance =
-      Nx.transpose(x)
-      |> Nx.dot(x)
-      |> Nx.divide(n)
+    covariance = Nx.dot(x, [0], x, [0]) / n
 
     case Nx.shape(covariance) do
       {} -> Nx.reshape(covariance, {1, 1})
@@ -186,10 +177,8 @@ defmodule Scholar.Covariance.LedoitWolf do
   end
 
   defnp trace(x) do
-    n = Nx.axis_size(x, 0)
-
-    Nx.eye(n)
-    |> Nx.multiply(x)
+    x
+    |> Nx.take_diagonal()
     |> Nx.sum()
   end
 
@@ -199,7 +188,7 @@ defmodule Scholar.Covariance.LedoitWolf do
         0
 
       {n} ->
-        Nx.broadcast(x, {1, n})
+        Nx.reshape(x, {1, n})
         |> ledoit_wolf_shrinkage_complex(opts)
 
       _ ->
@@ -216,45 +205,34 @@ defmodule Scholar.Covariance.LedoitWolf do
     x2 = Nx.pow(x, 2)
     emp_cov_trace = Nx.sum(x2, axes: [0]) / n_samples
     mu = Nx.sum(emp_cov_trace) / n_features
-    delta = beta = Nx.tensor(0.0, type: {:f, size})
+    beta = Nx.tensor(0.0, type: {:f, size})
     i = Nx.tensor(0)
     block = Nx.iota({block_size})
 
-    if n_splits > 0 do
-      {beta, delta, _} =
-        while {beta, delta, {x, x2, block, i, n_splits}}, i < n_splits do
+    beta = if n_splits > 0 do
+      {beta, _} =
+        while {beta, {x, x2, block, i, n_splits}}, i < n_splits do
           {block_size} = Nx.shape(block)
           j = Nx.tensor(0)
 
-          {beta, delta, _} =
-            while {beta, delta, {x, x2, block, i, j, n_splits}}, j < n_splits do
+          {beta, _} =
+            while {beta, {x, x2, block, i, j, n_splits}}, j < n_splits do
               {block_size} = Nx.shape(block)
               rows_from = block_size * i
               cols_from = block_size * j
-              x2_t = Nx.transpose(x2)
-              x_t = Nx.transpose(x)
 
               to_beta =
-                Nx.slice_along_axis(x2_t, rows_from, block_size, axis: 0)
-                |> Nx.dot(Nx.slice_along_axis(x2, cols_from, block_size, axis: 1))
+                Nx.slice_along_axis(x2, rows_from, block_size, axis: 1)
+                |> Nx.dot([0], Nx.slice_along_axis(x2, cols_from, block_size, axis: 1), [0])
                 |> Nx.sum()
 
               beta = beta + to_beta
 
-              to_delta =
-                Nx.slice_along_axis(x_t, rows_from, block_size, axis: 0)
-                |> Nx.dot(Nx.slice_along_axis(x, cols_from, block_size, axis: 1))
-                |> Nx.pow(2)
-                |> Nx.sum()
-
-              delta = delta + to_delta
-
-              {beta, delta, {x, x2, block, i, j + 1, n_splits}}
+              {beta, {x, x2, block, i, j + 1, n_splits}}
             end
 
           rows_from = block_size * i
           x2_t = Nx.transpose(x2)
-          x_t = Nx.transpose(x)
           {m, n} = Nx.shape(x2)
           mask = Nx.iota({1, n}) |> Nx.tile([m]) |> Nx.reshape({m, n})
           mask = Nx.select(mask >= block_size * n_splits, 1, 0)
@@ -266,25 +244,16 @@ defmodule Scholar.Covariance.LedoitWolf do
 
           beta = beta + to_beta
 
-          to_delta =
-            Nx.slice_along_axis(x_t, rows_from, block_size, axis: 0)
-            |> Nx.dot(Nx.multiply(x, mask))
-            |> Nx.pow(2)
-            |> Nx.sum()
-
-          delta = delta + to_delta
-
-          {beta, delta, {x, x2, block, i + 1, n_splits}}
+          {beta, {x, x2, block, i + 1, n_splits}}
         end
 
       j = Nx.tensor(0)
 
-      {beta, delta, _} =
-        while {beta, delta, {x, x2, block, j, n_splits}}, j < n_splits do
+      {beta, _} =
+        while {beta, {x, x2, block, j, n_splits}}, j < n_splits do
           {block_size} = Nx.shape(block)
           cols_from = block_size * j
           x2_t = Nx.transpose(x2)
-          x_t = Nx.transpose(x)
           {rows, cols} = Nx.shape(x)
 
           mask =
@@ -299,21 +268,13 @@ defmodule Scholar.Covariance.LedoitWolf do
 
           beta = beta + to_beta
 
-          to_delta =
-            Nx.multiply(x_t, mask)
-            |> Nx.dot(Nx.slice_along_axis(x, cols_from, block_size, axis: 1))
-            |> Nx.pow(2)
-            |> Nx.sum()
-
-          delta = delta + to_delta
-          {beta, delta, {x, x2, block, j + 1, n_splits}}
+          {beta, {x, x2, block, j + 1, n_splits}}
         end
-
-      {beta, delta}
+      beta
     else
-      {beta, delta}
+      beta
     end
-
+    delta = beta
     x2_t = Nx.transpose(x2)
     x_t = Nx.transpose(x)
     {rows, cols} = Nx.shape(x)
