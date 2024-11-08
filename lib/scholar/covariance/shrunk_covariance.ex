@@ -1,8 +1,6 @@
 defmodule Scholar.Covariance.ShrunkCovariance do
   @moduledoc """
   Covariance estimator with shrinkage.
-
-
   """
   import Nx.Defn
 
