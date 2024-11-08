@@ -8,7 +8,7 @@ defmodule Scholar.Covariance.ShrunkCovariance do
   defstruct [:covariance, :location]
 
   opts_schema = [
-    assume_centered: [
+    assume_centered?: [
       default: false,
       type: :boolean,
       doc: """
@@ -94,7 +94,7 @@ defmodule Scholar.Covariance.ShrunkCovariance do
             """
     end
 
-    {x, location} = Scholar.Covariance.Utils.center(x, opts[:assume_centered])
+    {x, location} = Scholar.Covariance.Utils.center(x, opts[:assume_centered?])
 
     covariance =
       Scholar.Covariance.Utils.empirical_covariance(x)

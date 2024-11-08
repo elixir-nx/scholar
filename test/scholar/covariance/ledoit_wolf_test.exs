@@ -40,7 +40,7 @@ defmodule Scholar.Covariance.LedoitWolfTest do
     )
   end
 
-  test "fit test - :assume_centered is true" do
+  test "fit test - :assume_centered? is true" do
     key = key()
 
     {x, _new_key} =
@@ -52,7 +52,7 @@ defmodule Scholar.Covariance.LedoitWolfTest do
         type: :f32
       )
 
-    model = LedoitWolf.fit(x, assume_centered: true)
+    model = LedoitWolf.fit(x, assume_centered?: true)
 
     assert_all_close(
       model.covariance,

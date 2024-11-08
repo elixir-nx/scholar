@@ -38,7 +38,7 @@ defmodule Scholar.Covariance.ShrunkCovarianceTest do
     )
   end
 
-  test "fit test - :assume_centered is true" do
+  test "fit test - :assume_centered? is true" do
     key = key()
 
     {x, _new_key} =
@@ -50,7 +50,7 @@ defmodule Scholar.Covariance.ShrunkCovarianceTest do
         type: :f32
       )
 
-    model = ShrunkCovariance.fit(x, assume_centered: true)
+    model = ShrunkCovariance.fit(x, assume_centered?: true)
 
     assert_all_close(
       model.covariance,
