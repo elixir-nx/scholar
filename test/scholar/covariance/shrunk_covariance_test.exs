@@ -89,7 +89,11 @@ defmodule Scholar.Covariance.ShrunkCovarianceTest do
       atol: 1.0e-3
     )
 
-    assert_all_close(model.location, Nx.tensor([-1.015519142150879, -0.4495307505130768, 0.06475571542978287]), atol: 1.0e-3)
+    assert_all_close(
+      model.location,
+      Nx.tensor([-1.015519142150879, -0.4495307505130768, 0.06475571542978287]),
+      atol: 1.0e-3
+    )
   end
 
   test "fit test 2" do

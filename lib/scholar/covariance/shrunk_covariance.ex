@@ -1,5 +1,7 @@
 defmodule Scholar.Covariance.ShrunkCovariance do
   @moduledoc """
+  Covariance estimator with shrinkage.
+
 
   """
   import Nx.Defn
@@ -28,6 +30,7 @@ defmodule Scholar.Covariance.ShrunkCovariance do
 
   @opts_schema NimbleOptions.new!(opts_schema)
   @doc """
+  Fit the shrunk covariance model to `x`.
 
   ## Options
 
@@ -84,6 +87,7 @@ defmodule Scholar.Covariance.ShrunkCovariance do
 
   defnp fit_n(x, opts) do
     shrinkage = opts[:shrinkage]
+
     if shrinkage < 0 or shrinkage > 1 do
       raise ArgumentError,
             """
@@ -91,8 +95,10 @@ defmodule Scholar.Covariance.ShrunkCovariance do
             got shrinkage: #{inspect(Nx.shape(x))}\
             """
     end
+
     {x, location} = Scholar.Covariance.Utils.center(x, opts[:assume_centered])
-    covariance = 
+
+    covariance =
       Scholar.Covariance.Utils.empirical_covariance(x)
       |> shrunk_covariance(shrinkage)
 
@@ -110,7 +116,7 @@ defmodule Scholar.Covariance.ShrunkCovariance do
 
     mask = Nx.iota(Nx.shape(shrunk_cov))
     selector = Nx.remainder(mask, num_features + 1) == 0
-    
+
     Nx.select(selector, shrunk_cov + shrinkage * mu, shrunk_cov)
   end
 end
