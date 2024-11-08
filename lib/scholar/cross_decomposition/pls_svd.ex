@@ -110,7 +110,8 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
   defnp fit_n(x, y, opts) do
     {x, y} = check_x_y(x, y, opts)
     num_components = opts[:num_components]
-    {x, y, x_mean, y_mean, x_std, y_std} = center_scale_x_y(x, y, opts)
+    {x, x_mean, x_std} = center_scale(x, opts)
+    {y, y_mean, y_std} = center_scale(y, opts)
 
     c = Nx.dot(x, [0], y, [0])
 
@@ -326,28 +327,21 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
     {x, y}
   end
 
-  defnp center_scale_x_y(x, y, opts) do
+  defnp center_scale(x, opts) do
     scale = opts[:scale]
     x_mean = Nx.mean(x, axes: [0])
     x = x - x_mean
-
-    y_mean = Nx.mean(y, axes: [0])
-    y = y - y_mean
 
     if scale do
       x_std = Nx.standard_deviation(x, axes: [0], ddof: 1)
       x_std = Nx.select(x_std == 0.0, 1.0, x_std)
       x = x / Nx.broadcast(x_std, Nx.shape(x))
 
-      y_std = Nx.standard_deviation(y, axes: [0], ddof: 1)
-      y_std = Nx.select(y_std == 0.0, 1.0, y_std)
-      y = y / Nx.broadcast(y_std, Nx.shape(y))
-
-      {x, y, x_mean, y_mean, x_std, y_std}
+      {x, x_mean, x_std}
     else
       x_std = Nx.broadcast(1, {Nx.axis_size(x, 1)})
-      y_std = Nx.broadcast(1, {Nx.axis_size(y, 1)})
-      {x, y, x_mean, y_mean, x_std, y_std}
+
+      {x, x_mean, x_std}
     end
   end
 end
