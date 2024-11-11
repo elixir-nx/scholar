@@ -36,7 +36,8 @@ defmodule Scholar.Covariance.ShrunkCovariance do
 
   ## Return Values
 
-    The function returns a struct with the following parameters:
+  The function returns a struct with the following parameters:
+
     * `:covariance` - Tensor of shape `{num_features, num_features}`. Estimated covariance matrix.
     * `:location` - Tensor of shape `{num_features,}`.
       Estimated location, i.e. the estimated mean.
