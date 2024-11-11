@@ -115,6 +115,6 @@ defmodule Scholar.Covariance.ShrunkCovariance do
     mask = Nx.iota(Nx.shape(shrunk_cov))
     selector = Nx.remainder(mask, num_features + 1) == 0
 
-    Nx.select(selector, shrunk_cov + shrinkage * mu, shrunk_cov)
+    shrunk_cov + shrinkage * mu * selector
   end
 end
