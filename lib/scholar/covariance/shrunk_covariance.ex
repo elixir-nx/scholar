@@ -76,8 +76,6 @@ defmodule Scholar.Covariance.ShrunkCovariance do
         f32[2]
         [0.18202415108680725, -0.09216632694005966]
       >
-
-
   """
 
   deftransform fit(x, opts \\ []) do
