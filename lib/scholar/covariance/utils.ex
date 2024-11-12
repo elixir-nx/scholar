@@ -3,7 +3,7 @@ defmodule Scholar.Covariance.Utils do
   import Nx.Defn
   require Nx
 
-  defn center(x, assume_centered \\ false) do
+defn center(x, assume_centered? \\ false) do
     x =
       case Nx.shape(x) do
         {_} -> Nx.new_axis(x, 1)
