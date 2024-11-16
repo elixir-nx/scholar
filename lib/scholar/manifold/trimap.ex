@@ -160,7 +160,7 @@ defmodule Scholar.Manifold.Trimap do
         else
           {found?, _} =
             while {stop = Nx.u8(0),
-                   {tensor1, tensor2, left = Nx.s64(0), right = Nx.size(tensor2) - 1, i}},
+                   {tensor1, tensor2, left = Nx.s64(0), right = Nx.s64(Nx.size(tensor2) - 1), i}},
                   left <= right and not stop do
               mid = div(left + right, 2)
 

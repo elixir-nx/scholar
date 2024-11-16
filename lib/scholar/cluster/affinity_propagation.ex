@@ -103,9 +103,9 @@ defmodule Scholar.Cluster.AffinityPropagation do
       iex> x = Nx.tensor([[12,5,78,2], [9,3,81,-2], [-1,3,6,1], [1,-2,5,2]])
       iex> Scholar.Cluster.AffinityPropagation.fit(x, key: key)
       %Scholar.Cluster.AffinityPropagation{
-        labels: Nx.tensor([0, 0, 2, 2]),
-        cluster_centers_indices: Nx.tensor([0, -1, 2, -1]),
-        cluster_centers: Nx.tensor(
+        labels: Nx.s32([0, 0, 2, 2]),
+        cluster_centers_indices: Nx.s32([0, -1, 2, -1]),
+        cluster_centers: Nx.f32(
           [
             [12.0, 5.0, 78.0, 2.0],
             [:infinity, :infinity, :infinity, :infinity],
@@ -113,8 +113,8 @@ defmodule Scholar.Cluster.AffinityPropagation do
             [:infinity, :infinity, :infinity, :infinity]
           ]
         ),
-        num_clusters: Nx.tensor(2, type: :u64),
-        iterations: Nx.tensor(22, type: :s64)
+        num_clusters: Nx.u32(2),
+        iterations: Nx.u32(22)
       }
   """
   deftransform fit(data, opts \\ []) do
@@ -125,7 +125,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
   defnp fit_n(data, key, opts) do
     data = to_float(data)
-    iterations = opts[:iterations]
+    iterations = opts[:iterations] |> Nx.as_type(:u32)
     damping_factor = opts[:damping_factor]
     converge_after = opts[:converge_after]
     n = Nx.axis_size(data, 0)
@@ -146,7 +146,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
     stop = Nx.u8(0)
 
     {{a, r, it}, _} =
-      while {{a = zero_n, r = zero_n, i = 0}, {s, range, stop, e}},
+      while {{a = zero_n, r = zero_n, i = Nx.u32(0)}, {s, range, stop, e}},
             i < iterations and not stop do
         temp = a + s
         indices = Nx.argmax(temp, axis: 1)
@@ -204,7 +204,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
 
         indices =
           Nx.select(mask, Nx.iota(Nx.shape(diagonals)), -1)
-          |> Nx.as_type({:s, 64})
+          |> Nx.as_type(:s32)
 
         cluster_centers =
           Nx.select(
@@ -216,15 +216,14 @@ defmodule Scholar.Cluster.AffinityPropagation do
         labels =
           Nx.broadcast(mask, Nx.shape(s))
           |> Nx.select(s, Nx.Constants.neg_infinity(Nx.type(s)))
-          |> Nx.argmax(axis: 1)
-          |> Nx.as_type({:s, 64})
+          |> Nx.argmax(axis: 1, type: :s32)
 
         labels = Nx.select(mask, Nx.iota(Nx.shape(labels)), labels)
 
         {cluster_centers, indices, labels}
       else
-        {Nx.tensor(-1, type: Nx.type(data)), Nx.broadcast(Nx.tensor(-1, type: :s64), {n}),
-         Nx.broadcast(Nx.tensor(-1, type: :s64), {n})}
+        {Nx.tensor(-1, type: Nx.type(data)), Nx.broadcast(Nx.tensor(-1, type: :s32), {n}),
+         Nx.broadcast(Nx.tensor(-1, type: :s32), {n})}
       end
 
     %__MODULE__{
@@ -262,16 +261,16 @@ defmodule Scholar.Cluster.AffinityPropagation do
       iex> model = Scholar.Cluster.AffinityPropagation.fit(x, key: key)
       iex> Scholar.Cluster.AffinityPropagation.prune(model)
       %Scholar.Cluster.AffinityPropagation{
-        labels: Nx.tensor([0, 0, 1, 1]),
-        cluster_centers_indices: Nx.tensor([0, 2]),
+        labels: Nx.s32([0, 0, 1, 1]),
+        cluster_centers_indices: Nx.s32([0, 2]),
         cluster_centers: Nx.tensor(
           [
             [12.0, 5.0, 78.0, 2.0],
             [-1.0, 3.0, 6.0, 1.0]
           ]
         ),
-        num_clusters: Nx.tensor(2, type: :u64),
-        iterations: Nx.tensor(22, type: :s64)
+        num_clusters: Nx.u32(2),
+        iterations: Nx.u32(22)
       }
   """
   def prune(
@@ -293,7 +292,9 @@ defmodule Scholar.Cluster.AffinityPropagation do
       end)
 
     mapping = Map.new(mapping)
-    cluster_centers_indices = Nx.tensor(Enum.reverse(indices))
+
+    cluster_centers_indices =
+      Nx.tensor(Enum.reverse(indices), type: Nx.type(cluster_centers_indices))
 
     %__MODULE__{
       model
@@ -314,7 +315,7 @@ defmodule Scholar.Cluster.AffinityPropagation do
       iex> model = Scholar.Cluster.AffinityPropagation.prune(model)
       iex> Scholar.Cluster.AffinityPropagation.predict(model, Nx.tensor([[10,3,50,6], [8,3,8,2]]))
       #Nx.Tensor<
-        s64[2]
+        s32[2]
         [0, 1]
       >
   """

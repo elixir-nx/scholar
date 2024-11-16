@@ -65,7 +65,7 @@ defmodule Scholar.Neighbors.KDTreeTest do
       kdtree = KDTree.fit(x())
       {indices, distances} = KDTree.predict(kdtree, x_pred())
 
-      assert indices == Nx.tensor([[0, 6, 4], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
+      assert indices == Nx.tensor([[0, 6, 4], [5, 2, 9], [0, 9, 2], [5, 2, 7]], type: :s64)
 
       assert_all_close(
         distances,
@@ -82,7 +82,7 @@ defmodule Scholar.Neighbors.KDTreeTest do
       kdtree = KDTree.fit(x(), metric: {:minkowski, 1.5})
       {indices, distances} = KDTree.predict(kdtree, x_pred())
 
-      assert indices == Nx.tensor([[0, 6, 2], [5, 2, 9], [0, 9, 2], [5, 2, 7]])
+      assert indices == Nx.tensor([[0, 6, 2], [5, 2, 9], [0, 9, 2], [5, 2, 7]], type: :s64)
 
       assert_all_close(
         distances,
@@ -99,7 +99,8 @@ defmodule Scholar.Neighbors.KDTreeTest do
       kdtree = KDTree.fit(x(), num_neighbors: 4)
       {indices, distances} = KDTree.predict(kdtree, x_pred())
 
-      assert indices == Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
+      assert indices ==
+               Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]], type: :s64)
 
       assert_all_close(
         distances,
@@ -116,7 +117,8 @@ defmodule Scholar.Neighbors.KDTreeTest do
       kdtree = KDTree.fit(x() |> Nx.as_type(:f64), num_neighbors: 4)
       {indices, distances} = KDTree.predict(kdtree, x_pred())
 
-      assert indices == Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]])
+      assert indices ==
+               Nx.tensor([[0, 6, 4, 2], [5, 2, 9, 0], [0, 9, 2, 5], [5, 2, 7, 4]], type: :s64)
 
       assert_all_close(
         distances,

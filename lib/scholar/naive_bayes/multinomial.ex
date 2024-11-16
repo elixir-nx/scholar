@@ -292,7 +292,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
       iex> model = Scholar.NaiveBayes.Multinomial.fit(x, y, num_classes: 3)
       iex> Scholar.NaiveBayes.Multinomial.predict(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]))
       #Nx.Tensor<
-        s64[2]
+        s32[2]
         [2, 2]
       >
   """

@@ -64,7 +64,7 @@ defmodule Scholar.Neighbors.BruteKNN do
       2
       iex> model.data
       #Nx.Tensor<
-        s64[5][2]
+        s32[5][2]
         [
           [1, 2],
           [2, 3],

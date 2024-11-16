@@ -87,7 +87,7 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
       iex> encoder = Scholar.Preprocessing.OrdinalEncoder.fit(tensor, num_categories: 4)
       iex> Scholar.Preprocessing.OrdinalEncoder.transform(encoder, tensor)
       #Nx.Tensor<
-        s64[7]
+        s32[7]
         [1, 0, 2, 3, 0, 2, 0]
       >
 
@@ -96,7 +96,7 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
       iex> new_tensor = Nx.tensor([2, 3, 4, 5, 4, 56, 2])
       iex> Scholar.Preprocessing.OrdinalEncoder.transform(encoder, new_tensor)
       #Nx.Tensor<
-        s64[7]
+        s32[7]
         [0, 1, 2, -1, 2, 3, 0]
       >
   """

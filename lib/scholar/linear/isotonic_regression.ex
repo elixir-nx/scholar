@@ -158,7 +158,6 @@ defmodule Scholar.Linear.IsotonicRegression do
     {sample_weights, opts} = Keyword.pop(opts, :sample_weights, 1.0)
     x_type = to_float_type(x)
     x = to_float(x)
-
     y = to_float(y)
 
     sample_weights =
@@ -202,7 +201,7 @@ defmodule Scholar.Linear.IsotonicRegression do
   @doc """
   Makes predictions with the given `model` on input `x` and interpolating `function`.
 
-  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.  
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.
   Otherwise, predictions match train target shape.
 
   ## Examples
@@ -443,19 +442,19 @@ defmodule Scholar.Linear.IsotonicRegression do
   end
 
   defnp contiguous_isotonic_regression(y, sample_weights, max_size, increasing) do
-    y_size = if increasing, do: max_size, else: Nx.axis_size(y, 0) - 1
+    y_size = if(increasing, do: max_size, else: Nx.axis_size(y, 0) - 1) |> Nx.as_type(:u32)
     y = if increasing, do: y, else: Nx.reverse(y)
     sample_weights = if increasing, do: sample_weights, else: Nx.reverse(sample_weights)
 
-    target = Nx.iota({Nx.axis_size(y, 0)}, type: :s64)
+    target = Nx.iota({Nx.axis_size(y, 0)}, type: :u32)
     type_wy = Nx.Type.merge(Nx.type(y), Nx.type(sample_weights))
-    i = if increasing, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size
+    i = if(increasing, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size) |> Nx.as_type(:u32)
 
     {{y, target}, _} =
       while {{y, target},
              {i, sample_weights, sum_w = Nx.tensor(0, type: Nx.type(sample_weights)),
-              sum_wy = Nx.tensor(0, type: type_wy), prev_y = Nx.tensor(0, type: type_wy), _k = 0,
-              terminating_flag = 0, y_size}},
+              sum_wy = Nx.tensor(0, type: type_wy), prev_y = Nx.tensor(0, type: type_wy),
+              _k = Nx.u32(0), terminating_flag = Nx.u8(0), y_size}},
             i < y_size + 1 and not terminating_flag do
         k = target[i] + 1
 
@@ -509,12 +508,12 @@ defmodule Scholar.Linear.IsotonicRegression do
         end
       end
 
-    i = if increasing, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size
+    i = if(increasing, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size) |> Nx.as_type(:u32)
 
     {y, _} =
-      while {y, {target, i, _k = 0, max_size}}, i < max_size + 1 do
+      while {y, {target, i, _k = Nx.u32(0), max_size}}, i < max_size + 1 do
         k = target[i] + 1
-        indices = Nx.iota({Nx.axis_size(y, 0)})
+        indices = Nx.iota({Nx.axis_size(y, 0)}, type: :u32)
         in_range? = Nx.logical_and(i + 1 <= indices, indices < k)
         y = Nx.select(in_range?, y[i], y)
         i = k

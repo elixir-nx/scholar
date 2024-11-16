@@ -211,7 +211,7 @@ defmodule Scholar.Linear.LogisticRegression do
   @doc """
   Makes predictions with the given `model` on inputs `x`.
 
-  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.        
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.
 
   ## Examples
 
@@ -220,7 +220,7 @@ defmodule Scholar.Linear.LogisticRegression do
       iex> model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
       iex> Scholar.Linear.LogisticRegression.predict(model, Nx.tensor([[-3.0, 5.0]]))
       #Nx.Tensor<
-        s64[1]
+        s32[1]
         [1]
       >
   """

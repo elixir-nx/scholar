@@ -75,32 +75,32 @@ defmodule Scholar.Cluster.OPTICS do
       iex> x = Nx.tensor([[1, 2], [2, 5], [3, 6], [8, 7], [8, 8], [7, 3]])
       iex> Scholar.Cluster.OPTICS.fit(x, min_samples: 2).labels
       #Nx.Tensor<
-        s64[6]
+        s32[6]
         [-1, -1, -1, -1, -1, -1]
       >
       iex> Scholar.Cluster.OPTICS.fit(x, eps: 4.5, min_samples: 2).labels
       #Nx.Tensor<
-        s64[6]
+        s32[6]
         [0, 0, 0, 1, 1, 1]
       >
       iex> Scholar.Cluster.OPTICS.fit(x, eps: 2, min_samples: 2).labels
       #Nx.Tensor<
-        s64[6]
+        s32[6]
         [-1, 0, 0, 1, 1, -1]
       >
       iex> Scholar.Cluster.OPTICS.fit(x, eps: 2, min_samples: 2, algorithm: :kd_tree, metric: {:minkowski, 1}).labels
       #Nx.Tensor<
-        s64[6]
+        s32[6]
         [-1, 0, 0, 1, 1, -1]
       >
       iex> Scholar.Cluster.OPTICS.fit(x, eps: 1, min_samples: 2).labels
       #Nx.Tensor<
-        s64[6]
+        s32[6]
         [-1, -1, -1, 0, 0, -1]
       >
       iex> Scholar.Cluster.OPTICS.fit(x, eps: 4.5, min_samples: 3).labels
       #Nx.Tensor<
-        s64[6]
+        s32[6]
         [0, 0, 0, 1, 1, -1]
       >
   """

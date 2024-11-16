@@ -150,7 +150,7 @@ KNNClassifier.predict(model, x_pred)
 
 ```
 #Nx.Tensor<
-  s64[1]
+  s32[1]
   EXLA.Backend<host:0, 0.3809581470.3464101900.76922>
   [1]
 >
@@ -167,7 +167,7 @@ KNNClassifier.predict(model, x_pred)
 
 ```
 #Nx.Tensor<
-  s64[1]
+  s32[1]
   EXLA.Backend<host:0, 0.3809581470.3464101900.77007>
   [0]
 >
@@ -409,7 +409,7 @@ x = Scholar.Preprocessing.standard_scale(x)
    ]
  >,
  #Nx.Tensor<
-   s64[4898]
+   s32[4898]
    EXLA.Backend<host:0, 0.3809581470.3464101900.77326>
    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 1, 2, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0, 1, ...]
  >}

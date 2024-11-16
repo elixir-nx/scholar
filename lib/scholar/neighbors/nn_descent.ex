@@ -192,14 +192,14 @@ defmodule Scholar.Neighbors.NNDescent do
 
     # binsearch which checks if the elements of tensor1 are in tensor2
     {is_in, _} =
-      while {is_in, {tensor1, tensor2, prev = Nx.s64(-1), i = Nx.s64(0)}}, i < Nx.size(tensor1) do
+      while {is_in, {tensor1, tensor2, prev = Nx.s32(-1), i = Nx.u32(0)}}, i < Nx.size(tensor1) do
         if i > 0 and prev == tensor1[i] do
           is_in = Nx.indexed_put(is_in, Nx.new_axis(i, 0), is_in[i - 1])
           {is_in, {tensor1, tensor2, prev, i + 1}}
         else
           {found?, _} =
             while {stop = Nx.u8(0),
-                   {tensor1, tensor2, left = Nx.s64(0), right = Nx.size(tensor2) - 1, i}},
+                   {tensor1, tensor2, left = Nx.s32(0), right = Nx.s32(Nx.size(tensor2) - 1), i}},
                   left <= right and not stop do
               mid = div(left + right, 2)
 
@@ -224,10 +224,10 @@ defmodule Scholar.Neighbors.NNDescent do
   end
 
   defnp unique_random_sample(key, shape, opts \\ []) do
-    final_samples = Nx.broadcast(Nx.s64(0), shape)
+    final_samples = Nx.broadcast(0, shape)
 
     {final_samples, key, _} =
-      while {final_samples, key, i = Nx.s64(0)}, i < elem(shape, 0) do
+      while {final_samples, key, i = Nx.u32(0)}, i < elem(shape, 0) do
         {samples, key} = Nx.Random.randint(key, 0, opts[:maxval], shape: {elem(shape, 1)})
         samples = Nx.sort(samples)
         discard = Nx.broadcast(Nx.u8(0), {elem(shape, 1)})
@@ -292,11 +292,11 @@ defmodule Scholar.Neighbors.NNDescent do
       )
 
     {{indices, keys, flags}, _} =
-      while {{indices, keys, flags}, {index0 = Nx.s64(0), data, missing, random_indices, d}},
+      while {{indices, keys, flags}, {index0 = Nx.u32(0), data, missing, random_indices, d}},
             index0 < num_heaps do
         {{indices, keys, flags}, _} =
           while {{indices, keys, flags},
-                 {index0, j = Nx.s64(0), data, missing, random_indices, d}},
+                 {index0, j = Nx.u32(0), data, missing, random_indices, d}},
                 j < missing[index0] do
             {add_neighbor(
                {indices, keys, flags},
@@ -357,21 +357,21 @@ defmodule Scholar.Neighbors.NNDescent do
     {indices, keys, flags} = curr_graph
 
     {curr_graph, _} =
-      while {{indices, keys, flags}, {i = Nx.s64(0), data, leaves}},
+      while {{indices, keys, flags}, {i = Nx.u32(0), data, leaves}},
             i < num_leaves do
         {{indices, keys, flags}, _} =
-          while {{indices, keys, flags}, {i, j = Nx.s64(0), data, leaves, stop = Nx.u8(0)}},
+          while {{indices, keys, flags}, {i, j = Nx.u32(0), data, leaves, stop = Nx.u8(0)}},
                 j < leaf_size and not stop do
             index0 = leaves[[i, j]]
 
-            if index0 != Nx.s64(-1) do
+            if index0 != -1 do
               {{indices, keys, flags}, _} =
                 while {{indices, keys, flags},
                        {i, j, k = j + 1, index0, data, leaves, stop_inner = Nx.u8(0)}},
                       k < leaf_size and not stop_inner do
                   index1 = leaves[[i, k]]
 
-                  if index1 != Nx.s64(-1) do
+                  if index1 != -1 do
                     d = handle_dist(data[index0], data[index1], opts)
 
                     {indices, keys, flags} =

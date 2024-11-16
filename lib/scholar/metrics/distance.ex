@@ -593,7 +593,7 @@ defmodule Scholar.Metrics.Distance do
       iex> y = Nx.reverse(x)
       iex> Scholar.Metrics.Distance.pairwise_squared_euclidean(x, y)
       #Nx.Tensor<
-        s64[6][6]
+        s32[6][6]
         [
           [5470, 3526, 2014, 934, 286, 70],
           [3526, 2014, 934, 286, 70, 286],
@@ -619,7 +619,7 @@ defmodule Scholar.Metrics.Distance do
       iex> x = Nx.iota({6, 6})
       iex> Scholar.Metrics.Distance.pairwise_squared_euclidean(x)
       #Nx.Tensor<
-        s64[6][6]
+        s32[6][6]
         [
           [0, 216, 864, 1944, 3456, 5400],
           [216, 0, 216, 864, 1944, 3456],

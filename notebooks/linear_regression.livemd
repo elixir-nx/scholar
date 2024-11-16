@@ -368,7 +368,7 @@ Nx.iota({n_samples, n_variables})
 
 ```
 #Nx.Tensor<
-  s64[5][3]
+  s32[5][3]
   EXLA.Backend<host:0, 0.54336858.2205024268.199422>
   [
     [0, 0, 0],
