@@ -11,7 +11,7 @@ defn center(x, assume_centered? \\ false) do
       end
 
     location =
-      if assume_centered do
+      if assume_centered? do
         0
       else
         Nx.mean(x, axes: [0])
