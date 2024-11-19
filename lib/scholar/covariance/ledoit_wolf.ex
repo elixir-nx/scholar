@@ -13,7 +13,7 @@ defmodule Scholar.Covariance.LedoitWolf do
   defstruct [:covariance, :shrinkage, :location]
 
   opts_schema = [
-    assume_centered: [
+    assume_centered?: [
       default: false,
       type: :boolean,
       doc: """
@@ -93,7 +93,7 @@ defmodule Scholar.Covariance.LedoitWolf do
 
       iex> key = Nx.Random.key(0)
       iex> {x, _new_key} = Nx.Random.multivariate_normal(key, Nx.tensor([0.0, 0.0, 0.0]), Nx.tensor([[3.0, 2.0, 1.0], [1.0, 2.0, 3.0], [1.3, 1.0, 2.2]]), shape: {10}, type: :f32)
-      iex> cov = Scholar.Covariance.LedoitWolf.fit(x, assume_centered: true)
+      iex> cov = Scholar.Covariance.LedoitWolf.fit(x, assume_centered?: true)
       iex> cov.covariance
       #Nx.Tensor<
         f32[3][3]
@@ -110,7 +110,7 @@ defmodule Scholar.Covariance.LedoitWolf do
   end
 
   defnp fit_n(x, opts) do
-    {x, location} = center(x, opts)
+    {x, location} = Scholar.Covariance.Utils.center(x, opts[:assume_centered?])
 
     {covariance, shrinkage} =
       ledoit_wolf(x)
@@ -122,23 +122,6 @@ defmodule Scholar.Covariance.LedoitWolf do
     }
   end
 
-  defnp center(x, opts) do
-    x =
-      case Nx.shape(x) do
-        {_} -> Nx.new_axis(x, 1)
-        _ -> x
-      end
-
-    location =
-      if opts[:assume_centered] do
-        0
-      else
-        Nx.mean(x, axes: [0])
-      end
-
-    {x - location, location}
-  end
-
   defnp ledoit_wolf(x) do
     case Nx.shape(x) do
       {_n, 1} ->
@@ -147,23 +130,6 @@ defmodule Scholar.Covariance.LedoitWolf do
       _ ->
         ledoit_wolf_shrinkage(x)
     end
-  end
-
-  defnp empirical_covariance(x) do
-    n = Nx.axis_size(x, 0)
-
-    covariance = Nx.dot(x, [0], x, [0]) / n
-
-    case Nx.shape(covariance) do
-      {} -> Nx.reshape(covariance, {1, 1})
-      _ -> covariance
-    end
-  end
-
-  defnp trace(x) do
-    x
-    |> Nx.take_diagonal()
-    |> Nx.sum()
   end
 
   defnp ledoit_wolf_shrinkage(x) do
@@ -182,9 +148,9 @@ defmodule Scholar.Covariance.LedoitWolf do
 
   defnp ledoit_wolf_shrinkage_complex(x) do
     {num_samples, num_features} = Nx.shape(x)
-    emp_cov = empirical_covariance(x)
+    emp_cov = Scholar.Covariance.Utils.empirical_covariance(x)
 
-    emp_cov_trace = trace(emp_cov)
+    emp_cov_trace = Scholar.Covariance.Utils.trace(emp_cov)
     mu = Nx.sum(emp_cov_trace) / num_features
 
     flatten_delta = Nx.flatten(emp_cov)
