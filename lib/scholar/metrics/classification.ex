@@ -253,7 +253,7 @@ defmodule Scholar.Metrics.Classification do
       iex> y_pred = Nx.tensor([0, 2, 1, 1, 2, 2, 2, 0, 0, 1], type: :u32)
       iex> Scholar.Metrics.Classification.accuracy(y_true, y_pred, normalize: false)
       #Nx.Tensor<
-        u64
+        u32
         6
       >
   """
@@ -530,7 +530,7 @@ defmodule Scholar.Metrics.Classification do
       iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: :u32)
       iex> Scholar.Metrics.Classification.confusion_matrix(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
-        u64[3][3]
+        u32[3][3]
         [
           [1, 1, 0],
           [1, 0, 1],
@@ -538,8 +538,8 @@ defmodule Scholar.Metrics.Classification do
         ]
       >
 
-      iex> y_true = Nx.tensor([0, 0, 1, 1, 2, 2], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 0, 1, 1, 2, 2], type: :u64)
+      iex> y_pred = Nx.tensor([0, 1, 0, 2, 2, 2], type: :u64)
       iex> sample_weights = [2, 5, 1, 1.5, 2, 8]
       iex> Scholar.Metrics.Classification.confusion_matrix(y_true, y_pred, num_classes: 3, sample_weights: sample_weights, normalize: :predicted)
       #Nx.Tensor<
@@ -556,7 +556,7 @@ defmodule Scholar.Metrics.Classification do
 
     weights =
       if opts[:sample_weights] == nil,
-        do: Nx.u64(1),
+        do: Nx.u32(1),
         else: validate_weights(opts[:sample_weights], Nx.axis_size(y_true, 0))
 
     confusion_matrix_n(y_true, y_pred, weights, opts)
@@ -567,9 +567,9 @@ defmodule Scholar.Metrics.Classification do
 
     num_classes = check_num_classes(opts[:num_classes])
 
-    zeros = Nx.broadcast(Nx.u64(0), {num_classes, num_classes})
+    zeros = Nx.broadcast(Nx.u32(0), {num_classes, num_classes})
     indices = Nx.stack([y_true, y_pred], axis: 1)
-    updates = Nx.broadcast(Nx.u64(1), y_true) * weights
+    updates = Nx.broadcast(Nx.u32(1), y_true) * weights
 
     cm = Nx.indexed_add(zeros, indices, updates)
 
@@ -597,15 +597,15 @@ defmodule Scholar.Metrics.Classification do
 
   ## Examples
 
-      iex> y_true = Nx.tensor([0, 1, 2, 0, 1, 2], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 2, 1, 0, 0, 1], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 1, 2, 0, 1, 2], type: :u64)
+      iex> y_pred = Nx.tensor([0, 2, 1, 0, 0, 1], type: :u64)
       iex> Scholar.Metrics.Classification.balanced_accuracy_score(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32
         0.3333333432674408
       >
-      iex> y_true = Nx.tensor([0, 1, 2, 0, 1, 2], type: {:u, 32})
-      iex> y_pred = Nx.tensor([0, 2, 1, 0, 0, 1], type: {:u, 32})
+      iex> y_true = Nx.tensor([0, 1, 2, 0, 1, 2], type: :u64)
+      iex> y_pred = Nx.tensor([0, 2, 1, 0, 0, 1], type: :u64)
       iex> sample_weights = [1, 1, 1, 2, 2, 2]
       iex> Scholar.Metrics.Classification.balanced_accuracy_score(y_true, y_pred, num_classes: 3, sample_weights: sample_weights, adjusted: true)
       #Nx.Tensor<
@@ -749,7 +749,7 @@ defmodule Scholar.Metrics.Classification do
       {Nx.f32([0.6666666865348816, 1.0, 0.25]),
        Nx.f32([0.6666666865348816, 0.5, 1.0]),
        Nx.f32([0.6666666865348816, 0.6666666865348816, 0.4000000059604645]),
-       Nx.u64([3, 6, 1])}
+       Nx.u32([3, 6, 1])}
       iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3, average: :macro)
       {Nx.f32([0.6666666865348816, 1.0, 0.25]),
        Nx.f32([0.6666666865348816, 0.5, 1.0]),
@@ -773,7 +773,7 @@ defmodule Scholar.Metrics.Classification do
       {Nx.f32([0.0, 0.0]),
        Nx.f32([0.0, 0.0]),
        Nx.f32([0.0, 0.0]),
-       Nx.u64([2, 2])}
+       Nx.u32([2, 2])}
   """
   deftransform precision_recall_fscore_support(y_true, y_pred, opts) do
     opts = NimbleOptions.validate!(opts, @precision_recall_fscore_support_schema)
@@ -902,7 +902,7 @@ defmodule Scholar.Metrics.Classification do
       iex> y_true = Nx.tensor([2, 2, 3, 4])
       iex> Scholar.Metrics.Classification.zero_one_loss(y_true, y_pred, normalize: false)
       #Nx.Tensor<
-        u64
+        u32
         1
       >
   """
@@ -1370,7 +1370,7 @@ defmodule Scholar.Metrics.Classification do
       iex> y_score = Nx.tensor([[0.5, 0.2, 0.1], [0.3, 0.4, 0.5], [0.4, 0.3, 0.2], [0.1, 0.3, 0.6], [0.9, 0.1, 0.0]])
       iex> Scholar.Metrics.Classification.top_k_accuracy_score(y_true, y_score, k: 2, num_classes: 3, normalize: false)
       #Nx.Tensor<
-        u64
+        u32
         4
       >
 

@@ -259,7 +259,7 @@ defmodule Scholar.Linear.SVM do
       iex> model = Scholar.Linear.SVM.fit(x, y, num_classes: 2)
       iex> Scholar.Linear.SVM.predict(model, Nx.tensor([[-3.0, 5.0]]))
       #Nx.Tensor<
-        s64[1]
+        s32[1]
         [1]
       >
   """

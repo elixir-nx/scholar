@@ -146,7 +146,7 @@ defmodule Scholar.Neighbors.RadiusNNClassifier do
       iex> model = Scholar.Neighbors.RadiusNNClassifier.fit(x, y, num_classes: 2)
       iex> Scholar.Neighbors.RadiusNNClassifier.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       #Nx.Tensor<
-        s64[2]
+        s32[2]
         [0, 1]
       >
   """

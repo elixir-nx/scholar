@@ -258,7 +258,7 @@ Now, we need to run a query to calculate the nearest neighbors for a given set o
 
 ```
 {#Nx.Tensor<
-   s64[2278][6]
+   s32[2278][6]
    EXLA.Backend<host:0, 0.482371013.981598225.187162>
    [
      [0, 1367, 370, 119, 1158, 1423],
@@ -497,7 +497,7 @@ x = Scholar.Preprocessing.StandardScaler.fit_transform(x)
    ]
  >,
  #Nx.Tensor<
-   s64[39644][1]
+   s32[39644][1]
    EXLA.Backend<host:0, 0.482371013.981598227.186805>
    [
      [593],

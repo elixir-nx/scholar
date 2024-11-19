@@ -161,7 +161,7 @@ defmodule Scholar.NaiveBayes.Gaussian do
       iex> model = Scholar.NaiveBayes.Gaussian.fit(x, y, num_classes: 3)
       iex> Scholar.NaiveBayes.Gaussian.predict(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]))
       #Nx.Tensor<
-        s64[2]
+        s32[2]
         [2, 2]
       >
   """

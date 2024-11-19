@@ -110,8 +110,8 @@ defmodule Scholar.Linear.PolynomialRegression do
   @doc """
   Makes predictions with the given `model` on input `x`.
 
-  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.    
-  Otherwise, predictions match train target shape.  
+  Output predictions have shape `{n_samples}` when train target is shaped either `{n_samples}` or `{n_samples, 1}`.
+  Otherwise, predictions match train target shape.
 
   ## Examples
 
@@ -148,7 +148,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> x = Nx.tensor([[2]])
       iex> Scholar.Linear.PolynomialRegression.transform(x, degree: 5, fit_intercept?: false)
       #Nx.Tensor<
-        s64[1][5]
+        s32[1][5]
         [
           [2, 4, 8, 16, 32]
         ]
@@ -157,7 +157,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> x = Nx.tensor([[2, 3]])
       iex> Scholar.Linear.PolynomialRegression.transform(x)
       #Nx.Tensor<
-        s64[1][6]
+        s32[1][6]
         [
           [1, 2, 3, 4, 6, 9]
         ]
@@ -166,7 +166,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> x = Nx.iota({3, 2})
       iex> Scholar.Linear.PolynomialRegression.transform(x, fit_intercept?: false)
       #Nx.Tensor<
-        s64[3][5]
+        s32[3][5]
         [
           [0, 1, 0, 0, 1],
           [2, 3, 4, 6, 9],

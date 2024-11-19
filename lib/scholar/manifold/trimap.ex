@@ -153,14 +153,14 @@ defmodule Scholar.Manifold.Trimap do
 
     # binsearch which checks if the elements of tensor1 are in tensor2
     {is_in, _} =
-      while {is_in, {tensor1, tensor2, prev = Nx.s64(-1), i = Nx.s64(0)}}, i < Nx.size(tensor1) do
+      while {is_in, {tensor1, tensor2, prev = Nx.s64(-1), i = Nx.u32(0)}}, i < Nx.size(tensor1) do
         if i > 0 and prev == tensor1[i] do
           is_in = Nx.indexed_put(is_in, Nx.new_axis(i, 0), is_in[i - 1])
           {is_in, {tensor1, tensor2, prev, i + 1}}
         else
           {found?, _} =
             while {stop = Nx.u8(0),
-                   {tensor1, tensor2, left = Nx.s64(0), right = Nx.size(tensor2) - 1, i}},
+                   {tensor1, tensor2, left = Nx.s64(0), right = Nx.s64(Nx.size(tensor2) - 1), i}},
                   left <= right and not stop do
               mid = div(left + right, 2)
 
@@ -188,13 +188,19 @@ defmodule Scholar.Manifold.Trimap do
     final_samples = Nx.broadcast(Nx.s64(0), shape)
 
     {final_samples, key, _, _} =
-      while {final_samples, key, rejects, i = Nx.s64(0)}, i < elem(shape, 0) do
-        {samples, key} = Nx.Random.randint(key, 0, opts[:maxval], shape: {elem(shape, 1)})
+      while {final_samples, key, rejects, i = Nx.u32(0)}, i < elem(shape, 0) do
+        # TODO: See if we can relax the samples to u32
+        {samples, key} =
+          Nx.Random.randint(key, 0, opts[:maxval], shape: {elem(shape, 1)}, type: :s64)
+
         discard = in1d(samples, rejects[i])
 
         {samples, key, _, _, _} =
           while {samples, key, discard, rejects, i}, Nx.any(discard) do
-            {new_samples, key} = Nx.Random.randint(key, 0, opts[:maxval], shape: {elem(shape, 1)})
+            # TODO: See if we can relax the samples to u32
+            {new_samples, key} =
+              Nx.Random.randint(key, 0, opts[:maxval], shape: {elem(shape, 1)}, type: :s64)
+
             discard = in1d(new_samples, rejects[i]) or in1d(new_samples, samples)
             samples = Nx.select(discard, samples, new_samples)
             {samples, key, in1d(samples, rejects[i]), rejects, i}
@@ -552,7 +558,7 @@ defmodule Scholar.Manifold.Trimap do
     gain = Nx.broadcast(Nx.tensor(1.0, type: to_float_type(embeddings)), Nx.shape(embeddings))
 
     {embeddings, _} =
-      while {embeddings, {vel, gain, lr, triplets, weights, i = Nx.s64(0)}},
+      while {embeddings, {vel, gain, lr, triplets, weights, i = Nx.u32(0)}},
             i < opts[:num_iters] do
         gamma = if i < @switch_iter, do: @init_momentum, else: @final_momentum
 
