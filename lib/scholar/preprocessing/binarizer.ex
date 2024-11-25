@@ -27,7 +27,7 @@ defmodule Scholar.Preprocessing.Binarizer do
       iex> t = Nx.tensor([[0, 0, 0], [3, 4, 5], [-2, 4, 3]])
       iex> Scholar.Preprocessing.Binarizer.fit_transform(t, threshold: 3.0)
       #Nx.Tensor<
-        s64[3][3]
+        u8[3][3]
         [
           [0, 0, 0],
           [0, 1, 1],
@@ -37,7 +37,7 @@ defmodule Scholar.Preprocessing.Binarizer do
       iex> t = Nx.tensor([[0, 0, 0], [3, 4, 5], [-2, 4, 3]])
       iex> Scholar.Preprocessing.Binarizer.fit_transform(t,threshold: 0.4)
       #Nx.Tensor<
-        s64[3][3]
+        u8[3][3]
         [
           [0, 0, 0],
           [1, 1, 1],
@@ -51,6 +51,6 @@ defmodule Scholar.Preprocessing.Binarizer do
 
   defnp binarize_n(tensor, opts) do
     threshold = opts[:threshold]
-    Nx.select(Nx.greater(tensor, threshold), 1, 0)
+    tensor > threshold
   end
 end
