@@ -14,7 +14,7 @@ defmodule Scholar.Impute.KNNImputter do
 
   opts_schema = [
     missing_values: [
-      type: {:or, [:float, :integer, {:in, [:nan]}]},
+      type: {:or, [:float, :integer, {:in, [:infinity, :neg_infinity, :nan]}]},
       default: :nan,
       doc: ~S"""
       The placeholder for the missing values. All occurrences of `:missing_values` will be imputed.
@@ -35,10 +35,9 @@ defmodule Scholar.Impute.KNNImputter do
   Imputter for completing missing values using k-Nearest Neighbors.
 
   Preconditions:
-    * `num_neighbors` is a positive integer.
-    *  number of neighbors must be less than number valid of rows - 1
-  (valid row is row with more than 1 non nan value) otherwise it is better to use simple imputter
-    *  when you set a value different than :nan in `missing_values` there should be no NaNs in the input tensor
+    *  The number of neighbors must be less than the number of valid rows - 1.
+    *  A valid row is a row with more than 1 non-NaN values. Otherwise it is better to use a simpler imputter.
+    *  When you set a value different than :nan in `missing_values` there should be no NaNs in the input tensor
 
   ## Options
 
@@ -48,7 +47,7 @@ defmodule Scholar.Impute.KNNImputter do
 
     The function returns a struct with the following parameters:
 
-    * `:missing_values` - the same value as in `:missing_values`
+    * `:missing_values` - the same value as in the `:missing_values` option
 
     * `:statistics` - The imputation fill value for each feature. Computing statistics can result in values.
 
@@ -164,27 +163,25 @@ defmodule Scholar.Impute.KNNImputter do
 
     # calculate distance between row with nan to fill and all other rows where distance
     # to the row is under its index in the tensor
-    {_, row_distances} =
-      while {{i = 0, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances},
-            i < rows do
-#        potential_donors = Nx.vectorize(x, :rows)
-#        distances = nan_euclidean(row_with_value_to_fill, nan_col, potential_donors) |> Nx.devectorize()
-#        row_distances = Nx.indexed_put(distances, Nx.new_axis(i, 0), Nx.Constants.infinity())
-        potential_donor = x[i]
-
-        distance =
-          if i == nan_row do
-            Nx.Constants.infinity(Nx.type(row_with_value_to_fill))
-          else
-            nan_euclidean(row_with_value_to_fill, nan_col, potential_donor)
-          end
-
-        row_distances = Nx.indexed_put(row_distances, Nx.new_axis(i, 0), distance)
-        {{i + 1, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances}
-      end
-#    potential_donors = Nx.vectorize(x, :rows)
-#    distances = nan_euclidean(row_with_value_to_fill, nan_col, potential_donors) |> Nx.devectorize()
-#    row_distances = Nx.indexed_put(distances, [i], Nx.Constants.infinity())
+#    {_, row_distances} =
+#      while {{i = 0, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances},
+#            i < rows do
+#
+#        potential_donor = x[i]
+#
+#        distance =
+#          if i == nan_row do
+#            Nx.Constants.infinity(Nx.type(row_with_value_to_fill))
+#          else
+#            nan_euclidean(row_with_value_to_fill, nan_col, potential_donor)
+#          end
+#
+#        row_distances = Nx.indexed_put(row_distances, Nx.new_axis(i, 0), distance)
+#        {{i + 1, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances}
+#      end
+    potential_donors = Nx.vectorize(x, :rows)
+    distances = nan_euclidean(row_with_value_to_fill, nan_col, potential_donors) |> Nx.devectorize()
+    row_distances = Nx.indexed_put(distances, Nx.tensor(nan_row), Nx.Constants.infinity())
 
     {_, indices} = Nx.top_k(-row_distances, k: num_neighbors)
 
