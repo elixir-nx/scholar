@@ -17,7 +17,7 @@ defmodule KNNImputterTest do
 
       knn_imputer =
         %KNNImputter{statistics: statistics, missing_values: missing_values} =
-        jit_fit.(x, missing_values: :nan, number_of_neighbors: 2)
+        jit_fit.(x, missing_values: :nan, num_neighbors: 2)
 
       assert missing_values == :nan
 
@@ -47,7 +47,7 @@ defmodule KNNImputterTest do
 
       knn_imputter =
         %KNNImputter{statistics: statistics, missing_values: missing_values} =
-        jit_fit.(x, missing_values: :nan, number_of_neighbors: 1)
+        jit_fit.(x, missing_values: :nan, num_neighbors: 1)
 
       assert missing_values == :nan
 
@@ -79,7 +79,7 @@ defmodule KNNImputterTest do
 
       knn_imputter =
         %KNNImputter{statistics: statistics, missing_values: missing_values} =
-        jit_fit.(x, missing_values: 19.0, number_of_neighbors: 2)
+        jit_fit.(x, missing_values: 19.0, num_neighbors: 2)
 
       assert missing_values == 19.0
 
@@ -110,7 +110,7 @@ defmodule KNNImputterTest do
       assert_raise ArgumentError,
                    "wrong input rank. Expected: 2, got: 1",
                    fn ->
-                     KNNImputter.fit(x, missing_values: 1, number_of_neighbors: 2)
+                     KNNImputter.fit(x, missing_values: 1, num_neighbors: 2)
                    end
     end
 
@@ -120,9 +120,9 @@ defmodule KNNImputterTest do
       jit_fit = Nx.Defn.jit(&KNNImputter.fit/2)
 
       assert_raise NimbleOptions.ValidationError,
-                   "invalid value for :number_of_neighbors option: expected positive integer, got: -1",
+                   "invalid value for :num_neighbors option: expected positive integer, got: -1",
                    fn ->
-                     jit_fit.(x, missing_values: 1.0, number_of_neighbors: -1)
+                     jit_fit.(x, missing_values: 1.0, num_neighbors: -1)
                    end
     end
   end

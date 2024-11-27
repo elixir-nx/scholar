@@ -22,7 +22,7 @@ defmodule Scholar.Impute.KNNImputter do
       The default value expects there are no NaNs in the input tensor.
       """
     ],
-    number_of_neighbors: [
+    num_neighbors: [
       type: :pos_integer,
       default: 2,
       doc: "The number of nearest neighbors."
@@ -35,7 +35,7 @@ defmodule Scholar.Impute.KNNImputter do
   Imputter for completing missing values using k-Nearest Neighbors.
 
   Preconditions:
-    * `number_of_neighbors` is a positive integer.
+    * `num_neighbors` is a positive integer.
     *  number of neighbors must be less than number valid of rows - 1
   (valid row is row with more than 1 non nan value) otherwise it is better to use simple imputter
     *  when you set a value different than :nan in `missing_values` there should be no NaNs in the input tensor
@@ -50,13 +50,12 @@ defmodule Scholar.Impute.KNNImputter do
 
     * `:missing_values` - the same value as in `:missing_values`
 
-    * `:statistics` - The imputation fill value for each feature. Computing statistics can result in
-    [`Nx.Constant.nan/0`](https://hexdocs.pm/nx/Nx.Constants.html#nan/0) values.
+    * `:statistics` - The imputation fill value for each feature. Computing statistics can result in values.
 
   ## Examples
 
       iex> x = Nx.tensor([[40.0, 2.0],[4.0, 5.0],[7.0, :nan],[:nan, 8.0],[11.0, 11.0]])
-      iex> Scholar.Impute.KNNImputter.fit(x, number_of_neighbors: 2)
+      iex> Scholar.Impute.KNNImputter.fit(x, num_neighbors: 2)
       %Scholar.Impute.KNNImputter{
         statistics: Nx.tensor(
           [
@@ -89,7 +88,7 @@ defmodule Scholar.Impute.KNNImputter do
          else: x
 
 
-    statistics = knn_impute(x, num_neighbors: opts[:number_of_neighbors], missing_values: missing_values)
+    statistics = knn_impute(x, num_neighbors: opts[:num_neighbors], missing_values: missing_values)
     %__MODULE__{statistics: statistics, missing_values: missing_values}
   end
 
@@ -103,7 +102,7 @@ defmodule Scholar.Impute.KNNImputter do
   ## Examples
 
       iex> x = Nx.tensor([[40.0, 2.0],[4.0, 5.0],[7.0, :nan],[:nan, 8.0],[11.0, 11.0]])
-      iex> imputer = Scholar.Impute.KNNImputter.fit(x, number_of_neighbors: 2)
+      iex> imputer = Scholar.Impute.KNNImputter.fit(x, num_neighbors: 2)
       iex> Scholar.Impute.KNNImputter.transform(imputer, x)
       Nx.tensor(
         [
@@ -131,22 +130,17 @@ defmodule Scholar.Impute.KNNImputter do
 
     {_, values_to_impute} =
       while {{row = 0, mask, num_neighbors, num_rows, x}, values_to_impute},
-            Nx.less(row, num_rows) do
+            row < num_rows do
         {_, values_to_impute} =
           while {{col = 0, mask, num_neighbors, num_cols, row, x}, values_to_impute},
-                Nx.less(col, num_cols) do
-            if mask[row][col] > 0 do
+                col < num_cols do
+            if mask[row][col] do
               {rows, cols} = Nx.shape(x)
 
               neighbor_avg =
                 calculate_knn(x, row, col, rows: rows, num_neighbors: opts[:num_neighbors])
 
-              indices =
-                [Nx.stack(row), Nx.stack(col)]
-                |> Nx.concatenate()
-                |> Nx.stack()
-
-              values_to_impute = Nx.indexed_put(values_to_impute, indices, Nx.stack(neighbor_avg))
+              values_to_impute = Nx.put_slice(values_to_impute, [row, col], Nx.reshape(neighbor_avg, {1, 1}))
               {{col + 1, mask, num_neighbors, cols, row, x}, values_to_impute}
             else
               {{col + 1, mask, num_neighbors, num_cols, row, x}, values_to_impute}
@@ -172,19 +166,25 @@ defmodule Scholar.Impute.KNNImputter do
     # to the row is under its index in the tensor
     {_, row_distances} =
       while {{i = 0, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances},
-            Nx.less(i, rows) do
+            i < rows do
+#        potential_donors = Nx.vectorize(x, :rows)
+#        distances = nan_euclidean(row_with_value_to_fill, nan_col, potential_donors) |> Nx.devectorize()
+#        row_distances = Nx.indexed_put(distances, Nx.new_axis(i, 0), Nx.Constants.infinity())
         potential_donor = x[i]
 
         distance =
           if i == nan_row do
             Nx.Constants.infinity(Nx.type(row_with_value_to_fill))
           else
-            nan_euclidian(row_with_value_to_fill, nan_col, potential_donor)
+            nan_euclidean(row_with_value_to_fill, nan_col, potential_donor)
           end
 
         row_distances = Nx.indexed_put(row_distances, Nx.new_axis(i, 0), distance)
         {{i + 1, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances}
       end
+#    potential_donors = Nx.vectorize(x, :rows)
+#    distances = nan_euclidean(row_with_value_to_fill, nan_col, potential_donors) |> Nx.devectorize()
+#    row_distances = Nx.indexed_put(distances, [i], Nx.Constants.infinity())
 
     {_, indices} = Nx.top_k(-row_distances, k: num_neighbors)
 
@@ -194,7 +194,7 @@ defmodule Scholar.Impute.KNNImputter do
   end
 
   # nan_col is the column of the value to impute
-  defnp nan_euclidian(row, nan_col, potential_neighbor) do
+  defnp nan_euclidean(row, nan_col, potential_neighbor) do
     {coordinates} = Nx.shape(row)
 
     # minus nan column
