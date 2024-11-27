@@ -302,7 +302,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
       iex> model = Scholar.NaiveBayes.Bernoulli.fit(x, y, num_classes: 3)
       iex> Scholar.NaiveBayes.Bernoulli.predict(model, Nx.tensor([[6, 2, 4], [8, 5, 9]]), Nx.tensor([0, 1, 2]))
       #Nx.Tensor<
-        s64[2]
+        s32[2]
         [2, 2]
       >
   """
