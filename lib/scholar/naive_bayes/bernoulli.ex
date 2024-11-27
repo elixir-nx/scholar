@@ -1,6 +1,7 @@
 defmodule Scholar.NaiveBayes.Bernoulli do
   @moduledoc """
   Naive Bayes classifier for multivariate Bernoulli models.
+
   Like MultinomialNB, this classifier is suitable for discrete data. The
   difference is that while MultinomialNB works with occurrence counts,
   BernoulliNB is designed for binary/boolean features.
