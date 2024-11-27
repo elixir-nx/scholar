@@ -355,8 +355,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
     log_proba_x =
       jll
       |> Nx.logsumexp(axes: [1])
-      |> Nx.new_axis(1)
-      |> Nx.broadcast(jll)
+      |> Nx.reshape({Nx.axis_size(jll, 0), 1})
 
     jll - log_proba_x
   end
