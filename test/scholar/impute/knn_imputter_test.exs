@@ -17,7 +17,7 @@ defmodule KNNImputterTest do
 
       knn_imputer =
         %KNNImputter{statistics: statistics, missing_values: missing_values} =
-        jit_fit.(x, missing_values: :nan, number_of_neighbors: 2)
+        jit_fit.(x, missing_values: :nan, num_neighbors: 2)
 
       assert missing_values == :nan
 
@@ -47,7 +47,7 @@ defmodule KNNImputterTest do
 
       knn_imputter =
         %KNNImputter{statistics: statistics, missing_values: missing_values} =
-        jit_fit.(x, missing_values: :nan, number_of_neighbors: 1)
+        jit_fit.(x, missing_values: :nan, num_neighbors: 1)
 
       assert missing_values == :nan
 
@@ -72,13 +72,14 @@ defmodule KNNImputterTest do
 
     test "missing values different than :nan" do
       x = generate_data()
-      x = Nx.select(Nx.is_nan(x), Nx.tensor(19.0), x)
+      x = Nx.select(Nx.is_nan(x), 19.0, x)
+#      x = Nx.select(Nx.equal(x,19), :nan, x)
       jit_fit = Nx.Defn.jit(&KNNImputter.fit/2)
       jit_transform = Nx.Defn.jit(&KNNImputter.transform/2)
 
       knn_imputter =
         %KNNImputter{statistics: statistics, missing_values: missing_values} =
-        jit_fit.(x, missing_values: 19.0, number_of_neighbors: 2)
+        jit_fit.(x, missing_values: 19.0, num_neighbors: 2)
 
       assert missing_values == 19.0
 
@@ -103,25 +104,25 @@ defmodule KNNImputterTest do
   end
 
   describe "errors" do
-    test "Wrong impute rank" do
+    test "invalid impute rank" do
       x = Nx.tensor([1, 2, 2, 3])
 
       assert_raise ArgumentError,
-                   "Wrong input rank. Expected: 2, got: 1",
+                   "wrong input rank. Expected: 2, got: 1",
                    fn ->
-                     KNNImputter.fit(x, missing_values: 1, number_of_neighbors: 2)
+                     KNNImputter.fit(x, missing_values: 1, num_neighbors: 2)
                    end
     end
 
-    test "Invalid n_neighbors value" do
+    test "invalid n_neighbors value" do
       x = generate_data()
 
       jit_fit = Nx.Defn.jit(&KNNImputter.fit/2)
 
       assert_raise NimbleOptions.ValidationError,
-                   "invalid value for :number_of_neighbors option: expected positive integer, got: -1",
+                   "invalid value for :num_neighbors option: expected positive integer, got: -1",
                    fn ->
-                     jit_fit.(x, missing_values: 1.0, number_of_neighbors: -1)
+                     jit_fit.(x, missing_values: 1.0, num_neighbors: -1)
                    end
     end
   end
