@@ -163,31 +163,31 @@ defmodule Scholar.Impute.KNNImputter do
 
     # calculate distance between row with nan to fill and all other rows where distance
     # to the row is under its index in the tensor
-#    {_, row_distances} =
-#      while {{i = 0, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances},
-#            i < rows do
-#
-#        potential_donor = x[i]
-#
-#        distance =
-#          if i == nan_row do
-#            Nx.Constants.infinity(Nx.type(row_with_value_to_fill))
-#          else
-#            nan_euclidean(row_with_value_to_fill, nan_col, potential_donor)
-#          end
-#
-#        row_distances = Nx.indexed_put(row_distances, Nx.new_axis(i, 0), distance)
-#        {{i + 1, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances}
-#      end
-    potential_donors = Nx.vectorize(x, :rows)
-    distances = nan_euclidean(row_with_value_to_fill, nan_col, potential_donors) |> Nx.devectorize()
-    row_distances = Nx.indexed_put(distances, Nx.tensor(nan_row), Nx.Constants.infinity())
+    {_, row_distances} =
+      while {{i = 0, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances},
+            i < rows do
+
+        potential_donor = x[i]
+
+        distance =
+          calculate_distance(row_with_value_to_fill, nan_col, potential_donor,nan_row)
+
+        row_distances = Nx.indexed_put(row_distances, Nx.new_axis(i, 0), distance)
+        {{i + 1, x, row_with_value_to_fill, rows, nan_row, nan_col}, row_distances}
+      end
 
     {_, indices} = Nx.top_k(-row_distances, k: num_neighbors)
 
     gather_indices = Nx.stack([indices, Nx.broadcast(nan_col, indices)], axis: 1)
     values = Nx.gather(x, gather_indices)
     Nx.sum(values) / num_neighbors
+  end
+
+  defnp calculate_distance(row,nan_col,potential_donor,nan_row) do
+    case row do
+      ^nan_row -> Nx.Constants.infinity(Nx.type(row))
+      _ -> nan_euclidean(row, nan_col, potential_donor)
+    end
   end
 
   # nan_col is the column of the value to impute
