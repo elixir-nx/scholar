@@ -73,7 +73,7 @@ defmodule KNNImputterTest do
     test "missing values different than :nan" do
       x = generate_data()
       x = Nx.select(Nx.is_nan(x), 19.0, x)
-#      x = Nx.select(Nx.equal(x,19), :nan, x)
+      #      x = Nx.select(Nx.equal(x,19), :nan, x)
       jit_fit = Nx.Defn.jit(&KNNImputter.fit/2)
       jit_transform = Nx.Defn.jit(&KNNImputter.transform/2)
 
