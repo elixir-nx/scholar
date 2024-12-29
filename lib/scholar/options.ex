@@ -108,4 +108,17 @@ defmodule Scholar.Options do
       {:error, "expected 'beta' to be in the range [0, inf]"}
     end
   end
+
+  def quantile_range(value) do
+    case value do
+      {q_min, q_max}
+      when is_number(q_min) and is_number(q_max) and 0.0 < q_min and q_min < q_max and
+             q_max < 100.0 ->
+        {:ok, {q_min, q_max}}
+
+      _ ->
+        {:error,
+         "expected :quantile_range to be a tuple {q_min, q_max} such that 0.0 < q_min < q_max < 100.0, got: #{inspect(value)}"}
+    end
+  end
 end
