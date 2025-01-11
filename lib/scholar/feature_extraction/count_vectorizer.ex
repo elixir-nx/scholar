@@ -1,10 +1,10 @@
 defmodule Scholar.FeatureExtraction.CountVectorizer do
   @moduledoc """
-    A `CountVectorizer` converts a collection of text documents to a matrix of token counts.
+  A `CountVectorizer` converts a collection of text documents to a matrix of token counts.
 
-    Each row of the matrix corresponds to a document in the input corpus, and each column corresponds to a unique token from the vocabulary of the corpus.
+  Each row of the matrix corresponds to a document in the input corpus, and each column corresponds to a unique token from the vocabulary of the corpus.
 
-    Supports also already indexed tensors.
+  Supports also already indexed tensors.
   """
   import Nx.Defn
 
@@ -35,8 +35,11 @@ defmodule Scholar.FeatureExtraction.CountVectorizer do
   * creation of a count tensor
 
   ## Options
+
   #{NimbleOptions.docs(@binarize_schema)}
+
   ## Examples
+
       iex> corpus = ["Elixir is amazing!", "Elixir provides great tools."]
       iex> Scholar.FeatureExtraction.CountVectorizer.fit_transform(corpus)
       %Scholar.FeatureExtraction.CountVectorizer{
