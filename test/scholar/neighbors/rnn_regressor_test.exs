@@ -54,7 +54,18 @@ defmodule Scholar.Neighbors.RadiusNNRegressorTest do
 
     test "predict with weights set to :distance and with specific metric and 2d labels" do
       y =
-        Nx.tensor([[1, 4], [0, 3], [2, 5], [0, 3], [0, 3], [1, 4], [2, 5], [0, 3], [1, 4], [2, 5]])
+        Nx.tensor([
+          [1, 4],
+          [0, 3],
+          [2, 5],
+          [0, 3],
+          [0, 3],
+          [1, 4],
+          [2, 5],
+          [0, 3],
+          [1, 4],
+          [2, 5]
+        ])
 
       model =
         RadiusNNRegressor.fit(x(), y,
