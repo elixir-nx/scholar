@@ -178,7 +178,7 @@ defmodule Scholar.Interpolation.CubicSplineTest do
       model = CubicSpline.fit(Nx.tensor([0, 1, 2]), Nx.tensor([0, 1, 2]))
 
       assert CubicSpline.predict(model, Nx.tensor([-1, 0, 1, 2, 3]), extrapolate: false) ==
-               ~V[NaN 0 1 2 NaN]
+               ~VEC[NaN 0 1 2 NaN]
     end
 
     test "predict/2 returns the same shape as the input" do

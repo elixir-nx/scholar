@@ -153,9 +153,9 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
   ## Examples
 
     iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-    iex> encoder = Scholar.Preprocessing.OridinalEncoder.fit(tensor, num_categories: 4)
+    iex> encoder = Scholar.Preprocessing.OrdinalEncoder.fit(tensor, num_categories: 4)
     iex> encoded = Nx.tensor([1, 0, 2, 3, 1, 0, 2])
-    iex> Scholar.Preprocessing.OridinalEncoder.inverse_transform(encoder, encoded)
+    iex> Scholar.Preprocessing.OrdinalEncoder.inverse_transform(encoder, encoded)
     Nx.tensor([3, 2, 4, 56, 3, 2, 4])
   """
   deftransform inverse_transform(%__MODULE__{categories: categories}, encoded_tensor) do
@@ -168,7 +168,7 @@ defmodule Scholar.Preprocessing.OrdinalEncoder do
   ## Examples
 
       iex> tensor = Nx.tensor([3, 2, 4, 56, 2, 4, 2])
-      iex> Scholar.Preprocessing.OridinalEncoder.fit_transform(tensor)
+      iex> Scholar.Preprocessing.OrdinalEncoder.fit_transform(tensor)
       #Nx.Tensor<
         u64[7]
         [1, 0, 2, 3, 0, 2, 0]
