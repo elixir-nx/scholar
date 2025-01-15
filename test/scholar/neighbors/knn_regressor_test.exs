@@ -93,7 +93,18 @@ defmodule Scholar.Neighbors.KNNRegressorTest do
 
     test "predict with 2D labels" do
       y =
-        Nx.tensor([[1, 4], [0, 3], [2, 5], [0, 3], [0, 3], [1, 4], [2, 5], [0, 3], [1, 4], [2, 5]])
+        Nx.tensor([
+          [1, 4],
+          [0, 3],
+          [2, 5],
+          [0, 3],
+          [0, 3],
+          [1, 4],
+          [2, 5],
+          [0, 3],
+          [1, 4],
+          [2, 5]
+        ])
 
       model = KNNRegressor.fit(x_train(), y, num_neighbors: 3)
       y_pred = KNNRegressor.predict(model, x())
@@ -111,7 +122,18 @@ defmodule Scholar.Neighbors.KNNRegressorTest do
 
     test "predict with 2D labels, cosine metric and weights set to :distance" do
       y =
-        Nx.tensor([[1, 4], [0, 3], [2, 5], [0, 3], [0, 3], [1, 4], [2, 5], [0, 3], [1, 4], [2, 5]])
+        Nx.tensor([
+          [1, 4],
+          [0, 3],
+          [2, 5],
+          [0, 3],
+          [0, 3],
+          [1, 4],
+          [2, 5],
+          [0, 3],
+          [1, 4],
+          [2, 5]
+        ])
 
       model =
         KNNRegressor.fit(x_train(), y, num_neighbors: 3, metric: :cosine, weights: :distance)
