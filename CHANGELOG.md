@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.4.0 (2025-01-15)
+
+  * Require Nx `~> 0.9`
+  * Add batching to regression metrics
+  * Add `Scholar.Cluster.OPTICS`
+  * Add `Scholar.Covariance.LedoitWolf`
+  * Add `Scholar.Covariance.ShrunkCovariance`
+  * Add `Scholar.CrossDecomposition.PLSSVD`
+  * Add `Scholar.Decomposition.TruncatedSVD`
+  * Add `Scholar.Impute.KNNImputter`
+  * Add `Scholar.NaiveBayes.Bernoulli`
+  * Add `Scholar.Preprocessing.Binarizer`
+  * Add `Scholar.Preprocessing.RobustScaler`
+  * Add `partial_fit/2` and `incremental_fit/2` to PCA
+  * Split `RNN` into `Scholar.Neighbors.RadiusNNClassifier` and `Scholar.Neighbors.RadiusNNRegressor`
+  * Unify shape checks across all APIs
+
 ## v0.3.1 (2024-06-18)
 
 ### Enhancements

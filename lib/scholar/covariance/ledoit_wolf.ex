@@ -1,6 +1,7 @@
 defmodule Scholar.Covariance.LedoitWolf do
   @moduledoc """
-  Ledoit-Wolf is a particular form of shrinkage covariance estimator, where the shrinkage coefficient is computed using O. Ledoit and M. Wolf’s formula.
+  Ledoit-Wolf is a particular form of shrinkage covariance estimator,
+  where the shrinkage coefficient is computed using O. Ledoit and M. Wolf’s formula.
 
   Ledoit and M. Wolf's formula as
   described in "A Well-Conditioned Estimator for Large-Dimensional
@@ -67,7 +68,7 @@ defmodule Scholar.Covariance.LedoitWolf do
         f32[2]
         [0.17184630036354065, 0.3276958167552948]
       >
-      
+
       iex> key = Nx.Random.key(0)
       iex> {x, _new_key} = Nx.Random.multivariate_normal(key, Nx.tensor([0.0, 0.0, 0.0]), Nx.tensor([[3.0, 2.0, 1.0], [1.0, 2.0, 3.0], [1.3, 1.0, 2.2]]), shape: {10}, type: :f32)
       iex> model = Scholar.Covariance.LedoitWolf.fit(x)
@@ -85,7 +86,7 @@ defmodule Scholar.Covariance.LedoitWolf do
         f32
         0.1908363401889801
       >
-      iex> model.location 
+      iex> model.location
       #Nx.Tensor<
         f32[3]
         [1.1228725910186768, 0.5419300198554993, 0.8678852319717407]

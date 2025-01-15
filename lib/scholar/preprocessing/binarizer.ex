@@ -1,6 +1,6 @@
 defmodule Scholar.Preprocessing.Binarizer do
   @moduledoc """
-    Binarize data according to a threshold.
+  Binarize data according to a threshold.
   """
   import Nx.Defn
 
