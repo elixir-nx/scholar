@@ -140,7 +140,8 @@ defmodule Scholar.Preprocessing do
   end
 
   @doc """
-  It is a shortcut for `Scholar.Preprocessing.OrdinalEncoder.fit_transform/2`.
+  It is a shortcut for `Scholar.Preprocessing.OrdinalEncoder.fit_transform/1`.
+
   See `Scholar.Preprocessing.OrdinalEncoder` for more information.
 
   ## Examples

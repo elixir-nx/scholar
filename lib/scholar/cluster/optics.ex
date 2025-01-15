@@ -25,14 +25,14 @@ defmodule Scholar.Cluster.OPTICS do
     max_eps: [
       type: {:custom, Scholar.Options, :beta, []},
       doc: """
-        The maximum distance between two samples for one to be considered as in the neighborhood of the other. 
+        The maximum distance between two samples for one to be considered as in the neighborhood of the other.
         Default value of Nx.Constants.infinity() will identify clusters across all scales.
       """
     ],
     eps: [
       type: {:custom, Scholar.Options, :beta, []},
       doc: """
-        The maximum distance between two samples for one to be considered as in the neighborhood of the other. 
+        The maximum distance between two samples for one to be considered as in the neighborhood of the other.
         By default it assumes the same value as max_eps.
       """
     ],
@@ -58,7 +58,7 @@ defmodule Scholar.Cluster.OPTICS do
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
-  Perform OPTICS clustering for `x` which is tensor of `{n_samples, n_features} shape.
+  Perform OPTICS clustering for `x` which is tensor of `{n_samples, n_features}` shape.
 
   ## Options
 
@@ -67,7 +67,7 @@ defmodule Scholar.Cluster.OPTICS do
   ## Return Values
 
   The function returns a labels tensor of shape `{n_samples}`.
-  Cluster labels for each point in the dataset given to fit().
+  Cluster labels for each point in the dataset given to `fit`.
   Noisy samples are labeled as -1.
 
   ## Examples
