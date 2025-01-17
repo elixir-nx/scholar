@@ -4,6 +4,18 @@ defmodule Scholar.FeatureExtraction.CountVectorizer do
   """
   import Nx.Defn
 
+  opts_schema = [
+    max_token_id: [
+      type: :pos_integer,
+      required: true,
+      doc: ~S"""
+      Maximum token id in the input tensor.
+      """
+    ]
+  ]
+
+  @opts_schema NimbleOptions.new!(opts_schema)
+
   @doc """
   Generates a count matrix where each row corresponds to a document in the input corpus, and each column corresponds to a unique token in the vocabulary of the corpus.
 
@@ -13,9 +25,13 @@ defmodule Scholar.FeatureExtraction.CountVectorizer do
 
   The same number represents the same token in the vocabulary. Tokens should start from 0 and be consecutive. Negative values are ignored, making them suitable for padding.
 
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
+
   ## Examples
       iex> t = Nx.tensor([[0, 1, 2], [1, 3, 4]])
-      iex> Scholar.FeatureExtraction.CountVectorizer.fit_transform(t)
+      iex> Scholar.FeatureExtraction.CountVectorizer.fit_transform(t, max_token_id: Scholar.FeatureExtraction.CountVectorizer.max_token_id(t))
       Nx.tensor([
           [1, 1, 1, 0, 0],
           [0, 1, 0, 1, 1]
@@ -23,22 +39,32 @@ defmodule Scholar.FeatureExtraction.CountVectorizer do
 
   With padding:
       iex> t = Nx.tensor([[0, 1, -1], [1, 3, 4]])
-      iex> Scholar.FeatureExtraction.CountVectorizer.fit_transform(t)
+      iex> Scholar.FeatureExtraction.CountVectorizer.fit_transform(t, max_token_id: Scholar.FeatureExtraction.CountVectorizer.max_token_id(t))
       Nx.tensor([
             [1, 1, 0, 0, 0],
             [0, 1, 0, 1, 1]
         ])
   """
-  deftransform fit_transform(tensor) do
-    max_index = tensor |> Nx.reduce_max() |> Nx.add(1) |> Nx.to_number()
-    opts = [max_index: max_index]
+  deftransform fit_transform(tensor, opts \\ []) do
+    fit_transform_n(tensor, NimbleOptions.validate!(opts, @opts_schema))
+  end
 
-    fit_transform_n(tensor, opts)
+  @doc """
+  Computes the max_token_id option from given tensor.
+
+  ## Examples
+
+      iex> t = Nx.tensor([[1, -1, 2], [2, 0, 0], [0, 1, -1]])
+      iex> Scholar.FeatureExtraction.CountVectorizer.max_token_id(t)
+      2
+  """
+  def max_token_id(tensor) do
+    tensor |> Nx.reduce_max() |> Nx.to_number()
   end
 
   defnp fit_transform_n(tensor, opts) do
     check_for_rank(tensor)
-    counts = Nx.broadcast(0, {Nx.axis_size(tensor, 0), opts[:max_index]})
+    counts = Nx.broadcast(0, {Nx.axis_size(tensor, 0), opts[:max_token_id] + 1})
 
     {_, counts} =
       while {{i = 0, tensor}, counts}, Nx.less(i, Nx.axis_size(tensor, 0)) do
