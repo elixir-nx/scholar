@@ -17,19 +17,23 @@ defmodule Scholar.FeatureExtraction.CountVectorizer do
   @opts_schema NimbleOptions.new!(opts_schema)
 
   @doc """
-  Generates a count matrix where each row corresponds to a document in the input corpus, and each column corresponds to a unique token in the vocabulary of the corpus.
+  Generates a count matrix where each row corresponds to a document in the input corpus,
+  and each column corresponds to a unique token in the vocabulary of the corpus.
 
   The input must be a 2D tensor where:
+
   * Each row represents a document.
   * Each document has integer values representing tokens.
 
-  The same number represents the same token in the vocabulary. Tokens should start from 0 and be consecutive. Negative values are ignored, making them suitable for padding.
+  The same number represents the same token in the vocabulary. Tokens should start from 0
+  and be consecutive. Negative values are ignored, making them suitable for padding.
 
   ## Options
 
   #{NimbleOptions.docs(@opts_schema)}
 
   ## Examples
+
       iex> t = Nx.tensor([[0, 1, 2], [1, 3, 4]])
       iex> Scholar.FeatureExtraction.CountVectorizer.fit_transform(t, max_token_id: Scholar.FeatureExtraction.CountVectorizer.max_token_id(t))
       Nx.tensor([
@@ -38,6 +42,7 @@ defmodule Scholar.FeatureExtraction.CountVectorizer do
         ])
 
   With padding:
+
       iex> t = Nx.tensor([[0, 1, -1], [1, 3, 4]])
       iex> Scholar.FeatureExtraction.CountVectorizer.fit_transform(t, max_token_id: Scholar.FeatureExtraction.CountVectorizer.max_token_id(t))
       Nx.tensor([
@@ -51,6 +56,9 @@ defmodule Scholar.FeatureExtraction.CountVectorizer do
 
   @doc """
   Computes the max_token_id option from given tensor.
+
+  This function cannot be called inside `defn` (and it will raise
+  if you try to do so).
 
   ## Examples
 
