@@ -131,16 +131,15 @@ defmodule Scholar.Interpolation.Linear do
 
   defnp predict_n(%__MODULE__{x: x, coefficients: coefficients} = _model, target_x, opts) do
     shape = Nx.shape(target_x)
-
     target_x = Nx.flatten(target_x)
-
     indices = Nx.argsort(target_x)
 
     left_bound = x[0]
     right_bound = x[-1]
 
     target_x = Nx.sort(target_x)
-    res = Nx.broadcast(Nx.tensor(0, type: to_float_type(target_x)), {Nx.axis_size(target_x, 0)})
+    type = Nx.Type.merge(to_float_type(target_x), coefficients.type)
+    res = Nx.broadcast(Nx.tensor(0, type: type), {Nx.axis_size(target_x, 0)})
 
     # while with smaller than left_bound
     {{res, i}, _} =

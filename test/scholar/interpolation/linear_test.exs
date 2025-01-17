@@ -51,5 +51,16 @@ defmodule Scholar.Interpolation.LinearTest do
       assert Linear.predict(model, Nx.tensor([[[-0.5], [0.5], [1.5], [2.5], [3.5]]])) ==
                Nx.tensor([[[0.0], [0.0], [0.5], [3], [7]]])
     end
+
+    test "with different types" do
+      x_s = Nx.tensor([1, 2, 3], type: :u64)
+      y_s = Nx.tensor([1.0, 2.0, 3.0], type: :f64)
+      target = Nx.tensor([1, 2], type: :u64)
+
+      assert x_s
+             |> Scholar.Interpolation.Linear.fit(y_s)
+             |> Scholar.Interpolation.Linear.predict(target) ==
+               Nx.tensor([1.0, 2.0], type: :f64)
+    end
   end
 end
