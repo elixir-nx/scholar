@@ -4,7 +4,7 @@ defmodule Scholar.Preprocessing.CountVectorizer do
   doctest CountVectorizer
 
   describe "fit_transform" do
-    test "fit_transform test" do
+    test "without padding" do
       tesnsor = Nx.tensor([[2, 3, 0], [1, 4, 4]])
 
       counts =
@@ -17,7 +17,7 @@ defmodule Scholar.Preprocessing.CountVectorizer do
       assert counts == expected_counts
     end
 
-    test "fit_transform test - tensor with padding" do
+    test "with padding" do
       tensor = Nx.tensor([[2, 3, 0], [1, 4, -1]])
 
       counts =
@@ -30,12 +30,12 @@ defmodule Scholar.Preprocessing.CountVectorizer do
   end
 
   describe "max_token_id" do
-    test "max_token_id test" do
+    test "without padding" do
       tensor = Nx.tensor([[2, 3, 0], [1, 4, 4]])
       assert CountVectorizer.max_token_id(tensor) == 4
     end
 
-    test "max_token_id tes - tensor with padding" do
+    test "with padding" do
       tensor = Nx.tensor([[2, 3, 0], [1, 4, -1]])
       assert CountVectorizer.max_token_id(tensor) == 4
     end
