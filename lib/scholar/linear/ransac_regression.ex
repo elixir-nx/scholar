@@ -86,19 +86,10 @@ defmodule RANSACRegression do
   defnp loss_fn(loss_t, y_true, y_pred) do
     {loss} = loss_t.shape
 
-    y_true =
-      if Nx.rank(y_true) == 2 do
-        Nx.reshape(y_true, y_pred)
-      else
-        y_true
-      end
-
-    diff = Nx.abs(y_true - y_pred)
-
     cond do
-      loss == @losses[:mae] -> diff
-      loss == @losses[:mse] -> Nx.pow(diff, 2)
-      true -> diff
+      loss == @losses[:mae] -> Metrics.mean_absolute_error(y_true, y_pred, axes: [1])
+      loss == @losses[:mse] -> Metrics.mean_square_error(y_true, y_pred, axes: [1])
+      true -> Metrics.mean_absolute_error(y_true, y_pred, axis: 0)
     end
   end
 
@@ -124,6 +115,7 @@ defmodule RANSACRegression do
         {rand_x, rand_y} = Nx.split(rand_samples, elem(x.shape, 1), axis: 1)
         model = LinearRegression.fit(rand_x, rand_y)
         y_pred = LinearRegression.predict(model, x)
+        y_pred = Nx.reshape(y_pred, {elem(y_pred.shape, 0), 1})
 
         error = loss_fn(loss_t, y, y_pred)
         inliers_i = Nx.less(error, thr)
