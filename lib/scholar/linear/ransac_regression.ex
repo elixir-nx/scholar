@@ -10,6 +10,7 @@ defmodule RANSACRegression do
   """
 
   import Nx.Defn
+  alias Scholar.Metrics.Regression, as: Metrics
 
   defstruct [:estimator, :inliers_indices, :n_inliers]
 
