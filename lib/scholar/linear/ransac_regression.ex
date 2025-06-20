@@ -11,26 +11,14 @@ defmodule RANSACRegression do
 
   import Nx.Defn
   alias Scholar.Metrics.Regression, as: Metrics
-
-  alias Scholar.Linear.{
-    LinearRegression,
-    PolynomialRegression
-  }
+  alias Scholar.Linear.PolynomialRegression
 
   @derive {Nx.Container, containers: [:model, :inliers_indices, :n_inliers]}
-  defstruct [:estimator, :model, :inliers_indices, :n_inliers]
+  defstruct [:model, :inliers_indices, :n_inliers]
 
-  @models [linear: 1, polynomial: 2]
   @losses [mae: 1, mse: 2]
 
   opts = [
-    estimator: [
-      type: {:in, Keyword.keys(@models)},
-      doc: """
-      Base estimator.
-      """,
-      default: :linear
-    ],
     max_iters: [
       type: :integer,
       doc: """
@@ -55,9 +43,10 @@ defmodule RANSACRegression do
     degree: [
       type: :integer,
       doc: """
-      Degree for a polynomial regression base estimator. Default is 2.
+      Degree for the polynomial regression base estimator. Default is 1,
+      which is equivalente to a linear regression.
       """,
-      default: 2
+      default: 1
     ],
     loss: [
       type: {:in, Keyword.keys(@losses)},
@@ -76,7 +65,8 @@ defmodule RANSACRegression do
   @opts_schema NimbleOptions.new!(opts)
 
   @doc """
-  Fits a robust regressor using RANSAC algorithm.
+  Fits a robust regressor using RANSAC algorithm, using
+  a polynomial regression as base estimator.
 
   #{NimbleOptions.docs(@opts_schema)}
   """
@@ -96,30 +86,12 @@ defmodule RANSACRegression do
     x_inliers = Nx.take(x, inliers_idx)
     y_inliers = Nx.take(y, inliers_idx)
 
-    model =
-      cond do
-        opts[:estimator] == :linear ->
-          LinearRegression.fit(x_inliers, y_inliers)
+    model = PolynomialRegression.fit(x_inliers, y_inliers, degree: opts[:degree])
 
-        opts[:estimator] == :polynomial ->
-          PolynomialRegression.fit(x_inliers, y_inliers)
-
-        true ->
-          LinearRegression.fit(x_inliers, y_inliers)
-      end
-
-    %__MODULE__{
-      estimator: opts[:estimator],
-      inliers_indices: inliers_idx,
-      n_inliers: n_inliers,
-      model: model
-    }
+    %__MODULE__{inliers_indices: inliers_idx, n_inliers: n_inliers, model: model}
   end
 
-  def predict(%__MODULE__{estimator: :polynomial, model: m}, x),
-    do: PolynomialRegression.predict(m, x)
-
-  def predict(%__MODULE__{model: m}, x), do: LinearRegression.predict(m, x)
+  def predict(%__MODULE__{model: m}, x), do: PolynomialRegression.predict(m, x)
 
   defnp loss_fn(loss_t, y_true, y_pred) do
     {loss} = loss_t.shape
@@ -131,35 +103,13 @@ defmodule RANSACRegression do
     end
   end
 
-  defnp fit_fn(model_t, x_train, y_train, degree_t) do
-    {m} = model_t.shape
+  defnp fit_fn(x_train, y_train, degree_t) do
     {d} = degree_t.shape
-
-    cond do
-      m == @models[:linear] ->
-        LinearRegression.fit(x_train, y_train)
-
-      m == @models[:polynomial] ->
-        PolynomialRegression.fit(x_train, y_train, degree: d)
-
-      true ->
-        LinearRegression.fit(x_train, y_train)
-    end
+    PolynomialRegression.fit(x_train, y_train, degree: d)
   end
 
-  defnp predict_fn(model_t, model, x) do
-    {m} = model_t.shape
-
-    cond do
-      m == @models[:linear] ->
-        LinearRegression.predict(model, x)
-
-      m == @models[:polynomial] ->
-        PolynomialRegression.predict(model, x)
-
-      true ->
-        LinearRegression.predict(model, x)
-    end
+  defnp predict_fn(model, x) do
+    PolynomialRegression.predict(model, x)
   end
 
   defnp fit_n(x, y, opts) do
@@ -167,11 +117,9 @@ defmodule RANSACRegression do
     thr = opts[:threshold]
     min_samples = opts[:min_samples]
     loss = @losses[opts[:loss]]
-    model = @models[opts[:estimator]]
     degree = opts[:degree]
 
     loss_t = Nx.broadcast(:nan, {loss})
-    model_t = Nx.broadcast(:nan, {model})
     min_samples_t = Nx.broadcast(:nan, {min_samples})
     degree_t = Nx.broadcast(:nan, {degree})
 
@@ -180,15 +128,14 @@ defmodule RANSACRegression do
     inliers = Nx.broadcast(0, {max_iters, elem(x.shape, 0)})
 
     {inliers_masks, _} =
-      while {inliers,
-             {i = 0, x, y, rand_key, data, min_samples_t, thr, loss_t, model_t, degree_t}},
+      while {inliers, {i = 0, x, y, rand_key, data, min_samples_t, thr, loss_t, degree_t}},
             i < max_iters do
         n_samples = elem(min_samples_t.shape, 0)
         {rand_samples, rand_key} = Nx.Random.choice(rand_key, data, axis: 0, samples: n_samples)
 
         {rand_x, rand_y} = Nx.split(rand_samples, elem(x.shape, 1), axis: 1)
-        model = fit_fn(model_t, rand_x, rand_y, degree_t)
-        y_pred = predict_fn(model_t, model, x)
+        model = fit_fn(rand_x, rand_y, degree_t)
+        y_pred = predict_fn(model, x)
         y_pred = Nx.reshape(y_pred, {elem(y_pred.shape, 0), 1})
 
         error = loss_fn(loss_t, y, y_pred)
@@ -197,8 +144,7 @@ defmodule RANSACRegression do
         updated_inliers =
           Nx.put_slice(inliers, [i, 0], Nx.reshape(inliers_i, {1, elem(x.shape, 0)}))
 
-        {updated_inliers,
-         {i + 1, x, y, rand_key, data, min_samples_t, thr, loss_t, model_t, degree_t}}
+        {updated_inliers, {i + 1, x, y, rand_key, data, min_samples_t, thr, loss_t, degree_t}}
       end
 
     best_mask_idx =
