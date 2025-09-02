@@ -1,4 +1,4 @@
-defmodule RANSACRegression do
+defmodule Scholar.Linear.RANSACRegression do
   @moduledoc """
   The Random Sample Consensus algorithm is an iterative
   method that fits a robust estimator, able to cope with
