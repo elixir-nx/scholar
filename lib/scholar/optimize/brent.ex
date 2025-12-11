@@ -97,11 +97,10 @@ defmodule Scholar.Optimize.Brent do
       %Scholar.Optimize{
         x: x,
         fun: fx,
-        success: converged,
+        converged: Nx.tensor(if(converged, do: 1, else: 0), type: :u8),
         iterations: Nx.tensor(iter, type: :s64),
         fun_evals: Nx.tensor(f_evals, type: :s64),
-        grad_evals: Nx.tensor(0, type: :s64),
-        message: build_message(converged, iter, maxiter)
+        grad_evals: Nx.tensor(0, type: :s64)
       }
     else
       # Try parabolic interpolation
@@ -236,16 +235,4 @@ defmodule Scholar.Optimize.Brent do
     end
   end
 
-  defp build_message(converged, iterations, maxiter) do
-    cond do
-      converged ->
-        "Optimization converged after #{iterations} iterations."
-
-      iterations >= maxiter ->
-        "Maximum iterations (#{maxiter}) reached."
-
-      true ->
-        "Optimization terminated."
-    end
-  end
 end

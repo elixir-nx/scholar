@@ -38,17 +38,16 @@ defmodule Scholar.Optimize do
 
   import Nx.Defn
 
-  @derive {Nx.Container, containers: [:x, :fun, :iterations, :fun_evals, :grad_evals]}
-  defstruct [:x, :fun, :success, :iterations, :fun_evals, :grad_evals, :message]
+  @derive {Nx.Container, containers: [:x, :fun, :converged, :iterations, :fun_evals, :grad_evals]}
+  defstruct [:x, :fun, :converged, :iterations, :fun_evals, :grad_evals]
 
   @type t :: %__MODULE__{
           x: Nx.Tensor.t(),
           fun: Nx.Tensor.t(),
-          success: boolean(),
+          converged: Nx.Tensor.t(),
           iterations: Nx.Tensor.t(),
           fun_evals: Nx.Tensor.t(),
-          grad_evals: Nx.Tensor.t() | nil,
-          message: String.t()
+          grad_evals: Nx.Tensor.t() | nil
         }
 
   minimize_opts = [
@@ -130,19 +129,18 @@ defmodule Scholar.Optimize do
   A `Scholar.Optimize` struct containing:
   * `:x` - The solution tensor
   * `:fun` - The function value at the solution
-  * `:success` - Whether optimization converged successfully
+  * `:converged` - Tensor boolean indicating whether optimization converged successfully
   * `:iterations` - Number of iterations performed
   * `:fun_evals` - Number of function evaluations
   * `:grad_evals` - Number of gradient evaluations (for gradient-based methods)
-  * `:message` - Description of the termination reason
 
   ## Examples
 
       iex> fun = fn x -> Nx.sum(x ** 2) end
       iex> x0 = Nx.tensor([1.0, 2.0])
       iex> result = Scholar.Optimize.minimize(fun, x0)
-      iex> result.success
-      true
+      iex> Nx.to_number(result.converged)
+      1
       iex> Nx.all_close(result.x, Nx.tensor([0.0, 0.0]), atol: 1.0e-4) |> Nx.to_number()
       1
   """
@@ -184,8 +182,8 @@ defmodule Scholar.Optimize do
 
       iex> fun = fn x -> (x - 3) ** 2 end
       iex> result = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 5.0})
-      iex> result.success
-      true
+      iex> Nx.to_number(result.converged)
+      1
       iex> Nx.all_close(result.x, Nx.tensor(3.0), atol: 1.0e-4) |> Nx.to_number()
       1
   """

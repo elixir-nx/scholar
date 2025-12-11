@@ -10,7 +10,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize_scalar(fun, bracket: {0.0, 5.0}, method: :golden)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor(3.0), atol: 1.0e-6)
       assert_all_close(result.fun, Nx.tensor(0.0), atol: 1.0e-10)
     end
@@ -20,7 +20,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize_scalar(fun, bracket: {-5.0, 5.0}, method: :golden)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor(-2.0), atol: 1.0e-6)
       assert_all_close(result.fun, Nx.tensor(1.0), atol: 1.0e-10)
     end
@@ -32,7 +32,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize_scalar(fun, bracket: {0.0, 2 * :math.pi()}, method: :golden)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor(expected_x), atol: 1.0e-5)
     end
 
@@ -51,7 +51,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize_scalar(fun, bracket: {0.0, 5.0}, method: :brent)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor(3.0), atol: 1.0e-6)
       assert_all_close(result.fun, Nx.tensor(0.0), atol: 1.0e-10)
     end
@@ -62,7 +62,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize_scalar(fun, bracket: {-2.0, 4.0}, method: :brent)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor(1.0), atol: 1.0e-4)
     end
 
@@ -71,7 +71,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize_scalar(fun, bracket: {0.0, 5.0})
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor(3.0), atol: 1.0e-6)
     end
 
@@ -82,8 +82,8 @@ defmodule Scholar.OptimizeTest do
       result_golden = Optimize.minimize_scalar(fun, bracket: {0.0, 10.0}, method: :golden)
 
       # Both should succeed
-      assert result_brent.success
-      assert result_golden.success
+      assert Nx.to_number(result_brent.converged) == 1
+      assert Nx.to_number(result_golden.converged) == 1
 
       # Brent should typically use fewer function evaluations
       # (Not always guaranteed, but usually true for smooth functions)
@@ -98,7 +98,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize(fun, x0, method: :nelder_mead)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor([0.0, 0.0, 0.0]), atol: 1.0e-4)
       assert_all_close(result.fun, Nx.tensor(0.0), atol: 1.0e-8)
     end
@@ -116,7 +116,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize(fun, x0, method: :nelder_mead)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor([1.0, 2.0]), atol: 1.0e-4)
     end
 
@@ -132,7 +132,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize(fun, x0, method: :nelder_mead, maxiter: 1000, tol: 1.0e-6)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor([1.0, 1.0]), atol: 2.0e-3)
     end
 
@@ -142,7 +142,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize(fun, x0)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor([0.0, 0.0]), atol: 1.0e-4)
     end
   end
@@ -154,7 +154,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize(fun, x0, method: :bfgs)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor([0.0, 0.0, 0.0]), atol: 1.0e-6)
       assert_all_close(result.fun, Nx.tensor(0.0), atol: 1.0e-12)
     end
@@ -175,7 +175,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize(fun, x0, method: :bfgs)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor([0.5, 0.5]), atol: 1.0e-6)
     end
 
@@ -190,7 +190,7 @@ defmodule Scholar.OptimizeTest do
 
       result = Optimize.minimize(fun, x0, method: :bfgs, maxiter: 500)
 
-      assert result.success
+      assert Nx.to_number(result.converged) == 1
       assert_all_close(result.x, Nx.tensor([1.0, 1.0]), atol: 1.0e-4)
     end
 
@@ -212,8 +212,8 @@ defmodule Scholar.OptimizeTest do
       result_nm = Optimize.minimize(fun, x0, method: :nelder_mead)
 
       # Both should succeed
-      assert result_bfgs.success
-      assert result_nm.success
+      assert Nx.to_number(result_bfgs.converged) == 1
+      assert Nx.to_number(result_nm.converged) == 1
 
       # BFGS should typically need fewer iterations for smooth problems
       assert Nx.to_number(result_bfgs.iterations) < Nx.to_number(result_nm.iterations)
@@ -274,31 +274,28 @@ defmodule Scholar.OptimizeTest do
       assert %Scholar.Optimize{} = result
       assert Nx.is_tensor(result.x)
       assert Nx.is_tensor(result.fun)
-      assert is_boolean(result.success)
+      assert Nx.is_tensor(result.converged)
       assert Nx.is_tensor(result.iterations)
       assert Nx.is_tensor(result.fun_evals)
       assert Nx.is_tensor(result.grad_evals)
-      assert is_binary(result.message)
     end
 
-    test "message indicates convergence reason" do
+    test "converged is true when optimization succeeds" do
       fun = fn x -> Nx.sum(Nx.pow(x, 2)) end
       x0 = Nx.tensor([1.0, 1.0])
 
       result = Optimize.minimize(fun, x0)
 
-      assert result.success
-      assert result.message =~ "converged"
+      assert Nx.to_number(result.converged) == 1
     end
 
-    test "message indicates max iterations when not converged" do
+    test "converged is false when max iterations reached" do
       fun = fn x -> Nx.sum(Nx.pow(x, 2)) end
       x0 = Nx.tensor([100.0, 100.0])
 
       result = Optimize.minimize(fun, x0, maxiter: 2)
 
-      refute result.success
-      assert result.message =~ "Maximum iterations"
+      assert Nx.to_number(result.converged) == 0
     end
   end
 end

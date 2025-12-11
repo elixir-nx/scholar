@@ -107,11 +107,10 @@ defmodule Scholar.Optimize.BFGS do
       %Scholar.Optimize{
         x: x,
         fun: f,
-        success: converged,
+        converged: Nx.tensor(if(converged, do: 1, else: 0), type: :u8),
         iterations: Nx.tensor(iter, type: :s64),
         fun_evals: Nx.tensor(f_evals, type: :s64),
-        grad_evals: Nx.tensor(g_evals, type: :s64),
-        message: build_message(converged, iter, maxiter)
+        grad_evals: Nx.tensor(g_evals, type: :s64)
       }
     else
       # Search direction: p = -H * g
@@ -214,16 +213,4 @@ defmodule Scholar.Optimize.BFGS do
     end
   end
 
-  defp build_message(converged, iterations, maxiter) do
-    cond do
-      converged ->
-        "Optimization converged after #{iterations} iterations."
-
-      iterations >= maxiter ->
-        "Maximum iterations (#{maxiter}) reached."
-
-      true ->
-        "Optimization terminated."
-    end
-  end
 end

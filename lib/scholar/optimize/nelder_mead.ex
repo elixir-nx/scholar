@@ -143,11 +143,10 @@ defmodule Scholar.Optimize.NelderMead do
       %Scholar.Optimize{
         x: x_opt,
         fun: f_opt,
-        success: converged,
+        converged: Nx.tensor(if(converged, do: 1, else: 0), type: :u8),
         iterations: Nx.tensor(iter, type: :s64),
         fun_evals: Nx.tensor(f_evals, type: :s64),
-        grad_evals: Nx.tensor(0, type: :s64),
-        message: build_message(converged, iter, maxiter)
+        grad_evals: Nx.tensor(0, type: :s64)
       }
     else
       # Compute centroid of all points except the worst (last)
@@ -261,16 +260,4 @@ defmodule Scholar.Optimize.NelderMead do
     {new_simplex, new_f_simplex}
   end
 
-  defp build_message(converged, iterations, maxiter) do
-    cond do
-      converged ->
-        "Optimization converged after #{iterations} iterations."
-
-      iterations >= maxiter ->
-        "Maximum iterations (#{maxiter}) reached."
-
-      true ->
-        "Optimization terminated."
-    end
-  end
 end
