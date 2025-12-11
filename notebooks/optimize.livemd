@@ -1,0 +1,294 @@
+# Optimization with Scholar.Optimize
+
+```elixir
+Mix.install([
+  {:scholar, path: "."},
+  {:nx, "~> 0.9"},
+  {:kino_vega_lite, "~> 0.1"}
+])
+```
+
+## Introduction
+
+`Scholar.Optimize` provides general-purpose numerical optimization algorithms similar to SciPy's `scipy.optimize` module. It includes both univariate (scalar) and multivariate optimization methods.
+
+**Available methods:**
+
+| Function | Method | Description |
+|----------|--------|-------------|
+| `minimize_scalar/2` | `:golden` | Golden section search (derivative-free) |
+| `minimize_scalar/2` | `:brent` | Brent's method (default, combines golden section with parabolic interpolation) |
+| `minimize/3` | `:nelder_mead` | Nelder-Mead simplex (derivative-free, default) |
+| `minimize/3` | `:bfgs` | BFGS quasi-Newton (uses automatic differentiation) |
+
+## Scalar Optimization
+
+Scalar optimization finds the minimum of a function of one variable within a specified bracket.
+
+### Simple Parabola
+
+Let's minimize $f(x) = (x - 3)^2$, which has its minimum at $x = 3$.
+
+```elixir
+# Define the objective function
+fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
+
+# Find the minimum using Brent's method (default)
+result = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 5.0})
+
+IO.puts("Minimum found at x = #{Nx.to_number(result.x)}")
+IO.puts("Function value: #{Nx.to_number(result.fun)}")
+IO.puts("Converged: #{result.success}")
+IO.puts("Iterations: #{Nx.to_number(result.iterations)}")
+```
+
+### Comparing Methods
+
+Let's compare Golden Section and Brent's method on the same problem:
+
+```elixir
+fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
+
+result_golden = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 10.0}, method: :golden)
+result_brent = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 10.0}, method: :brent)
+
+IO.puts("Golden Section:")
+IO.puts("  x = #{Nx.to_number(result_golden.x)}")
+IO.puts("  Function evaluations: #{Nx.to_number(result_golden.fun_evals)}")
+
+IO.puts("\nBrent's method:")
+IO.puts("  x = #{Nx.to_number(result_brent.x)}")
+IO.puts("  Function evaluations: #{Nx.to_number(result_brent.fun_evals)}")
+```
+
+Brent's method typically uses fewer function evaluations on smooth functions due to its use of parabolic interpolation.
+
+### Minimizing a Trigonometric Function
+
+Find the minimum of $\sin(x)$ in the interval $[0, 2\pi]$:
+
+```elixir
+fun = fn x -> Nx.sin(x) end
+
+result = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 2 * :math.pi()})
+
+expected_x = 3 * :math.pi() / 2  # 3π/2 ≈ 4.712
+
+IO.puts("Minimum found at x = #{Nx.to_number(result.x)}")
+IO.puts("Expected: #{expected_x}")
+IO.puts("sin(x) at minimum: #{Nx.to_number(result.fun)}")
+```
+
+## Multivariate Optimization
+
+Multivariate optimization finds the minimum of a function of multiple variables.
+
+### Sphere Function
+
+The sphere function $f(\mathbf{x}) = \sum_{i} x_i^2$ has its minimum at the origin.
+
+```elixir
+# Define the sphere function
+sphere = fn x -> Nx.sum(Nx.pow(x, 2)) end
+
+# Initial guess
+x0 = Nx.tensor([1.0, 2.0, 3.0])
+
+# Minimize using Nelder-Mead (derivative-free)
+result_nm = Scholar.Optimize.minimize(sphere, x0, method: :nelder_mead)
+
+IO.puts("Nelder-Mead result:")
+IO.puts("  x = #{inspect(Nx.to_flat_list(result_nm.x))}")
+IO.puts("  f(x) = #{Nx.to_number(result_nm.fun)}")
+IO.puts("  Iterations: #{Nx.to_number(result_nm.iterations)}")
+```
+
+```elixir
+# Now try BFGS (uses gradients via autodiff)
+result_bfgs = Scholar.Optimize.minimize(sphere, x0, method: :bfgs)
+
+IO.puts("BFGS result:")
+IO.puts("  x = #{inspect(Nx.to_flat_list(result_bfgs.x))}")
+IO.puts("  f(x) = #{Nx.to_number(result_bfgs.fun)}")
+IO.puts("  Iterations: #{Nx.to_number(result_bfgs.iterations)}")
+IO.puts("  Gradient evaluations: #{Nx.to_number(result_bfgs.grad_evals)}")
+```
+
+BFGS typically converges in fewer iterations than Nelder-Mead for smooth, differentiable functions.
+
+### Rosenbrock Function
+
+The Rosenbrock function is a classic optimization test problem:
+
+$$f(x, y) = (1 - x)^2 + 100(y - x^2)^2$$
+
+It has a global minimum at $(1, 1)$ but is notoriously difficult to optimize due to its curved, narrow valley.
+
+```elixir
+rosenbrock = fn x ->
+  term1 = Nx.pow(Nx.subtract(1, x[0]), 2)
+  term2 = Nx.multiply(100, Nx.pow(Nx.subtract(x[1], Nx.pow(x[0], 2)), 2))
+  Nx.add(term1, term2)
+end
+
+x0 = Nx.tensor([0.0, 0.0])
+
+# Try both methods
+result_nm = Scholar.Optimize.minimize(rosenbrock, x0, method: :nelder_mead, maxiter: 1000)
+result_bfgs = Scholar.Optimize.minimize(rosenbrock, x0, method: :bfgs, maxiter: 500)
+
+IO.puts("Rosenbrock function optimization:")
+IO.puts("\nNelder-Mead:")
+IO.puts("  Solution: #{inspect(Nx.to_flat_list(result_nm.x))}")
+IO.puts("  f(x): #{Nx.to_number(result_nm.fun)}")
+IO.puts("  Iterations: #{Nx.to_number(result_nm.iterations)}")
+IO.puts("  Converged: #{result_nm.success}")
+
+IO.puts("\nBFGS:")
+IO.puts("  Solution: #{inspect(Nx.to_flat_list(result_bfgs.x))}")
+IO.puts("  f(x): #{Nx.to_number(result_bfgs.fun)}")
+IO.puts("  Iterations: #{Nx.to_number(result_bfgs.iterations)}")
+IO.puts("  Converged: #{result_bfgs.success}")
+```
+
+### Quadratic Programming
+
+Minimize a quadratic function with known analytical solution:
+
+$$f(\mathbf{x}) = \frac{1}{2}\mathbf{x}^T A \mathbf{x} - \mathbf{b}^T \mathbf{x}$$
+
+where $A = \text{diag}(2, 4)$ and $\mathbf{b} = (1, 2)^T$.
+
+The optimal solution is $\mathbf{x}^* = A^{-1}\mathbf{b} = (0.5, 0.5)^T$.
+
+```elixir
+quadratic = fn x ->
+  # f(x) = 0.5 * (2*x[0]^2 + 4*x[1]^2) - (x[0] + 2*x[1])
+  quad_term = Nx.multiply(0.5, Nx.add(
+    Nx.multiply(2, Nx.pow(x[0], 2)),
+    Nx.multiply(4, Nx.pow(x[1], 2))
+  ))
+  lin_term = Nx.add(x[0], Nx.multiply(2, x[1]))
+  Nx.subtract(quad_term, lin_term)
+end
+
+x0 = Nx.tensor([0.0, 0.0])
+result = Scholar.Optimize.minimize(quadratic, x0, method: :bfgs)
+
+IO.puts("Quadratic optimization:")
+IO.puts("  Computed solution: #{inspect(Nx.to_flat_list(result.x))}")
+IO.puts("  Expected solution: [0.5, 0.5]")
+IO.puts("  Converged: #{result.success}")
+```
+
+## Visualization
+
+Let's visualize the optimization landscape and convergence for a 2D function.
+
+```elixir
+alias VegaLite, as: Vl
+
+# Create a grid for the contour plot
+x_range = Enum.map(-2..40, fn i -> i * 0.1 end)
+y_range = Enum.map(-2..40, fn i -> i * 0.1 end)
+
+# Sphere function shifted to (2, 2)
+shifted_sphere = fn x, y -> (x - 2) * (x - 2) + (y - 2) * (y - 2) end
+
+contour_data =
+  for x <- x_range, y <- y_range do
+    %{x: x, y: y, z: shifted_sphere.(x, y)}
+  end
+
+Vl.new(width: 400, height: 400, title: "Optimization Landscape: Shifted Sphere Function")
+|> Vl.data_from_values(contour_data)
+|> Vl.mark(:rect)
+|> Vl.encode_field(:x, "x", type: :quantitative, bin: [maxbins: 50])
+|> Vl.encode_field(:y, "y", type: :quantitative, bin: [maxbins: 50])
+|> Vl.encode_field(:color, "z", type: :quantitative, aggregate: :mean, scale: [scheme: "viridis"])
+```
+
+```elixir
+# Optimize and show the result
+fun = fn x ->
+  Nx.add(
+    Nx.pow(Nx.subtract(x[0], 2), 2),
+    Nx.pow(Nx.subtract(x[1], 2), 2)
+  )
+end
+
+x0 = Nx.tensor([0.0, 0.0])
+result = Scholar.Optimize.minimize(fun, x0, method: :bfgs)
+
+IO.puts("Starting point: (0, 0)")
+IO.puts("Optimal point: (#{Nx.to_number(result.x[0])}, #{Nx.to_number(result.x[1])})")
+IO.puts("Expected: (2, 2)")
+```
+
+## Options and Configuration
+
+### Tolerance
+
+Control convergence tolerance:
+
+```elixir
+fun = fn x -> Nx.sum(Nx.pow(x, 2)) end
+x0 = Nx.tensor([1.0, 1.0])
+
+# Looser tolerance (faster but less accurate)
+result_loose = Scholar.Optimize.minimize(fun, x0, tol: 1.0e-3)
+IO.puts("Loose tolerance (1e-3):")
+IO.puts("  Iterations: #{Nx.to_number(result_loose.iterations)}")
+IO.puts("  x = #{inspect(Nx.to_flat_list(result_loose.x))}")
+
+# Tighter tolerance (slower but more accurate)
+result_tight = Scholar.Optimize.minimize(fun, x0, tol: 1.0e-8)
+IO.puts("\nTight tolerance (1e-8):")
+IO.puts("  Iterations: #{Nx.to_number(result_tight.iterations)}")
+IO.puts("  x = #{inspect(Nx.to_flat_list(result_tight.x))}")
+```
+
+### Maximum Iterations
+
+Limit the number of iterations:
+
+```elixir
+fun = fn x -> Nx.sum(Nx.pow(x, 2)) end
+x0 = Nx.tensor([100.0, 100.0])
+
+result = Scholar.Optimize.minimize(fun, x0, maxiter: 5)
+
+IO.puts("With maxiter: 5")
+IO.puts("  Converged: #{result.success}")
+IO.puts("  Message: #{result.message}")
+IO.puts("  Iterations used: #{Nx.to_number(result.iterations)}")
+```
+
+## When to Use Each Method
+
+| Method | Best For | Pros | Cons |
+|--------|----------|------|------|
+| **Golden Section** | Simple univariate problems | Guaranteed convergence, no derivatives needed | Slow (linear convergence) |
+| **Brent** | General univariate problems | Fast on smooth functions, robust | Slightly more complex |
+| **Nelder-Mead** | Non-differentiable functions, noisy objectives | No derivatives needed, handles discontinuities | Slow in high dimensions |
+| **BFGS** | Smooth, differentiable functions | Fast convergence, automatic gradients | Requires differentiability |
+
+## Result Struct
+
+All optimization functions return a `Scholar.Optimize` struct:
+
+```elixir
+fun = fn x -> Nx.sum(Nx.pow(x, 2)) end
+x0 = Nx.tensor([1.0, 1.0])
+
+result = Scholar.Optimize.minimize(fun, x0, method: :bfgs)
+
+IO.puts("Result struct fields:")
+IO.puts("  x:          Solution tensor")
+IO.puts("  fun:        Function value at solution")
+IO.puts("  success:    #{result.success} (boolean)")
+IO.puts("  iterations: #{Nx.to_number(result.iterations)}")
+IO.puts("  fun_evals:  #{Nx.to_number(result.fun_evals)}")
+IO.puts("  grad_evals: #{Nx.to_number(result.grad_evals)}")
+IO.puts("  message:    #{result.message}")
+```
