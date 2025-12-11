@@ -1,0 +1,577 @@
+# Portfolio Optimization: Efficient Frontier
+
+```elixir
+Mix.install([
+  {:scholar, path: "."},
+  {:nx, "~> 0.9"},
+  {:req, "~> 0.5"},
+  {:kino_vega_lite, "~> 0.1"},
+  {:kino, "~> 0.14"}
+])
+```
+
+## Introduction
+
+This notebook demonstrates **Modern Portfolio Theory (MPT)** and the **Efficient Frontier** using `Scholar.Optimize`. We'll optimize portfolio weights for a selection of popular stocks: Apple (AAPL), Tesla (TSLA), Meta (META), and Shopify (SHOP).
+
+## What is the Efficient Frontier?
+
+The **Efficient Frontier** is a cornerstone concept in Modern Portfolio Theory, introduced by Harry Markowitz in 1952 (for which he later won the Nobel Prize in Economics).
+
+### The Core Idea
+
+When you invest in multiple assets, the overall risk of your portfolio is typically **less than** the weighted average of individual asset risks. This is because assets don't move perfectly together - when one goes down, another might go up, partially offsetting losses. This is the mathematical basis for diversification.
+
+### Key Concepts
+
+**Expected Return**: The weighted average of expected returns of all assets in the portfolio:
+$$E[R_p] = \sum_{i=1}^{n} w_i \cdot E[R_i]$$
+
+**Portfolio Volatility (Risk)**: Measured by standard deviation, it depends on the covariance between assets:
+$$\sigma_p = \sqrt{\sum_{i=1}^{n} \sum_{j=1}^{n} w_i w_j \sigma_{ij}}$$
+
+where $\sigma_{ij}$ is the covariance between assets $i$ and $j$.
+
+### The Frontier
+
+When you plot all possible portfolios on a risk-return chart:
+- The **x-axis** represents risk (volatility)
+- The **y-axis** represents expected return
+
+The **Efficient Frontier** is the upper-left boundary of this cloud of possible portfolios. It represents:
+- For any given level of risk → the maximum achievable return
+- For any given level of return → the minimum required risk
+
+```
+Expected Return (%)
+    │
+    │                    ╭─────── Efficient Frontier
+    │                 ╭──╯
+    │              ╭──╯    • Individual stocks
+    │           ╭──╯   •
+    │        ╭──╯  •      •
+    │     ╭──╯        •
+    │   ╭─╯   •    •
+    │  ╭╯  •
+    │ ╭╯•
+    │─┴────────────────────────── Risk (Volatility %)
+```
+
+### Special Portfolios on the Frontier
+
+1. **Minimum Volatility Portfolio**: The leftmost point on the frontier - lowest possible risk achievable through diversification.
+
+2. **Maximum Sharpe Ratio Portfolio**: The portfolio with the best risk-adjusted return. The Sharpe Ratio is:
+$$\text{Sharpe Ratio} = \frac{E[R_p] - R_f}{\sigma_p}$$
+   where $R_f$ is the risk-free rate.
+
+3. **Tangency Portfolio**: When a risk-free asset exists, this is where the Capital Market Line (a line from the risk-free rate) is tangent to the frontier.
+
+### Why It Matters
+
+- **Rational investors** should only hold portfolios on the efficient frontier
+- **Portfolios below the frontier** are suboptimal - you can get higher return for the same risk, or lower risk for the same return
+- **Portfolios above the frontier** are impossible to achieve
+
+### Limitations
+
+While powerful, the efficient frontier has practical limitations:
+- Assumes returns are normally distributed
+- Uses historical data to estimate future returns and covariances
+- Sensitive to estimation errors in inputs
+- Doesn't account for transaction costs, taxes, or liquidity
+
+Despite these limitations, the efficient frontier remains a fundamental tool for understanding the risk-return tradeoff in portfolio construction.
+
+## Fetching Stock Data
+
+We'll use Yahoo Finance to fetch historical stock prices.
+
+```elixir
+defmodule StockData do
+  @doc """
+  Fetches historical stock data from Yahoo Finance.
+  Returns daily returns as a list of floats.
+  """
+  def fetch_returns(symbol, period \\ "1y") do
+    # Calculate period timestamps
+    now = DateTime.utc_now() |> DateTime.to_unix()
+
+    period_seconds = case period do
+      "1y" -> 365 * 24 * 60 * 60
+      "2y" -> 2 * 365 * 24 * 60 * 60
+      "5y" -> 5 * 365 * 24 * 60 * 60
+      _ -> 365 * 24 * 60 * 60
+    end
+
+    from = now - period_seconds
+
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/#{symbol}?period1=#{from}&period2=#{now}&interval=1d"
+
+    case Req.get(url, headers: [{"User-Agent", "Mozilla/5.0"}]) do
+      {:ok, %{status: 200, body: body}} ->
+        parse_yahoo_response(body)
+      {:ok, %{status: status}} ->
+        {:error, "HTTP #{status}"}
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp parse_yahoo_response(body) do
+    try do
+      result = body["chart"]["result"] |> List.first()
+      closes = result["indicators"]["quote"] |> List.first() |> Map.get("close")
+
+      # Filter out nil values and calculate returns
+      prices = closes |> Enum.filter(&(&1 != nil))
+
+      returns =
+        prices
+        |> Enum.chunk_every(2, 1, :discard)
+        |> Enum.map(fn [prev, curr] -> (curr - prev) / prev end)
+
+      {:ok, returns}
+    rescue
+      _ -> {:error, "Failed to parse response"}
+    end
+  end
+
+  @doc """
+  Calculates annualized statistics from daily returns.
+  """
+  def annualized_stats(returns) do
+    n = length(returns)
+    mean_daily = Enum.sum(returns) / n
+
+    variance =
+      returns
+      |> Enum.map(fn r -> (r - mean_daily) * (r - mean_daily) end)
+      |> Enum.sum()
+      |> Kernel./(n - 1)
+
+    std_daily = :math.sqrt(variance)
+
+    # Annualize (252 trading days)
+    %{
+      annual_return: mean_daily * 252,
+      annual_volatility: std_daily * :math.sqrt(252),
+      sharpe_ratio: (mean_daily * 252) / (std_daily * :math.sqrt(252))
+    }
+  end
+end
+```
+
+```elixir
+# Fetch data for our portfolio stocks
+symbols = ["AAPL", "TSLA", "META", "SHOP"]
+
+IO.puts("Fetching stock data...")
+
+stock_data =
+  symbols
+  |> Enum.map(fn symbol ->
+    IO.puts("  Fetching #{symbol}...")
+    case StockData.fetch_returns(symbol, "2y") do
+      {:ok, returns} -> {symbol, returns}
+      {:error, reason} ->
+        IO.puts("  Error fetching #{symbol}: #{inspect(reason)}")
+        {symbol, nil}
+    end
+  end)
+  |> Enum.filter(fn {_, returns} -> returns != nil end)
+  |> Map.new()
+
+IO.puts("\nFetched data for: #{Map.keys(stock_data) |> Enum.join(", ")}")
+```
+
+## Individual Stock Statistics
+
+Let's look at the risk/return profile of each stock:
+
+```elixir
+stats =
+  stock_data
+  |> Enum.map(fn {symbol, returns} ->
+    s = StockData.annualized_stats(returns)
+    %{
+      symbol: symbol,
+      annual_return: Float.round(s.annual_return * 100, 2),
+      annual_volatility: Float.round(s.annual_volatility * 100, 2),
+      sharpe_ratio: Float.round(s.sharpe_ratio, 2)
+    }
+  end)
+  |> Enum.sort_by(& &1.sharpe_ratio, :desc)
+
+Kino.DataTable.new(stats,
+  keys: [:symbol, :annual_return, :annual_volatility, :sharpe_ratio],
+  name: "Individual Stock Statistics"
+)
+```
+
+## Building the Covariance Matrix
+
+For portfolio optimization, we need the covariance matrix of returns.
+
+```elixir
+defmodule PortfolioMath do
+  @doc """
+  Builds a covariance matrix from return series.
+  """
+  def covariance_matrix(returns_map, symbols) do
+    # Align returns to same length
+    min_length =
+      symbols
+      |> Enum.map(fn s -> length(returns_map[s]) end)
+      |> Enum.min()
+
+    aligned_returns =
+      symbols
+      |> Enum.map(fn s ->
+        returns_map[s] |> Enum.take(-min_length)
+      end)
+
+    n_assets = length(symbols)
+    n_obs = min_length
+
+    # Calculate means
+    means = Enum.map(aligned_returns, fn r -> Enum.sum(r) / n_obs end)
+
+    # Calculate covariance matrix
+    cov_matrix =
+      for i <- 0..(n_assets - 1) do
+        for j <- 0..(n_assets - 1) do
+          ri = Enum.at(aligned_returns, i)
+          rj = Enum.at(aligned_returns, j)
+          mi = Enum.at(means, i)
+          mj = Enum.at(means, j)
+
+          cov =
+            Enum.zip(ri, rj)
+            |> Enum.map(fn {x, y} -> (x - mi) * (y - mj) end)
+            |> Enum.sum()
+            |> Kernel./(n_obs - 1)
+
+          # Annualize
+          cov * 252
+        end
+      end
+
+    # Annualized expected returns
+    expected_returns = Enum.map(means, fn m -> m * 252 end)
+
+    {Nx.tensor(cov_matrix, type: :f64), Nx.tensor(expected_returns, type: :f64)}
+  end
+
+  @doc """
+  Calculates portfolio return given weights and expected returns.
+  """
+  def portfolio_return(weights, expected_returns) do
+    Nx.dot(weights, expected_returns)
+  end
+
+  @doc """
+  Calculates portfolio volatility (standard deviation) given weights and covariance matrix.
+  """
+  def portfolio_volatility(weights, cov_matrix) do
+    # sqrt(w' * Cov * w)
+    variance = Nx.dot(weights, Nx.dot(cov_matrix, weights))
+    Nx.sqrt(variance)
+  end
+
+  @doc """
+  Calculates negative Sharpe ratio (for minimization).
+  Risk-free rate assumed to be 0.05 (5%).
+  """
+  def neg_sharpe_ratio(weights, expected_returns, cov_matrix, risk_free_rate \\ 0.05) do
+    ret = portfolio_return(weights, expected_returns)
+    vol = portfolio_volatility(weights, cov_matrix)
+
+    # Negative because we're minimizing
+    Nx.negate(Nx.divide(Nx.subtract(ret, risk_free_rate), vol))
+  end
+end
+```
+
+```elixir
+# Build covariance matrix
+symbols = Map.keys(stock_data) |> Enum.sort()
+{cov_matrix, expected_returns} = PortfolioMath.covariance_matrix(stock_data, symbols)
+
+IO.puts("Symbols: #{Enum.join(symbols, ", ")}")
+IO.puts("\nExpected Annual Returns:")
+Enum.zip(symbols, Nx.to_flat_list(expected_returns))
+|> Enum.each(fn {s, r} -> IO.puts("  #{s}: #{Float.round(r * 100, 2)}%") end)
+
+IO.puts("\nCovariance Matrix (annualized):")
+IO.inspect(cov_matrix)
+```
+
+## Portfolio Optimization
+
+Now let's use `Scholar.Optimize` to find optimal portfolios.
+
+### Maximum Sharpe Ratio Portfolio
+
+```elixir
+# Define the objective function for Nelder-Mead
+# We need to handle the constraint that weights sum to 1
+# Using softmax transformation: raw_weights -> exp(w) / sum(exp(w))
+
+n_assets = length(symbols)
+
+objective_fn = fn raw_weights ->
+  # Transform to valid weights using softmax
+  exp_weights = Nx.exp(raw_weights)
+  weights = Nx.divide(exp_weights, Nx.sum(exp_weights))
+
+  # Calculate negative Sharpe ratio (we minimize, so negative of what we want to maximize)
+  PortfolioMath.neg_sharpe_ratio(weights, expected_returns, cov_matrix)
+end
+
+# Initial guess (equal weights in raw space)
+x0 = Nx.broadcast(Nx.tensor(0.0, type: :f64), {n_assets})
+
+# Optimize using Nelder-Mead
+result = Scholar.Optimize.minimize(objective_fn, x0, method: :nelder_mead, maxiter: 2000, tol: 1.0e-8)
+
+# Convert to actual weights
+exp_weights = Nx.exp(result.x)
+optimal_weights = Nx.divide(exp_weights, Nx.sum(exp_weights))
+
+IO.puts("Maximum Sharpe Ratio Portfolio:")
+IO.puts("Converged: #{result.success}")
+IO.puts("\nOptimal Weights:")
+Enum.zip(symbols, Nx.to_flat_list(optimal_weights))
+|> Enum.each(fn {s, w} -> IO.puts("  #{s}: #{Float.round(w * 100, 2)}%") end)
+
+opt_return = Nx.to_number(PortfolioMath.portfolio_return(optimal_weights, expected_returns))
+opt_vol = Nx.to_number(PortfolioMath.portfolio_volatility(optimal_weights, cov_matrix))
+opt_sharpe = (opt_return - 0.05) / opt_vol
+
+IO.puts("\nPortfolio Statistics:")
+IO.puts("  Expected Return: #{Float.round(opt_return * 100, 2)}%")
+IO.puts("  Volatility: #{Float.round(opt_vol * 100, 2)}%")
+IO.puts("  Sharpe Ratio: #{Float.round(opt_sharpe, 3)}")
+```
+
+### Minimum Volatility Portfolio
+
+```elixir
+# Objective: minimize portfolio volatility
+min_vol_objective = fn raw_weights ->
+  exp_weights = Nx.exp(raw_weights)
+  weights = Nx.divide(exp_weights, Nx.sum(exp_weights))
+  PortfolioMath.portfolio_volatility(weights, cov_matrix)
+end
+
+result_min_vol = Scholar.Optimize.minimize(min_vol_objective, x0, method: :nelder_mead, maxiter: 2000, tol: 1.0e-8)
+
+exp_weights_mv = Nx.exp(result_min_vol.x)
+min_vol_weights = Nx.divide(exp_weights_mv, Nx.sum(exp_weights_mv))
+
+IO.puts("Minimum Volatility Portfolio:")
+IO.puts("Converged: #{result_min_vol.success}")
+IO.puts("\nOptimal Weights:")
+Enum.zip(symbols, Nx.to_flat_list(min_vol_weights))
+|> Enum.each(fn {s, w} -> IO.puts("  #{s}: #{Float.round(w * 100, 2)}%") end)
+
+mv_return = Nx.to_number(PortfolioMath.portfolio_return(min_vol_weights, expected_returns))
+mv_vol = Nx.to_number(PortfolioMath.portfolio_volatility(min_vol_weights, cov_matrix))
+
+IO.puts("\nPortfolio Statistics:")
+IO.puts("  Expected Return: #{Float.round(mv_return * 100, 2)}%")
+IO.puts("  Volatility: #{Float.round(mv_vol * 100, 2)}%")
+```
+
+## Computing the Efficient Frontier
+
+The efficient frontier is the set of optimal portfolios. We compute it by minimizing volatility for various target returns.
+
+```elixir
+defmodule EfficientFrontier do
+  @doc """
+  Computes portfolios along the efficient frontier.
+  """
+  def compute(expected_returns, cov_matrix, n_points \\ 50) do
+    n_assets = Nx.axis_size(expected_returns, 0)
+
+    # Get return range
+    min_ret = Nx.to_number(Nx.reduce_min(expected_returns))
+    max_ret = Nx.to_number(Nx.reduce_max(expected_returns))
+
+    # Generate target returns
+    target_returns =
+      for i <- 0..(n_points - 1) do
+        min_ret + (max_ret - min_ret) * i / (n_points - 1)
+      end
+
+    # For each target return, minimize volatility
+    x0 = Nx.broadcast(Nx.tensor(0.0, type: :f64), {n_assets})
+
+    portfolios =
+      target_returns
+      |> Enum.map(fn target ->
+        # Objective: minimize volatility + penalty for missing target return
+        objective = fn raw_weights ->
+          exp_weights = Nx.exp(raw_weights)
+          weights = Nx.divide(exp_weights, Nx.sum(exp_weights))
+
+          vol = PortfolioMath.portfolio_volatility(weights, cov_matrix)
+          ret = PortfolioMath.portfolio_return(weights, expected_returns)
+
+          # Add quadratic penalty for deviation from target return
+          penalty = Nx.multiply(1000.0, Nx.pow(Nx.subtract(ret, target), 2))
+          Nx.add(vol, penalty)
+        end
+
+        result = Scholar.Optimize.minimize(objective, x0, method: :nelder_mead, maxiter: 1000, tol: 1.0e-6)
+
+        exp_weights = Nx.exp(result.x)
+        weights = Nx.divide(exp_weights, Nx.sum(exp_weights))
+
+        ret = Nx.to_number(PortfolioMath.portfolio_return(weights, expected_returns))
+        vol = Nx.to_number(PortfolioMath.portfolio_volatility(weights, cov_matrix))
+
+        %{return: ret, volatility: vol, weights: Nx.to_flat_list(weights)}
+      end)
+
+    # Filter to keep only efficient portfolios (remove dominated ones)
+    portfolios
+    |> Enum.sort_by(& &1.volatility)
+    |> Enum.reduce([], fn p, acc ->
+      case acc do
+        [] -> [p]
+        [last | _] ->
+          if p.return > last.return, do: [p | acc], else: acc
+      end
+    end)
+    |> Enum.reverse()
+  end
+end
+```
+
+```elixir
+IO.puts("Computing efficient frontier (this may take a moment)...")
+frontier = EfficientFrontier.compute(expected_returns, cov_matrix, 30)
+IO.puts("Computed #{length(frontier)} efficient portfolios")
+```
+
+## Visualization
+
+```elixir
+alias VegaLite, as: Vl
+
+# Prepare data for plotting
+frontier_data =
+  frontier
+  |> Enum.map(fn p ->
+    %{
+      volatility: p.volatility * 100,
+      return: p.return * 100,
+      type: "Efficient Frontier"
+    }
+  end)
+
+# Individual stocks
+stock_points =
+  Enum.zip(symbols, Nx.to_flat_list(expected_returns))
+  |> Enum.with_index()
+  |> Enum.map(fn {{symbol, ret}, idx} ->
+    vol = Nx.to_number(cov_matrix[idx][idx]) |> :math.sqrt()
+    %{
+      volatility: vol * 100,
+      return: ret * 100,
+      type: symbol
+    }
+  end)
+
+# Special portfolios
+special_portfolios = [
+  %{
+    volatility: opt_vol * 100,
+    return: opt_return * 100,
+    type: "Max Sharpe"
+  },
+  %{
+    volatility: mv_vol * 100,
+    return: mv_return * 100,
+    type: "Min Volatility"
+  }
+]
+
+all_data = frontier_data ++ stock_points ++ special_portfolios
+
+Vl.new(width: 600, height: 400, title: "Efficient Frontier: AAPL, TSLA, META, SHOP")
+|> Vl.data_from_values(all_data)
+|> Vl.mark(:point, size: 100)
+|> Vl.encode_field(:x, "volatility",
+    type: :quantitative,
+    title: "Volatility (%)",
+    scale: [zero: false]
+  )
+|> Vl.encode_field(:y, "return",
+    type: :quantitative,
+    title: "Expected Return (%)",
+    scale: [zero: false]
+  )
+|> Vl.encode_field(:color, "type", type: :nominal, title: "Portfolio")
+|> Vl.encode_field(:shape, "type", type: :nominal)
+```
+
+## Portfolio Allocation Visualization
+
+```elixir
+# Show allocation for maximum Sharpe portfolio
+allocation_data =
+  Enum.zip(symbols, Nx.to_flat_list(optimal_weights))
+  |> Enum.map(fn {symbol, weight} ->
+    %{symbol: symbol, weight: weight * 100}
+  end)
+
+Vl.new(width: 400, height: 300, title: "Maximum Sharpe Ratio Portfolio Allocation")
+|> Vl.data_from_values(allocation_data)
+|> Vl.mark(:arc, innerRadius: 50)
+|> Vl.encode_field(:theta, "weight", type: :quantitative)
+|> Vl.encode_field(:color, "symbol", type: :nominal, title: "Stock")
+|> Vl.encode(:tooltip, [
+  [field: "symbol", type: :nominal],
+  [field: "weight", type: :quantitative, format: ".1f"]
+])
+```
+
+## Summary
+
+```elixir
+IO.puts("""
+╔══════════════════════════════════════════════════════════════╗
+║                    PORTFOLIO OPTIMIZATION SUMMARY            ║
+╠══════════════════════════════════════════════════════════════╣
+║ Stocks analyzed: #{symbols |> Enum.join(", ") |> String.pad_trailing(42)}║
+╠══════════════════════════════════════════════════════════════╣
+║ MAXIMUM SHARPE RATIO PORTFOLIO                               ║
+║   Expected Return: #{String.pad_trailing("#{Float.round(opt_return * 100, 2)}%", 41)}║
+║   Volatility:      #{String.pad_trailing("#{Float.round(opt_vol * 100, 2)}%", 41)}║
+║   Sharpe Ratio:    #{String.pad_trailing("#{Float.round(opt_sharpe, 3)}", 41)}║
+╠══════════════════════════════════════════════════════════════╣
+║ MINIMUM VOLATILITY PORTFOLIO                                 ║
+║   Expected Return: #{String.pad_trailing("#{Float.round(mv_return * 100, 2)}%", 41)}║
+║   Volatility:      #{String.pad_trailing("#{Float.round(mv_vol * 100, 2)}%", 41)}║
+╚══════════════════════════════════════════════════════════════╝
+""")
+```
+
+## Key Takeaways
+
+1. **Diversification Benefits**: The efficient frontier shows how combining assets can achieve better risk-adjusted returns than holding any single asset.
+
+2. **Risk-Return Tradeoff**: Moving along the frontier, higher returns come with higher volatility.
+
+3. **Optimization with Scholar**: We used `Scholar.Optimize.minimize` with the Nelder-Mead method to find optimal portfolio weights. The softmax transformation ensures weights are always positive and sum to 1.
+
+4. **Practical Considerations**: Real-world portfolio optimization should also consider:
+   - Transaction costs
+   - Position limits
+   - Liquidity constraints
+   - Tax implications
+   - Rebalancing frequency
