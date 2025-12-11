@@ -302,10 +302,90 @@ IO.puts("Symbols: #{Enum.join(symbols, ", ")}")
 IO.puts("\nExpected Annual Returns:")
 Enum.zip(symbols, Nx.to_flat_list(expected_returns))
 |> Enum.each(fn {s, r} -> IO.puts("  #{s}: #{Float.round(r * 100, 2)}%") end)
-
-IO.puts("\nCovariance Matrix (annualized):")
-IO.inspect(cov_matrix)
 ```
+
+### Covariance Matrix Heatmap
+
+The covariance matrix shows how assets move together. Higher values indicate assets that tend to move in the same direction, while lower values suggest diversification benefits.
+
+```elixir
+alias VegaLite, as: Vl
+
+# Convert covariance matrix to correlation matrix for better visualization
+n_assets = length(symbols)
+cov_list = Nx.to_list(cov_matrix)
+
+# Extract standard deviations (sqrt of diagonal)
+std_devs =
+  for i <- 0..(n_assets - 1) do
+    :math.sqrt(Enum.at(cov_list, i) |> Enum.at(i))
+  end
+
+# Compute correlation matrix: corr(i,j) = cov(i,j) / (std_i * std_j)
+correlation_data =
+  for i <- 0..(n_assets - 1), j <- 0..(n_assets - 1) do
+    cov_ij = Enum.at(cov_list, i) |> Enum.at(j)
+    corr_ij = cov_ij / (Enum.at(std_devs, i) * Enum.at(std_devs, j))
+    %{
+      x: Enum.at(symbols, j),
+      y: Enum.at(symbols, i),
+      correlation: Float.round(corr_ij, 3),
+      covariance: Float.round(cov_ij, 4)
+    }
+  end
+
+Vl.new(width: 350, height: 350, title: "Correlation Matrix Heatmap")
+|> Vl.data_from_values(correlation_data)
+|> Vl.mark(:rect)
+|> Vl.encode_field(:x, "x", type: :nominal, title: nil, axis: [label_angle: 0])
+|> Vl.encode_field(:y, "y", type: :nominal, title: nil)
+|> Vl.encode_field(:color, "correlation",
+  type: :quantitative,
+  scale: [scheme: "redblue", domain: [-1, 1], reverse: true],
+  title: "Correlation"
+)
+|> Vl.encode(:tooltip, [
+  [field: "x", type: :nominal, title: "Stock 1"],
+  [field: "y", type: :nominal, title: "Stock 2"],
+  [field: "correlation", type: :quantitative, title: "Correlation", format: ".3f"],
+  [field: "covariance", type: :quantitative, title: "Covariance", format: ".4f"]
+])
+```
+
+```elixir
+# Also show the raw covariance matrix as a heatmap
+covariance_data =
+  for i <- 0..(n_assets - 1), j <- 0..(n_assets - 1) do
+    cov_ij = Enum.at(cov_list, i) |> Enum.at(j)
+    %{
+      x: Enum.at(symbols, j),
+      y: Enum.at(symbols, i),
+      covariance: Float.round(cov_ij, 4)
+    }
+  end
+
+Vl.new(width: 350, height: 350, title: "Covariance Matrix Heatmap (Annualized)")
+|> Vl.data_from_values(covariance_data)
+|> Vl.mark(:rect)
+|> Vl.encode_field(:x, "x", type: :nominal, title: nil, axis: [label_angle: 0])
+|> Vl.encode_field(:y, "y", type: :nominal, title: nil)
+|> Vl.encode_field(:color, "covariance",
+  type: :quantitative,
+  scale: [scheme: "orangered"],
+  title: "Covariance"
+)
+|> Vl.encode(:tooltip, [
+  [field: "x", type: :nominal, title: "Stock 1"],
+  [field: "y", type: :nominal, title: "Stock 2"],
+  [field: "covariance", type: :quantitative, title: "Covariance", format: ".4f"]
+])
+```
+
+**Interpreting the Heatmaps:**
+- **Correlation = 1.0** (diagonal): Each stock is perfectly correlated with itself
+- **High positive correlation**: Stocks tend to move together (less diversification benefit)
+- **Low or negative correlation**: Stocks move independently or opposite (more diversification benefit)
+- **Covariance diagonal**: Shows individual stock variances (volatility²)
 
 ## Portfolio Optimization
 
