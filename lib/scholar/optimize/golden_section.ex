@@ -44,7 +44,12 @@ defmodule Scholar.Optimize.GoldenSection do
 
   A `Scholar.Optimize` struct with the optimization result.
   """
-  deftransform minimize(fun, opts) do
+  defn minimize(fun, opts \\ []) do
+    {a, b, tol, maxiter} = transform_opts(opts)
+    minimize_n(fun, a, b, tol, maxiter)
+  end
+
+  deftransformp transform_opts(opts) do
     {a, b} = opts[:bracket]
     tol = opts[:tol]
     maxiter = opts[:maxiter]
@@ -54,10 +59,10 @@ defmodule Scholar.Optimize.GoldenSection do
     tol = Nx.tensor(tol, type: :f64)
     maxiter = Nx.tensor(maxiter, type: :s64)
 
-    minimize_n(fun, a, b, tol, maxiter)
+    {a, b, tol, maxiter}
   end
 
-  defn minimize_n(fun, a, b, tol, maxiter) do
+  defnp minimize_n(fun, a, b, tol, maxiter) do
     # Golden ratio as tensor
     phi = Nx.tensor(@phi, type: :f64)
 

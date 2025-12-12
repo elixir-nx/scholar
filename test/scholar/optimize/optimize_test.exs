@@ -43,6 +43,16 @@ defmodule Scholar.OptimizeTest do
 
       assert Nx.to_number(result.iterations) <= 5
     end
+
+    test "works with jit_apply" do
+      fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
+      opts = [bracket: {0.0, 5.0}, tol: 1.0e-8, maxiter: 500]
+
+      result = Nx.Defn.jit_apply(&Scholar.Optimize.GoldenSection.minimize/2, [fun, opts])
+
+      assert Nx.to_number(result.converged) == 1
+      assert_all_close(result.x, Nx.tensor(3.0), atol: 1.0e-6)
+    end
   end
 
   describe "minimize_scalar with Brent's method" do
