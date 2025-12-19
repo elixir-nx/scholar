@@ -122,7 +122,10 @@ defmodule Scholar.Cluster.DBSCAN do
       while {labels = Nx.broadcast(0, {Nx.axis_size(indices, 0)}),
              {indices, is_core?, label_num = 1, i = 0}},
             i < Nx.axis_size(indices, 0) do
-        stack = Nx.broadcast(0, {Nx.axis_size(indices, 0) ** 2})
+        # During cluster expansion, we store points to be visited on
+        # the stack. Each point can be at the stack at most once, so
+        # the number of points is the upper bound on stack size.
+        stack = Nx.broadcast(-1, {Nx.axis_size(indices, 0)})
         stack_ptr = 0
 
         if Nx.take(labels, i) != 0 or not Nx.take(is_core?, i) do
@@ -147,7 +150,9 @@ defmodule Scholar.Cluster.DBSCAN do
 
                       {stack, stack_ptr, _} =
                         while {stack, stack_ptr, {mask, j = 0}}, j < Nx.axis_size(mask, 0) do
-                          if Nx.take(mask, j) != 0 do
+                          # Add point to the stack if it's a unlabelled neighbour
+                          # and it is already not on the stack.
+                          if Nx.take(mask, j) != 0 and not Nx.any(stack == j) do
                             stack =
                               Nx.indexed_put(
                                 stack,
