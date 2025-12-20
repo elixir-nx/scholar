@@ -9,10 +9,8 @@
 
 Traditional machine learning tools built on top of Nx. Scholar implements
 several algorithms for classification, regression, clustering, dimensionality
-reduction, metrics, and preprocessing.
-
-For deep learning, see [Axon](https://github.com/elixir-nx/axon).
-For decision trees/forests, see [EXGBoost](https://github.com/acalejos/exgboost).
+reduction, metrics, and preprocessing. For deep learning, see
+[Axon](https://github.com/elixir-nx/axon).
 
 ## Installation
 
@@ -81,6 +79,21 @@ Nx.Defn.global_default_options(compiler: EXLA, client: :host)
 >
 > If for some reason you cannot set a default `defn` compiler, you can explicitly
 > JIT any function, for example: `EXLA.jit(&Scholar.Cluster.AffinityPropagation.fit/1)`.
+
+## Contributing
+
+We welcome the contribution of new algorithms to the project. However, it is important
+to note that we only accept implementations that are fully implemented as "numerical
+definitions", as this gives us the ability to compile and run all algorithms inside
+GPUs. This means not all algorithms can be implemented in Scholar. Decision
+trees/forests are one of such algorithms and for those there are additional libraries,
+such as [EXGBoost](https://github.com/acalejos/exgboost).
+
+Implementation wise, this means most functions simply validate options and
+then delegate to an implementation fully written inside a `defn` or `defnp`.
+You can look [at this pull request as an example](https://github.com/elixir-nx/scholar/pull/314).
+We also recommend adding tests that show that you can still invoke your
+imlpementation after wrapping it in a `Nx.Defn.jit/2` call.
 
 ## License
 

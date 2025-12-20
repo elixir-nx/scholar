@@ -117,70 +117,91 @@ defmodule Scholar.Cluster.DBSCAN do
     }
   end
 
-  defnp dbscan_inner(is_core?, indices) do
-    {labels, _} =
-      while {labels = Nx.broadcast(0, {Nx.axis_size(indices, 0)}),
-             {indices, is_core?, label_num = 1, i = 0}},
-            i < Nx.axis_size(indices, 0) do
-        stack = Nx.broadcast(0, {Nx.axis_size(indices, 0) ** 2})
-        stack_ptr = 0
+  defnp dbscan_inner(is_core?, neighbors) do
+    # We implement the clustering via label propagation.
+    #
+    # Algorithm:
+    #
+    # 1. Initialize each core sample with a unique label (its index),
+    #    non-core samples get a "dummy label", which is bigger than
+    #    all others.
+    # 2. Then iteratively, we update each sample with minimum label
+    #    from all of its core neighbors.
+    # 3. Connected core samples (and all their neighbors) converge
+    #    to the same minimum label.
+    # 4. Isolated non-core samples are left with "dummy label", which
+    #    we map to -1 at the end.
+    #
+    # This converges in O(D) iterations where D is the diameter of
+    # the largest cluster.
+    #
+    # This approach is more parallelization-friendly than a sequential
+    # sample-by-sample DFS traversal.
 
-        if Nx.take(labels, i) != 0 or not Nx.take(is_core?, i) do
-          {labels, {indices, is_core?, label_num, i + 1}}
-        else
-          {labels, _} =
-            while {labels, {k = i, label_num, indices, is_core?, stack, stack_ptr}},
-                  stack_ptr >= 0 do
-              {labels, stack, stack_ptr} =
-                if Nx.take(labels, k) == 0 do
-                  labels =
-                    Nx.indexed_put(
-                      labels,
-                      Nx.new_axis(Nx.new_axis(k, 0), 0),
-                      Nx.new_axis(label_num, 0)
-                    )
+    num_samples = Nx.axis_size(is_core?, 0)
+    dummy_label = num_samples
 
-                  {stack, stack_ptr} =
-                    if Nx.take(is_core?, k) do
-                      neighb = Nx.take(indices, k)
-                      mask = neighb * (labels == 0)
+    labels = Nx.select(is_core?, Nx.iota({num_samples}), dummy_label)
 
-                      {stack, stack_ptr, _} =
-                        while {stack, stack_ptr, {mask, j = 0}}, j < Nx.axis_size(mask, 0) do
-                          if Nx.take(mask, j) != 0 do
-                            stack =
-                              Nx.indexed_put(
-                                stack,
-                                Nx.new_axis(Nx.new_axis(stack_ptr, 0), 0),
-                                Nx.new_axis(j, 0)
-                              )
+    core_neighbors = Nx.new_axis(is_core?, 0) and neighbors
 
-                            {stack, stack_ptr + 1, {mask, j + 1}}
-                          else
-                            {stack, stack_ptr, {mask, j + 1}}
-                          end
-                        end
+    # We create a tensor where for each sample (0-axis) we have indices
+    # of its core neighbors (1-axis) and remaining spots filled with
+    # its own index.
+    core_neighbor_indices =
+      Nx.select(
+        core_neighbors,
+        # neighbor index
+        Nx.iota({num_samples, num_samples}, axis: 1),
+        # self index
+        Nx.iota({num_samples, num_samples}, axis: 0)
+      )
 
-                      {stack, stack_ptr}
-                    else
-                      {stack, stack_ptr}
-                    end
-
-                  {labels, stack, stack_ptr}
-                else
-                  {labels, stack, stack_ptr}
-                end
-
-              k = if stack_ptr > 0, do: Nx.take(stack, stack_ptr - 1), else: -1
-              stack_ptr = stack_ptr - 1
-              {labels, {k, label_num, indices, is_core?, stack, stack_ptr}}
-            end
-
-          {labels, {indices, is_core?, label_num + 1, i + 1}}
-        end
+    {labels, _, _} =
+      while {labels, core_neighbor_indices, finished? = Nx.tensor(false)}, not finished? do
+        core_neighbor_labels = Nx.take(labels, core_neighbor_indices)
+        updated_labels = Nx.reduce_min(core_neighbor_labels, axes: [1])
+        finished? = Nx.all(labels == updated_labels)
+        {updated_labels, core_neighbor_indices, finished?}
       end
 
-    # we need to subtract 1 from labels because we started from label_num=1 which simplifies oprations
-    labels - 1
+    # Normalize labels to be consecutive.
+    normalized_labels = normalize_labels(labels)
+
+    # Noisy samples don't get any label from core samples, so they keep
+    # the dummy label, which we replace with -1.
+    Nx.select(labels == dummy_label, -1, normalized_labels)
+  end
+
+  # Normalizes non-consecutive labels into consecutive labels.
+  #
+  # For example [1, 4, 2, 2, 1, 4] -> [0, 2, 1, 1, 0, 2].
+  defnp normalize_labels(labels) do
+    sort_indices = Nx.argsort(labels)
+    unsort_indices = inverse_permutation(sort_indices)
+
+    sorted = Nx.take_along_axis(labels, sort_indices)
+
+    # Create a mask with 1 at every position where a new value appears,
+    # then use cumulative sum, so that each group gets the same value.
+    normalized_sorted =
+      Nx.concatenate([
+        Nx.tensor([0]),
+        Nx.not_equal(sorted[0..-2//1], sorted[1..-1//1])
+      ])
+      |> Nx.cumulative_sum()
+
+    Nx.take_along_axis(normalized_sorted, unsort_indices)
+  end
+
+  defnp inverse_permutation(indices) do
+    shape = Nx.shape(indices)
+    type = Nx.type(indices)
+
+    Nx.indexed_put(
+      Nx.broadcast(Nx.tensor(0, type: type), shape),
+      Nx.new_axis(indices, -1),
+      Nx.iota(shape, type: type)
+    )
   end
 end

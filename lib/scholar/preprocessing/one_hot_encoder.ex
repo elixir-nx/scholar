@@ -112,8 +112,9 @@ defmodule Scholar.Preprocessing.OneHotEncoder do
   end
 
   @doc """
-  Appl
-   encoding on the provided tensor directly. It's equivalent to `fit/2` and then `transform/2` on the same data.
+  Apply encoding on the provided tensor directly.
+
+  It's equivalent to `fit/2` and then `transform/2` on the same data.
 
   ## Examples
 
