@@ -28,36 +28,113 @@ defmodule Scholar.Optimize.GoldenSection do
 
   import Nx.Defn
 
+  @derive {Nx.Container, containers: [:x, :fun, :converged, :iterations, :fun_evals]}
+  defstruct [:x, :fun, :converged, :iterations, :fun_evals]
+
+  @type t :: %__MODULE__{
+          x: Nx.Tensor.t(),
+          fun: Nx.Tensor.t(),
+          converged: Nx.Tensor.t(),
+          iterations: Nx.Tensor.t(),
+          fun_evals: Nx.Tensor.t()
+        }
+
   # Golden ratio conjugate: (sqrt(5) - 1) / 2
   @phi 0.6180339887498949
+
+  opts = [
+    bracket: [
+      type: {:custom, __MODULE__, :__bracket__, []},
+      required: true,
+      doc: """
+      Bracket containing the minimum. A tuple `{a, b}` defining the search interval.
+      The minimum must lie within this interval.
+      """
+    ],
+    tol: [
+      type: {:custom, Scholar.Options, :positive_number, []},
+      default: 1.0e-8,
+      doc: "Absolute tolerance for convergence."
+    ],
+    maxiter: [
+      type: :pos_integer,
+      default: 500,
+      doc: "Maximum number of iterations."
+    ]
+  ]
+
+  @opts_schema NimbleOptions.new!(opts)
+
+  @doc false
+  def __bracket__(value) do
+    case value do
+      {a, b} when is_number(a) and is_number(b) and a < b ->
+        {:ok, {a, b}}
+
+      {a, b} when is_number(a) and is_number(b) ->
+        {:error,
+         "expected :bracket to be a tuple {a, b} where a < b, got: #{inspect(value)}"}
+
+      _ ->
+        {:error,
+         "expected :bracket to be a tuple {a, b} of numbers, got: #{inspect(value)}"}
+    end
+  end
 
   @doc """
   Minimizes a scalar function using golden section search.
 
   ## Arguments
 
-  * `fun` - The objective function to minimize. Must take a scalar tensor
-    and return a scalar tensor.
-  * `opts` - Options including `:bracket`, `:tol`, and `:maxiter`.
+  * `fun` - The objective function to minimize. Must be a defn-compatible function
+    that takes a scalar tensor and returns a scalar tensor.
+  * `opts` - Options (see below).
+
+  ## Options
+
+  #{NimbleOptions.docs(@opts_schema)}
 
   ## Returns
 
-  A `Scholar.Optimize` struct with the optimization result.
+  A `Scholar.Optimize.GoldenSection` struct with the optimization result:
+
+  * `:x` - The optimal point found
+  * `:fun` - The function value at the optimal point
+  * `:converged` - Whether the optimization converged (1 if true, 0 if false)
+  * `:iterations` - Number of iterations performed
+  * `:fun_evals` - Number of function evaluations
+
+  ## Examples
+
+      iex> fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
+      iex> result = Scholar.Optimize.GoldenSection.minimize(fun, bracket: {0.0, 5.0})
+      iex> Nx.to_number(result.converged)
+      1
+      iex> Nx.all_close(result.x, Nx.tensor(3.0), atol: 1.0e-4) |> Nx.to_number()
+      1
   """
-  deftransform minimize(fun, opts \\ []) do
-    {a, b} = opts[:bracket]
-    tol = opts[:tol]
-    maxiter = opts[:maxiter]
+  defn minimize(fun, opts \\ []) do
+    {a, b, tol, maxiter} = transform_opts(opts)
     minimize_n(fun, a, b, tol, maxiter)
+  end
+
+  deftransformp transform_opts(opts) do
+    opts = NimbleOptions.validate!(opts, @opts_schema)
+    {a, b} = opts[:bracket]
+
+    a = Nx.tensor(a, type: :f64)
+    b = Nx.tensor(b, type: :f64)
+    tol = Nx.tensor(opts[:tol], type: :f64)
+    maxiter = Nx.tensor(opts[:maxiter], type: :s64)
+
+    {a, b, tol, maxiter}
   end
 
   defnp minimize_n(fun, a, b, tol, maxiter) do
     # Golden ratio as tensor
     phi = Nx.tensor(@phi, type: :f64)
 
-    # Ensure a < b using select
-    {a, b} = swap_if_needed(a, b)
-
+    # a < b is guaranteed by option validation
     # Compute bracket width
     width = b - a
 
@@ -135,20 +212,12 @@ defmodule Scholar.Optimize.GoldenSection do
     # Check if we converged (bracket width < tol)
     converged = final_state.b - final_state.a < tol
 
-    %Scholar.Optimize{
+    %__MODULE__{
       x: x_opt,
       fun: f_opt,
       converged: converged,
       iterations: final_state.iter,
-      fun_evals: final_state.f_evals + 1,
-      grad_evals: Nx.tensor(0, type: :s64)
+      fun_evals: final_state.f_evals + 1
     }
-  end
-
-  defnp swap_if_needed(a, b) do
-    should_swap = a > b
-    new_a = Nx.select(should_swap, b, a)
-    new_b = Nx.select(should_swap, a, b)
-    {new_a, new_b}
   end
 end

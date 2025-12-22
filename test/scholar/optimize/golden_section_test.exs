@@ -58,8 +58,7 @@ defmodule Scholar.Optimize.GoldenSectionTest do
 
       result = GoldenSection.minimize(fun, bracket: {0.0, 5.0}, tol: 1.0e-8, maxiter: 500)
 
-      assert %Scholar.Optimize{} = result
-      assert Nx.to_number(result.grad_evals) == 0
+      assert %Scholar.Optimize.GoldenSection{} = result
     end
   end
 end

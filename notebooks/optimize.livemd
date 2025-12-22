@@ -1,4 +1,4 @@
-# Optimization with Scholar.Optimize
+# Optimization with Scholar.Optimize.GoldenSection
 
 ```elixir
 Mix.install([
@@ -10,13 +10,7 @@ Mix.install([
 
 ## Introduction
 
-`Scholar.Optimize` provides numerical optimization algorithms similar to SciPy's `scipy.optimize` module.
-
-**Available methods:**
-
-| Function | Method | Description |
-|----------|--------|-------------|
-| `minimize_scalar/2` | `:golden` | Golden section search (derivative-free) |
+`Scholar.Optimize.GoldenSection` provides the Golden Section search algorithm for scalar (univariate) function minimization.
 
 ## Scalar Optimization
 
@@ -27,11 +21,13 @@ Scalar optimization finds the minimum of a function of one variable within a spe
 Let's minimize $f(x) = (x - 3)^2$, which has its minimum at $x = 3$.
 
 ```elixir
+alias Scholar.Optimize.GoldenSection
+
 # Define the objective function
 fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
 
 # Find the minimum using Golden Section
-result = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 5.0})
+result = GoldenSection.minimize(fun, bracket: {0.0, 5.0})
 
 IO.puts("Minimum found at x = #{Nx.to_number(result.x)}")
 IO.puts("Function value: #{Nx.to_number(result.fun)}")
@@ -45,9 +41,11 @@ IO.puts("Function evaluations: #{Nx.to_number(result.fun_evals)}")
 Find the minimum of $\sin(x)$ in the interval $[0, 2\pi]$:
 
 ```elixir
+alias Scholar.Optimize.GoldenSection
+
 fun = fn x -> Nx.sin(x) end
 
-result = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 2 * :math.pi()})
+result = GoldenSection.minimize(fun, bracket: {0.0, 2 * :math.pi()})
 
 expected_x = 3 * :math.pi() / 2  # 3π/2 ≈ 4.712
 
@@ -61,9 +59,11 @@ IO.puts("sin(x) at minimum: #{Nx.to_number(result.fun)}")
 Minimize $f(x) = (x + 2)^2 + 1$, which has minimum at $x = -2$ with value $1$:
 
 ```elixir
+alias Scholar.Optimize.GoldenSection
+
 fun = fn x -> Nx.add(Nx.pow(Nx.add(x, 2), 2), 1) end
 
-result = Scholar.Optimize.minimize_scalar(fun, bracket: {-5.0, 5.0})
+result = GoldenSection.minimize(fun, bracket: {-5.0, 5.0})
 
 IO.puts("Minimum found at x = #{Nx.to_number(result.x)}")
 IO.puts("Function value: #{Nx.to_number(result.fun)}")
@@ -81,7 +81,6 @@ The Golden Section search is a derivative-free optimization technique for findin
 - Requires only function evaluations (no derivatives)
 
 ```elixir
-# Direct call to GoldenSection module
 alias Scholar.Optimize.GoldenSection
 
 fun = fn x -> Nx.pow(Nx.subtract(x, 1), 2) end
@@ -100,11 +99,13 @@ IO.puts("  Function evaluations: #{Nx.to_number(result.fun_evals)}")
 Golden Section is implemented as a pure `defn` function, making it fully compatible with JIT compilation and GPU execution:
 
 ```elixir
+alias Scholar.Optimize.GoldenSection
+
 fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
 opts = [bracket: {0.0, 5.0}, tol: 1.0e-8, maxiter: 500]
 
 # This works with jit_apply for GPU acceleration
-result = Nx.Defn.jit_apply(&Scholar.Optimize.GoldenSection.minimize/2, [fun, opts])
+result = Nx.Defn.jit_apply(&GoldenSection.minimize/2, [fun, opts])
 
 IO.puts("JIT-compiled result:")
 IO.puts("  x = #{Nx.to_number(result.x)}")
@@ -118,13 +119,15 @@ IO.puts("  Converged: #{Nx.to_number(result.converged) == 1}")
 Control convergence tolerance (bracket width threshold):
 
 ```elixir
+alias Scholar.Optimize.GoldenSection
+
 fun = fn x -> Nx.pow(Nx.subtract(x, 2), 2) end
 
 # Default tolerance (1.0e-8)
-result_default = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 5.0})
+result_default = GoldenSection.minimize(fun, bracket: {0.0, 5.0})
 
 # Looser tolerance (faster)
-result_loose = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 5.0}, tol: 1.0e-4)
+result_loose = GoldenSection.minimize(fun, bracket: {0.0, 5.0}, tol: 1.0e-4)
 
 IO.puts("Default tolerance (1e-8): #{Nx.to_number(result_default.iterations)} iterations")
 IO.puts("Loose tolerance (1e-4): #{Nx.to_number(result_loose.iterations)} iterations")
@@ -135,9 +138,11 @@ IO.puts("Loose tolerance (1e-4): #{Nx.to_number(result_loose.iterations)} iterat
 Limit the number of iterations:
 
 ```elixir
+alias Scholar.Optimize.GoldenSection
+
 fun = fn x -> Nx.pow(Nx.subtract(x, 2), 2) end
 
-result = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 100.0}, maxiter: 10)
+result = GoldenSection.minimize(fun, bracket: {0.0, 100.0}, maxiter: 10)
 
 IO.puts("With maxiter: 10")
 IO.puts("  Converged: #{Nx.to_number(result.converged) == 1}")
@@ -147,12 +152,14 @@ IO.puts("  Final bracket width affects convergence")
 
 ## Result Struct
 
-All optimization functions return a `Scholar.Optimize` struct:
+`GoldenSection.minimize/2` returns a `Scholar.Optimize.GoldenSection` struct:
 
 ```elixir
+alias Scholar.Optimize.GoldenSection
+
 fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
 
-result = Scholar.Optimize.minimize_scalar(fun, bracket: {0.0, 5.0})
+result = GoldenSection.minimize(fun, bracket: {0.0, 5.0})
 
 IO.puts("Result struct fields:")
 IO.puts("  x:          #{Nx.to_number(result.x)} (solution)")
@@ -160,5 +167,4 @@ IO.puts("  fun:        #{Nx.to_number(result.fun)} (function value at solution)"
 IO.puts("  converged:  #{Nx.to_number(result.converged)} (1 = yes, 0 = no)")
 IO.puts("  iterations: #{Nx.to_number(result.iterations)}")
 IO.puts("  fun_evals:  #{Nx.to_number(result.fun_evals)}")
-IO.puts("  grad_evals: #{Nx.to_number(result.grad_evals)} (always 0 for Golden Section)")
 ```

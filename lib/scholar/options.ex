@@ -121,19 +121,4 @@ defmodule Scholar.Options do
          "expected :quantile_range to be a tuple {q_min, q_max} such that 0.0 < q_min < q_max < 100.0, got: #{inspect(value)}"}
     end
   end
-
-  def bracket(value) do
-    case value do
-      {a, b} when is_number(a) and is_number(b) and a < b ->
-        {:ok, {a, b}}
-
-      {a, b} when is_number(a) and is_number(b) ->
-        {:error,
-         "expected :bracket to be a tuple {a, b} where a < b, got: #{inspect(value)}"}
-
-      _ ->
-        {:error,
-         "expected :bracket to be a tuple {a, b} of numbers, got: #{inspect(value)}"}
-    end
-  end
 end
