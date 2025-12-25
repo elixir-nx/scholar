@@ -132,7 +132,7 @@ defmodule Scholar.Optimize.GoldenSection do
 
   defnp minimize_n(fun, a, b, tol, maxiter) do
     # Golden ratio as tensor
-    phi = Nx.tensor(@phi, type: :f64)
+    phi = @phi
 
     # a < b is guaranteed by option validation
     # Compute bracket width
