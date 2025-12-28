@@ -1084,8 +1084,7 @@ defmodule Scholar.Neighbors.NNDescent do
     initial_candidates = RandomProjectionForest.get_leaves(forest, query_data)
 
     {{query_indices, query_keys, _query_flags}, _query_data, search_graph, _initial_candidates,
-     _train_data, _rng_key,
-     _i} =
+     _train_data, _rng_key, _i} =
       while {{query_indices, query_keys, query_flags}, query_data, search_graph,
              initial_candidates, train_data, rng_key, i = 0},
             i < num_heaps do
@@ -1171,16 +1170,14 @@ defmodule Scholar.Neighbors.NNDescent do
 
         # # SEARCH
         {{query_indices, query_keys, query_flags}, {_visited, _heap, _min_dist, _min_index},
-         query_data, search_graph, initial_candidates, train_data, i, _dist_bound,
-         _stop} =
+         query_data, search_graph, initial_candidates, train_data, i, _dist_bound, _stop} =
           while {{query_indices, query_keys, query_flags}, {visited, heap, min_dist, min_index},
                  query_data, {search_indices, search_keys, search_flags}, initial_candidates,
                  train_data, i, dist_bound, stop},
                 min_dist < dist_bound and
                   not stop do
             {{query_indices, query_keys, query_flags}, {visited, heap, _min_dist, _min_index},
-             query_data, _, initial_candidates, train_data, i, dist_bound, _stop_inner,
-             _} =
+             query_data, _, initial_candidates, train_data, i, dist_bound, _stop_inner, _} =
               while {{query_indices, query_keys, query_flags},
                      {visited, heap, min_dist, min_index}, query_data,
                      {search_indices, search_keys, search_flags}, initial_candidates, train_data,
