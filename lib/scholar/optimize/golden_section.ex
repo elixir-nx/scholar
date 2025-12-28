@@ -43,18 +43,13 @@ defmodule Scholar.Optimize.GoldenSection do
   @phi 0.6180339887498949
 
   opts = [
-    bracket: [
-      type: {:custom, __MODULE__, :__bracket__, []},
-      required: true,
-      doc: """
-      Bracket containing the minimum. A tuple `{a, b}` defining the search interval.
-      The minimum must lie within this interval.
-      """
-    ],
     tol: [
       type: {:custom, Scholar.Options, :positive_number, []},
-      default: 1.0e-8,
-      doc: "Absolute tolerance for convergence."
+      default: 1.0e-5,
+      doc: """
+      Absolute tolerance for convergence. Default is 1.0e-5 which works with f32 precision.
+      For higher precision, use f64 tensors for bounds and a smaller tolerance.
+      """
     ],
     maxiter: [
       type: :pos_integer,
@@ -65,27 +60,13 @@ defmodule Scholar.Optimize.GoldenSection do
 
   @opts_schema NimbleOptions.new!(opts)
 
-  @doc false
-  def __bracket__(value) do
-    case value do
-      {a, b} when is_number(a) and is_number(b) and a < b ->
-        {:ok, {a, b}}
-
-      {a, b} when is_number(a) and is_number(b) ->
-        {:error,
-         "expected :bracket to be a tuple {a, b} where a < b, got: #{inspect(value)}"}
-
-      _ ->
-        {:error,
-         "expected :bracket to be a tuple {a, b} of numbers, got: #{inspect(value)}"}
-    end
-  end
-
   @doc """
   Minimizes a scalar function using golden section search.
 
   ## Arguments
 
+  * `a` - Lower bound of the search interval (number or scalar tensor).
+  * `b` - Upper bound of the search interval (number or scalar tensor). Must satisfy `a < b`.
   * `fun` - The objective function to minimize. Must be a defn-compatible function
     that takes a scalar tensor and returns a scalar tensor.
   * `opts` - Options (see below).
@@ -107,40 +88,40 @@ defmodule Scholar.Optimize.GoldenSection do
   ## Examples
 
       iex> fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
-      iex> result = Scholar.Optimize.GoldenSection.minimize(fun, bracket: {0.0, 5.0})
+      iex> result = Scholar.Optimize.GoldenSection.minimize(0.0, 5.0, fun)
       iex> Nx.to_number(result.converged)
       1
-      iex> Nx.all_close(result.x, Nx.tensor(3.0), atol: 1.0e-4) |> Nx.to_number()
+      iex> Nx.all_close(result.x, Nx.tensor(3.0), atol: 1.0e-3) |> Nx.to_number()
+      1
+
+  For higher precision, use f64 tensors:
+
+      iex> fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
+      iex> a = Nx.tensor(0.0, type: :f64)
+      iex> b = Nx.tensor(5.0, type: :f64)
+      iex> result = Scholar.Optimize.GoldenSection.minimize(a, b, fun, tol: 1.0e-10)
+      iex> Nx.to_number(result.converged)
+      1
+      iex> Nx.all_close(result.x, Nx.tensor(3.0), atol: 1.0e-8) |> Nx.to_number()
       1
   """
-  defn minimize(fun, opts \\ []) do
-    {a, b, tol, maxiter} = transform_opts(opts)
-    minimize_n(fun, a, b, tol, maxiter)
+  defn minimize(a, b, fun, opts \\ []) do
+    {tol, maxiter} = transform_opts(opts)
+    minimize_n(a, b, fun, tol, maxiter)
   end
 
   deftransformp transform_opts(opts) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    {a, b} = opts[:bracket]
-
-    a = Nx.tensor(a, type: :f64)
-    b = Nx.tensor(b, type: :f64)
-    tol = Nx.tensor(opts[:tol], type: :f64)
-    maxiter = Nx.tensor(opts[:maxiter], type: :s64)
-
-    {a, b, tol, maxiter}
+    {opts[:tol], opts[:maxiter]}
   end
 
-  defnp minimize_n(fun, a, b, tol, maxiter) do
-    # Golden ratio as tensor
-    phi = @phi
-
-    # a < b is guaranteed by option validation
+  defnp minimize_n(a, b, fun, tol, maxiter) do
     # Compute bracket width
     width = b - a
 
     # Initial interior points: c and d
-    c = b - phi * width
-    d = a + phi * width
+    c = b - @phi * width
+    d = a + @phi * width
     fc = fun.(c)
     fd = fun.(d)
 
@@ -152,13 +133,13 @@ defmodule Scholar.Optimize.GoldenSection do
       d: d,
       fc: fc,
       fd: fd,
-      iter: Nx.tensor(0, type: :s64),
-      f_evals: Nx.tensor(2, type: :s64)
+      iter: Nx.u32(0),
+      f_evals: Nx.u32(2)
     }
 
     # Main optimization loop
     {final_state, _} =
-      while {state = initial_state, {phi, tol, maxiter}},
+      while {state = initial_state, {tol, maxiter}},
             state.iter < maxiter and state.b - state.a >= tol do
         # Determine which side to narrow based on function values
         narrow_left = state.fc < state.fd
@@ -168,13 +149,13 @@ defmodule Scholar.Optimize.GoldenSection do
         new_b_left = state.d
         new_d_left = state.c
         new_fd_left = state.fc
-        new_c_left = new_b_left - phi * (new_b_left - state.a)
+        new_c_left = new_b_left - @phi * (new_b_left - state.a)
 
         # Case 2 (narrow_right): new interval is [c, b], c becomes new d
         new_a_right = state.c
         new_c_right = state.d
         new_fc_right = state.fd
-        new_d_right = new_a_right + phi * (state.b - new_a_right)
+        new_d_right = new_a_right + @phi * (state.b - new_a_right)
 
         # Select based on condition
         new_a = Nx.select(narrow_left, state.a, new_a_right)
@@ -202,7 +183,7 @@ defmodule Scholar.Optimize.GoldenSection do
           f_evals: state.f_evals + 1
         }
 
-        {new_state, {phi, tol, maxiter}}
+        {new_state, {tol, maxiter}}
       end
 
     # Solution is the midpoint of the final bracket
