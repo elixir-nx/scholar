@@ -282,6 +282,29 @@ print(f"x: {result.x}, f(x): {result.fun}, iterations: {result.nit}")
 
 Use these reference values in tests with appropriate tolerance (typically `atol: 1.0e-4` to `1.0e-6`).
 
+## Golden Ratio Constants
+
+Optimization algorithms use different golden ratio-derived constants:
+
+| Constant | Value | Formula | Used In |
+|----------|-------|---------|---------|
+| φ (phi) | 0.6180339887498949 | (√5 - 1) / 2 | Golden Section - bracket shrink factor |
+| 2 - φ | 0.3819660112501051 | (3 - √5) / 2 | Brent - golden section step ratio |
+
+```python
+import math
+
+phi = (math.sqrt(5) - 1) / 2        # 0.6180339887498949
+brent_ratio = (3 - math.sqrt(5)) / 2  # 0.3819660112501051
+
+# Verify: they sum to 1
+assert abs(phi + brent_ratio - 1.0) < 1e-15
+```
+
+**Why different constants?**
+- **Golden Section**: Shrinks bracket by factor φ ≈ 0.618 each iteration
+- **Brent**: Steps into the larger segment by ratio (2-φ) ≈ 0.382 when using golden section fallback
+
 ## References
 
 - PR #323: https://github.com/elixir-nx/scholar/pull/323 (original comprehensive optimizer)
