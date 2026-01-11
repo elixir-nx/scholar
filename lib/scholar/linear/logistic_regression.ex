@@ -126,16 +126,16 @@ defmodule Scholar.Linear.LogisticRegression do
 
     num_classes = opts[:num_classes]
 
-    coef =
+    w =
       Nx.broadcast(
         Nx.tensor(0.0, type: type),
         {num_features, num_classes}
       )
 
-    bias = Nx.broadcast(Nx.tensor(0.0, type: type), {num_classes})
+    b = Nx.broadcast(Nx.tensor(0.0, type: type), {num_classes})
 
-    coef_optimizer_state = optimizer_init_fn.(coef) |> as_type(type)
-    bias_optimizer_state = optimizer_init_fn.(bias) |> as_type(type)
+    w_optimizer_state = optimizer_init_fn.(w) |> as_type(type)
+    b_optimizer_state = optimizer_init_fn.(b) |> as_type(type)
 
     {alpha, opts} = Keyword.pop!(opts, :alpha)
     {tol, opts} = Keyword.pop!(opts, :tol)
@@ -148,13 +148,13 @@ defmodule Scholar.Linear.LogisticRegression do
     fit_n(
       x,
       y,
-      coef,
-      bias,
+      w,
+      b,
       alpha,
       l1_ratio,
       tol,
-      coef_optimizer_state,
-      bias_optimizer_state,
+      w_optimizer_state,
+      b_optimizer_state,
       opts
     )
   end
@@ -174,13 +174,13 @@ defmodule Scholar.Linear.LogisticRegression do
   defnp fit_n(
           x,
           y,
-          coef,
-          bias,
+          w,
+          b,
           alpha,
           l1_ratio,
           tol,
-          coef_optimizer_state,
-          bias_optimizer_state,
+          w_optimizer_state,
+          b_optimizer_state,
           opts
         ) do
     num_samples = Nx.axis_size(x, 0)
@@ -194,37 +194,37 @@ defmodule Scholar.Linear.LogisticRegression do
       |> Nx.broadcast({num_samples, num_classes})
       |> Nx.equal(Nx.iota({num_samples, num_classes}, axis: 1))
 
-    {final_coef, final_bias, _} =
-      while {coef, bias,
-             {x, y_one_hot, max_iterations, alpha, l1_ratio, tol, coef_optimizer_state,
-              bias_optimizer_state, converged? = Nx.u8(0), iter = Nx.u32(0)}},
+    {coef, bias, _} =
+      while {w, b,
+             {x, y_one_hot, max_iterations, alpha, l1_ratio, tol, w_optimizer_state,
+              b_optimizer_state, converged? = Nx.u8(0), iter = Nx.u32(0)}},
             iter < max_iterations and not converged? do
-        {coef_grad, bias_grad} =
-          grad({coef, bias}, fn {coef, bias} ->
-            compute_loss(coef, bias, alpha, l1_ratio, x, y_one_hot)
+        {w_grad, b_grad} =
+          grad({w, b}, fn {w, b} ->
+            compute_loss(w, b, alpha, l1_ratio, x, y_one_hot)
           end)
 
-        {coef_updates, coef_optimizer_state} =
-          optimizer_update_fn.(coef_grad, coef_optimizer_state, coef)
+        {w_updates, w_optimizer_state} =
+          optimizer_update_fn.(w_grad, w_optimizer_state, w)
 
-        coef = Polaris.Updates.apply_updates(coef, coef_updates)
+        w = Polaris.Updates.apply_updates(w, w_updates)
 
-        {bias_updates, bias_optimizer_state} =
-          optimizer_update_fn.(bias_grad, bias_optimizer_state, bias)
+        {b_updates, b_optimizer_state} =
+          optimizer_update_fn.(b_grad, b_optimizer_state, b)
 
-        bias = Polaris.Updates.apply_updates(bias, bias_updates)
+        b = Polaris.Updates.apply_updates(b, bias_updates)
 
         converged? =
-          Nx.reduce_max(Nx.abs(coef_grad)) < tol and Nx.reduce_max(Nx.abs(bias_grad)) < tol
+          Nx.reduce_max(Nx.abs(w_grad)) < tol and Nx.reduce_max(Nx.abs(bias_grad)) < tol
 
-        {coef, bias,
-         {x, y_one_hot, max_iterations, alpha, l1_ratio, tol, coef_optimizer_state,
-          bias_optimizer_state, converged?, iter + 1}}
+        {w, b,
+         {x, y_one_hot, max_iterations, alpha, l1_ratio, tol, w_optimizer_state,
+          b_optimizer_state, converged?, iter + 1}}
       end
 
     %__MODULE__{
-      coefficients: final_coef,
-      bias: final_bias
+      coefficients: coef,
+      bias: bias
     }
   end
 
@@ -252,12 +252,12 @@ defmodule Scholar.Linear.LogisticRegression do
     end
   end
 
-  defnp compute_loss(coeff, bias, alpha, l1_ratio, xs, ys) do
-    reg = compute_regularization(coeff, alpha, l1_ratio)
+  defnp compute_loss(w, b, alpha, l1_ratio, xs, ys) do
+    reg = compute_regularization(w, alpha, l1_ratio)
 
     xs
-    |> Nx.dot(coeff)
-    |> Nx.add(bias)
+    |> Nx.dot(w)
+    |> Nx.add(b)
     |> log_softmax()
     |> Nx.multiply(ys)
     |> Nx.sum(axes: [1])
