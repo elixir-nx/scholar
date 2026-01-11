@@ -1,7 +1,6 @@
 defmodule Scholar.Neighbors.Utils do
   @moduledoc false
   import Nx.Defn
-  require Nx
 
   def metric(:cosine), do: {:ok, &Scholar.Metrics.Distance.cosine/2}
 

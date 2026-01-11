@@ -6,7 +6,6 @@ defmodule Scholar.Neighbors.RadiusNNClassifier do
   """
   import Nx.Defn
   import Scholar.Shared
-  require Nx
 
   @derive {Nx.Container,
            keep: [:weights, :num_classes, :metric, :radius], containers: [:data, :labels]}

@@ -5,7 +5,6 @@ defmodule Scholar.Neighbors.RadiusNNRegressor do
   It implements regression.
   """
   import Nx.Defn
-  require Nx
 
   @derive {Nx.Container,
            keep: [:weights, :num_classes, :metric, :radius], containers: [:data, :labels]}

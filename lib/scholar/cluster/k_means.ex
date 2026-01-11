@@ -22,7 +22,6 @@ defmodule Scholar.Cluster.KMeans do
   """
   import Nx.Defn
   import Scholar.Shared
-  require Nx
 
   @derive {Nx.Container, containers: [:num_iterations, :clusters, :inertia, :labels]}
   defstruct [:num_iterations, :clusters, :inertia, :labels]

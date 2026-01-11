@@ -9,7 +9,6 @@ defmodule Scholar.Cluster.OPTICS do
   method.
   """
   import Nx.Defn
-  require Nx
 
   @derive {Nx.Container, containers: [:labels, :min_samples, :max_eps, :eps, :algorithm]}
   defstruct [:labels, :min_samples, :max_eps, :eps, :algorithm]

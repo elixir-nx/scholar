@@ -274,7 +274,7 @@ defmodule Scholar.Linear.IsotonicRegression do
         }
       }
   """
-  def preprocess(model, trim_duplicates \\ true) do
+  def preprocess(%__MODULE__{} = model, trim_duplicates \\ true) do
     cutoff = Nx.to_number(model.cutoff_index)
     x = model.x_thresholds[0..cutoff]
     y = model.y_thresholds[0..cutoff]
@@ -303,16 +303,11 @@ defmodule Scholar.Linear.IsotonicRegression do
         {x, y}
       end
 
-    model = %__MODULE__{model | x_thresholds: x}
-    model = %__MODULE__{model | y_thresholds: y}
-
     %__MODULE__{
       model
-      | preprocess:
-          Scholar.Interpolation.Linear.fit(
-            model.x_thresholds,
-            model.y_thresholds
-          )
+      | x_thresholds: x,
+        y_thresholds: y,
+        preprocess: Scholar.Interpolation.Linear.fit(x, y)
     }
   end
 

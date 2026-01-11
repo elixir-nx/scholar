@@ -10,7 +10,6 @@ defmodule Scholar.Neighbors.BruteKNN do
   """
   import Nx.Defn
   import Scholar.Shared
-  require Nx
 
   @derive {Nx.Container, keep: [:num_neighbors, :metric, :batch_size], containers: [:data]}
   defstruct [:num_neighbors, :metric, :data, :batch_size]

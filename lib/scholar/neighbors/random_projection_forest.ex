@@ -19,7 +19,6 @@ defmodule Scholar.Neighbors.RandomProjectionForest do
 
   import Nx.Defn
   import Scholar.Shared
-  require Nx
   alias Scholar.Neighbors.Utils
 
   @derive {Nx.Container,

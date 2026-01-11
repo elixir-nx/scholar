@@ -11,7 +11,6 @@ defmodule Scholar.Metrics.Ranking do
 
   import Nx.Defn
   import Scholar.Shared
-  require Nx
 
   @dcg_opts [
     k: [

@@ -1,7 +1,6 @@
 defmodule Scholar.Decomposition.Utils do
   @moduledoc false
   import Nx.Defn
-  require Nx
 
   defn flip_svd(u, v, u_based \\ true) do
     base =

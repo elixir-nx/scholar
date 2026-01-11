@@ -13,7 +13,6 @@ defmodule Scholar.Neighbors.LargeVis do
 
   import Nx.Defn
   import Scholar.Shared
-  require Nx
   alias Scholar.Neighbors.RandomProjectionForest
   alias Scholar.Neighbors.Utils
 

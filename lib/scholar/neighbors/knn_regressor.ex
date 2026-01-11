@@ -5,7 +5,6 @@ defmodule Scholar.Neighbors.KNNRegressor do
   Performs regression by computing the (weighted) mean of k-nearest neighbor labels.
   """
   import Nx.Defn
-  require Nx
 
   @derive {Nx.Container, keep: [:weights], containers: [:algorithm, :labels]}
   defstruct [:algorithm, :weights, :labels]

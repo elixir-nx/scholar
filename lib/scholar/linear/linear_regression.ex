@@ -5,7 +5,6 @@ defmodule Scholar.Linear.LinearRegression do
   Time complexity of linear regression is $O((K^2) * (K+N))$ where $N$ is the number of samples
   and $K$ is the number of features.
   """
-  require Nx
   import Nx.Defn
   import Scholar.Shared
   alias Scholar.Linear.LinearHelpers

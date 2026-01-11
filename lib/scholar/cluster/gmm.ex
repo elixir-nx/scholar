@@ -22,7 +22,6 @@ defmodule Scholar.Cluster.GaussianMixture do
 
   import Nx.Defn
   import Scholar.Shared
-  require Nx
 
   @derive {Nx.Container, containers: [:weights, :means, :covariances, :precisions_cholesky]}
   defstruct [:weights, :means, :covariances, :precisions_cholesky]

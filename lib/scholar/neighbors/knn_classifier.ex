@@ -7,7 +7,6 @@ defmodule Scholar.Neighbors.KNNClassifier do
 
   import Nx.Defn
   import Scholar.Shared
-  require Nx
 
   @derive {Nx.Container, keep: [:num_classes, :weights], containers: [:algorithm, :labels]}
   defstruct [:algorithm, :num_classes, :weights, :labels]

@@ -395,8 +395,8 @@ defmodule Scholar.Manifold.MDS do
     %__MODULE__{embedding: best, stress: best_stress, n_iter: best_iter}
   end
 
-  defnp special_preprocess(model) do
-    %Scholar.Linear.IsotonicRegression{
+  defnp special_preprocess(%Scholar.Linear.IsotonicRegression{} = model) do
+    %{
       model
       | preprocess:
           Scholar.Interpolation.Linear.fit(

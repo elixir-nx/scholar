@@ -19,7 +19,6 @@ defmodule Scholar.Linear.RidgeRegression do
   Time complexity is $O(N^2)$ for `:cholesky` solver and $O((N^2) * (K + N))$ for `:svd` solver,
   where $N$ is the number of observations and $K$ is the number of features.
   """
-  require Nx
   import Nx.Defn
   import Scholar.Shared
   alias Scholar.Linear.LinearHelpers

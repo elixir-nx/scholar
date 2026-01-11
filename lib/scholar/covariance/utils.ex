@@ -1,7 +1,6 @@
 defmodule Scholar.Covariance.Utils do
   @moduledoc false
   import Nx.Defn
-  require Nx
 
   defn center(x, assume_centered? \\ false) do
     x =
