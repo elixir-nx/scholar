@@ -212,10 +212,10 @@ defmodule Scholar.Linear.LogisticRegression do
         {b_updates, b_optimizer_state} =
           optimizer_update_fn.(b_grad, b_optimizer_state, b)
 
-        b = Polaris.Updates.apply_updates(b, bias_updates)
+        b = Polaris.Updates.apply_updates(b, b_updates)
 
         converged? =
-          Nx.reduce_max(Nx.abs(w_grad)) < tol and Nx.reduce_max(Nx.abs(bias_grad)) < tol
+          Nx.reduce_max(Nx.abs(w_grad)) < tol and Nx.reduce_max(Nx.abs(b_grad)) < tol
 
         {w, b,
          {x, y_one_hot, max_iterations, alpha, l1_ratio, tol, w_optimizer_state,
@@ -228,22 +228,22 @@ defmodule Scholar.Linear.LogisticRegression do
     }
   end
 
-  defnp compute_regularization(coeff, alpha, l1_ratio) do
+  defnp compute_regularization(w, alpha, l1_ratio) do
     if alpha > 0.0 do
       reg =
         cond do
           l1_ratio == 0.0 ->
             # L2 regularization
-            Nx.sum(coeff * coeff)
+            Nx.sum(w * w)
 
           l1_ratio == 1.0 ->
             # L1 regularization
-            Nx.sum(Nx.abs(coeff))
+            Nx.sum(Nx.abs(w))
 
           # Elastic-Net regularization
           true ->
-            l1_ratio * Nx.sum(Nx.abs(coeff)) +
-              (1 - l1_ratio) * Nx.sum(coeff * coeff)
+            l1_ratio * Nx.sum(Nx.abs(w)) +
+              (1 - l1_ratio) * Nx.sum(w * w)
         end
 
       alpha * reg
