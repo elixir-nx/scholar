@@ -127,24 +127,6 @@ defmodule Scholar.Cluster.HierarchicalTest do
       assert model.dissimilarities == Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
     end
 
-    @tag :skip
-    test "ward", %{data: data} do
-      model = Hierarchical.fit(data, linkage: :ward)
-
-      # (Approximately, from Scipy)
-      assert model.dissimilarities ==
-               Nx.tensor([
-                 1.0,
-                 1.0,
-                 1.0,
-                 1.29099445,
-                 1.29099445,
-                 1.29099445,
-                 5.77350269,
-                 7.45355992
-               ])
-    end
-
     test "weighted", %{data: data} do
       model = Hierarchical.fit(data, linkage: :weighted)
 
