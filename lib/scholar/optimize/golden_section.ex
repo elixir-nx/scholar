@@ -105,14 +105,9 @@ defmodule Scholar.Optimize.GoldenSection do
       iex> Nx.all_close(result.x, Nx.tensor(3.0), atol: 1.0e-8) |> Nx.to_number()
       1
   """
-  defn minimize(a, b, fun, opts \\ []) do
-    {tol, maxiter} = transform_opts(opts)
-    minimize_n(a, b, fun, tol, maxiter)
-  end
-
-  deftransformp transform_opts(opts) do
+  deftransform minimize(a, b, fun, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    {opts[:tol], opts[:maxiter]}
+    minimize_n(a, b, fun, opts[:tol], opts[:maxiter])
   end
 
   defnp minimize_n(a, b, fun, tol, maxiter) do
