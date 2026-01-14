@@ -131,14 +131,9 @@ defmodule Scholar.Optimize.Brent do
       # Brent: ~5-8 function evaluations
       # Golden Section: ~40-45 function evaluations
   """
-  defn minimize(a, b, fun, opts \\ []) do
-    {tol, maxiter} = transform_opts(opts)
-    minimize_n(a, b, fun, tol, maxiter)
-  end
-
-  deftransformp transform_opts(opts) do
+  deftransform minimize(a, b, fun, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    {opts[:tol], opts[:maxiter]}
+    minimize_n(a, b, fun, opts[:tol], opts[:maxiter])
   end
 
   defnp minimize_n(a, b, fun, tol, maxiter) do
