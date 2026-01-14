@@ -47,9 +47,8 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       assert_raise NimbleOptions.ValidationError,
                    """
                    invalid value for :optimizer option: expected :optimizer to be either \
-                   a valid 0-arity function in Polaris.Optimizers or a valid {init_fn, update_fn} tuple
+                   a valid 0-arity function in Polaris.Optimizers or a valid {init_fn, update_fn} tuple\
                    """,
-                   #  "invalid value for :optimizer option: expected :optimizer to be either a valid 0-arity function in Polaris.Optimizers or a valid {init_fn, update_fn} tuple",
                    fn ->
                      LogisticRegression.fit(x, y,
                        num_classes: 2,
@@ -84,7 +83,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
 
       assert_raise ArgumentError,
                    """
-                   Scholar.Linear.LogisticRegression expected y to have shape {num_samples}, \
+                   expected y to have shape {num_samples}, \
                    got tensor with shape: {2, 2}
                    """,
                    fn -> LogisticRegression.fit(x, y, num_classes: 2) end
