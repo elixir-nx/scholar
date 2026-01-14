@@ -10,7 +10,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
     res = LogisticRegression.predict(model, x_test)
     accuracy = Scholar.Metrics.Classification.accuracy(res, y_test)
 
-    assert Nx.greater_equal(accuracy, 0.96) == Nx.u8(1)
+    assert Nx.to_number(accuracy) >= 0.96
   end
 
   describe "errors" do
@@ -84,7 +84,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       assert_raise ArgumentError,
                    """
                    expected y to have shape {num_samples}, \
-                   got tensor with shape: {2, 2}
+                   got tensor with shape: {2, 2}\
                    """,
                    fn -> LogisticRegression.fit(x, y, num_classes: 2) end
     end
@@ -116,7 +116,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       model = LogisticRegression.fit(x, y, num_classes: 2)
       y_pred = LogisticRegression.predict(model, x)
       accuracy = Scholar.Metrics.Classification.accuracy(y, y_pred)
-      assert Nx.equal(accuracy, 1)
+      assert Nx.to_number(accuracy) == 1.0
     end
 
     test "2D" do
@@ -130,7 +130,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       model = LogisticRegression.fit(x, y, num_classes: 2)
       y_pred = LogisticRegression.predict(model, x)
       accuracy = Scholar.Metrics.Classification.accuracy(y, y_pred)
-      assert Nx.equal(accuracy, 1)
+      assert Nx.to_number(accuracy) == 1.0
     end
   end
 end
