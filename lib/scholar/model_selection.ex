@@ -178,8 +178,8 @@ defmodule Scholar.ModelSelection do
       iex> y = Nx.tensor([0, 1, 2, 0, 1, 1, 0])
       iex> opts = [
       ...>   num_classes: [3],
-      ...>   iterations: [10, 20, 50],
-      ...>   optimizer: [Polaris.Optimizers.adam(learning_rate: 0.005), Polaris.Optimizers.adam(learning_rate: 0.01)],
+      ...>   max_iterations: [10, 20, 50],
+      ...>   alpha: [0.0, 0.1, 1.0],
       ...> ]
       iex> Scholar.ModelSelection.grid_search(x, y, folding_fun, scoring_fun, opts)
   """
