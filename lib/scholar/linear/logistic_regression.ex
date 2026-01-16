@@ -144,8 +144,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
     {coef, bias, _} =
       while {w, b,
-             {alpha, x, y_one_hot, tol, armijo_params, iter = Nx.u32(0),
-              converged? = Nx.u8(0)}},
+             {alpha, x, y_one_hot, tol, armijo_params, iter = Nx.u32(0), converged? = Nx.u8(0)}},
             iter < max_iterations and not converged? do
         logits = Nx.dot(x, w) + b
         probabilities = softmax(logits)
