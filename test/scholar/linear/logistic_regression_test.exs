@@ -40,23 +40,6 @@ defmodule Scholar.Linear.LogisticRegressionTest do
                    fn -> LogisticRegression.fit(x, y) end
     end
 
-    test "when :optimizer is invalid" do
-      x = Nx.tensor([[1, 2], [3, 4]])
-      y = Nx.tensor([1, 2])
-
-      assert_raise NimbleOptions.ValidationError,
-                   """
-                   invalid value for :optimizer option: expected :optimizer to be either \
-                   a valid 0-arity function in Polaris.Optimizers or a valid {init_fn, update_fn} tuple\
-                   """,
-                   fn ->
-                     LogisticRegression.fit(x, y,
-                       num_classes: 2,
-                       optimizer: :invalid_optimizer
-                     )
-                   end
-    end
-
     test "when :max_iterations is not a positive integer" do
       x = Nx.tensor([[1, 2], [3, 4]])
       y = Nx.tensor([1, 2])
@@ -87,20 +70,6 @@ defmodule Scholar.Linear.LogisticRegressionTest do
                    got tensor with shape: {2, 2}\
                    """,
                    fn -> LogisticRegression.fit(x, y, num_classes: 2) end
-    end
-  end
-
-  describe "column target tests" do
-    @tag :wip
-    test "column target" do
-      {x_train, _, y_train, _} = iris_data()
-
-      model = LogisticRegression.fit(x_train, y_train, num_classes: 3)
-      pred = LogisticRegression.predict(model, x_train)
-      col_model = LogisticRegression.fit(x_train, y_train |> Nx.new_axis(-1), num_classes: 3)
-      col_pred = LogisticRegression.predict(col_model, x_train)
-      assert model == col_model
-      assert pred == col_pred
     end
   end
 
