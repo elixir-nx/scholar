@@ -6,7 +6,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
   test "Iris Data Set - multinomial logistic regression test" do
     {x_train, x_test, y_train, y_test} = iris_data()
 
-    model = LogisticRegression.fit(x_train, y_train, num_classes: 3)
+    model = LogisticRegression.fit(x_train, y_train, num_classes: 3, alpha: 0.0)
     res = LogisticRegression.predict(model, x_test)
     accuracy = Scholar.Metrics.Classification.accuracy(res, y_test)
 
@@ -107,8 +107,8 @@ defmodule Scholar.Linear.LogisticRegressionTest do
   describe "linearly separable data" do
     test "1D" do
       key = Nx.Random.key(12)
-      {x1, key} = Nx.Random.uniform(key, -1.0, 0.0, shape: {1000, 1})
-      {x2, _key} = Nx.Random.uniform(key, 0.0, 1.0, shape: {1000, 1})
+      {x1, key} = Nx.Random.uniform(key, -2, -1, shape: {1000, 1})
+      {x2, _key} = Nx.Random.uniform(key, 1, 2, shape: {1000, 1})
       x = Nx.concatenate([x1, x2])
       y1 = Nx.broadcast(0, {1000})
       y2 = Nx.broadcast(1, {1000})
@@ -121,8 +121,8 @@ defmodule Scholar.Linear.LogisticRegressionTest do
 
     test "2D" do
       key = Nx.Random.key(12)
-      {x1, key} = Nx.Random.uniform(key, -1.0, 0.0, shape: {1000, 2})
-      {x2, _key} = Nx.Random.uniform(key, 0.0, 1.0, shape: {1000, 2})
+      {x1, key} = Nx.Random.uniform(key, -2, -1, shape: {1000, 2})
+      {x2, _key} = Nx.Random.uniform(key, 1, 2, shape: {1000, 2})
       x = Nx.concatenate([x1, x2])
       y1 = Nx.broadcast(0, {1000})
       y2 = Nx.broadcast(1, {1000})

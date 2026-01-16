@@ -21,28 +21,12 @@ defmodule Scholar.Linear.LogisticRegression do
       default: 1000,
       doc: "Maximum number of gradient descent iterations to perform."
     ],
-    optimizer: [
-      type: {:custom, Scholar.Options, :optimizer, []},
-      default: :sgd,
-      doc: """
-      Optimizer name or {init, update} pair of functions (see `Polaris.Optimizers` for more details).
-      """
-    ],
     alpha: [
       type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0,
       doc: """
-      Constant that multiplies the regularization term, controlling regularization strength.
+      Constant that multiplies the L2 regularization term, controlling regularization strength.
       If 0, no regularization is applied.
-      """
-    ],
-    l1_ratio: [
-      type: {:custom, Scholar.Options, :non_negative_number, []},
-      default: 0.0,
-      doc: """
-      The Elastic-Net mixing parameter, with `0 <= l1_ratio <= 1`.
-      Setting `l1_ratio` to 0 gives pure L2 regularization, and setting it to 1 gives pure L1 regularization.
-      For values between 0 and 1, a penalty of the form `l1_ratio * L1 + (1 - l1_ratio) * L2` is used.
       """
     ],
     tol: [
@@ -81,11 +65,10 @@ defmodule Scholar.Linear.LogisticRegression do
       %Scholar.Linear.LogisticRegression{
         coefficients: Nx.tensor(
           [
-            [0.09002052247524261, -0.09002052992582321],
-            [-0.1521512120962143, 0.1521512120962143]
-          ]
+            [0.0915902629494667, -0.09159023314714432],
+            [-0.1507941037416458, 0.1507941335439682]
         ),
-        bias: Nx.tensor([-0.05300388112664223, 0.053003907203674316])
+        bias: Nx.tensor([-0.06566660106182098, 0.06566664576530457])
       }
   """
   deftransform fit(x, y, opts \\ []) do
@@ -99,7 +82,7 @@ defmodule Scholar.Linear.LogisticRegression do
             "expected y to have shape {num_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
     end
 
-    {num_samples, num_features} = Nx.shape(x)
+    num_samples = Nx.axis_size(x, 0)
 
     if Nx.axis_size(y, 0) != num_samples do
       raise ArgumentError,
@@ -108,24 +91,25 @@ defmodule Scholar.Linear.LogisticRegression do
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
-    {l1_ratio, opts} = Keyword.pop!(opts, :l1_ratio)
+    type = to_float_type(x)
 
-    unless l1_ratio >= 0.0 and l1_ratio <= 1.0 do
-      raise ArgumentError,
-            "expected l1_ratio to be between 0 and 1, got: #{inspect(l1_ratio)}"
-    end
+    {alpha, opts} = Keyword.pop!(opts, :alpha)
+    alpha = Nx.tensor(alpha, type: type)
+    {tol, opts} = Keyword.pop!(opts, :tol)
+    tol = Nx.tensor(tol, type: type)
+    {max_iterations, opts} = Keyword.pop!(opts, :max_iterations)
+    max_iterations = Nx.tensor(max_iterations, type: :u32)
+
+    fit_n(x, y, alpha, max_iterations, tol, opts)
+  end
+
+  defnp fit_n(x, y, alpha, max_iterations, tol, opts) do
+    num_classes = opts[:num_classes]
+    {num_samples, num_features} = Nx.shape(x)
 
     type = to_float_type(x)
-    {optimizer, opts} = Keyword.pop!(opts, :optimizer)
 
-    {optimizer_init_fn, optimizer_update_fn} =
-      case optimizer do
-        atom when is_atom(atom) -> apply(Polaris.Optimizers, atom, [])
-        {f1, f2} -> {f1, f2}
-      end
-
-    num_classes = opts[:num_classes]
-
+    # Initialize weights and bias with zeros
     w =
       Nx.broadcast(
         Nx.tensor(0.0, type: type),
@@ -134,92 +118,64 @@ defmodule Scholar.Linear.LogisticRegression do
 
     b = Nx.broadcast(Nx.tensor(0.0, type: type), {num_classes})
 
-    w_optimizer_state = optimizer_init_fn.(w) |> as_type(type)
-    b_optimizer_state = optimizer_init_fn.(b) |> as_type(type)
-
-    {alpha, opts} = Keyword.pop!(opts, :alpha)
-    {tol, opts} = Keyword.pop!(opts, :tol)
-    alpha = Nx.tensor(alpha, type: type)
-    l1_ratio = Nx.tensor(l1_ratio, type: type)
-    tol = Nx.tensor(tol, type: type)
-
-    opts = Keyword.put(opts, :optimizer_update_fn, optimizer_update_fn)
-
-    fit_n(
-      x,
-      y,
-      w,
-      b,
-      alpha,
-      l1_ratio,
-      tol,
-      w_optimizer_state,
-      b_optimizer_state,
-      opts
-    )
-  end
-
-  deftransformp as_type(container, target_type) do
-    Nx.Defn.Composite.traverse(container, fn t ->
-      type = Nx.type(t)
-
-      if Nx.Type.float?(type) and not Nx.Type.complex?(type) do
-        Nx.as_type(t, target_type)
-      else
-        t
-      end
-    end)
-  end
-
-  defnp fit_n(
-          x,
-          y,
-          w,
-          b,
-          alpha,
-          l1_ratio,
-          tol,
-          w_optimizer_state,
-          b_optimizer_state,
-          opts
-        ) do
-    num_samples = Nx.axis_size(x, 0)
-    max_iterations = opts[:max_iterations]
-    num_classes = opts[:num_classes]
-    optimizer_update_fn = opts[:optimizer_update_fn]
-
+    # One-hot encoding of target labels
     y_one_hot =
       y
       |> Nx.new_axis(1)
       |> Nx.broadcast({num_samples, num_classes})
       |> Nx.equal(Nx.iota({num_samples, num_classes}, axis: 1))
 
+    # Define Armijo parameters
+    c = Nx.tensor(1.0e-4, type: type)
+    rho = Nx.tensor(0.5, type: type)
+
+    eta_min =
+      case type do
+        {:f, 32} -> Nx.tensor(1.0e-6, type: type)
+        {:f, 64} -> Nx.tensor(1.0e-8, type: type)
+        _ -> Nx.tensor(1.0e-6, type: type)
+      end
+
+    armijo_params = %{
+      c: c,
+      rho: rho,
+      eta_min: eta_min
+    }
+
     {coef, bias, _} =
       while {w, b,
-             {x, y_one_hot, max_iterations, alpha, l1_ratio, tol, w_optimizer_state,
-              b_optimizer_state, converged? = Nx.u8(0), iter = Nx.u32(0)}},
+             {alpha, x, y_one_hot, max_iterations, tol, armijo_params, iter = Nx.u32(0),
+              converged? = Nx.u8(0)}},
             iter < max_iterations and not converged? do
-        {w_grad, b_grad} =
-          grad({w, b}, fn {w, b} ->
-            compute_loss(w, b, alpha, l1_ratio, x, y_one_hot)
-          end)
+        logits = Nx.dot(x, w) + b
+        probabilities = softmax(logits)
+        residuals = probabilities - y_one_hot
 
-        {w_updates, w_optimizer_state} =
-          optimizer_update_fn.(w_grad, w_optimizer_state, w)
+        # Compute loss
+        loss =
+          logits
+          |> log_softmax()
+          |> Nx.multiply(y_one_hot)
+          |> Nx.sum(axes: [1])
+          |> Nx.mean()
+          |> Nx.negate()
+          |> Nx.add(alpha * Nx.sum(w * w))
 
-        w = Polaris.Updates.apply_updates(w, w_updates)
+        # Compute gradients
+        grad_w = Nx.dot(x, [0], residuals, [0]) / num_samples + 2 * alpha * w
+        grad_b = Nx.sum(residuals, axes: [0]) / num_samples
 
-        {b_updates, b_optimizer_state} =
-          optimizer_update_fn.(b_grad, b_optimizer_state, b)
+        # Perform line search to find step size
+        eta =
+          armijo_line_search(w, b, alpha, x, y_one_hot, loss, grad_w, grad_b, armijo_params)
 
-        b = Polaris.Updates.apply_updates(b, b_updates)
+        w = w - eta * grad_w
+        b = b - eta * grad_b
 
         converged? =
-          Nx.reduce_max(Nx.abs(w_grad)) < tol and Nx.reduce_max(Nx.abs(b_grad)) < tol
+          Nx.reduce_max(Nx.abs(grad_w)) < tol and Nx.reduce_max(Nx.abs(grad_b)) < tol
 
-        {w, b,
-         {x, y_one_hot, max_iterations, alpha, l1_ratio, tol, w_optimizer_state,
-          b_optimizer_state, converged?, iter + 1}}
+        {w, b, {alpha, x, y_one_hot, max_iterations, tol, armijo_params, iter + 1, converged?}}
       end
 
     %__MODULE__{
@@ -228,61 +184,57 @@ defmodule Scholar.Linear.LogisticRegression do
     }
   end
 
-  defnp compute_regularization(w, alpha, l1_ratio) do
-    if alpha > 0.0 do
-      reg =
-        cond do
-          l1_ratio == 0.0 ->
-            # L2 regularization
-            Nx.sum(w * w)
+  defnp armijo_line_search(w, b, alpha, x, y, loss, grad_w, grad_b, armijo_params) do
+    c = armijo_params[:c]
+    rho = armijo_params[:rho]
+    eta_min = armijo_params[:eta_min]
 
-          l1_ratio == 1.0 ->
-            # L1 regularization
-            Nx.sum(Nx.abs(w))
+    type = to_float_type(x)
+    dir_w = -grad_w
+    dir_b = -grad_b
+    # Directional derivative
+    slope = Nx.sum(dir_w * grad_w) + Nx.sum(dir_b * grad_b)
 
-          # Elastic-Net regularization
-          true ->
-            l1_ratio * Nx.sum(Nx.abs(w)) +
-              (1 - l1_ratio) * Nx.sum(w * w)
-        end
+    {eta, _} =
+      while {eta = Nx.tensor(1.0, type: type),
+             {w, b, alpha, x, y, loss, dir_w, dir_b, slope, c, rho, eta_min}},
+            compute_loss(w + eta * dir_w, b + eta * dir_b, alpha, x, y) > loss + c * eta * slope and
+              eta > eta_min do
+        eta = eta * rho
 
-      alpha * reg
-    else
-      0.0
-    end
+        {eta, {w, b, alpha, x, y, loss, dir_w, dir_b, slope, c, rho, eta_min}}
+      end
+
+    eta
   end
 
-  defnp compute_loss(w, b, alpha, l1_ratio, xs, ys) do
-    reg = compute_regularization(w, alpha, l1_ratio)
-
-    xs
+  defnp compute_loss(w, b, alpha, x, y) do
+    x
     |> Nx.dot(w)
     |> Nx.add(b)
     |> log_softmax()
-    |> Nx.multiply(ys)
+    |> Nx.multiply(y)
     |> Nx.sum(axes: [1])
-    |> Nx.negate()
     |> Nx.mean()
-    |> Nx.add(reg)
+    |> Nx.negate()
+    |> Nx.add(alpha * Nx.sum(w * w))
+  end
+
+  defnp softmax(logits) do
+    max = stop_grad(Nx.reduce_max(logits, axes: [1], keep_axes: true))
+    normalized_exp = (logits - max) |> Nx.exp()
+    normalized_exp / Nx.sum(normalized_exp, axes: [1], keep_axes: true)
   end
 
   defnp log_softmax(x) do
-    shifted = x - stop_grad(Nx.reduce_max(x, axes: [-1], keep_axes: true))
+    shifted = x - stop_grad(Nx.reduce_max(x, axes: [1], keep_axes: true))
 
     shifted
     |> Nx.exp()
-    |> Nx.sum(axes: [-1], keep_axes: true)
+    |> Nx.sum(axes: [1], keep_axes: true)
     |> Nx.log()
     |> Nx.negate()
     |> Nx.add(shifted)
-  end
-
-  # Normalized softmax
-
-  defnp softmax(t) do
-    max = stop_grad(Nx.reduce_max(t, axes: [-1], keep_axes: true))
-    normalized_exp = (t - max) |> Nx.exp()
-    normalized_exp / Nx.sum(normalized_exp, axes: [-1], keep_axes: true)
   end
 
   @doc """
@@ -317,7 +269,7 @@ defmodule Scholar.Linear.LogisticRegression do
       iex> y = Nx.tensor([1, 0, 1])
       iex> model = Scholar.Linear.LogisticRegression.fit(x, y, num_classes: 2)
       iex> Scholar.Linear.LogisticRegression.predict_probability(model, Nx.tensor([[-3.0, 5.0]]))
-      Nx.tensor([[0.10269401967525482, 0.8973060250282288]])
+      Nx.tensor([[0.10075931251049042, 0.8992406725883484]])
   """
   defn predict_probability(%__MODULE__{coefficients: coeff, bias: bias} = _model, x) do
     if Nx.rank(x) != 2 do
