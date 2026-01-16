@@ -6,11 +6,11 @@ defmodule Scholar.Linear.LogisticRegressionTest do
   test "Iris Data Set - multinomial logistic regression test" do
     {x_train, x_test, y_train, y_test} = iris_data()
 
-    model = LogisticRegression.fit(x_train, y_train, num_classes: 3)
+    model = LogisticRegression.fit(x_train, y_train, num_classes: 3, alpha: 0.0)
     res = LogisticRegression.predict(model, x_test)
     accuracy = Scholar.Metrics.Classification.accuracy(res, y_test)
 
-    assert Nx.greater_equal(accuracy, 0.96) == Nx.u8(1)
+    assert Nx.to_number(accuracy) >= 0.96
   end
 
   describe "errors" do
@@ -40,28 +40,14 @@ defmodule Scholar.Linear.LogisticRegressionTest do
                    fn -> LogisticRegression.fit(x, y) end
     end
 
-    test "when :optimizer is invalid" do
+    test "when :max_iterations is not a positive integer" do
       x = Nx.tensor([[1, 2], [3, 4]])
       y = Nx.tensor([1, 2])
 
       assert_raise NimbleOptions.ValidationError,
-                   "invalid value for :optimizer option: expected :optimizer to be either a valid 0-arity function in Polaris.Optimizers or a valid {init_fn, update_fn} tuple",
+                   "invalid value for :max_iterations option: expected positive integer, got: 0",
                    fn ->
-                     LogisticRegression.fit(x, y,
-                       num_classes: 2,
-                       optimizer: :invalid_optimizer
-                     )
-                   end
-    end
-
-    test "when :iterations is not a positive integer" do
-      x = Nx.tensor([[1, 2], [3, 4]])
-      y = Nx.tensor([1, 2])
-
-      assert_raise NimbleOptions.ValidationError,
-                   "invalid value for :iterations option: expected positive integer, got: 0",
-                   fn ->
-                     LogisticRegression.fit(x, y, num_classes: 2, iterations: 0)
+                     LogisticRegression.fit(x, y, num_classes: 2, max_iterations: 0)
                    end
     end
 
@@ -70,7 +56,7 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       y = Nx.tensor([1, 2])
 
       assert_raise ArgumentError,
-                   "expected x to have shape {n_samples, n_features}, got tensor with shape: {2}",
+                   "expected x to have shape {num_samples, num_features}, got tensor with shape: {2}",
                    fn -> LogisticRegression.fit(x, y, num_classes: 2) end
     end
 
@@ -79,22 +65,41 @@ defmodule Scholar.Linear.LogisticRegressionTest do
       y = Nx.tensor([[0, 1], [1, 0]])
 
       assert_raise ArgumentError,
-                   "Scholar.Linear.LogisticRegression expected y to have shape {n_samples}, got tensor with shape: {2, 2}",
+                   """
+                   expected y to have shape {num_samples}, \
+                   got tensor with shape: {2, 2}\
+                   """,
                    fn -> LogisticRegression.fit(x, y, num_classes: 2) end
     end
   end
 
-  describe "column target tests" do
-    @tag :wip
-    test "column target" do
-      {x_train, _, y_train, _} = iris_data()
+  describe "linearly separable data" do
+    test "1D" do
+      key = Nx.Random.key(12)
+      {x1, key} = Nx.Random.uniform(key, -2, -1, shape: {1000, 1})
+      {x2, _key} = Nx.Random.uniform(key, 1, 2, shape: {1000, 1})
+      x = Nx.concatenate([x1, x2])
+      y1 = Nx.broadcast(0, {1000})
+      y2 = Nx.broadcast(1, {1000})
+      y = Nx.concatenate([y1, y2])
+      model = LogisticRegression.fit(x, y, num_classes: 2)
+      y_pred = LogisticRegression.predict(model, x)
+      accuracy = Scholar.Metrics.Classification.accuracy(y, y_pred)
+      assert Nx.to_number(accuracy) == 1.0
+    end
 
-      model = LogisticRegression.fit(x_train, y_train, num_classes: 3)
-      pred = LogisticRegression.predict(model, x_train)
-      col_model = LogisticRegression.fit(x_train, y_train |> Nx.new_axis(-1), num_classes: 3)
-      col_pred = LogisticRegression.predict(col_model, x_train)
-      assert model == col_model
-      assert pred == col_pred
+    test "2D" do
+      key = Nx.Random.key(12)
+      {x1, key} = Nx.Random.uniform(key, -2, -1, shape: {1000, 2})
+      {x2, _key} = Nx.Random.uniform(key, 1, 2, shape: {1000, 2})
+      x = Nx.concatenate([x1, x2])
+      y1 = Nx.broadcast(0, {1000})
+      y2 = Nx.broadcast(1, {1000})
+      y = Nx.concatenate([y1, y2])
+      model = LogisticRegression.fit(x, y, num_classes: 2)
+      y_pred = LogisticRegression.predict(model, x)
+      accuracy = Scholar.Metrics.Classification.accuracy(y, y_pred)
+      assert Nx.to_number(accuracy) == 1.0
     end
   end
 end
