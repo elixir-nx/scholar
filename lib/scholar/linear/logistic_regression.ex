@@ -98,14 +98,13 @@ defmodule Scholar.Linear.LogisticRegression do
     alpha = Nx.tensor(alpha, type: type)
     {tol, opts} = Keyword.pop!(opts, :tol)
     tol = Nx.tensor(tol, type: type)
-    {max_iterations, opts} = Keyword.pop!(opts, :max_iterations)
-    max_iterations = Nx.tensor(max_iterations, type: :u32)
 
-    fit_n(x, y, alpha, max_iterations, tol, opts)
+    fit_n(x, y, alpha, tol, opts)
   end
 
-  defnp fit_n(x, y, alpha, max_iterations, tol, opts) do
+  defnp fit_n(x, y, alpha, tol, opts) do
     num_classes = opts[:num_classes]
+    max_iterations = opts[:max_iterations]
     {num_samples, num_features} = Nx.shape(x)
 
     type = to_float_type(x)
@@ -145,7 +144,7 @@ defmodule Scholar.Linear.LogisticRegression do
 
     {coef, bias, _} =
       while {w, b,
-             {alpha, x, y_one_hot, max_iterations, tol, armijo_params, iter = Nx.u32(0),
+             {alpha, x, y_one_hot, tol, armijo_params, iter = Nx.u32(0),
               converged? = Nx.u8(0)}},
             iter < max_iterations and not converged? do
         logits = Nx.dot(x, w) + b
@@ -176,7 +175,7 @@ defmodule Scholar.Linear.LogisticRegression do
         converged? =
           Nx.reduce_max(Nx.abs(grad_w)) < tol and Nx.reduce_max(Nx.abs(grad_b)) < tol
 
-        {w, b, {alpha, x, y_one_hot, max_iterations, tol, armijo_params, iter + 1, converged?}}
+        {w, b, {alpha, x, y_one_hot, tol, armijo_params, iter + 1, converged?}}
       end
 
     %__MODULE__{
