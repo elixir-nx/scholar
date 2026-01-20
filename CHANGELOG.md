@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.4.1 (2026-01-20)
+
+  * Add `Scholar.FeatureExtraction.CountVectorizer`
+  * Add `Scholar.NaiveBayes.Categorical`
+  * Add `Scholar.Optimize.Brent`
+  * Add `Scholar.Optimize.GoldenSection`
+  * Improve `Scholar.Cluster.DBSCAN`'s performance
+  * General fixes to `Scholar.Linear.LinearRegression`
+
 ## v0.4.0 (2025-01-15)
 
   * Require Nx `~> 0.9`
