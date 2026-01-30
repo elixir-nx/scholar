@@ -1,4 +1,4 @@
-# Scalar Optimization with Scholar.Optimize
+# Optimization with Scholar.Optimize
 
 ```elixir
 Mix.install([
@@ -9,6 +9,18 @@ Mix.install([
 ```
 
 ## Introduction
+
+Scholar provides optimization algorithms for both scalar (univariate) and multivariate functions:
+
+**Scalar Optimization:**
+- **`Scholar.Optimize.Brent`** - Brent's method (recommended for 1D)
+- **`Scholar.Optimize.GoldenSection`** - Golden Section search
+
+**Multivariate Optimization:**
+- **`Scholar.Optimize.BFGS`** - Quasi-Newton method with gradients (recommended)
+- **`Scholar.Optimize.NelderMead`** - Derivative-free simplex method
+
+## Scalar Optimization
 
 Scholar provides two algorithms for scalar (univariate) function minimization:
 
@@ -283,3 +295,120 @@ Both methods:
 - Require no derivatives
 - Are JIT/GPU compatible
 - Guarantee convergence within the specified bracket
+
+## Multivariate Optimization
+
+For functions of multiple variables, Scholar provides two algorithms:
+
+### BFGS (Recommended)
+
+BFGS (Broyden-Fletcher-Goldfarb-Shanno) is a quasi-Newton method that uses automatic differentiation to compute gradients. It's the recommended choice for smooth, differentiable functions.
+
+```elixir
+alias Scholar.Optimize.BFGS
+
+# Minimize a simple quadratic: f(x) = x1^2 + x2^2
+fun = fn x -> Nx.sum(Nx.pow(x, 2)) end
+x0 = Nx.tensor([1.0, 2.0])
+
+result = BFGS.minimize(x0, fun)
+
+IO.puts("BFGS Result:")
+IO.puts("  x = #{inspect(Nx.to_list(result.x))}")
+IO.puts("  f(x) = #{Nx.to_number(result.fun)}")
+IO.puts("  Converged: #{Nx.to_number(result.converged) == 1}")
+IO.puts("  Iterations: #{Nx.to_number(result.iterations)}")
+IO.puts("  Function evals: #{Nx.to_number(result.fun_evals)}")
+IO.puts("  Gradient evals: #{Nx.to_number(result.grad_evals)}")
+```
+
+### Nelder-Mead
+
+Nelder-Mead is a derivative-free method (simplex algorithm). Use it when gradients are unavailable or expensive to compute.
+
+```elixir
+alias Scholar.Optimize.NelderMead
+
+# Same function, but without using gradients
+fun = fn x -> Nx.sum(Nx.pow(x, 2)) end
+x0 = Nx.tensor([1.0, 2.0])
+
+result = NelderMead.minimize(x0, fun)
+
+IO.puts("Nelder-Mead Result:")
+IO.puts("  x = #{inspect(Nx.to_list(result.x))}")
+IO.puts("  f(x) = #{Nx.to_number(result.fun)}")
+IO.puts("  Converged: #{Nx.to_number(result.converged) == 1}")
+IO.puts("  Iterations: #{Nx.to_number(result.iterations)}")
+IO.puts("  Function evals: #{Nx.to_number(result.fun_evals)}")
+```
+
+### The Rosenbrock Function
+
+The Rosenbrock function is a classic optimization test case. It has a global minimum at $(1, 1)$ inside a narrow, curved valley:
+
+$$f(x, y) = (1 - x)^2 + 100(y - x^2)^2$$
+
+```elixir
+alias Scholar.Optimize.{BFGS, NelderMead}
+
+# Rosenbrock function
+rosenbrock = fn x ->
+  x0 = x[0]
+  x1 = x[1]
+  term1 = Nx.pow(Nx.subtract(1, x0), 2)
+  term2 = Nx.multiply(100, Nx.pow(Nx.subtract(x1, Nx.pow(x0, 2)), 2))
+  Nx.add(term1, term2)
+end
+
+x0 = Nx.tensor([0.0, 0.0], type: :f64)
+
+# Solve with BFGS
+bfgs_result = BFGS.minimize(x0, rosenbrock, gtol: 1.0e-8, maxiter: 1000)
+
+# Solve with Nelder-Mead
+nm_result = NelderMead.minimize(x0, rosenbrock, tol: 1.0e-10, maxiter: 2000)
+
+IO.puts("Rosenbrock minimum at (1, 1):")
+IO.puts("")
+IO.puts("BFGS:")
+IO.puts("  x = #{inspect(Nx.to_list(bfgs_result.x))}")
+IO.puts("  Function evals: #{Nx.to_number(bfgs_result.fun_evals)}")
+IO.puts("")
+IO.puts("Nelder-Mead:")
+IO.puts("  x = #{inspect(Nx.to_list(nm_result.x))}")
+IO.puts("  Function evals: #{Nx.to_number(nm_result.fun_evals)}")
+```
+
+### BFGS vs Nelder-Mead
+
+BFGS typically converges much faster for smooth functions because it uses gradient information:
+
+```elixir
+alias Scholar.Optimize.{BFGS, NelderMead}
+
+# 3D sphere function
+fun = fn x -> Nx.sum(Nx.pow(x, 2)) end
+x0 = Nx.tensor([1.0, 2.0, 3.0])
+
+bfgs_result = BFGS.minimize(x0, fun, gtol: 1.0e-6)
+nm_result = NelderMead.minimize(x0, fun, tol: 1.0e-6)
+
+IO.puts("3D Sphere function minimization:")
+IO.puts("  BFGS:        #{Nx.to_number(bfgs_result.fun_evals)} function evals")
+IO.puts("  Nelder-Mead: #{Nx.to_number(nm_result.fun_evals)} function evals")
+IO.puts("")
+IO.puts("BFGS speedup: #{Float.round(Nx.to_number(nm_result.fun_evals) / Nx.to_number(bfgs_result.fun_evals), 1)}x fewer evaluations")
+```
+
+### When to Use Which Method
+
+| Method | Use Case |
+|--------|----------|
+| **BFGS** | Default choice for smooth, differentiable functions |
+| **Nelder-Mead** | Non-differentiable functions, noisy functions, or when gradients are expensive |
+
+Both multivariate methods:
+- Work with functions of any number of variables
+- Are JIT/GPU compatible
+- Return similar result structs with `x`, `fun`, `converged`, `iterations`, `fun_evals`
