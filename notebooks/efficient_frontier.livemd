@@ -2,16 +2,30 @@
 
 ```elixir
 Mix.install([
-  {:scholar, path: "."},
+ {:scholar, github: "nyo16/scholar", branch: "add-multivariate-optimization"},
   {:nx, "~> 0.9"},
   {:kino_vega_lite, "~> 0.1"},
   {:req, "~> 0.5"}
 ])
 ```
 
+## ⚠️ Disclaimer
+
+**This notebook is for educational and demonstration purposes only. It is not financial advice and must not be used to make real investment decisions.**
+
+Specifically, be aware that:
+
+* The returns used below are **fabricated sample data**, not real historical prices. Any numbers you see here have no predictive value for any real security.
+* The mean-variance framework assumes returns are i.i.d. and normally distributed. Real markets exhibit fat tails, regime changes, autocorrelation, and non-stationary statistics that this model ignores entirely.
+* Expected returns and covariances estimated from 12 monthly observations are extremely noisy. In practice, such estimates are unstable and can lead to wildly overconfident portfolios.
+* The example ignores transaction costs, taxes, liquidity, borrowing constraints, slippage, and every other real-world friction.
+* No backtesting, out-of-sample validation, or risk management overlay is performed.
+
+If you want to manage real money: consult a licensed financial advisor, use properly validated data and models, and understand the risks. The authors and contributors of Scholar accept no liability for losses resulting from misuse of this notebook.
+
 ## Introduction
 
-This notebook demonstrates portfolio optimization using Scholar's multivariate optimization algorithms. We'll compute the efficient frontier for a portfolio of stocks using the Markowitz mean-variance framework.
+This notebook demonstrates portfolio optimization using Scholar's multivariate optimization algorithms. We'll compute the efficient frontier for a toy portfolio using the Markowitz mean-variance framework — purely as a showcase of `Scholar.Optimize.BFGS` and `Scholar.Optimize.NelderMead` on a real-valued, multi-dimensional problem.
 
 The efficient frontier represents the set of portfolios that offer the highest expected return for a given level of risk, or equivalently, the lowest risk for a given expected return.
 
@@ -71,8 +85,8 @@ covariance
 
 We want to find portfolio weights $w$ that trade off risk and expected return. The classical long-only mean-variance problem is:
 
-- **Minimize:** $w^T \Sigma w - \lambda \cdot w^T \mu$
-- **Subject to:** $\sum_i w_i = 1$ and $w_i \geq 0$
+* **Minimize:** $w^T \Sigma w - \lambda \cdot w^T \mu$
+* **Subject to:** $\sum_i w_i = 1$ and $w_i \geq 0$
 
 Sweeping the risk-aversion parameter $\lambda$ from $0$ (pure risk minimization) to $\infty$ (pure return maximization) traces out the efficient frontier.
 
@@ -292,6 +306,7 @@ This notebook demonstrated:
 4. **Comparison** between BFGS and Nelder-Mead for portfolio optimization
 
 Scholar's optimization algorithms are well-suited for financial applications:
-- **BFGS** provides fast convergence for smooth objectives
-- **Nelder-Mead** works when gradients are unavailable or noisy
-- Both are JIT-compatible for high performance
+
+* **BFGS** provides fast convergence for smooth objectives
+* **Nelder-Mead** works when gradients are unavailable or noisy
+* Both are JIT-compatible for high performance
