@@ -2,7 +2,7 @@
 
 ```elixir
 Mix.install([
-  {:scholar, github: "nyo16/scholar", branch: "add-multivariate-optimization"},
+  {:scholar, "~> 0.2.0"},
   {:nx, "~> 0.9"},
   {:kino_vega_lite, "~> 0.1"}
 ])
@@ -13,19 +13,21 @@ Mix.install([
 Scholar provides optimization algorithms for both scalar (univariate) and multivariate functions:
 
 **Scalar Optimization:**
-- **`Scholar.Optimize.Brent`** - Brent's method (recommended for 1D)
-- **`Scholar.Optimize.GoldenSection`** - Golden Section search
+
+* **`Scholar.Optimize.Brent`** - Brent's method (recommended for 1D)
+* **`Scholar.Optimize.GoldenSection`** - Golden Section search
 
 **Multivariate Optimization:**
-- **`Scholar.Optimize.BFGS`** - Quasi-Newton method with gradients (recommended)
-- **`Scholar.Optimize.NelderMead`** - Derivative-free simplex method
+
+* **`Scholar.Optimize.BFGS`** - Quasi-Newton method with gradients (recommended)
+* **`Scholar.Optimize.NelderMead`** - Derivative-free simplex method
 
 ## Scalar Optimization
 
 Scholar provides two algorithms for scalar (univariate) function minimization:
 
-- **`Scholar.Optimize.Brent`** - Brent's method (recommended)
-- **`Scholar.Optimize.GoldenSection`** - Golden Section search
+* **`Scholar.Optimize.Brent`** - Brent's method (recommended)
+* **`Scholar.Optimize.GoldenSection`** - Golden Section search
 
 Both find the minimum of a function of one variable within a specified bracket `[a, b]`.
 
@@ -34,8 +36,9 @@ Both find the minimum of a function of one variable within a specified bracket `
 ## Brent's Method (Recommended)
 
 Brent's method is the default choice for scalar optimization. It intelligently combines:
-- **Parabolic interpolation** for fast convergence when the function is smooth
-- **Golden section fallback** for guaranteed convergence
+
+* **Parabolic interpolation** for fast convergence when the function is smooth
+* **Golden section fallback** for guaranteed convergence
 
 ### Simple Parabola
 
@@ -134,20 +137,23 @@ IO.puts("Speedup: #{Float.round(Nx.to_number(golden_result.fun_evals) / Nx.to_nu
 ## How Brent's Method Works
 
 Brent's method tracks six points during optimization:
-- `a, b`: Current bracket bounds
-- `x`: Best point (lowest function value)
-- `w`: Second best point
-- `v`: Previous value of w
+
+* `a, b`: Current bracket bounds
+* `x`: Best point (lowest function value)
+* `w`: Second best point
+* `v`: Previous value of w
 
 At each iteration:
+
 1. Try **parabolic interpolation** through x, w, v
 2. If the parabolic step is acceptable (within bounds, making progress), use it
 3. Otherwise, take a **golden section step** into the larger segment
 4. Update the bracket and tracked points
 
 This gives:
-- **Superlinear convergence** when the function is smooth (parabolic steps)
-- **Guaranteed convergence** when it's not (golden section fallback)
+
+* **Superlinear convergence** when the function is smooth (parabolic steps)
+* **Guaranteed convergence** when it's not (golden section fallback)
 
 ```elixir
 alias Scholar.Optimize.Brent
@@ -168,10 +174,11 @@ IO.puts("  Function evaluations: #{Nx.to_number(result.fun_evals)}")
 Golden Section is included primarily for educational purposes. It uses the golden ratio $\phi = \frac{\sqrt{5} - 1}{2} \approx 0.618$ to select probe points.
 
 **Key properties:**
-- Guaranteed convergence for unimodal functions
-- Bracket width decreases by factor $\phi \approx 0.618$ per iteration
-- Linear convergence rate
-- Requires only function evaluations (no derivatives)
+
+* Guaranteed convergence for unimodal functions
+* Bracket width decreases by factor $\phi \approx 0.618$ per iteration
+* Linear convergence rate
+* Requires only function evaluations (no derivatives)
 
 ```elixir
 alias Scholar.Optimize.GoldenSection
@@ -285,16 +292,17 @@ IO.puts("  fun_evals:  #{Nx.to_number(result.fun_evals)}")
 
 ## When to Use Which Method
 
-| Method | Use Case |
-|--------|----------|
-| **Brent** | Default choice for all scalar optimization |
+| Method             | Use Case                                                                      |
+| ------------------ | ----------------------------------------------------------------------------- |
+| **Brent**          | Default choice for all scalar optimization                                    |
 | **Golden Section** | Educational purposes, or when you need guaranteed linear convergence behavior |
 
 Both methods:
-- Work with any continuous unimodal function
-- Require no derivatives
-- Are JIT/GPU compatible
-- Guarantee convergence within the specified bracket
+
+* Work with any continuous unimodal function
+* Require no derivatives
+* Are JIT/GPU compatible
+* Guarantee convergence within the specified bracket
 
 ## Multivariate Optimization
 
@@ -403,12 +411,13 @@ IO.puts("BFGS speedup: #{Float.round(Nx.to_number(nm_result.fun_evals) / Nx.to_n
 
 ### When to Use Which Method
 
-| Method | Use Case |
-|--------|----------|
-| **BFGS** | Default choice for smooth, differentiable functions |
+| Method          | Use Case                                                                       |
+| --------------- | ------------------------------------------------------------------------------ |
+| **BFGS**        | Default choice for smooth, differentiable functions                            |
 | **Nelder-Mead** | Non-differentiable functions, noisy functions, or when gradients are expensive |
 
 Both multivariate methods:
-- Work with functions of any number of variables
-- Are JIT/GPU compatible
-- Return similar result structs with `x`, `fun`, `converged`, `iterations`, `fun_evals`
+
+* Work with functions of any number of variables
+* Are JIT/GPU compatible
+* Return similar result structs with `x`, `fun`, `converged`, `iterations`, `fun_evals`

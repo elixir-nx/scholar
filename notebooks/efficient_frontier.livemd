@@ -2,7 +2,7 @@
 
 ```elixir
 Mix.install([
- {:scholar, github: "nyo16/scholar", branch: "add-multivariate-optimization"},
+  {:scholar, "~> 0.2.0"},
   {:nx, "~> 0.9"},
   {:kino_vega_lite, "~> 0.1"},
   {:req, "~> 0.5"}
