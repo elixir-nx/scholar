@@ -126,14 +126,9 @@ defmodule Scholar.Optimize.BFGS do
       iex> Nx.all_close(result.x, Nx.tensor([1.0, 1.0]), atol: 1.0e-4) |> Nx.to_number()
       1
   """
-  defn minimize(x0, fun, opts \\ []) do
-    {gtol, maxiter} = transform_opts(opts)
-    minimize_n(x0, fun, gtol, maxiter)
-  end
-
-  deftransformp transform_opts(opts) do
+  deftransform minimize(x0, fun, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    {opts[:gtol], opts[:maxiter]}
+    minimize_n(x0, fun, opts[:gtol], opts[:maxiter])
   end
 
   defnp minimize_n(x0, fun, gtol, maxiter) do
@@ -218,23 +213,20 @@ defmodule Scholar.Optimize.BFGS do
     }
   end
 
-  # Backtracking line search with Armijo condition (unrolled for defn compatibility)
+  # Backtracking line search with Armijo condition
   defnp line_search(x, f, g, p, fun) do
     # Directional derivative at alpha=0
     slope = Nx.dot(g, p)
 
     # Try step sizes: 1, 0.5, 0.25, 0.125, ...
-    # Unroll 10 iterations of backtracking
-    alpha = backtrack_step(x, f, p, slope, fun, 1.0)
-    alpha = backtrack_step(x, f, p, slope, fun, alpha)
-    alpha = backtrack_step(x, f, p, slope, fun, alpha)
-    alpha = backtrack_step(x, f, p, slope, fun, alpha)
-    alpha = backtrack_step(x, f, p, slope, fun, alpha)
-    alpha = backtrack_step(x, f, p, slope, fun, alpha)
-    alpha = backtrack_step(x, f, p, slope, fun, alpha)
-    alpha = backtrack_step(x, f, p, slope, fun, alpha)
-    alpha = backtrack_step(x, f, p, slope, fun, alpha)
-    alpha = backtrack_step(x, f, p, slope, fun, alpha)
+    # Unrolled at compile time for fusion.
+    {alpha, _} =
+      while {alpha = Nx.tensor(1.0, type: Nx.type(x)), {x, f, p, slope}},
+            _i <- 0..9//1,
+            unroll: true do
+        new_alpha = backtrack_step(x, f, p, slope, fun, alpha)
+        {new_alpha, {x, f, p, slope}}
+      end
 
     # Evaluate function and gradient at final alpha
     x_final = Nx.add(x, Nx.multiply(alpha, p))

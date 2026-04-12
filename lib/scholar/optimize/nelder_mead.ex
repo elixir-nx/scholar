@@ -142,14 +142,9 @@ defmodule Scholar.Optimize.NelderMead do
       iex> Nx.all_close(result.x, Nx.tensor([1.0, 1.0]), atol: 1.0e-4) |> Nx.to_number()
       1
   """
-  defn minimize(x0, fun, opts \\ []) do
-    {tol, maxiter, initial_simplex_step} = transform_opts(opts)
-    minimize_n(x0, fun, tol, maxiter, initial_simplex_step)
-  end
-
-  deftransformp transform_opts(opts) do
+  deftransform minimize(x0, fun, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
-    {opts[:tol], opts[:maxiter], opts[:initial_simplex_step]}
+    minimize_n(x0, fun, opts[:tol], opts[:maxiter], opts[:initial_simplex_step])
   end
 
   defnp minimize_n(x0, fun, tol, maxiter, initial_simplex_step) do
@@ -286,24 +281,23 @@ defmodule Scholar.Optimize.NelderMead do
     x_ic = Nx.subtract(centroid, Nx.multiply(@gamma, Nx.subtract(centroid, x_worst)))
     f_ic = fun.(x_ic)
 
+    candidates = %{
+      x_r: x_r,
+      f_r: f_r,
+      x_e: x_e,
+      f_e: f_e,
+      x_oc: x_oc,
+      f_oc: f_oc,
+      x_ic: x_ic,
+      f_ic: f_ic,
+      f_best: f_best,
+      f_second_worst: f_second_worst,
+      f_worst: f_worst
+    }
+
     # Decide action based on f_r
     {new_simplex, new_f_values, extra_evals} =
-      nelder_mead_update(
-        sorted_simplex,
-        sorted_f,
-        x_r,
-        f_r,
-        x_e,
-        f_e,
-        x_oc,
-        f_oc,
-        x_ic,
-        f_ic,
-        f_best,
-        f_second_worst,
-        f_worst,
-        fun
-      )
+      nelder_mead_update(sorted_simplex, sorted_f, candidates, fun)
 
     %{
       state
@@ -316,22 +310,21 @@ defmodule Scholar.Optimize.NelderMead do
   end
 
   # Update simplex based on reflection result
-  defnp nelder_mead_update(
-          sorted_simplex,
-          sorted_f,
-          x_r,
-          f_r,
-          x_e,
-          f_e,
-          x_oc,
-          f_oc,
-          x_ic,
-          f_ic,
-          f_best,
-          f_second_worst,
-          f_worst,
-          fun
-        ) do
+  defnp nelder_mead_update(sorted_simplex, sorted_f, candidates, fun) do
+    %{
+      x_r: x_r,
+      f_r: f_r,
+      x_e: x_e,
+      f_e: f_e,
+      x_oc: x_oc,
+      f_oc: f_oc,
+      x_ic: x_ic,
+      f_ic: f_ic,
+      f_best: f_best,
+      f_second_worst: f_second_worst,
+      f_worst: f_worst
+    } = candidates
+
     {n_plus_1, n} = Nx.shape(sorted_simplex)
 
     # Case 1: f_r < f_best -> try expansion
