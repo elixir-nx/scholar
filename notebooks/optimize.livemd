@@ -2,7 +2,8 @@
 
 ```elixir
 Mix.install([
-  {:scholar, "~> 0.4.1"},
+  # {:scholar, "~> 0.4.1"},
+  {:scholar, path: "."},
   {:nx, "~> 0.9"},
   {:kino_vega_lite, "~> 0.1"}
 ])
