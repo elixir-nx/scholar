@@ -154,7 +154,7 @@ alias Scholar.Optimize.Brent
 
 fun = fn x -> Nx.pow(Nx.subtract(x, 1), 2) end
 
-result = Brent.minimize(-5.0, 5.0, fun, tol: 1.0e-10, maxiter: 100)
+result = Brent.minimize(-5.0, 5.0, fun)
 
 IO.puts("Result from Brent.minimize:")
 IO.puts("  x = #{Nx.to_number(result.x)}")
@@ -178,7 +178,7 @@ alias Scholar.Optimize.GoldenSection
 
 fun = fn x -> Nx.pow(Nx.subtract(x, 1), 2) end
 
-result = GoldenSection.minimize(-5.0, 5.0, fun, tol: 1.0e-10, maxiter: 100)
+result = GoldenSection.minimize(-5.0, 5.0, fun)
 
 IO.puts("Result from GoldenSection.minimize:")
 IO.puts("  x = #{Nx.to_number(result.x)}")
@@ -195,7 +195,7 @@ Both methods are implemented as pure `defn` functions, making them fully compati
 alias Scholar.Optimize.Brent
 
 fun = fn x -> Nx.pow(Nx.subtract(x, 3), 2) end
-opts = [tol: 1.0e-8, maxiter: 500]
+opts = [tol: 1.0e-5, maxiter: 500]
 
 # This works with jit_apply for GPU acceleration
 result = Nx.Defn.jit_apply(&Brent.minimize/4, [0.0, 5.0, fun, opts])
