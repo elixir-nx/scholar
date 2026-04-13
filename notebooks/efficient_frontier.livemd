@@ -1,0 +1,313 @@
+# Portfolio Optimization: Efficient Frontier
+
+```elixir
+Mix.install([
+  # {:scholar, "~> 0.4.1"},
+  {:scholar, path: "."},
+  {:nx, "~> 0.9"},
+  {:kino_vega_lite, "~> 0.1"},
+  {:req, "~> 0.5"}
+])
+```
+
+## ⚠️ Disclaimer
+
+**This notebook is for educational and demonstration purposes only. It is not financial advice and must not be used to make real investment decisions.**
+
+Specifically, be aware that:
+
+* The returns used below are **fabricated sample data**, not real historical prices. Any numbers you see here have no predictive value for any real security.
+* The mean-variance framework assumes returns are i.i.d. and normally distributed. Real markets exhibit fat tails, regime changes, autocorrelation, and non-stationary statistics that this model ignores entirely.
+* Expected returns and covariances estimated from 12 monthly observations are extremely noisy. In practice, such estimates are unstable and can lead to wildly overconfident portfolios.
+* The example ignores transaction costs, taxes, liquidity, borrowing constraints, slippage, and every other real-world friction.
+* No backtesting, out-of-sample validation, or risk management overlay is performed.
+
+If you want to manage real money: consult a licensed financial advisor, use properly validated data and models, and understand the risks. The authors and contributors of Scholar accept no liability for losses resulting from misuse of this notebook.
+
+## Introduction
+
+This notebook demonstrates portfolio optimization using Scholar's multivariate optimization algorithms. We'll compute the efficient frontier for a toy portfolio using the Markowitz mean-variance framework — purely as a showcase of `Scholar.Optimize.BFGS` and `Scholar.Optimize.NelderMead` on a real-valued, multi-dimensional problem.
+
+The efficient frontier represents the set of portfolios that offer the highest expected return for a given level of risk, or equivalently, the lowest risk for a given expected return.
+
+## Fetch Stock Data
+
+We'll use historical stock data for a few major tech companies. For simplicity, we'll use pre-computed monthly returns.
+
+```elixir
+# Sample monthly returns data for 5 stocks (12 months)
+# In practice, you would fetch this from Yahoo Finance or another data source.
+# Returns are expressed as percentages (e.g. 5.0 = +5% for the month), which
+# keeps the objective on a scale that plays well with gradient-based solvers.
+stock_names = ["AAPL", "GOOGL", "MSFT", "AMZN", "META"]
+
+# Monthly returns in percent (12 months x 5 stocks)
+returns = Nx.tensor([
+  [5.0, 3.0, 4.0, 6.0, 2.0],
+  [-2.0, -1.0, 1.0, -3.0, -4.0],
+  [8.0, 6.0, 7.0, 9.0, 5.0],
+  [3.0, 2.0, 3.0, 4.0, 1.0],
+  [-1.0, 2.0, 1.0, -2.0, 3.0],
+  [4.0, 3.0, 5.0, 3.0, 4.0],
+  [2.0, 1.0, 2.0, 5.0, 2.0],
+  [-3.0, -2.0, -1.0, -4.0, -1.0],
+  [6.0, 4.0, 5.0, 7.0, 3.0],
+  [1.0, 2.0, 1.0, 2.0, 1.0],
+  [4.0, 3.0, 4.0, 5.0, 2.0],
+  [-1.0, 1.0, 0.0, -1.0, 2.0]
+], type: :f64)
+
+IO.puts("Returns matrix shape: #{inspect(Nx.shape(returns))}")
+IO.puts("Stocks: #{inspect(stock_names)}")
+```
+
+## Compute Expected Returns and Covariance
+
+```elixir
+# Expected returns (mean of historical returns)
+expected_returns = Nx.mean(returns, axes: [0])
+
+# Covariance matrix
+n_samples = Nx.axis_size(returns, 0)
+centered = Nx.subtract(returns, expected_returns)
+covariance = Nx.divide(Nx.dot(Nx.transpose(centered), centered), n_samples - 1)
+
+IO.puts("Expected Monthly Returns:")
+Enum.zip(stock_names, Nx.to_flat_list(expected_returns))
+|> Enum.each(fn {name, ret} ->
+  IO.puts("  #{name}: #{Float.round(ret, 2)}%")
+end)
+
+IO.puts("\nCovariance Matrix:")
+covariance
+```
+
+## Portfolio Optimization Problem
+
+We want to find portfolio weights $w$ that trade off risk and expected return. The classical long-only mean-variance problem is:
+
+* **Minimize:** $w^T \Sigma w - \lambda \cdot w^T \mu$
+* **Subject to:** $\sum_i w_i = 1$ and $w_i \geq 0$
+
+Sweeping the risk-aversion parameter $\lambda$ from $0$ (pure risk minimization) to $\infty$ (pure return maximization) traces out the efficient frontier.
+
+### Simplex Parameterization
+
+`BFGS` and `NelderMead` are unconstrained optimizers. Rather than adding penalty terms (which are ill-conditioned and can drift outside the feasible region), we parameterize the weights as a normalized square of an unconstrained vector $z \in \mathbb{R}^n$:
+
+$$w_i = \frac{z_i^2}{\sum_j z_j^2}$$
+
+This guarantees $w_i \geq 0$ and $\sum_i w_i = 1$ by construction, so the optimizer can search all of $\mathbb{R}^n$ freely while the portfolio always stays on the simplex.
+
+```elixir
+alias Scholar.Optimize.BFGS
+
+defmodule Portfolio do
+  @doc """
+  Portfolio objective function.
+
+  Parameterizes weights as `w_i = z_i^2 / sum(z_j^2)` so that weights
+  are always non-negative and sum to 1 by construction. Minimizes
+  `variance - lambda * return`.
+  """
+  def objective(cov, mu, lambda) do
+    fn z ->
+      sq = Nx.pow(z, 2)
+      w = Nx.divide(sq, Nx.sum(sq))
+
+      variance = Nx.dot(w, Nx.dot(cov, w))
+      portfolio_return = Nx.dot(w, mu)
+
+      Nx.subtract(variance, Nx.multiply(lambda, portfolio_return))
+    end
+  end
+
+  @doc """
+  Convert raw unconstrained parameters to simplex weights.
+  """
+  def weights_from_z(z) do
+    sq = Nx.pow(z, 2)
+    Nx.divide(sq, Nx.sum(sq))
+  end
+
+  @doc """
+  Compute monthly portfolio return and standard deviation from weights.
+  """
+  def portfolio_stats(w, cov, mu) do
+    variance = Nx.dot(w, Nx.dot(cov, w)) |> Nx.to_number()
+    portfolio_return = Nx.dot(w, mu) |> Nx.to_number()
+    {portfolio_return, :math.sqrt(variance)}
+  end
+end
+
+IO.puts("Portfolio module defined.")
+```
+
+## Compute the Efficient Frontier
+
+We'll compute optimal portfolios for different values of $\lambda$ (risk-return tradeoff):
+
+```elixir
+# Range of lambda values (higher = more return-seeking)
+lambdas = [0.0, 0.1, 0.3, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0, 50.0]
+
+# Initial raw parameters (ones → uniform weights via z^2/sum(z^2))
+n_assets = Nx.axis_size(expected_returns, 0)
+z0 = Nx.broadcast(Nx.tensor(1.0, type: :f64), {n_assets})
+
+# Compute optimal portfolios for each lambda
+efficient_portfolios =
+  Enum.map(lambdas, fn lambda ->
+    objective = Portfolio.objective(covariance, expected_returns, lambda)
+    result = BFGS.minimize(z0, objective, gtol: 1.0e-6, maxiter: 500)
+
+    weights = Portfolio.weights_from_z(result.x)
+    {ret, risk} = Portfolio.portfolio_stats(weights, covariance, expected_returns)
+
+    %{
+      lambda: lambda,
+      weights: Nx.to_list(weights),
+      return: ret * 12,  # Annualized
+      risk: risk * :math.sqrt(12),  # Annualized
+      converged: Nx.to_number(result.converged) == 1
+    }
+  end)
+
+IO.puts("Efficient Frontier Portfolios:")
+IO.puts("")
+IO.puts("Lambda | Ann. Return | Ann. Risk | Converged")
+IO.puts("-------|-------------|-----------|----------")
+
+Enum.each(efficient_portfolios, fn p ->
+  ret_pct = Float.round(p.return, 2)
+  risk_pct = Float.round(p.risk, 2)
+  IO.puts("#{String.pad_leading("#{p.lambda}", 6)} | #{String.pad_leading("#{ret_pct}%", 11)} | #{String.pad_leading("#{risk_pct}%", 9)} | #{p.converged}")
+end)
+```
+
+## Visualize the Efficient Frontier
+
+```elixir
+alias VegaLite, as: Vl
+
+# Prepare data for plotting
+frontier_data = Enum.map(efficient_portfolios, fn p ->
+  %{
+    "Risk (%)" => Float.round(p.risk, 2),
+    "Return (%)" => Float.round(p.return, 2),
+    "Lambda" => p.lambda
+  }
+end)
+
+Vl.new(width: 600, height: 400, title: "Efficient Frontier")
+|> Vl.data_from_values(frontier_data)
+|> Vl.mark(:line, point: true)
+|> Vl.encode_field(:x, "Risk (%)", type: :quantitative, title: "Annualized Risk (%)")
+|> Vl.encode_field(:y, "Return (%)", type: :quantitative, title: "Annualized Return (%)")
+|> Vl.encode_field(:tooltip, "Lambda", type: :quantitative)
+```
+
+## Optimal Portfolio Weights
+
+Let's examine the weights for a balanced portfolio (middle of the frontier):
+
+```elixir
+# Select a balanced portfolio (lambda = 1.0)
+balanced = Enum.find(efficient_portfolios, fn p -> p.lambda == 1.0 end)
+
+IO.puts("Balanced Portfolio (λ = 1.0):")
+IO.puts("  Annualized Return: #{Float.round(balanced.return, 2)}%")
+IO.puts("  Annualized Risk: #{Float.round(balanced.risk, 2)}%")
+IO.puts("")
+IO.puts("Weights:")
+
+Enum.zip(stock_names, balanced.weights)
+|> Enum.each(fn {name, weight} ->
+  pct = Float.round(weight * 100, 1)
+  bar = String.duplicate("█", round(pct / 2))
+  IO.puts("  #{String.pad_trailing(name, 5)}: #{String.pad_leading("#{pct}%", 6)} #{bar}")
+end)
+```
+
+## Compare BFGS vs Nelder-Mead
+
+Let's compare the two optimization methods on portfolio optimization:
+
+```elixir
+alias Scholar.Optimize.{BFGS, NelderMead}
+
+lambda = 1.0
+objective = Portfolio.objective(covariance, expected_returns, lambda)
+
+# BFGS
+bfgs_result = BFGS.minimize(z0, objective, gtol: 1.0e-6, maxiter: 500)
+bfgs_weights = Portfolio.weights_from_z(bfgs_result.x)
+{bfgs_ret, bfgs_risk} = Portfolio.portfolio_stats(bfgs_weights, covariance, expected_returns)
+
+# Nelder-Mead
+nm_result = NelderMead.minimize(z0, objective, tol: 1.0e-8, maxiter: 2000)
+nm_weights = Portfolio.weights_from_z(nm_result.x)
+{nm_ret, nm_risk} = Portfolio.portfolio_stats(nm_weights, covariance, expected_returns)
+
+IO.puts("Portfolio Optimization Comparison (λ = #{lambda}):")
+IO.puts("")
+IO.puts("Method       | Return (Ann) | Risk (Ann) | Fun Evals | Converged")
+IO.puts("-------------|--------------|------------|-----------|----------")
+IO.puts("BFGS         | #{String.pad_leading("#{Float.round(bfgs_ret * 12, 2)}%", 12)} | #{String.pad_leading("#{Float.round(bfgs_risk * :math.sqrt(12), 2)}%", 10)} | #{String.pad_leading("#{Nx.to_number(bfgs_result.fun_evals)}", 9)} | #{Nx.to_number(bfgs_result.converged) == 1}")
+IO.puts("Nelder-Mead  | #{String.pad_leading("#{Float.round(nm_ret * 12, 2)}%", 12)} | #{String.pad_leading("#{Float.round(nm_risk * :math.sqrt(12), 2)}%", 10)} | #{String.pad_leading("#{Nx.to_number(nm_result.fun_evals)}", 9)} | #{Nx.to_number(nm_result.converged) == 1}")
+```
+
+## Minimum Variance Portfolio
+
+The minimum variance portfolio is found by setting $\lambda = 0$:
+
+```elixir
+min_var = Enum.find(efficient_portfolios, fn p -> p.lambda == 0.0 end)
+
+IO.puts("Minimum Variance Portfolio:")
+IO.puts("  Annualized Return: #{Float.round(min_var.return, 2)}%")
+IO.puts("  Annualized Risk: #{Float.round(min_var.risk, 2)}%")
+IO.puts("")
+IO.puts("Weights:")
+
+Enum.zip(stock_names, min_var.weights)
+|> Enum.each(fn {name, weight} ->
+  pct = Float.round(weight * 100, 1)
+  IO.puts("  #{String.pad_trailing(name, 5)}: #{String.pad_leading("#{pct}%", 6)}")
+end)
+```
+
+## Maximum Return Portfolio
+
+The maximum return portfolio is found with a high $\lambda$ value:
+
+```elixir
+max_ret = Enum.max_by(efficient_portfolios, fn p -> p.return end)
+
+IO.puts("Maximum Return Portfolio (λ = #{max_ret.lambda}):")
+IO.puts("  Annualized Return: #{Float.round(max_ret.return, 2)}%")
+IO.puts("  Annualized Risk: #{Float.round(max_ret.risk, 2)}%")
+IO.puts("")
+IO.puts("Weights:")
+
+Enum.zip(stock_names, max_ret.weights)
+|> Enum.each(fn {name, weight} ->
+  pct = Float.round(weight * 100, 1)
+  IO.puts("  #{String.pad_trailing(name, 5)}: #{String.pad_leading("#{pct}%", 6)}")
+end)
+```
+
+## Summary
+
+This notebook demonstrated:
+
+1. **Portfolio optimization** using Markowitz mean-variance framework
+2. **Efficient frontier** computation using BFGS optimization
+3. **Simplex reparameterization** ($w_i = z_i^2 / \sum_j z_j^2$) to handle long-only budget constraints with unconstrained optimizers
+4. **Comparison** between BFGS and Nelder-Mead for portfolio optimization
+
+Scholar's optimization algorithms are well-suited for financial applications:
+
+* **BFGS** provides fast convergence for smooth objectives
+* **Nelder-Mead** works when gradients are unavailable or noisy
+* Both are JIT-compatible for high performance
