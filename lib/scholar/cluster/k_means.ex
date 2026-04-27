@@ -116,15 +116,15 @@ defmodule Scholar.Cluster.KMeans do
         ),
         clusters: Nx.tensor(
           [
-            [2.0, 4.5],
-            [1.0, 2.5]
+            [1.0, 2.5],
+            [2.0, 4.5]
           ]
         ),
         inertia: Nx.tensor(
           1.0
         ),
         labels: Nx.tensor(
-          [1, 0, 1, 0]
+          [0, 1, 0, 1]
         )
       }
   """
@@ -241,10 +241,6 @@ defmodule Scholar.Cluster.KMeans do
     # Use the identity ||x - c||^2 = ||x||^2 + ||c||^2 - 2·x·cᵀ
     # to compute distances via matrix multiply instead of broadcasting.
     # Peak memory is O(runs*k*n) instead of O(runs*k*n*d).
-    #
-    # This expansion has slightly more floating-point cancellation than
-    # direct subtraction for nearby points, but the difference is negligible
-    # for argmin-based cluster assignment.
     x_sq = Nx.sum(x * x, axes: [1])
     c_sq = Nx.sum(centroids * centroids, axes: [2])
     dot = Nx.dot(centroids, [2], x, [1])
@@ -253,6 +249,15 @@ defmodule Scholar.Cluster.KMeans do
       Nx.new_axis(Nx.new_axis(x_sq, 0), 0) +
         Nx.new_axis(c_sq, 2) -
         2 * dot
+
+    # k-means++ pads unused centroid slots with infinity. The expansion
+    # produces inf - inf = NaN there; restore inf so weighted sampling works.
+    inertia_for_centroids =
+      Nx.select(
+        Nx.is_nan(inertia_for_centroids),
+        Nx.Constants.infinity(Nx.type(inertia_for_centroids)),
+        inertia_for_centroids
+      )
 
     {inertia_for_centroids, Nx.reduce_min(inertia_for_centroids, axes: [1])}
   end
@@ -307,7 +312,7 @@ defmodule Scholar.Cluster.KMeans do
       iex> model = Scholar.Cluster.KMeans.fit(x, num_clusters: 2, key: key)
       iex> Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       Nx.tensor(
-        [0, 1]
+        [1, 0]
       )
   """
   defn predict(%__MODULE__{clusters: clusters} = _model, x) do
