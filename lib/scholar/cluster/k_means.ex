@@ -116,15 +116,15 @@ defmodule Scholar.Cluster.KMeans do
         ),
         clusters: Nx.tensor(
           [
-            [1.0, 2.5],
-            [2.0, 4.5]
+            [2.0, 4.5],
+            [1.0, 2.5]
           ]
         ),
         inertia: Nx.tensor(
           1.0
         ),
         labels: Nx.tensor(
-          [0, 1, 0, 1]
+          [1, 0, 1, 0]
         )
       }
   """
@@ -307,7 +307,7 @@ defmodule Scholar.Cluster.KMeans do
       iex> model = Scholar.Cluster.KMeans.fit(x, num_clusters: 2, key: key)
       iex> Scholar.Cluster.KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
       Nx.tensor(
-        [1, 0]
+        [0, 1]
       )
   """
   defn predict(%__MODULE__{clusters: clusters} = _model, x) do

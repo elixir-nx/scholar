@@ -15,13 +15,13 @@ defmodule Scholar.Cluster.KMeansTest do
           key: key()
         )
 
-      assert model.clusters == Nx.tensor([[1.0, 2.5], [2.0, 4.5]])
+      assert model.clusters == Nx.tensor([[2.0, 4.5], [1.0, 2.5]])
       assert model.inertia == Nx.tensor(1.0, type: {:f, 32})
-      assert model.labels == Nx.tensor([0, 1, 0, 1])
+      assert model.labels == Nx.tensor([1, 0, 1, 0])
       assert model.num_iterations == Nx.tensor(2)
 
       predictions = KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
-      assert predictions == Nx.tensor([1, 0])
+      assert predictions == Nx.tensor([0, 1])
     end
 
     test "fit and predict without weights and :init set as :random" do
@@ -49,13 +49,13 @@ defmodule Scholar.Cluster.KMeansTest do
           weights: [1, 2, 3, 4]
         )
 
-      assert model.clusters == Nx.tensor([[1.0, 2.75], [2.0, 4.75]])
+      assert model.clusters == Nx.tensor([[2.0, 4.75], [1.0, 2.75]])
       assert model.inertia == Nx.tensor(1.5, type: {:f, 32})
-      assert model.labels == Nx.tensor([0, 1, 0, 1])
+      assert model.labels == Nx.tensor([1, 0, 1, 0])
       assert model.num_iterations == Nx.tensor(2)
 
       predictions = KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
-      assert predictions == Nx.tensor([1, 0])
+      assert predictions == Nx.tensor([0, 1])
     end
 
     test "fit and predict with weights as a tensor" do
@@ -66,13 +66,13 @@ defmodule Scholar.Cluster.KMeansTest do
           weights: Nx.tensor([1, 2, 3, 4], type: {:f, 32})
         )
 
-      assert model.clusters == Nx.tensor([[1.0, 2.75], [2.0, 4.75]])
+      assert model.clusters == Nx.tensor([[2.0, 4.75], [1.0, 2.75]])
       assert model.inertia == Nx.tensor(1.5, type: {:f, 32})
-      assert model.labels == Nx.tensor([0, 1, 0, 1])
+      assert model.labels == Nx.tensor([1, 0, 1, 0])
       assert model.num_iterations == Nx.tensor(2)
 
       predictions = KMeans.predict(model, Nx.tensor([[1.9, 4.3], [1.1, 2.0]]))
-      assert predictions == Nx.tensor([1, 0])
+      assert predictions == Nx.tensor([0, 1])
     end
 
     test "transform" do
