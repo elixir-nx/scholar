@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.2 (2026-07-10)
+
+  * Reduce K-means memory from `O(n·k·d)` to `O(n·k)` and fix empty cluster NaN
+  * Add `Scholar.Optimize.BFGS`
+  * Add `Scholar.Optimize.NelderMead`
+  * Fix type system violations
+
 ## v0.4.1 (2026-01-20)
 
   * Add `Scholar.FeatureExtraction.CountVectorizer`
