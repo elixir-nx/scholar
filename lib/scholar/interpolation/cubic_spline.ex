@@ -241,15 +241,7 @@ defmodule Scholar.Interpolation.CubicSpline do
 
   defnp predict_n(%__MODULE__{x: x, coefficients: coefficients}, target_x, opts) do
     original_shape = Nx.shape(target_x)
-
-    target_x =
-      case target_x do
-        {} ->
-          Nx.new_axis(target_x, 0)
-
-        _ ->
-          Nx.flatten(target_x)
-      end
+    target_x = Nx.flatten(target_x)
 
     idx_selector = Nx.new_axis(target_x, 1) > Nx.new_axis(x, 0)
 

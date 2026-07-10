@@ -206,6 +206,15 @@ defmodule Scholar.Interpolation.CubicSplineTest do
       end
     end
 
+    test "predict/2 supports scalar tensors with jit_apply" do
+      model = CubicSpline.fit(Nx.iota({3}), Nx.iota({3}))
+
+      prediction =
+        Nx.Defn.jit_apply(&CubicSpline.predict/3, [model, Nx.tensor(1.0), []])
+
+      assert prediction == Nx.tensor(1.0)
+    end
+
     test "not sorted x" do
       x = Nx.tensor([3, 2, 4, 1, 0])
       y = Nx.tensor([-10, 3, -1, 2, 1])
