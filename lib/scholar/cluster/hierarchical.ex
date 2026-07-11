@@ -13,7 +13,7 @@ defmodule Scholar.Cluster.Hierarchical do
   Due to the requirements of the current implementation, only these options are supported:
 
     * `dissimilarity: :euclidean`
-    * `linkage: :average | :complete | :single | :weighted`
+    * `linkage: :average | :complete | :single | :ward | :weighted`
 
   Our current algorithm is $O(\\frac{n^2}{p} \\cdot \\log(n))$ where $n$ is the number of data points
   and $p$ is the number of processors.
@@ -152,14 +152,14 @@ defmodule Scholar.Cluster.Hierarchical do
         :complete -> &complete/6
         # :median -> &median/6
         :single -> &single/6
-        # :ward -> &ward/6
+        :ward -> &ward/6
         :weighted -> &weighted/6
       end
 
     dendrogram_fun =
       case linkage do
-        # TODO: :centroid, :median, :ward
-        l when l in [:average, :complete, :single, :weighted] ->
+        # TODO: :centroid, :median
+        l when l in [:average, :complete, :single, :ward, :weighted] ->
           &parallel_nearest_neighbor/3
       end
 
@@ -196,10 +196,13 @@ defmodule Scholar.Cluster.Hierarchical do
     clades = Nx.broadcast(-1, {n - 1, 2})
     sizes = Nx.broadcast(1, {2 * n - 1})
     pointers = Nx.broadcast(-1, {2 * n - 2})
+
+    cluster_sizes = Nx.broadcast(1, {n})
     diss = Nx.tensor(:infinity, type: Nx.type(pairwise)) |> Nx.broadcast({n - 1})
 
-    {{clades, diss, sizes}, _} =
-      while {{clades, diss, sizes}, {count = 0, pointers, pairwise}}, count < n - 1 do
+    {{clades, diss, sizes, _cluster_sizes}, _} =
+      while {{clades, diss, sizes, cluster_sizes}, {count = 0, pointers, pairwise}},
+            count < n - 1 do
         # Indexes of who I am nearest to
         nearest = Nx.argmin(pairwise, axis: 1)
 
@@ -213,10 +216,21 @@ defmodule Scholar.Cluster.Hierarchical do
         # They are bidirectional but let's keep only one side.
         links = Nx.select(clades_selector and nearest > nearest_of_nearest, nearest, n)
 
-        {clades, count, pointers, pairwise, diss, sizes} =
-          merge_clades(clades, count, pointers, pairwise, diss, sizes, links, n, update_fun)
+        {clades, count, pointers, pairwise, diss, sizes, cluster_sizes} =
+          merge_clades(
+            clades,
+            count,
+            pointers,
+            pairwise,
+            diss,
+            sizes,
+            cluster_sizes,
+            links,
+            n,
+            update_fun
+          )
 
-        {{clades, diss, sizes}, {count, pointers, pairwise}}
+        {{clades, diss, sizes, cluster_sizes}, {count, pointers, pairwise}}
       end
 
     sizes = sizes[n..(2 * n - 2)]
@@ -224,16 +238,27 @@ defmodule Scholar.Cluster.Hierarchical do
     {clades[perm], diss[perm], sizes[perm]}
   end
 
-  defnp merge_clades(clades, count, pointers, pairwise, diss, sizes, links, n, update_fun) do
-    {{clades, count, pointers, pairwise, diss, sizes}, _} =
-      while {{clades, count, pointers, pairwise, diss, sizes}, links},
+  defnp merge_clades(
+          clades,
+          count,
+          pointers,
+          pairwise,
+          diss,
+          sizes,
+          cluster_sizes,
+          links,
+          n,
+          update_fun
+        ) do
+    {{clades, count, pointers, pairwise, diss, sizes, cluster_sizes}, _} =
+      while {{clades, count, pointers, pairwise, diss, sizes, cluster_sizes}, links},
             i <- 0..(Nx.size(links) - 1) do
         # i < j because of how links is formed.
         # i will become the new clade index and we "infinity-out" j.
         j = links[i]
 
         if j == n do
-          {{clades, count, pointers, pairwise, diss, sizes}, links}
+          {{clades, count, pointers, pairwise, diss, sizes, cluster_sizes}, links}
         else
           # Clades a and b (i and j of pairwise) are being merged into c.
           indices = [i, j] |> Nx.stack() |> Nx.new_axis(-1)
@@ -251,6 +276,9 @@ defmodule Scholar.Cluster.Hierarchical do
           sc = sa + sb
           sizes = Nx.indexed_put(sizes, Nx.stack([i, c]) |> Nx.new_axis(-1), Nx.stack([sc, sc]))
 
+          cluster_sizes =
+            Nx.indexed_put(cluster_sizes, Nx.stack([i, j]) |> Nx.new_axis(-1), Nx.stack([sc, sc]))
+
           # Update dissimilarities
           diss = Nx.indexed_put(diss, Nx.stack([count]), pairwise[i][j])
 
@@ -259,7 +287,7 @@ defmodule Scholar.Cluster.Hierarchical do
 
           # Update pairwise
           updates =
-            update_fun.(pairwise[i], pairwise[j], pairwise[i][j], sa, sb, sc)
+            update_fun.(pairwise[i], pairwise[j], pairwise[i][j], sa, sb, cluster_sizes)
             |> Nx.indexed_put(indices, Nx.broadcast(:infinity, {2}))
 
           pairwise =
@@ -269,11 +297,11 @@ defmodule Scholar.Cluster.Hierarchical do
             |> Nx.put_slice([j, 0], Nx.broadcast(:infinity, {1, n}))
             |> Nx.put_slice([0, j], Nx.broadcast(:infinity, {n, 1}))
 
-          {{clades, count + 1, pointers, pairwise, diss, sizes}, links}
+          {{clades, count + 1, pointers, pairwise, diss, sizes, cluster_sizes}, links}
         end
       end
 
-    {clades, count, pointers, pairwise, diss, sizes}
+    {clades, count, pointers, pairwise, diss, sizes, cluster_sizes}
   end
 
   defnp find_clade(pointers, i) do
@@ -302,8 +330,8 @@ defmodule Scholar.Cluster.Hierarchical do
   defnp single(dac, dbc, _dab, _sa, _sb, _sc),
     do: Nx.min(dac, dbc)
 
-  # defnp ward(dac, dbc, dab, sa, sb, sc),
-  #   do: Nx.sqrt(((sa + sc) * dac + (sb + sc) * dbc - sc * dab) / (sa + sb + sc))
+  defnp ward(dac, dbc, dab, sa, sb, sk),
+    do: Nx.sqrt(((sa + sk) * dac ** 2 + (sb + sk) * dbc ** 2 - sk * dab ** 2) / (sa + sb + sk))
 
   defnp weighted(dac, dbc, _dab, _sa, _sb, _sc),
     do: (dac + dbc) / 2
