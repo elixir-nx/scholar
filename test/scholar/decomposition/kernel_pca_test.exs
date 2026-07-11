@@ -278,7 +278,16 @@ defmodule Scholar.Decomposition.KernelPCATest do
       x = Nx.as_type(x(), :f64)
       model = KernelPCA.fit(x, num_components: 2, kernel: :rbf)
       assert Nx.type(model.eigenvalues) == {:f, 64}
-      assert Nx.type(KernelPCA.transform(model, Nx.as_type(x_test(), :f64))) == {:f, 64}
+
+      transformed = KernelPCA.transform(model, Nx.as_type(x_test(), :f64))
+      assert Nx.type(transformed) == {:f, 64}
+
+      # f64 gets close to the f64 SciPy/scikit-learn reference
+      assert_all_close(
+        transformed,
+        Nx.tensor([[-0.11224132, 0.01060868], [-0.49994934, -0.10212445]], type: :f64),
+        atol: 1.0e-5
+      )
     end
 
     test "kernel defaults to :linear" do
@@ -291,8 +300,22 @@ defmodule Scholar.Decomposition.KernelPCATest do
     end
 
     test "num_components may equal num_samples" do
-      model = KernelPCA.fit(x(), num_components: 6, kernel: :linear)
+      # The centering forces one zero eigenvalue (up to floating-point noise,
+      # which can make it slightly negative), so this exercises the clipping
+      # in fit/2 and the zero-eigenvalue guard in transform/2.
+      model = KernelPCA.fit(x(), num_components: 6, kernel: :rbf)
       assert Nx.shape(model.eigenvalues) == {6}
+      assert Nx.to_number(model.eigenvalues[5]) == 0.0
+
+      z = KernelPCA.fit_transform(x(), num_components: 6, kernel: :rbf)
+      assert Nx.to_number(Nx.any(Nx.is_nan(z))) == 0
+
+      zt = KernelPCA.transform(model, x_test())
+      assert Nx.to_number(Nx.any(Nx.is_nan(zt))) == 0
+      assert Nx.to_number(Nx.any(Nx.is_infinity(zt))) == 0
+
+      # the zero-eigenvalue component projects to zero, as in scikit-learn
+      assert zt[[.., 5]] == Nx.tensor([0.0, 0.0])
     end
 
     test "eigenvalues are sorted in decreasing order" do

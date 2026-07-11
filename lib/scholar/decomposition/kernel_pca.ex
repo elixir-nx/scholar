@@ -43,7 +43,7 @@ defmodule Scholar.Decomposition.KernelPCA do
       doc: "The kernel used to compute the pairwise similarities between samples."
     ],
     gamma: [
-      type: {:or, [:float, nil]},
+      type: {:or, [{:custom, Scholar.Options, :positive_number, []}, nil]},
       default: nil,
       doc: """
       Kernel coefficient for the `:rbf`, `:poly` and `:sigmoid` kernels.
@@ -56,7 +56,7 @@ defmodule Scholar.Decomposition.KernelPCA do
       doc: "Degree of the `:poly` kernel."
     ],
     coef0: [
-      type: :float,
+      type: {:or, [:float, :integer]},
       default: 1.0,
       doc: "Independent term of the `:poly` and `:sigmoid` kernels."
     ]
@@ -117,6 +117,13 @@ defmodule Scholar.Decomposition.KernelPCA do
     end
 
     opts = Keyword.put(opts, :gamma, opts[:gamma] || 1.0 / num_features)
+
+    # The stopping criterion of Nx.LinAlg.eigh must match the input precision:
+    # a tolerance below the floating-point resolution makes the iteration run
+    # long past convergence and accumulate rounding noise instead.
+    eigh_eps = if Nx.type(x) == {:f, 64}, do: 1.0e-11, else: 1.0e-8
+    opts = Keyword.put(opts, :eigh_eps, eigh_eps)
+
     fit_n(x, opts)
   end
 
@@ -124,7 +131,8 @@ defmodule Scholar.Decomposition.KernelPCA do
     kernel = kernel_matrix(x, x, opts)
     {kernel_centered, kernel_fit_rows, kernel_fit_all} = center_fit(kernel)
 
-    {eigenvalues, eigenvectors} = top_eigen(kernel_centered, opts[:num_components])
+    {eigenvalues, eigenvectors} =
+      top_eigen(kernel_centered, opts[:num_components], opts[:eigh_eps])
 
     %__MODULE__{
       eigenvalues: eigenvalues,
@@ -268,23 +276,30 @@ defmodule Scholar.Decomposition.KernelPCA do
 
   # Eigenvectors of the centered kernel, sorted by decreasing eigenvalue and
   # sign-flipped so the largest absolute entry of each vector is positive.
-  defnp top_eigen(kernel_centered, num_components) do
+  defnp top_eigen(kernel_centered, num_components, eigh_eps) do
     # Centering can leave tiny floating-point asymmetries, but eigh requires
     # exact symmetry, so it is enforced explicitly before the decomposition.
     symmetric_kernel = (kernel_centered + Nx.transpose(kernel_centered)) / 2
-    {eigenvalues, eigenvectors} = Nx.LinAlg.eigh(symmetric_kernel, eps: 1.0e-8)
+    {eigenvalues, eigenvectors} = Nx.LinAlg.eigh(symmetric_kernel, eps: eigh_eps)
 
     order = Nx.argsort(eigenvalues, direction: :desc)
     eigenvalues = Nx.take(eigenvalues, order)[0..(num_components - 1)]
     eigenvectors = Nx.take(eigenvectors, order, axis: 1)[[.., 0..(num_components - 1)]]
+
+    # negative eigenvalues carry no usable projection, either floating-point
+    # noise around zero (the centering itself forces one zero eigenvalue) or
+    # produced by an indefinite kernel such as sigmoid, so they are clipped
+    eigenvalues = Nx.max(eigenvalues, 0)
 
     max_abs = eigenvectors |> Nx.abs() |> Nx.argmax(axis: 0, keep_axis: true)
     signs = eigenvectors |> Nx.take_along_axis(max_abs, axis: 0) |> Nx.sign()
     {eigenvalues, eigenvectors * signs}
   end
 
+  # components with a zero eigenvalue are projected to zero, as in scikit-learn
   defnp project(kernel_centered, eigenvalues, eigenvectors) do
-    scaled_eigenvectors = eigenvectors / Nx.sqrt(eigenvalues)
+    safe_eigenvalues = Nx.select(eigenvalues == 0, 1.0, eigenvalues)
+    scaled_eigenvectors = eigenvectors / Nx.sqrt(safe_eigenvalues) * (eigenvalues > 0)
     Nx.dot(kernel_centered, [1], scaled_eigenvectors, [0])
   end
 end
