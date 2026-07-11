@@ -166,6 +166,19 @@ defmodule Scholar.Decomposition.KernelPCA do
             """
     end
 
+    num_features_seen = Nx.axis_size(model.x_fit, 1)
+    num_features = Nx.axis_size(x, 1)
+
+    if num_features_seen != num_features do
+      raise ArgumentError,
+            """
+            expected input tensor to have the same number of features \
+            as tensor used to fit the model, \
+            got #{inspect(num_features)} \
+            and #{inspect(num_features_seen)}\
+            """
+    end
+
     transform_n(model, x)
   end
 
@@ -223,10 +236,16 @@ defmodule Scholar.Decomposition.KernelPCA do
         Nx.tanh(opts[:gamma] * Nx.dot(x, [1], y, [1]) + opts[:coef0])
 
       :cosine ->
-        x_normalized = x / Nx.sqrt(Nx.sum(x * x, axes: [1], keep_axes: true))
-        y_normalized = y / Nx.sqrt(Nx.sum(y * y, axes: [1], keep_axes: true))
+        # rows with zero norm are left as all-zeros instead of dividing by zero
+        x_normalized = x / safe_norm(x)
+        y_normalized = y / safe_norm(y)
         Nx.dot(x_normalized, [1], y_normalized, [1])
     end
+  end
+
+  defnp safe_norm(x) do
+    norm = Nx.sqrt(Nx.sum(x * x, axes: [1], keep_axes: true))
+    Nx.select(norm == 0, 1.0, norm)
   end
 
   deftransformp model_opts(model) do
@@ -250,7 +269,10 @@ defmodule Scholar.Decomposition.KernelPCA do
   # Eigenvectors of the centered kernel, sorted by decreasing eigenvalue and
   # sign-flipped so the largest absolute entry of each vector is positive.
   defnp top_eigen(kernel_centered, num_components) do
-    {eigenvalues, eigenvectors} = Nx.LinAlg.eigh(kernel_centered, eps: 1.0e-8)
+    # Centering can leave tiny floating-point asymmetries, but eigh requires
+    # exact symmetry, so it is enforced explicitly before the decomposition.
+    symmetric_kernel = (kernel_centered + Nx.transpose(kernel_centered)) / 2
+    {eigenvalues, eigenvectors} = Nx.LinAlg.eigh(symmetric_kernel, eps: 1.0e-8)
 
     order = Nx.argsort(eigenvalues, direction: :desc)
     eigenvalues = Nx.take(eigenvalues, order)[0..(num_components - 1)]

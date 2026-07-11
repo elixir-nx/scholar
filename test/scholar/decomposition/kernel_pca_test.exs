@@ -101,6 +101,38 @@ defmodule Scholar.Decomposition.KernelPCATest do
         atol: 1.0e-3
       )
     end
+
+    test "fit/2 eigenvalues" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :poly, degree: 3, coef0: 1.0)
+      assert_all_close(model.eigenvalues, Nx.tensor([1.97470225, 0.9261237]))
+    end
+
+    test "transform/2" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :poly, degree: 3, coef0: 1.0)
+
+      assert_all_close(
+        KernelPCA.transform(model, x_test()),
+        Nx.tensor([[-0.21107767, 0.05450511], [-0.87419523, -0.07912082]]),
+        atol: 1.0e-3
+      )
+    end
+
+    test "custom degree" do
+      z = KernelPCA.fit_transform(x(), num_components: 2, kernel: :poly, degree: 2, coef0: 1.0)
+
+      assert_all_close(
+        z,
+        Nx.tensor([
+          [0.21428251, -0.12551537],
+          [-0.11978673, 0.55138703],
+          [-0.49389717, -0.32901762],
+          [0.56577048, -0.00833521],
+          [-0.47484395, 0.04791742],
+          [0.30847487, -0.13643626]
+        ]),
+        atol: 1.0e-3
+      )
+    end
   end
 
   describe "sigmoid kernel" do
@@ -117,6 +149,21 @@ defmodule Scholar.Decomposition.KernelPCATest do
           [0.15586995, 0.00172166],
           [-0.09909037, -0.03727021]
         ]),
+        atol: 1.0e-3
+      )
+    end
+
+    test "fit/2 eigenvalues" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :sigmoid, coef0: 1.0)
+      assert_all_close(model.eigenvalues, Nx.tensor([0.07833214, 0.03754688]))
+    end
+
+    test "transform/2" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :sigmoid, coef0: 1.0)
+
+      assert_all_close(
+        KernelPCA.transform(model, x_test()),
+        Nx.tensor([[0.03661575, -0.00068769], [0.24706743, -0.05864022]]),
         atol: 1.0e-3
       )
     end
@@ -138,6 +185,67 @@ defmodule Scholar.Decomposition.KernelPCATest do
         ]),
         atol: 1.0e-3
       )
+    end
+
+    test "fit/2 eigenvalues" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :cosine)
+      assert_all_close(model.eigenvalues, Nx.tensor([0.79068667, 0.36860785]))
+    end
+
+    test "transform/2" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :cosine)
+
+      assert_all_close(
+        KernelPCA.transform(model, x_test()),
+        Nx.tensor([[0.11596968, -0.0139805], [0.72969734, -0.22251837]]),
+        atol: 1.0e-3
+      )
+    end
+
+    test "rows with zero norm do not produce NaN" do
+      x_with_zero_row =
+        Nx.tensor([[0.0, 0.0, 0.0], [1.0, 0.5, 0.2], [0.3, 1.0, 0.7], [0.9, 0.1, 1.0]])
+
+      model = KernelPCA.fit(x_with_zero_row, num_components: 2, kernel: :cosine)
+
+      # Reference values taken from scikit-learn, which treats zero-norm rows
+      # as an all-zero vector instead of dividing by zero.
+      assert_all_close(model.eigenvalues, Nx.tensor([0.59310028, 0.38942085]))
+
+      assert_all_close(
+        KernelPCA.fit_transform(x_with_zero_row, num_components: 2, kernel: :cosine),
+        Nx.tensor([
+          [0.66198055, -0.06451232],
+          [-0.2645941, -0.1783384],
+          [-0.14431492, 0.52389659],
+          [-0.25307153, -0.28104588]
+        ]),
+        atol: 1.0e-3
+      )
+    end
+  end
+
+  describe "rbf kernel with custom gamma" do
+    test "fit_transform/2" do
+      z = KernelPCA.fit_transform(x(), num_components: 2, kernel: :rbf, gamma: 2.0)
+
+      assert_all_close(
+        z,
+        Nx.tensor([
+          [-0.43668454, -0.12918044],
+          [0.29479921, 0.79022216],
+          [0.5971787, -0.46764162],
+          [-0.56175187, 0.01788282],
+          [0.63960914, -0.09610005],
+          [-0.53315064, -0.11518287]
+        ]),
+        atol: 1.0e-3
+      )
+    end
+
+    test "fit/2 keeps the given gamma instead of the default" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :rbf, gamma: 2.0)
+      assert model.gamma == 2.0
     end
   end
 
@@ -172,6 +280,26 @@ defmodule Scholar.Decomposition.KernelPCATest do
       assert Nx.type(model.eigenvalues) == {:f, 64}
       assert Nx.type(KernelPCA.transform(model, Nx.as_type(x_test(), :f64))) == {:f, 64}
     end
+
+    test "kernel defaults to :linear" do
+      assert KernelPCA.fit(x(), num_components: 2).kernel == :linear
+    end
+
+    test "gamma defaults to 1 / num_features" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :rbf)
+      assert_all_close(Nx.tensor(model.gamma), Nx.tensor(1.0 / 3))
+    end
+
+    test "num_components may equal num_samples" do
+      model = KernelPCA.fit(x(), num_components: 6, kernel: :linear)
+      assert Nx.shape(model.eigenvalues) == {6}
+    end
+
+    test "eigenvalues are sorted in decreasing order" do
+      model = KernelPCA.fit(x(), num_components: 4, kernel: :rbf)
+      sorted = model.eigenvalues |> Nx.to_flat_list() |> Enum.sort(:desc)
+      assert Nx.to_flat_list(model.eigenvalues) == sorted
+    end
   end
 
   describe "input validation" do
@@ -185,6 +313,23 @@ defmodule Scholar.Decomposition.KernelPCATest do
       assert_raise ArgumentError,
                    "num_components must be less than or equal to num_samples = 6, got 7",
                    fn -> KernelPCA.fit(x(), num_components: 7) end
+    end
+
+    test "transform/2 requires a rank-2 tensor" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :linear)
+
+      assert_raise ArgumentError,
+                   ~r/expected input tensor to have shape \{num_samples, num_features\}/,
+                   fn -> KernelPCA.transform(model, Nx.iota({3})) end
+    end
+
+    test "transform/2 requires the same number of features used to fit the model" do
+      model = KernelPCA.fit(x(), num_components: 2, kernel: :linear)
+
+      assert_raise ArgumentError,
+                   "expected input tensor to have the same number of features " <>
+                     "as tensor used to fit the model, got 2 and 3",
+                   fn -> KernelPCA.transform(model, Nx.tensor([[0.1, 0.2]])) end
     end
   end
 
