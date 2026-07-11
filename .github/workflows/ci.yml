@@ -12,7 +12,7 @@ jobs:
       matrix:
         include:
           - elixir: "1.19.4"
-            otp: "27.1"
+            otp: "27.3"
             lint: true
           - elixir: "1.15.8"
             otp: "26.1"
