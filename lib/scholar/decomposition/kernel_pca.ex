@@ -87,6 +87,9 @@ defmodule Scholar.Decomposition.KernelPCA do
 
     * `:kernel_fit_all` - Mean of the whole training kernel matrix.
 
+    * `:kernel`, `:gamma`, `:degree`, `:coef0` - The kernel options used to fit
+      the model, applied again when computing the kernel of new samples.
+
   ## Examples
 
       iex> x = Nx.tensor([[0.5, 0.2, 0.8], [1.0, 0.5, 0.2], [0.3, 1.0, 0.7], [0.9, 0.1, 1.0]])
@@ -291,6 +294,12 @@ defmodule Scholar.Decomposition.KernelPCA do
     # is quadratic in the eigenvector error
     eigenvectors = eigenvectors / Nx.LinAlg.norm(eigenvectors, axes: [0])
     eigenvalues = Nx.sum(eigenvectors * Nx.dot(symmetric_kernel, eigenvectors), axes: [0])
+
+    # the refinement can reorder eigenvalues that eigh resolved within its
+    # error, so they are sorted again to keep the decreasing order
+    order = Nx.argsort(eigenvalues, direction: :desc)
+    eigenvalues = Nx.take(eigenvalues, order)
+    eigenvectors = Nx.take(eigenvectors, order, axis: 1)
 
     # negative eigenvalues carry no usable projection, either floating-point
     # noise around zero (the centering itself forces one zero eigenvalue) or
