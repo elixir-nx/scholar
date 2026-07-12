@@ -92,7 +92,7 @@ defmodule Scholar.Decomposition.KernelPCA do
       iex> x = Nx.tensor([[0.5, 0.2, 0.8], [1.0, 0.5, 0.2], [0.3, 1.0, 0.7], [0.9, 0.1, 1.0]])
       iex> kpca = Scholar.Decomposition.KernelPCA.fit(x, num_components: 2, kernel: :rbf)
       iex> kpca.eigenvalues
-      Nx.tensor([0.3644832372665405, 0.26074573397636414])
+      Nx.tensor([0.3644832372665405, 0.26074567437171936])
   """
   deftransform fit(x, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -161,7 +161,7 @@ defmodule Scholar.Decomposition.KernelPCA do
       iex> Scholar.Decomposition.KernelPCA.transform(kpca, Nx.tensor([[0.5, 0.5, 0.5]]))
       Nx.tensor(
         [
-          [0.12500189244747162, 0.029097510501742363]
+          [0.12500189244747162, 0.029097504913806915]
         ]
       )
   """
@@ -213,10 +213,10 @@ defmodule Scholar.Decomposition.KernelPCA do
       iex> Scholar.Decomposition.KernelPCA.fit_transform(x, num_components: 2, kernel: :rbf)
       Nx.tensor(
         [
-          [-0.13561560213565826, -0.16519638895988464],
-          [0.021600963547825813, 0.44114428758621216],
-          [0.4687873125076294, -0.15764620900154114],
-          [-0.35477250814437866, -0.11830171197652817]
+          [-0.13561560213565826, -0.16519635915756226],
+          [0.021600963547825813, 0.4411441683769226],
+          [0.4687873125076294, -0.15764616429805756],
+          [-0.35477250814437866, -0.11830168217420578]
         ]
       )
   """
@@ -283,8 +283,14 @@ defmodule Scholar.Decomposition.KernelPCA do
     {eigenvalues, eigenvectors} = Nx.LinAlg.eigh(symmetric_kernel, eps: eigh_eps)
 
     order = Nx.argsort(eigenvalues, direction: :desc)
-    eigenvalues = Nx.take(eigenvalues, order)[0..(num_components - 1)]
     eigenvectors = Nx.take(eigenvectors, order, axis: 1)[[.., 0..(num_components - 1)]]
+
+    # eigh may stop before the eigenvalues fully converge, while the
+    # eigenvectors are already accurate, so the eigenvalues are recomputed as
+    # the Rayleigh quotient of the (renormalized) eigenvectors, whose error
+    # is quadratic in the eigenvector error
+    eigenvectors = eigenvectors / Nx.LinAlg.norm(eigenvectors, axes: [0])
+    eigenvalues = Nx.sum(eigenvectors * Nx.dot(symmetric_kernel, eigenvectors), axes: [0])
 
     # negative eigenvalues carry no usable projection, either floating-point
     # noise around zero (the centering itself forces one zero eigenvalue) or
