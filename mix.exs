@@ -72,6 +72,7 @@ defmodule Scholar.MixProject do
           Scholar.Cluster.GaussianMixture,
           Scholar.Cluster.Hierarchical,
           Scholar.Cluster.KMeans,
+          Scholar.Cluster.SpectralClustering,
           Scholar.Decomposition.KernelPCA,
           Scholar.Decomposition.PCA,
           Scholar.Integrate,
