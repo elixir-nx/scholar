@@ -275,11 +275,9 @@ defmodule Scholar.Metrics.Regression do
       cond do
         power < 0 ->
           2 *
-            (
-              Nx.pow(max(y_true, 0), 2 - power) / ((1 - power) * (2 - power))
-              -y_true * Nx.pow(y_pred, 1 - power) / (1 - power)
-              +Nx.pow(y_pred, 2 - power) / (2 - power)
-            )
+            (Nx.pow(max(y_true, 0), 2 - power) / ((1 - power) * (2 - power)) -
+               y_true * Nx.pow(y_pred, 1 - power) / (1 - power) +
+               Nx.pow(y_pred, 2 - power) / (2 - power))
 
         # Normal distribution
         power == 0 ->
@@ -298,11 +296,9 @@ defmodule Scholar.Metrics.Regression do
         # power > 2 -> Stable distribution, with support on the positive reals
         true ->
           2 *
-            (
-              Nx.pow(y_true, 2 - power) / ((1 - power) * (2 - power))
-              -y_true * Nx.pow(y_pred, 1 - power) / (1 - power)
-              +Nx.pow(y_pred, 2 - power) / (2 - power)
-            )
+            (Nx.pow(y_true, 2 - power) / ((1 - power) * (2 - power)) -
+               y_true * Nx.pow(y_pred, 1 - power) / (1 - power) +
+               Nx.pow(y_pred, 2 - power) / (2 - power))
       end
 
     Nx.mean(deviance, axes: opts[:axes])

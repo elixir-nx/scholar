@@ -56,7 +56,51 @@ defmodule Scholar.Metrics.RegressionTest do
     end
   end
 
+  describe "mean_tweedie_deviance/4" do
+    # Reference values from sklearn 1.6.1 mean_tweedie_deviance.
+    test "matches sklearn for power between 1 and 2" do
+      y_true = Nx.tensor([1.0, 2.0, 3.0, 4.0], type: :f64)
+      y_pred = Nx.tensor([1.5, 1.5, 3.5, 4.5], type: :f64)
+
+      deviance = Regression.mean_tweedie_deviance(y_true, y_pred, 1.5)
+      assert_all_close(deviance, Nx.tensor(0.08778531726769745, type: :f64))
+    end
+
+    test "matches sklearn for power greater than 2" do
+      y_true = Nx.tensor([1.0, 2.0, 3.0, 4.0], type: :f64)
+      y_pred = Nx.tensor([1.5, 1.5, 3.5, 4.5], type: :f64)
+
+      deviance = Regression.mean_tweedie_deviance(y_true, y_pred, 3)
+      assert_all_close(deviance, Nx.tensor(0.04413895187704714, type: :f64))
+    end
+
+    test "matches sklearn for negative power" do
+      y_true = Nx.tensor([1.0, 2.0, 3.0, 4.0], type: :f64)
+      y_pred = Nx.tensor([1.5, 1.5, 3.5, 4.5], type: :f64)
+
+      deviance = Regression.mean_tweedie_deviance(y_true, y_pred, -1)
+      assert_all_close(deviance, Nx.tensor(0.6666666666666652, type: :f64))
+    end
+
+    test "deviance is non-negative and zero for perfect predictions" do
+      y_true = Nx.tensor([1.0, 2.0, 3.0, 4.0], type: :f64)
+
+      for power <- [-1, 1.5, 3] do
+        deviance = Regression.mean_tweedie_deviance(y_true, y_true, power)
+        assert_all_close(deviance, Nx.tensor(0.0, type: :f64))
+      end
+    end
+  end
+
   describe "d2_tweedie_score/3" do
+    test "matches sklearn for power between 1 and 2" do
+      y_true = Nx.tensor([1.0, 2.0, 3.0, 4.0], type: :f64)
+      y_pred = Nx.tensor([1.5, 1.5, 3.5, 4.5], type: :f64)
+
+      d2 = Regression.d2_tweedie_score(y_true, y_pred, 1.5)
+      assert_all_close(d2, Nx.tensor(0.7538144334490452, type: :f64))
+    end
+
     test "equal R^2 when power is 0" do
       y_true = Nx.tensor([1, 1, 1, 1, 1, 2, 2, 1, 3, 1], type: :u32)
       y_pred = Nx.tensor([2, 2, 1, 1, 2, 2, 2, 1, 3, 1], type: :u32)
