@@ -144,15 +144,29 @@ defmodule Scholar.Cluster.SpectralClustering do
     # accumulate noise past convergence.
     eigh_eps = if Nx.type(x) == {:f, 64}, do: 1.0e-11, else: 1.0e-8
 
+    {labels, embedding} =
+      fit_n(x, key,
+        num_clusters: opts[:num_clusters],
+        affinity: opts[:affinity],
+        gamma: opts[:gamma],
+        eigh_eps: eigh_eps,
+        num_runs: opts[:num_runs],
+        max_iterations: opts[:max_iterations]
+      )
+
+    %__MODULE__{labels: labels, embedding: embedding}
+  end
+
+  defnp fit_n(x, key, opts) do
     embedding =
       spectral_embedding(x,
         num_clusters: opts[:num_clusters],
         affinity: opts[:affinity],
         gamma: opts[:gamma],
-        eigh_eps: eigh_eps
+        eigh_eps: opts[:eigh_eps]
       )
 
-    kmeans =
+    model =
       Scholar.Cluster.KMeans.fit(embedding,
         num_clusters: opts[:num_clusters],
         num_runs: opts[:num_runs],
@@ -160,7 +174,7 @@ defmodule Scholar.Cluster.SpectralClustering do
         key: key
       )
 
-    %__MODULE__{labels: kmeans.labels, embedding: embedding}
+    {model.labels, embedding}
   end
 
   defnp spectral_embedding(x, opts) do
