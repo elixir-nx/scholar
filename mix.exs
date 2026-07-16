@@ -87,6 +87,7 @@ defmodule Scholar.MixProject do
           Scholar.Linear.PolynomialRegression,
           Scholar.Linear.RidgeRegression,
           Scholar.Linear.SVM,
+          Scholar.Manifold.LargeVis,
           Scholar.Manifold.MDS,
           Scholar.Manifold.Trimap,
           Scholar.Manifold.TSNE,
