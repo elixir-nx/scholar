@@ -105,7 +105,11 @@ defmodule Scholar.Manifold.LargeVis do
     metric: [
       type: {:in, [:squared_euclidean, :euclidean]},
       default: :euclidean,
-      doc: "The function that measures distance between two points."
+      doc: """
+      The function that measures distance between two points during the
+      k-NN graph construction. The affinities themselves are always computed
+      on squared euclidean distances, as in t-SNE.
+      """
     ],
     key: [
       type: {:custom, Scholar.Options, :key, []},
@@ -163,6 +167,15 @@ defmodule Scholar.Manifold.LargeVis do
     {num_samples, _} = Nx.shape(x)
 
     {graph, distances} = ANN.fit(x, ann_opts(opts, key))
+
+    # The affinities follow the paper (and t-SNE): a Gaussian kernel on
+    # squared distances. The metric only affects the neighbor search, whose
+    # ranking is the same for :euclidean and :squared_euclidean.
+    distances =
+      case opts[:metric] do
+        :euclidean -> distances * distances
+        :squared_euclidean -> distances
+      end
 
     # The k-NN graph lists each point as one of its own neighbors (distance 0).
     # Left in, that entry would dominate the softmax below, distorting the

@@ -110,20 +110,18 @@ defmodule Scholar.Manifold.LargeVisTest do
       assert_all_close(LargeVis.fit(x, opts), LargeVis.fit(x, opts), atol: 0.0, rtol: 0.0)
     end
 
-    test "supports the squared_euclidean metric" do
+    # Affinities are always computed on squared distances, and squaring is
+    # monotone, so both metrics find the same neighbors and must produce the
+    # same embedding up to floating-point roundtrip noise.
+    test "euclidean and squared_euclidean metrics agree" do
       x = Nx.iota({40, 4}) |> Nx.as_type(:f64)
+      opts = [num_neighbors: 8, perplexity: 4, num_iters: 5, key: key()]
 
-      y =
-        LargeVis.fit(x,
-          num_neighbors: 8,
-          perplexity: 4,
-          num_iters: 5,
-          metric: :squared_euclidean,
-          key: key()
-        )
+      y_euclidean = LargeVis.fit(x, opts ++ [metric: :euclidean])
+      y_squared = LargeVis.fit(x, opts ++ [metric: :squared_euclidean])
 
-      assert Nx.shape(y) == {40, 2}
-      refute Nx.any(Nx.is_nan(y)) |> Nx.to_number() == 1
+      assert Nx.shape(y_squared) == {40, 2}
+      assert_all_close(y_euclidean, y_squared)
     end
 
     test "handles degenerate data with identical points" do
