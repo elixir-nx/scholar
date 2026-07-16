@@ -128,6 +128,68 @@ defmodule Scholar.DiscriminantAnalysis.LinearTest do
       probs = Linear.predict_probability(model, three_class_test_points())
       assert_all_close(probs, expected, atol: 1.0e-6)
     end
+
+    # Unequal class sizes exercise the interaction between the prior term and the
+    # (num_samples - num_classes) covariance normalization, which balanced
+    # classes do not.
+    test "coefficients, intercept and decision_function with unbalanced classes (f64)" do
+      x =
+        Nx.tensor(
+          [
+            [0.0, 0.0],
+            [0.5, 0.2],
+            [0.2, 0.4],
+            [0.1, 0.1],
+            [0.3, 0.0],
+            [0.0, 0.3],
+            [5.0, 5.0],
+            [5.2, 4.8],
+            [4.8, 5.1],
+            [10.0, 0.0],
+            [10.2, 0.3]
+          ],
+          type: :f64
+        )
+
+      y = Nx.tensor([0, 0, 0, 0, 0, 0, 1, 1, 1, 2, 2])
+      model = Linear.fit(x, y, num_classes: 3)
+
+      assert_all_close(
+        model.priors,
+        Nx.tensor([6 / 11, 3 / 11, 2 / 11], type: :f64)
+      )
+
+      expected_coef =
+        Nx.tensor(
+          [
+            [-90.99560744104983, -55.87429195011562],
+            [57.705113660897624, 130.21319023823452],
+            [186.42915183180307, -27.696909507004875]
+          ],
+          type: :f64
+        )
+
+      expected_intercept =
+        Nx.tensor([203.67786828506502, -660.0225187014742, -1228.3078001516808], type: :f64)
+
+      expected_decision =
+        Nx.tensor(
+          [
+            [159.61689846771537, -603.6470275317345, -1180.6881274542413],
+            [-530.6716286707622, 279.56900079418654, -434.6465885276898],
+            [-711.8656353204449, -69.95006306867447, 633.2140272156494],
+            [-163.4968801928486, -190.2267589536438, -831.4771943396853]
+          ],
+          type: :f64
+        )
+
+      assert_all_close(model.coefficients, expected_coef, atol: 1.0e-6)
+      assert_all_close(model.intercept, expected_intercept, atol: 1.0e-6)
+
+      decision = Linear.decision_function(model, three_class_test_points())
+      assert_all_close(decision, expected_decision, atol: 1.0e-6)
+      assert Nx.to_flat_list(Linear.predict(model, three_class_test_points())) == [0, 1, 2, 0]
+    end
   end
 
   describe "properties" do

@@ -13,6 +13,11 @@ defmodule Scholar.DiscriminantAnalysis.Linear do
   pooled within-class covariance. The predicted class is the one with the
   highest score.
 
+  The scores are computed around the overall mean $\bar{x} = \sum\_{k} \pi\_{k}
+  \mu\_{k}$ (as scikit-learn's `svd` solver does), so `decision_function`
+  differs from the expression above by a term that is constant across classes.
+  That term cancels in `predict` and `predict_probability`.
+
   The pooled covariance is assumed to be invertible, which holds when the number
   of samples is larger than the number of features and no feature is a linear
   combination of the others.
