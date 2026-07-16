@@ -58,8 +58,9 @@ defmodule Scholar.Manifold.LargeVis do
       default: 5,
       doc: """
       Target perplexity for the per-point Gaussian bandwidth search. Must be
-      smaller than `:num_neighbors`, since a point's effective neighbor count
-      cannot exceed how many neighbors it actually has.
+      smaller than `:num_neighbors - 1`, since a point's effective neighbor
+      count cannot exceed how many neighbors it actually has (the neighbor
+      list includes the point itself, which is excluded from the affinities).
       """
     ],
     learning_rate: [
@@ -146,9 +147,10 @@ defmodule Scholar.Manifold.LargeVis do
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
-    unless opts[:perplexity] < opts[:num_neighbors] do
+    unless opts[:perplexity] < opts[:num_neighbors] - 1 do
       raise ArgumentError,
-            "expected :perplexity to be smaller than :num_neighbors, " <>
+            "expected :perplexity to be smaller than :num_neighbors - 1 " <>
+              "(the neighbor list includes the point itself, which is excluded), " <>
               "got perplexity: #{opts[:perplexity]} and num_neighbors: #{opts[:num_neighbors]}"
     end
 
@@ -161,6 +163,14 @@ defmodule Scholar.Manifold.LargeVis do
     {num_samples, _} = Nx.shape(x)
 
     {graph, distances} = ANN.fit(x, ann_opts(opts, key))
+
+    # The k-NN graph lists each point as one of its own neighbors (distance 0).
+    # Left in, that entry would dominate the softmax below, distorting the
+    # perplexity search and producing self-edges whose gradient is zero, so
+    # roughly half of the sampled positive pairs would be wasted. Masking its
+    # distance to infinity zeroes its affinity and its sampling probability.
+    self_mask = Nx.equal(graph, Nx.iota({num_samples, 1}))
+    distances = Nx.select(self_mask, Nx.Constants.infinity(Nx.type(distances)), distances)
 
     sigmas = find_sigmas(distances, opts[:perplexity])
     p_cond = p_conditional(distances, sigmas)
@@ -184,9 +194,10 @@ defmodule Scholar.Manifold.LargeVis do
     |> Keyword.merge(if opts[:num_trees], do: [num_trees: opts[:num_trees]], else: [])
   end
 
-  # Softmax of -distance / (2 * sigma^2) over the k neighbors. Self is never
-  # among the k neighbors (Scholar.Neighbors.LargeVis excludes it), so unlike
-  # t-SNE's dense p_conditional there is no diagonal to mask out.
+  # Softmax of -distance / (2 * sigma^2) over the k neighbors. The self entry
+  # the ANN graph carries has already had its distance set to infinity by
+  # fit_n, so it contributes exp(-inf) = 0 here, the same effect t-SNE's
+  # diagonal masking has on its dense conditional.
   defnp p_conditional(distances, sigmas) do
     arg = Nx.negate(distances) / (2 * Nx.reshape(sigmas, {:auto, 1}) ** 2)
     arg = arg - Nx.reduce_max(arg, axes: [1], keep_axes: true)

@@ -92,6 +92,49 @@ defmodule Scholar.Manifold.LargeVisTest do
       assert Nx.shape(jitted) == Nx.shape(direct)
       refute Nx.any(Nx.is_nan(jitted)) |> Nx.to_number() == 1
     end
+
+    test "preserves f32 and casts integer input to f32" do
+      opts = [num_neighbors: 8, perplexity: 4, num_iters: 5, key: key()]
+
+      y_f32 = LargeVis.fit(Nx.iota({40, 4}) |> Nx.as_type(:f32), opts)
+      assert Nx.type(y_f32) == {:f, 32}
+
+      y_int = LargeVis.fit(Nx.iota({40, 4}), opts)
+      assert Nx.type(y_int) == {:f, 32}
+    end
+
+    test "is deterministic for a fixed key" do
+      x = Nx.iota({40, 4}) |> Nx.as_type(:f64)
+      opts = [num_neighbors: 8, perplexity: 4, num_iters: 10, key: key()]
+
+      assert_all_close(LargeVis.fit(x, opts), LargeVis.fit(x, opts), atol: 0.0, rtol: 0.0)
+    end
+
+    test "supports the squared_euclidean metric" do
+      x = Nx.iota({40, 4}) |> Nx.as_type(:f64)
+
+      y =
+        LargeVis.fit(x,
+          num_neighbors: 8,
+          perplexity: 4,
+          num_iters: 5,
+          metric: :squared_euclidean,
+          key: key()
+        )
+
+      assert Nx.shape(y) == {40, 2}
+      refute Nx.any(Nx.is_nan(y)) |> Nx.to_number() == 1
+    end
+
+    test "handles degenerate data with identical points" do
+      x = Nx.broadcast(1.0, {40, 4}) |> Nx.as_type(:f64)
+
+      y =
+        LargeVis.fit(x, num_neighbors: 8, perplexity: 4, num_iters: 5, key: key())
+
+      refute Nx.any(Nx.is_nan(y)) |> Nx.to_number() == 1
+      refute Nx.any(Nx.is_infinity(y)) |> Nx.to_number() == 1
+    end
   end
 
   describe "embedding quality" do
@@ -125,15 +168,17 @@ defmodule Scholar.Manifold.LargeVisTest do
                    end
     end
 
-    test "raises when perplexity is not smaller than num_neighbors" do
+    test "raises when perplexity is not smaller than num_neighbors - 1" do
       x = Nx.iota({20, 4}) |> Nx.as_type(:f64)
 
-      assert_raise ArgumentError,
-                   "expected :perplexity to be smaller than :num_neighbors, " <>
-                     "got perplexity: 5 and num_neighbors: 5",
-                   fn ->
-                     LargeVis.fit(x, num_neighbors: 5, perplexity: 5)
-                   end
+      message =
+        "expected :perplexity to be smaller than :num_neighbors - 1 " <>
+          "(the neighbor list includes the point itself, which is excluded), " <>
+          "got perplexity: 4 and num_neighbors: 5"
+
+      assert_raise ArgumentError, message, fn ->
+        LargeVis.fit(x, num_neighbors: 5, perplexity: 4)
+      end
     end
   end
 end
