@@ -461,7 +461,7 @@ defmodule Scholar.Neighbors.KDTree do
                   if Nx.any(
                        metric.(
                          point[[coord_indicator]],
-                         data[[indices[right_child(node)], coord_indicator]]
+                         data[[indices[node], coord_indicator]]
                        ) <
                          distances
                      ) do
@@ -489,7 +489,7 @@ defmodule Scholar.Neighbors.KDTree do
                   if Nx.any(
                        metric.(
                          point[[coord_indicator]],
-                         data[[indices[left_child(node)], coord_indicator]]
+                         data[[indices[node], coord_indicator]]
                        ) <
                          distances
                      ) do

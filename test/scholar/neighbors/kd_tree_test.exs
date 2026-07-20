@@ -130,5 +130,39 @@ defmodule Scholar.Neighbors.KDTreeTest do
         ])
       )
     end
+
+    test "agrees with brute-force search" do
+      for seed <- 1..10 do
+        key = Nx.Random.key(seed)
+        {x, key} = Nx.Random.uniform(key, 0.0, 10.0, shape: {12, 2}, type: :f64)
+        {x_pred, _} = Nx.Random.uniform(key, 0.0, 10.0, shape: {5, 2}, type: :f64)
+
+        kdtree = KDTree.fit(x, num_neighbors: 3)
+        {kd_indices, kd_distances} = KDTree.predict(kdtree, x_pred)
+
+        brute = Scholar.Neighbors.BruteKNN.fit(x, num_neighbors: 3)
+        {brute_indices, brute_distances} = Scholar.Neighbors.BruteKNN.predict(brute, x_pred)
+
+        assert Nx.to_list(kd_indices) == Nx.to_list(brute_indices)
+        assert_all_close(kd_distances, brute_distances)
+      end
+    end
+
+    test "agrees with brute-force search on other metrics" do
+      key = Nx.Random.key(42)
+      {x, key} = Nx.Random.uniform(key, 0.0, 10.0, shape: {30, 3}, type: :f64)
+      {x_pred, _} = Nx.Random.uniform(key, 0.0, 10.0, shape: {5, 3}, type: :f64)
+
+      for metric <- [{:minkowski, 1}, {:minkowski, :infinity}] do
+        kdtree = KDTree.fit(x, num_neighbors: 3, metric: metric)
+        {kd_indices, kd_distances} = KDTree.predict(kdtree, x_pred)
+
+        brute = Scholar.Neighbors.BruteKNN.fit(x, num_neighbors: 3, metric: metric)
+        {brute_indices, brute_distances} = Scholar.Neighbors.BruteKNN.predict(brute, x_pred)
+
+        assert Nx.to_list(kd_indices) == Nx.to_list(brute_indices)
+        assert_all_close(kd_distances, brute_distances)
+      end
+    end
   end
 end
