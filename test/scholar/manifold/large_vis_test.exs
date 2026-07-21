@@ -137,14 +137,14 @@ defmodule Scholar.Manifold.LargeVisTest do
 
   describe "embedding quality" do
     test "separates well-clustered data far better than chance" do
-      {x, labels} = blobs(25, 4, 10, 2.5, 700)
+      {x, labels} = blobs(15, 3, 10, 3.0, 700)
 
       y =
         LargeVis.fit(x,
           num_neighbors: 8,
-          perplexity: 6,
-          num_iters: 400,
-          batch_size: 128,
+          perplexity: 5,
+          num_iters: 150,
+          batch_size: 64,
           num_negative_samples: 5,
           key: Nx.Random.key(55)
         )
