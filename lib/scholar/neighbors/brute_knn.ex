@@ -247,8 +247,8 @@ defmodule Scholar.Neighbors.BruteKNN do
     metric = opts[:metric]
     distances = metric.(query, data)
 
-    neighbor_indices =
-      Nx.argsort(distances, axis: 1, type: :u64) |> Nx.slice_along_axis(0, k, axis: 1)
+    {_values, raw_indices} = Nx.top_k(Nx.negate(distances), k: k)
+    neighbor_indices = Nx.as_type(raw_indices, {:u, 64})
 
     neighbor_distances = Nx.take_along_axis(distances, neighbor_indices, axis: 1)
     {neighbor_indices, neighbor_distances}
