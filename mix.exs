@@ -75,6 +75,7 @@ defmodule Scholar.MixProject do
           Scholar.Cluster.SpectralClustering,
           Scholar.Decomposition.KernelPCA,
           Scholar.Decomposition.PCA,
+          Scholar.DiscriminantAnalysis.Linear,
           Scholar.Integrate,
           Scholar.Interpolation.BezierSpline,
           Scholar.Interpolation.CubicSpline,
