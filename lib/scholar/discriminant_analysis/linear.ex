@@ -29,8 +29,8 @@ defmodule Scholar.DiscriminantAnalysis.Linear do
   import Nx.Defn
   import Scholar.Shared
 
-  @derive {Nx.Container, containers: [:coefficients, :intercept, :means, :priors, :classes]}
-  defstruct [:coefficients, :intercept, :means, :priors, :classes]
+  @derive {Nx.Container, containers: [:coefficients, :intercept, :means, :priors]}
+  defstruct [:coefficients, :intercept, :means, :priors]
 
   opts_schema = [
     num_classes: [
@@ -62,8 +62,6 @@ defmodule Scholar.DiscriminantAnalysis.Linear do
     * `:means` - Class-wise mean of the samples, shape `{num_classes, num_features}`.
 
     * `:priors` - Class prior probabilities, shape `{num_classes}`.
-
-    * `:classes` - Labels seen during fit, shape `{num_classes}`.
 
   ## Examples
 
@@ -126,8 +124,7 @@ defmodule Scholar.DiscriminantAnalysis.Linear do
       coefficients: coefficients,
       intercept: intercept,
       means: means,
-      priors: priors,
-      classes: classes
+      priors: priors
     }
   end
 
@@ -162,9 +159,9 @@ defmodule Scholar.DiscriminantAnalysis.Linear do
         [0, 1]
       >
   """
-  defn predict(%__MODULE__{classes: classes} = model, x) do
+  defn predict(%__MODULE__{} = model, x) do
     scores = decision_function(model, x)
-    Nx.take(classes, Nx.argmax(scores, axis: 1))
+    Nx.argmax(scores, axis: 1)
   end
 
   @doc """
@@ -185,7 +182,7 @@ defmodule Scholar.DiscriminantAnalysis.Linear do
   """
   defn predict_probability(%__MODULE__{} = model, x) do
     scores = decision_function(model, x)
-    scores = scores - Nx.reduce_max(scores, axes: [1], keep_axes: true)
+    scores = scores - stop_grad(Nx.reduce_max(scores, axes: [1], keep_axes: true))
     exp = Nx.exp(scores)
     exp / Nx.sum(exp, axes: [1], keep_axes: true)
   end
