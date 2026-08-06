@@ -68,6 +68,7 @@ defmodule Scholar.MixProject do
       groups_for_modules: [
         Models: [
           Scholar.Cluster.AffinityPropagation,
+          Scholar.Cluster.BIRCH,
           Scholar.Cluster.DBSCAN,
           Scholar.Cluster.GaussianMixture,
           Scholar.Cluster.Hierarchical,
