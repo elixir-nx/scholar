@@ -29,6 +29,7 @@ defmodule Scholar.Cluster.Hierarchical do
   """
   import Nx.Defn
 
+  @derive {Nx.Container, keep: [:num_points], containers: [:clades, :dissimilarities, :sizes]}
   defstruct [:clades, :dissimilarities, :num_points, :sizes]
 
   @dissimilarity_types [
@@ -234,8 +235,19 @@ defmodule Scholar.Cluster.Hierarchical do
       end
 
     sizes = sizes[n..(2 * n - 2)]
-    perm = Nx.argsort(diss, stable: false, type: :u32)
-    {clades[perm], diss[perm], sizes[perm]}
+    perm = Nx.argsort(diss, stable: true, type: :u32)
+
+    # A row at index `i` creates clade `n + i`. Reordering the rows therefore also requires
+    # reordering every reference to a non-singleton clade.
+    inverse_perm =
+      Nx.broadcast(0, {n - 1})
+      |> Nx.indexed_put(Nx.new_axis(perm, -1), Nx.iota({n - 1}, type: Nx.type(clades)))
+
+    clade_id_mapping =
+      Nx.concatenate([Nx.iota({n}, type: Nx.type(clades)), inverse_perm + n])
+
+    clades = Nx.take(clade_id_mapping, clades[perm])
+    {clades, diss[perm], sizes[perm]}
   end
 
   defnp merge_clades(

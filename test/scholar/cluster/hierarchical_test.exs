@@ -181,6 +181,22 @@ defmodule Scholar.Cluster.HierarchicalTest do
       labels_list = Hierarchical.labels_list(model, cluster_by: [num_clusters: 3])
       assert labels_list == [0, 1, 1, 2, 0]
     end
+
+    test "remaps clade ids after sorting dendrogram rows" do
+      {data, _key} = Nx.Random.uniform(Nx.Random.key(0), shape: {50, 2})
+      model = Nx.Defn.jit_apply(&Hierarchical.fit/1, [data])
+
+      assert model.clades
+             |> Nx.to_list()
+             |> Enum.with_index(model.num_points)
+             |> Enum.all?(fn {children, clade_id} ->
+               Enum.all?(children, &(&1 < clade_id))
+             end)
+
+      labels = Hierarchical.labels_list(model, cluster_by: [num_clusters: 5])
+      assert length(labels) == 50
+      assert labels |> Enum.uniq() |> length() == 5
+    end
   end
 
   describe "errors" do
