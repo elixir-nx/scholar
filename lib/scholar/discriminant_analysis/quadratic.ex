@@ -20,8 +20,22 @@ defmodule Scholar.DiscriminantAnalysis.Quadratic do
 
   Every class covariance is assumed to be invertible, which requires at least as
   many samples as features in each class and no feature being a linear
-  combination of the others. Use `:reg_param` to shrink the eigenvalues towards
-  one when that does not hold.
+  combination of the others. When that does not hold, a covariance is singular
+  and its smallest eigenvalues come out as zero, which the score then divides by.
+  Use `:reg_param` to shrink the eigenvalues towards one in that case.
+
+  Note that scikit-learn handles rank deficiency differently: it decomposes the
+  centered class data and keeps only `min(class_size, num_features)` components,
+  so it works in the subspace the class actually spans. This implementation keeps
+  all `num_features` directions and relies on `:reg_param` instead, so results
+  diverge from scikit-learn's for a class with fewer samples than features.
+
+  Forming the covariance squares its condition number, so features on wildly
+  different scales cost accuracy in the eigendecomposition well before the
+  matrix is singular. A compiled backend absorbs this, but the pure-Nx
+  eigendecomposition does not, and features spanning several orders of magnitude
+  can lose the smallest eigenvalues there entirely. Standardizing the features
+  beforehand, with `Scholar.Preprocessing.StandardScaler`, avoids it either way.
 
   Reference:
 
@@ -33,11 +47,13 @@ defmodule Scholar.DiscriminantAnalysis.Quadratic do
   @derive {Nx.Container, containers: [:means, :priors, :scalings, :rotations]}
   defstruct [:means, :priors, :scalings, :rotations]
 
-  # `Nx.LinAlg.eigh/2` defaults to `eps: 1.0e-4`, which leaves the eigenvalues
-  # about three digits short. QDA divides by them and takes their log, so the
-  # error is amplified rather than absorbed. Measured against LAPACK on the same
-  # f64 covariance, 1.0e-8 lands the eigenvalues within ~1.0e-7; tightening
-  # further makes it worse, since the iteration then runs into `:max_iter`.
+  # Only matters for the pure-Nx eigendecomposition, which compilers like EXLA
+  # replace with a native routine. There `Nx.LinAlg.eigh/2` runs a Jacobi
+  # iteration whose default `eps: 1.0e-4` leaves the eigenvalues about three
+  # digits short, and QDA divides by them and takes their log, so that error is
+  # amplified rather than absorbed. Measured against LAPACK on the same f64
+  # covariance, 1.0e-8 lands the eigenvalues within ~1.0e-7; tightening further
+  # makes it worse, since the iteration then runs into `:max_iter`.
   @eigh_eps 1.0e-8
 
   opts_schema = [
@@ -128,23 +144,32 @@ defmodule Scholar.DiscriminantAnalysis.Quadratic do
     priors = class_count / num_samples
     means = Nx.dot(one_hot, [0], x, [0]) / Nx.new_axis(class_count, 1)
 
-    # One covariance per class. Looping keeps the working set at O(num_samples *
-    # num_features); masking every class at once would need a
-    # {num_classes, num_samples, num_features} intermediate instead.
-    covariances =
+    # One covariance per class, decomposed as we go. Looping keeps the working
+    # set at O(num_samples * num_features); masking every class at once would
+    # need a {num_classes, num_samples, num_features} intermediate instead.
+    #
+    # The decomposition also has to happen one class at a time: as of Nx 0.9.2,
+    # `Nx.LinAlg.eigh/2` on a stack of matrices only decomposes the first one
+    # under EXLA and returns zeros for the rest.
+    scalings = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {num_classes, num_features})
+
+    rotations =
       Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {num_classes, num_features, num_features})
 
-    {covariances, _} =
-      while {covariances, {x, one_hot, means, k = 0}}, k < num_classes do
+    {scalings, rotations, _} =
+      while {scalings, rotations, {x, one_hot, means, k = 0}}, k < num_classes do
         mask = Nx.new_axis(one_hot[[.., k]], 1)
         centered = (x - means[k]) * mask
         covariance = Nx.dot(centered, [0], centered, [0]) / (Nx.sum(mask) - 1)
 
-        covariances = Nx.put_slice(covariances, [k, 0, 0], Nx.new_axis(covariance, 0))
-        {covariances, {x, one_hot, means, k + 1}}
+        {eigenvalues, eigenvectors} = Nx.LinAlg.eigh(covariance, eps: @eigh_eps)
+
+        scalings = Nx.put_slice(scalings, [k, 0], Nx.new_axis(eigenvalues, 0))
+        rotations = Nx.put_slice(rotations, [k, 0, 0], Nx.new_axis(eigenvectors, 0))
+
+        {scalings, rotations, {x, one_hot, means, k + 1}}
       end
 
-    {scalings, rotations} = Nx.LinAlg.eigh(covariances, eps: @eigh_eps)
     scalings = (1 - reg_param) * scalings + reg_param
 
     %__MODULE__{

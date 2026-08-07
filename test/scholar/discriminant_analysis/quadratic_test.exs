@@ -131,6 +131,36 @@ defmodule Scholar.DiscriminantAnalysis.QuadraticTest do
       )
     end
 
+    test ":reg_param makes a class with fewer samples than features usable" do
+      # Class 1 has 3 samples in 4 dimensions, so its covariance is singular and
+      # its smallest eigenvalues are zero. Dividing the score by those is what
+      # `:reg_param` is there to avoid.
+      x =
+        Nx.tensor([
+          [0.0, 0.0, 0.0, 0.0],
+          [1.0, 0.0, 0.5, 0.25],
+          [0.0, 1.0, 0.25, 0.5],
+          [0.5, 0.5, 1.0, 0.0],
+          [0.25, 0.75, 0.0, 1.0],
+          [5.0, 5.0, 5.0, 5.0],
+          [5.5, 4.5, 5.25, 4.75],
+          [4.5, 5.5, 4.75, 5.25]
+        ])
+
+      y = Nx.tensor([0, 0, 0, 0, 0, 1, 1, 1])
+
+      unregularized = Quadratic.fit(x, y, num_classes: 2)
+      assert Nx.to_number(Nx.reduce_min(unregularized.scalings)) == 0.0
+
+      model = Quadratic.fit(x, y, num_classes: 2, reg_param: 0.5)
+      assert Nx.to_number(Nx.reduce_min(model.scalings)) >= 0.5
+
+      scores = Quadratic.decision_function(model, x)
+      assert Nx.to_number(Nx.any(Nx.is_infinity(scores))) == 0
+      assert Nx.to_number(Nx.any(Nx.is_nan(scores))) == 0
+      assert Quadratic.predict(model, x) == y
+    end
+
     test "accepts integer input" do
       x_int = Nx.tensor([[-2, -1], [-1, -1], [-1, -2], [-2, -2], [1, 1], [1, 2], [2, 1], [2, 2]])
 
