@@ -144,30 +144,37 @@ defmodule Scholar.DiscriminantAnalysis.Quadratic do
     priors = class_count / num_samples
     means = Nx.dot(one_hot, [0], x, [0]) / Nx.new_axis(class_count, 1)
 
+    # Every sample centered by the mean of its own class, so the loop below only
+    # has to select rows rather than recentre them.
+    centered = x - Nx.take(means, y, axis: 0)
+
     # One covariance per class, decomposed as we go. Looping keeps the working
     # set at O(num_samples * num_features); masking every class at once would
     # need a {num_classes, num_samples, num_features} intermediate instead.
     #
-    # The decomposition also has to happen one class at a time: as of Nx 0.9.2,
-    # `Nx.LinAlg.eigh/2` on a stack of matrices only decomposes the first one
-    # under EXLA and returns zeros for the rest.
+    # The decomposition also has to happen one class at a time. On Nx 0.9.x,
+    # `Nx.LinAlg.eigh/2` over a stack of matrices decomposes only the first one
+    # under EXLA and returns zeros for the rest. Fixed in Nx 0.13, but Scholar
+    # still supports 0.9.
     scalings = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {num_classes, num_features})
 
     rotations =
       Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {num_classes, num_features, num_features})
 
     {scalings, rotations, _} =
-      while {scalings, rotations, {x, one_hot, means, k = 0}}, k < num_classes do
-        mask = Nx.new_axis(one_hot[[.., k]], 1)
-        centered = (x - means[k]) * mask
-        covariance = Nx.dot(centered, [0], centered, [0]) / (Nx.sum(mask) - 1)
+      while {scalings, rotations, {centered, one_hot, class_count, k = Nx.u32(0)}},
+            k < num_classes do
+        # The mask is one or zero, so masking a single side of the product is
+        # enough to drop the rows belonging to the other classes.
+        in_class = Nx.new_axis(one_hot[[.., k]], 1)
+        covariance = Nx.dot(centered * in_class, [0], centered, [0]) / (class_count[k] - 1)
 
         {eigenvalues, eigenvectors} = Nx.LinAlg.eigh(covariance, eps: @eigh_eps)
 
         scalings = Nx.put_slice(scalings, [k, 0], Nx.new_axis(eigenvalues, 0))
         rotations = Nx.put_slice(rotations, [k, 0, 0], Nx.new_axis(eigenvectors, 0))
 
-        {scalings, rotations, {x, one_hot, means, k + 1}}
+        {scalings, rotations, {centered, one_hot, class_count, k + 1}}
       end
 
     scalings = (1 - reg_param) * scalings + reg_param
@@ -198,15 +205,17 @@ defmodule Scholar.DiscriminantAnalysis.Quadratic do
        ) do
     x = to_float(x)
 
-    # {num_classes, num_samples, num_features}
-    centered = Nx.new_axis(x, 0) - Nx.new_axis(means, 1)
-    rotated = Nx.dot(centered, [2], [0], rotations, [1], [0])
+    # Rotating `x - mean` is the same as rotating each separately, and doing it
+    # separately keeps one {num_samples, num_classes, num_features} tensor around
+    # instead of two.
+    rotated =
+      Nx.dot(x, [1], rotations, [1]) -
+        Nx.new_axis(Nx.dot(means, [1], [0], rotations, [1], [0]), 0)
 
-    mahalanobis = Nx.sum(rotated ** 2 / Nx.new_axis(scalings, 1), axes: [2])
+    mahalanobis = Nx.sum(rotated ** 2 / Nx.new_axis(scalings, 0), axes: [2])
     log_det = Nx.sum(Nx.log(scalings), axes: [1])
 
-    scores = -0.5 * (mahalanobis + Nx.new_axis(log_det, 1)) + Nx.new_axis(Nx.log(priors), 1)
-    Nx.transpose(scores)
+    -0.5 * (mahalanobis + Nx.new_axis(log_det, 0)) + Nx.new_axis(Nx.log(priors), 0)
   end
 
   @doc """
