@@ -149,13 +149,15 @@ defmodule Scholar.DiscriminantAnalysis.Quadratic do
     centered = x - Nx.take(means, y, axis: 0)
 
     # One covariance per class, decomposed as we go. Looping keeps the working
-    # set at O(num_samples * num_features); masking every class at once would
-    # need a {num_classes, num_samples, num_features} intermediate instead.
+    # set at O(num_samples * num_features), where masking every class at once
+    # would need a {num_classes, num_samples, num_features} intermediate, and it
+    # never holds the whole stack of covariances at once. Decomposing the stack
+    # in one batched call instead measures the same under EXLA, so there is
+    # nothing to win by holding it.
     #
-    # The decomposition also has to happen one class at a time. On Nx 0.9.x,
-    # `Nx.LinAlg.eigh/2` over a stack of matrices decomposes only the first one
-    # under EXLA and returns zeros for the rest. Fixed in Nx 0.13, but Scholar
-    # still supports 0.9.
+    # It also sidesteps `Nx.LinAlg.eigh/2` over a stack of matrices, which on
+    # Nx 0.9.x under EXLA decomposes only the first one and returns zeros for
+    # the rest. Fixed in Nx 0.13.
     scalings = Nx.broadcast(Nx.tensor(0, type: Nx.type(x)), {num_classes, num_features})
 
     rotations =
