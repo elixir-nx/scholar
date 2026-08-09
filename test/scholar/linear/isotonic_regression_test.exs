@@ -255,4 +255,26 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       Nx.tensor([180.6462860107422, 159.4623260498047, 183.35507202148438])
     )
   end
+
+  test "predict does not depend on the order of the input" do
+    # A swap of two entries is its own inverse, so it cannot tell a permutation apart
+    # from its inverse. This uses a 3-cycle, which can.
+    n = 100
+    x = Nx.iota({n})
+
+    model = x |> IsotonicRegression.fit(y()) |> IsotonicRegression.preprocess()
+
+    sorted = Nx.tensor([23.64, 34.64, 46.93])
+    shuffled = Nx.tensor([46.93, 23.64, 34.64])
+
+    [a, b, c] = Nx.to_list(IsotonicRegression.predict(model, sorted))
+
+    assert_all_close(
+      IsotonicRegression.predict(model, shuffled),
+      Nx.tensor([c, a, b])
+    )
+
+    # Fitted with the default :increasing?, so predictions must not decrease with x.
+    assert a <= b and b <= c
+  end
 end

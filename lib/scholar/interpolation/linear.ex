@@ -132,7 +132,7 @@ defmodule Scholar.Interpolation.Linear do
   defnp predict_n(%__MODULE__{x: x, coefficients: coefficients} = _model, target_x, opts) do
     shape = Nx.shape(target_x)
     target_x = Nx.flatten(target_x)
-    indices = Nx.argsort(target_x)
+    sort_idx = Nx.argsort(target_x)
 
     left_bound = x[0]
     right_bound = x[-1]
@@ -180,8 +180,6 @@ defmodule Scholar.Interpolation.Linear do
         {{res, i}, {x, right_bound, coefficients, target_x, j}}
       end
 
-    {res, i}
-
     # while with bigger than right_bound
 
     {res, _} =
@@ -200,7 +198,9 @@ defmodule Scholar.Interpolation.Linear do
         {res, {x, coefficients, target_x, i + 1}}
       end
 
-    res = Nx.take(res, indices)
+    # `res` is in sorted order, so restoring the input order takes the inverse of
+    # `sort_idx`, which for a permutation is its argsort.
+    res = Nx.take(res, Nx.argsort(sort_idx))
     Nx.reshape(res, shape)
   end
 

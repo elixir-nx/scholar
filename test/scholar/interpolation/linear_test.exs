@@ -52,6 +52,29 @@ defmodule Scholar.Interpolation.LinearTest do
                Nx.tensor([[[0.0], [0.0], [0.5], [3], [7]]])
     end
 
+    test "predict/2 with unsorted target_x" do
+      # `predict/2` sorts `target_x` internally, so the results have to be mapped back
+      # to the order they came in.
+      x = Nx.tensor([1.0, 2.0, 3.0])
+      y = Nx.tensor([10.0, 20.0, 30.0])
+
+      model = Linear.fit(x, y)
+
+      assert Linear.predict(model, Nx.tensor([3.0, 1.0, 2.0])) ==
+               Nx.tensor([30.0, 10.0, 20.0])
+    end
+
+    test "predict/2 with unsorted target_x outside the training bounds" do
+      x = Nx.tensor([1.0, 2.0, 3.0])
+      y = Nx.tensor([10.0, 20.0, 30.0])
+
+      model = Linear.fit(x, y)
+      target_x = Nx.tensor([3.0, 0.0, 2.0, 5.0, 1.0])
+
+      assert Linear.predict(model, target_x, left: -1.0, right: 99.0) ==
+               Nx.tensor([30.0, -1.0, 20.0, 99.0, 10.0])
+    end
+
     test "with different types" do
       x_s = Nx.tensor([1, 2, 3], type: :u64)
       y_s = Nx.tensor([1.0, 2.0, 3.0], type: :f64)
