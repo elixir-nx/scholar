@@ -9,7 +9,7 @@ defmodule Scholar.MixProject do
       app: :scholar,
       name: "Scholar",
       version: @version,
-      elixir: "~> 1.14",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       deps: deps(),
       docs: &docs/0,
@@ -29,7 +29,7 @@ defmodule Scholar.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.34", only: :docs},
-      {:nx, "~> 0.9"},
+      {:nx, "~> 0.13"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, ">= 0.0.0", only: :test},
       {:polaris, "~> 0.1"},
