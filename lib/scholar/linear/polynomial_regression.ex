@@ -121,7 +121,7 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> Scholar.Linear.PolynomialRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
       #Nx.Tensor<
         f32[1]
-        [3.8487606048583984]
+        [3.848881]
       >
   """
   deftransform predict(model, x) do

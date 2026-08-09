@@ -75,7 +75,7 @@ defmodule Scholar.Metrics.Clustering do
       iex> Scholar.Metrics.Clustering.silhouette_score(x, labels, num_clusters: 2)
       #Nx.Tensor<
         f32
-        0.6749133467674255
+        0.67491335
       >
 
       iex> x = Nx.tensor([[0.1, 0], [0, 1], [22, 65], [42, 3], [4.2, 51]])

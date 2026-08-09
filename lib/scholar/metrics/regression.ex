@@ -125,12 +125,12 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.mean_square_log_error(y_true, y_pred)
       #Nx.Tensor<
         f32
-        0.24022650718688965
+        0.2402265
       >
       iex> Scholar.Metrics.Regression.mean_square_log_error(y_true, y_pred, axes: [0])
       #Nx.Tensor<
         f32[2]
-        [0.4804530143737793, 0.0]
+        [0.480453, 0.0]
       >
   """
   deftransform mean_square_log_error(y_true, y_pred, opts \\ []) do
@@ -157,7 +157,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.mean_absolute_percentage_error(y_true, y_pred)
       #Nx.Tensor<
         f32
-        0.3273809552192688
+        0.32738096
       >
 
       iex> y_true = Nx.tensor([1.0, 0.0, 2.4, 7.0])
@@ -165,14 +165,14 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.mean_absolute_percentage_error(y_true, y_pred)
       #Nx.Tensor<
         f32
-        209715.28125
+        209715.28
       >
       iex> y_true = Nx.tensor([[0.5, 1], [-1, 1], [7, -6]])
       iex> y_pred = Nx.tensor([[0, 2], [-1, 2], [8, -5]])
       iex> Scholar.Metrics.Regression.mean_absolute_percentage_error(y_true, y_pred, axes: [0])
       #Nx.Tensor<
         f32[2]
-        [0.380952388048172, 0.7222222685813904]
+        [0.3809524, 0.72222227]
       >
   """
   deftransform mean_absolute_percentage_error(y_true, y_pred, opts \\ []) do
@@ -222,14 +222,14 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.mean_tweedie_deviance(y_true, y_pred, 1)
       #Nx.Tensor<
         f32
-        0.18411168456077576
+        0.18411168
       >
       iex> y_true = Nx.tensor([[1, 1, 1, 1], [1, 2, 2, 1]], type: :u32)
       iex> y_pred = Nx.tensor([[2, 2, 1, 1], [2, 2, 2, 1]], type: :u32)
       iex> Scholar.Metrics.Regression.mean_tweedie_deviance(y_true, y_pred, 1, axes: [0])
       #Nx.Tensor<
         f32[4]
-        [0.6137056350708008, 0.3068528175354004, 0.0, 0.0]
+        [0.61370564, 0.30685282, 0.0, 0.0]
       >
   """
   deftransform mean_tweedie_deviance(y_true, y_pred, power, opts \\ []) do
@@ -253,7 +253,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.mean_tweedie_deviance!(y_true, y_pred, 1)
       #Nx.Tensor<
         f32
-        0.18411168456077576
+        0.18411168
       >
   """
   def mean_tweedie_deviance!(y_true, y_pred, power, opts \\ []) do
@@ -350,7 +350,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.mean_poisson_deviance(y_true, y_pred)
       #Nx.Tensor<
         f32
-        0.18411168456077576
+        0.18411168
       >
 
       iex> y_true = Nx.tensor([[1, 1, 1, 1], [1, 2, 2, 1]], type: :u32)
@@ -358,7 +358,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.mean_poisson_deviance(y_true, y_pred, axes: [1])
       #Nx.Tensor<
         f32[2]
-        [0.3068528175354004, 0.1534264087677002]
+        [0.30685282, 0.15342641]
       >
   """
   deftransform mean_poisson_deviance(y_true, y_pred, opts \\ []) do
@@ -380,14 +380,14 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.mean_gamma_deviance(y_true, y_pred)
       #Nx.Tensor<
         f32
-        0.115888312458992
+        0.11588831
       >
       iex> y_true = Nx.tensor([[1, 1, 1, 1, 1], [2, 2, 1, 3, 1]], type: :u32)
       iex> y_pred = Nx.tensor([[2, 2, 1, 1, 2], [2, 2, 1, 3, 1]], type: :u32)
       iex> Scholar.Metrics.Regression.mean_gamma_deviance(y_true, y_pred, axes: [0])
       #Nx.Tensor<
         f32[5]
-        [0.1931471824645996, 0.1931471824645996, 0.0, 0.0, 0.1931471824645996]
+        [0.19314718, 0.19314718, 0.0, 0.0, 0.19314718]
       >
   """
   deftransform mean_gamma_deviance(y_true, y_pred, opts \\ []) do
@@ -588,7 +588,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.d2_tweedie_score(y_true, y_pred, 1)
       #Nx.Tensor<
         f32
-        0.32202935218811035
+        0.32202935
       >
   """
   defn d2_tweedie_score(y_true, y_pred, power) do
@@ -692,7 +692,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.mean_pinball_loss(y_true, y_pred, alpha: 0.5, axes: [0])
       #Nx.Tensor<
         f32[4]
-        [0.5, 0.3333333432674408, 0.0, 0.0]
+        [0.5, 0.33333334, 0.0, 0.0]
       >
   """
   deftransform mean_pinball_loss(y_true, y_pred, opts \\ []) do
@@ -768,7 +768,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred)
       #Nx.Tensor<
         f32
-        0.7647058963775635
+        0.7647059
       >
       iex> y_true = Nx.tensor([[0.5, 1], [-1, 1], [7, -6]], type: {:f, 64})
       iex> y_pred = Nx.tensor([[0, 2], [-1, 2], [8, -5]], type: {:f, 64})
@@ -782,7 +782,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.d2_absolute_error_score(y_true, y_pred, axes: [0])
       #Nx.Tensor<
         f32[2]
-        [0.8125, 0.5714285373687744]
+        [0.8125, 0.57142854]
       >
   """
 
@@ -841,7 +841,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.d2_pinball_score(y_true, y_pred, alpha: 0.9)
       #Nx.Tensor<
         f32
-        0.7727271914482117
+        0.7727272
       >
       iex> Scholar.Metrics.Regression.d2_pinball_score(y_true, y_true, alpha: 0.1)
       #Nx.Tensor<
@@ -853,7 +853,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.d2_pinball_score(y_true, y_pred, axes: [0])
       #Nx.Tensor<
         f32[2]
-        [0.8125, 0.5714285373687744]
+        [0.8125, 0.57142854]
       >
   """
 

@@ -238,7 +238,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.accuracy(Nx.tensor([1, 0, 0]), Nx.tensor([1, 0, 1]))
       #Nx.Tensor<
         f32
-        0.6666666865348816
+        0.6666667
       >
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
@@ -246,7 +246,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.accuracy(y_true, y_pred)
       #Nx.Tensor<
         f32
-        0.6000000238418579
+        0.6
       >
 
       iex> y_true = Nx.tensor([0, 1, 1, 1, 1, 0, 2, 1, 0, 1], type: :u32)
@@ -285,7 +285,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.binary_precision(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
       #Nx.Tensor<
         f32
-        0.6666666865348816
+        0.6666667
       >
   """
   defn binary_precision(y_true, y_pred) do
@@ -315,7 +315,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.precision(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
-        [0.6666666865348816, 1.0, 0.25]
+        [0.6666667, 1.0, 0.25]
       >
   """
   deftransform precision(y_true, y_pred, opts \\ []) do
@@ -344,7 +344,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.binary_recall(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
       #Nx.Tensor<
         f32
-        0.6666666865348816
+        0.6666667
       >
   """
   defn binary_recall(y_true, y_pred) do
@@ -374,7 +374,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.recall(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
-        [0.6666666865348816, 0.5, 1.0]
+        [0.6666667, 0.5, 1.0]
       >
   """
   deftransform recall(y_true, y_pred, opts \\ []) do
@@ -420,7 +420,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.binary_sensitivity(Nx.tensor([0, 1, 1, 1]), Nx.tensor([1, 0, 1, 1]))
       #Nx.Tensor<
         f32
-        0.6666666865348816
+        0.6666667
       >
   """
   defn binary_sensitivity(y_true, y_pred) do
@@ -443,7 +443,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.sensitivity(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
-        [0.6666666865348816, 0.5, 1.0]
+        [0.6666667, 0.5, 1.0]
       >
   """
   deftransform sensitivity(y_true, y_pred, opts \\ []) do
@@ -497,7 +497,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.specificity(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
-        [0.8571428656578064, 1.0, 0.6666666865348816]
+        [0.85714287, 1.0, 0.6666667]
       >
   """
   deftransform specificity(y_true, y_pred, opts \\ []) do
@@ -545,9 +545,9 @@ defmodule Scholar.Metrics.Classification do
       #Nx.Tensor<
         f32[3][3]
         [
-          [0.6666666865348816, 1.0, 0.0],
-          [0.3333333432674408, 0.0, 0.1304347813129425],
-          [0.0, 0.0, 0.8695651888847351]
+          [0.6666667, 1.0, 0.0],
+          [0.33333334, 0.0, 0.13043478],
+          [0.0, 0.0, 0.8695652]
         ]
       >
   """
@@ -1007,7 +1007,7 @@ defmodule Scholar.Metrics.Classification do
       iex> precision
       #Nx.Tensor<
         f32[5]
-        [0.6666666865348816, 0.800000011920929, 0.6666666865348816, 1.0, 1.0]
+        [0.6666667, 0.8, 0.6666667, 1.0, 1.0]
       >
       iex> recall
       #Nx.Tensor<
@@ -1017,7 +1017,7 @@ defmodule Scholar.Metrics.Classification do
       iex> thresholds
       #Nx.Tensor<
         f32[4]
-        [0.10000000149011612, 0.3499999940395355, 0.4000000059604645, 0.800000011920929]
+        [0.1, 0.35, 0.4, 0.8]
       >
   """
   defn precision_recall_curve(
@@ -1063,7 +1063,7 @@ defmodule Scholar.Metrics.Classification do
       iex> ap
       #Nx.Tensor<
         f32
-        0.8999999761581421
+        0.9
       >
   """
   defn average_precision_score(
@@ -1107,7 +1107,7 @@ defmodule Scholar.Metrics.Classification do
       iex> thresholds
       #Nx.Tensor<
         f32[5]
-        [1.7999999523162842, 0.800000011920929, 0.4000000059604645, 0.3499999940395355, 0.10000000149011612]
+        [1.8, 0.8, 0.4, 0.35, 0.1]
       >
   """
   defn roc_curve(y_true, y_score, distinct_value_indices, weights \\ 1.0) do
@@ -1516,7 +1516,7 @@ defmodule Scholar.Metrics.Classification do
       iex> thresholds
       #Nx.Tensor<
         f32[4]
-        [0.10000000149011612, 0.3499999940395355, 0.4000000059604645, 0.800000011920929]
+        [0.1, 0.35, 0.4, 0.8]
       >
 
       iex> y_true = Nx.tensor([0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1])
@@ -1526,17 +1526,17 @@ defmodule Scholar.Metrics.Classification do
       iex> fpr
       #Nx.Tensor<
         f32[9]
-        [1.0, 0.6666666865348816, 0.6666666865348816, 0.6666666865348816, 0.3333333432674408, 0.3333333432674408, 0.1666666716337204, 0.1666666716337204, 0.0]
+        [1.0, 0.6666667, 0.6666667, 0.6666667, 0.33333334, 0.33333334, 0.16666667, 0.16666667, 0.0]
       >
       iex> fnr
       #Nx.Tensor<
         f32[9]
-        [0.0, 0.0, 0.2222222238779068, 0.4444444477558136, 0.4444444477558136, 0.6666666865348816, 0.6666666865348816, 0.8888888955116272, 0.8888888955116272]
+        [0.0, 0.0, 0.22222222, 0.44444445, 0.44444445, 0.6666667, 0.6666667, 0.8888889, 0.8888889]
       >
       iex> thresholds
       #Nx.Tensor<
         f32[9]
-        [0.10000000149011612, 0.20000000298023224, 0.30000001192092896, 0.4000000059604645, 0.5, 0.6000000238418579, 0.699999988079071, 0.800000011920929, 0.8999999761581421]
+        [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
       >
   """
   defn det_curve(y_true, y_score, distinct_value_indices, weights \\ 1.0) do
