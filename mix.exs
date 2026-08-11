@@ -76,6 +76,7 @@ defmodule Scholar.MixProject do
           Scholar.Decomposition.KernelPCA,
           Scholar.Decomposition.PCA,
           Scholar.DiscriminantAnalysis.Linear,
+          Scholar.DiscriminantAnalysis.Quadratic,
           Scholar.Integrate,
           Scholar.Interpolation.BezierSpline,
           Scholar.Interpolation.CubicSpline,
