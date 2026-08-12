@@ -70,7 +70,7 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
   test "compute scores" do
     {x, y} = diabetes_data()
     eps = Nx.Constants.smallest_positive_normal(:f64)
-    alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
+    alpha = Nx.divide(1, Nx.add(Nx.variance(y), eps))
     lambda = 1.0
     alpha_1 = 0.1
     alpha_2 = 0.1
@@ -92,6 +92,55 @@ defmodule Scholar.Linear.BayesianRidgeRegressionTest do
 
     first_score = brr.scores[0]
     assert_all_close(score, first_score, rtol: 0.05)
+  end
+
+  test "alpha and lambda converge without oscillating across iteration counts" do
+    {x, y} = diabetes_data()
+    y = Nx.flatten(y)
+
+    # Reference alpha_ values from sklearn 1.6.1 BayesianRidge on the same data
+    # (default alpha_init/lambda_init, default hyperparameters).
+    reference_alpha = %{
+      1 => 2.51380100e-4,
+      5 => 3.37994664e-4,
+      50 => 3.51229877e-4,
+      51 => 3.51229877e-4,
+      299 => 3.51229877e-4,
+      300 => 3.51229877e-4
+    }
+
+    for {iterations, expected_alpha} <- reference_alpha do
+      model = BayesianRidgeRegression.fit(x, y, iterations: iterations)
+      assert_all_close(model.alpha, expected_alpha, rtol: 5.0e-3)
+    end
+  end
+
+  test "alpha and lambda are stable between adjacent iteration counts" do
+    {x, y} = diabetes_data()
+    y = Nx.flatten(y)
+
+    for {low_iters, high_iters} <- [{50, 51}, {100, 101}, {299, 300}] do
+      low = BayesianRidgeRegression.fit(x, y, iterations: low_iters)
+      high = BayesianRidgeRegression.fit(x, y, iterations: high_iters)
+
+      assert_all_close(low.alpha, high.alpha, rtol: 1.0e-3)
+      assert_all_close(low.lambda, high.lambda, rtol: 1.0e-3)
+      assert_all_close(low.coefficients, high.coefficients, atol: 1.0e-4)
+    end
+  end
+
+  test "default alpha_init matches the documented 1/Var(y)" do
+    {x, y} = diabetes_data()
+    y = Nx.flatten(y)
+
+    eps = Nx.Constants.smallest_positive_normal(:f32)
+    alpha_init = Nx.to_number(Nx.divide(1, Nx.add(Nx.variance(y), eps)))
+
+    default_model = BayesianRidgeRegression.fit(x, y, iterations: 1)
+    explicit_model = BayesianRidgeRegression.fit(x, y, iterations: 1, alpha_init: alpha_init)
+
+    assert_all_close(default_model.alpha, explicit_model.alpha, atol: 1.0e-10)
+    assert_all_close(default_model.coefficients, explicit_model.coefficients, atol: 1.0e-6)
   end
 
   defnp compute_score(x, y, alpha, lambda, alpha_1, alpha_2, lambda_1, lambda_2) do

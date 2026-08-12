@@ -214,12 +214,12 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       iex> model.coefficients
       #Nx.Tensor<
         f32[1]
-        [0.9932512044906616]
+        [0.9999999403953552]
       >
       iex> model.intercept
       #Nx.Tensor<
         f32
-        0.03644371032714844
+        4.76837158203125e-7
       >
   """
   deftransform fit(x, y, opts \\ []) do
@@ -241,7 +241,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     # handle vector types
     # handle default alpha value, add eps to avoid division by 0
     eps = Nx.Constants.smallest_positive_normal(x_type)
-    default_alpha = Nx.divide(1, Nx.add(Nx.variance(x), eps))
+    default_alpha = Nx.divide(1, Nx.add(Nx.variance(y), eps))
     alpha = Keyword.get(opts, :alpha_init, default_alpha)
     alpha = Nx.tensor(alpha, type: x_type)
 
@@ -313,11 +313,11 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
     {n_samples, n_features} = Nx.shape(x)
     {coef, rmse} = update_coef(x, y, n_samples, n_features, xt_y, u, vh, eigenvals, alpha, lambda)
 
-    {{coef, alpha, lambda, _rmse, iter, has_converged, scores}, _} =
+    {{coef, _rmse, alpha, lambda, iter, has_converged, scores}, _} =
       while {{coef, rmse, alpha, lambda, iter = Nx.u64(0), has_converged = Nx.u8(0),
               scores = scores},
              {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}},
-            iter <= iterations and not has_converged do
+            iter < iterations and not has_converged do
         scores =
           if opts[:compute_scores?] do
             new_score =
@@ -349,7 +349,7 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
 
         has_converged = Nx.sum(Nx.abs(coef - coef_new)) < 1.0e-8
 
-        {{coef_new, alpha, lambda, rmse, iter + 1, has_converged, scores},
+        {{coef_new, rmse, alpha, lambda, iter + 1, has_converged, scores},
          {x, y, xt_y, u, s, vh, eigenvals, alpha_1, alpha_2, lambda_1, lambda_2, iterations}}
       end
 
@@ -437,8 +437,8 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       iex> model = Scholar.Linear.BayesianRidgeRegression.fit(x, y)
       iex> Scholar.Linear.BayesianRidgeRegression.predict(model, Nx.tensor([[1], [3], [4]]))
       Nx.tensor(
-        [1.02969491481781, 3.0161972045898438, 4.009448528289795]  
-      )  
+        [1.0000004768371582, 3.000000238418579, 4.0]
+      )
   """
   deftransform predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
     predict_n(coeff, intercept, x)
