@@ -52,6 +52,7 @@ defmodule Scholar.Cluster.HDBSCAN do
       Campello, Moulavi and Sander, 2013.
   """
   import Nx.Defn
+  import Scholar.Shared
 
   @derive {Nx.Container, containers: [:labels]}
   defstruct [:labels]
@@ -184,7 +185,10 @@ defmodule Scholar.Cluster.HDBSCAN do
     metric = opts[:metric]
     min_samples = opts[:min_samples]
 
-    distances = metric.(x, x)
+    # The metrics subtract and square in the dtype they are given. On an integer input that
+    # overflows, and on an unsigned one the subtraction wraps, which makes the matrix
+    # asymmetric and the clustering meaningless. Floating point first.
+    distances = metric.(to_float(x), to_float(x))
     core = Nx.sort(distances, axis: 1)[[.., min_samples - 1]]
 
     Nx.max(Nx.max(Nx.new_axis(core, 1), Nx.new_axis(core, 0)), distances)

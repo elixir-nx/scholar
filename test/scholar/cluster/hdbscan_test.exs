@@ -183,6 +183,55 @@ defmodule Scholar.Cluster.HDBSCANTest do
 
       assert model.labels == Nx.tensor([0, 0, 0, 0, 1, 1, 1, 1], type: :s32)
     end
+
+    # The distance metrics subtract and square in whatever dtype they are handed. Left in an
+    # integer type that overflows, and on an unsigned type the subtraction wraps, which makes
+    # the matrix asymmetric and then the clustering meaningless.
+    test "every numeric dtype gives the same answer" do
+      points = [[1, 2], [2, 2], [2, 3], [1, 3], [8, 7], [8, 8], [7, 8], [7, 7]]
+      expected = Nx.tensor([0, 0, 0, 0, 1, 1, 1, 1], type: :s32)
+
+      for type <- [:u8, :s8, :u16, :s16, :u32, :s32, :u64, :s64, :f16, :bf16, :f32, :f64] do
+        model =
+          Nx.tensor(points, type: type)
+          |> HDBSCAN.fit(min_cluster_size: 3, min_samples: 2)
+
+        assert model.labels == expected, "#{inspect(type)} disagrees"
+      end
+    end
+
+    test "unsigned input works with every Minkowski exponent" do
+      points = [
+        [1, 2],
+        [2, 2],
+        [2, 3],
+        [1, 3],
+        [8, 7],
+        [8, 8],
+        [7, 8],
+        [7, 7],
+        [1, 8],
+        [9, 1],
+        [4, 4],
+        [5, 5]
+      ]
+
+      signed =
+        Nx.tensor(points, type: :s64)
+        |> HDBSCAN.fit(min_cluster_size: 2, min_samples: 2, metric: {:minkowski, 1})
+
+      for type <- [:u8, :u16, :u32, :u64], p <- [1, 3, :infinity] do
+        model =
+          Nx.tensor(points, type: type)
+          |> HDBSCAN.fit(min_cluster_size: 2, min_samples: 2, metric: {:minkowski, p})
+
+        assert Nx.shape(model.labels) == {12}
+
+        if p == 1 do
+          assert model.labels == signed.labels, "#{inspect(type)} disagrees with s64"
+        end
+      end
+    end
   end
 
   describe "compilation and precision" do
