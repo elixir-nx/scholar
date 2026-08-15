@@ -32,7 +32,7 @@ defmodule Scholar.Cluster.HDBSCAN do
   ties differently while producing dendrograms of identical height. So the labels here can
   differ from `sklearn.cluster.HDBSCAN` on such data, without either being wrong. On data
   where the merge heights are all distinct, and therefore the dendrogram is unique, the two
-  agree.
+  agree on which points are grouped together, up to which cluster gets which integer id.
 
   ## Not yet supported
 
