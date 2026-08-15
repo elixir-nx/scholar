@@ -135,6 +135,17 @@ defmodule Scholar.Cluster.Hierarchical do
       If clade `k` was created by merging clades `i` and `j`, then
       `sizes[k] == sizes[i] + sizes[j]`.
 
+  ## Incomplete dendrograms
+
+  Non-finite dissimilarities, which come from `:nan` or infinite values in `data` or in a
+  precomputed matrix, can leave two or more clades with no finite distance to merge by. There
+  is then no meaningful pair to merge next, so the remaining merges are not made and are
+  reported as `clades` of `[-1, -1]`, `sizes` of `0`, and `NaN` dissimilarities, sorted to the
+  end. Test for them with `clades` or `sizes`, since a merge that really was made can also
+  carry a `NaN` dissimilarity when the underlying distances are themselves `NaN`:
+
+      Nx.any(Nx.equal(model.sizes, 0))
+
   ## Examples
 
       iex> data = Nx.tensor([[2], [7], [9], [0], [3]])
@@ -231,9 +242,12 @@ defmodule Scholar.Cluster.Hierarchical do
     cluster_sizes = Nx.broadcast(1, {n})
     diss = Nx.tensor(:infinity, type: Nx.type(pairwise)) |> Nx.broadcast({n - 1})
 
-    {{clades, diss, sizes, _cluster_sizes}, _} =
-      while {{clades, diss, sizes, cluster_sizes}, {count = 0, pointers, pairwise}},
-            count < n - 1 do
+    {{clades, diss, sizes, _cluster_sizes, count}, _} =
+      while {{clades, diss, sizes, cluster_sizes, count = 0},
+             {pointers, pairwise, aborted = Nx.u8(0)}},
+            count < n - 1 and aborted == 0 do
+        count_before_round = count
+
         # Indexes of who I am nearest to
         nearest = Nx.argmin(pairwise, axis: 1)
 
@@ -261,10 +275,29 @@ defmodule Scholar.Cluster.Hierarchical do
             update_fun
           )
 
-        {{clades, diss, sizes, cluster_sizes}, {count, pointers, pairwise}}
+        # Non-finite dissimilarities (from NaN or infinite input) can make argmin's
+        # tie-breaking point two clades at each other asymmetrically, so that neither
+        # is ever picked as the other's mutual nearest neighbor and no merge happens.
+        # That is otherwise impossible: for finite dissimilarities the globally closest
+        # pair of live clades is always mutually nearest, guaranteeing progress every
+        # round, which is why this never triggers on well formed input (count changing
+        # is the only thing checked, so it costs nothing when it doesn't apply). When it
+        # does happen, stop instead of guessing a merge: the two clades are stuck exactly
+        # because there is no finite distance to justify pairing them over any other.
+        aborted = count == count_before_round
+
+        {{clades, diss, sizes, cluster_sizes, count}, {pointers, pairwise, aborted}}
       end
 
     sizes = sizes[n..(2 * n - 2)]
+
+    # Rows the loop never got to fill, if it aborted above. Marking their dissimilarity
+    # NaN keeps them out of the way of the sort below (NaN orders after every real value,
+    # including infinity) and reports the incomplete merges as such instead of leaving
+    # their initial values looking like real ones.
+    incomplete = Nx.iota({n - 1}) >= count
+    diss = Nx.select(incomplete, Nx.Constants.nan(Nx.type(diss)), diss)
+
     perm = Nx.argsort(diss, stable: true, type: :u32)
 
     # A row at index `i` creates clade `n + i`. Reordering the rows therefore also requires
@@ -276,8 +309,20 @@ defmodule Scholar.Cluster.Hierarchical do
     clade_id_mapping =
       Nx.concatenate([Nx.iota({n}, type: Nx.type(clades)), inverse_perm + n])
 
-    clades = Nx.take(clade_id_mapping, clades[perm])
-    {clades, diss[perm], sizes[perm]}
+    # Incomplete rows sort to the tail, so the mask still marks them after the permutation.
+    # Their clade ids stay -1 rather than being mapped through the table.
+    sorted_clades = clades[perm]
+
+    clades =
+      Nx.select(
+        Nx.broadcast(Nx.new_axis(incomplete, -1), Nx.shape(sorted_clades)),
+        -1,
+        Nx.take(clade_id_mapping, Nx.max(sorted_clades, 0))
+      )
+
+    sizes = Nx.select(incomplete, 0, sizes[perm])
+
+    {clades, diss[perm], sizes}
   end
 
   defnp merge_clades(

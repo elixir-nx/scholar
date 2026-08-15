@@ -280,6 +280,89 @@ defmodule Scholar.Cluster.HierarchicalTest do
     end
   end
 
+  describe "non-finite dissimilarities" do
+    # Regression tests for a real hang: with a non-finite dissimilarity (from :nan or
+    # :infinity), argmin's tie-breaking can point two clades at each other without either
+    # being picked as the other's mutual nearest neighbor, so no merge ever happens. This is
+    # impossible for finite dissimilarities, where the globally closest pair of clades is
+    # always mutually nearest to each other, guaranteeing at least one merge every round.
+    # When it happens the loop now stops instead of running forever, and the merges it could
+    # not make are reported as NaN dissimilarities with clade -1 and size 0.
+    #
+    # Every case is wrapped in a Task with an explicit timeout so a regression fails fast
+    # with a clear message instead of hanging the whole test run.
+    defp fit_within(data, opts, ms \\ 5_000) do
+      task = Task.async(fn -> Hierarchical.fit(data, opts) end)
+
+      case Task.yield(task, ms) || Task.shutdown(task, :brutal_kill) do
+        {:ok, result} -> result
+        nil -> flunk("Hierarchical.fit did not terminate within #{ms}ms")
+      end
+    end
+
+    test "an infinite dissimilarity between the last two clades reports an incomplete merge" do
+      # Point 3 is infinitely far from everyone. Once points 0, 1 and 2 (mutually close)
+      # have merged, only two clades remain: {0, 1, 2} and {3}, at distance infinity, and
+      # there is no finite distance left to justify merging them over any other pairing.
+      d =
+        Nx.tensor([
+          [0.0, 1.0, 1.0, :infinity],
+          [1.0, 0.0, 1.4142135623730951, :infinity],
+          [1.0, 1.4142135623730951, 0.0, :infinity],
+          [:infinity, :infinity, :infinity, 0.0]
+        ])
+
+      model = fit_within(d, dissimilarity: :precomputed, linkage: :single)
+
+      assert model.num_points == 4
+      # The two finite merges are made and kept, in ascending order.
+      assert Nx.to_flat_list(model.dissimilarities) |> Enum.take(2) == [1.0, 1.0]
+      # The merge that could not be made is reported instead of guessed.
+      assert Nx.to_number(Nx.is_nan(model.dissimilarities[-1])) == 1
+      assert Nx.to_flat_list(model.clades[-1]) == [-1, -1]
+      assert Nx.to_number(model.sizes[-1]) == 0
+    end
+
+    test "a NaN coordinate still makes every merge" do
+      # NaN alone does not stall the loop: argmin keeps picking a mutual pair, so every
+      # merge is made. The dissimilarities really are NaN here, since the distances are,
+      # which is why an incomplete merge is identified by its clade and size, not by NaN.
+      x = Nx.tensor([[0.0, 0.0], [0.1, 0.0], [0.2, 0.0], [5.0, 5.0], [5.1, 5.0], [:nan, 0.0]])
+
+      model = fit_within(x, [])
+
+      assert model.num_points == 6
+      assert Nx.to_number(Nx.all(Nx.not_equal(model.clades, -1))) == 1
+      assert Nx.to_number(Nx.all(Nx.greater(model.sizes, 0))) == 1
+    end
+
+    test "an all-NaN input still makes every merge" do
+      x = Nx.broadcast(Nx.tensor(:nan), {6, 2})
+
+      model = fit_within(x, [])
+
+      assert model.num_points == 6
+      assert Nx.to_number(Nx.all(Nx.not_equal(model.clades, -1))) == 1
+      assert Nx.to_number(Nx.all(Nx.greater(model.sizes, 0))) == 1
+    end
+
+    test "does not change the result on finite data" do
+      # Aborting only ever triggers when a round makes zero progress, which cannot happen
+      # for finite dissimilarities, so this must match plain `fit/2` exactly.
+      data = Nx.tensor([[1, 5], [2, 5], [1, 4], [4, 5], [5, 5], [5, 4], [1, 2], [1, 1], [2, 1]])
+
+      for linkage <- [:average, :complete, :single, :ward, :weighted] do
+        assert fit_within(data, linkage: linkage) == Hierarchical.fit(data, linkage: linkage)
+      end
+    end
+
+    test "works with jit_apply" do
+      x = Nx.tensor([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [:nan, :nan], [5.0, 5.0]])
+
+      assert Nx.Defn.jit_apply(&Hierarchical.fit/1, [x]) == Hierarchical.fit(x)
+    end
+  end
+
   describe "errors" do
     test "need a square tensor when dissimilarity is precomputed" do
       assert_raise(
