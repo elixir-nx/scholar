@@ -12,7 +12,7 @@ defmodule Scholar.Cluster.Hierarchical do
 
   Due to the requirements of the current implementation, only these options are supported:
 
-    * `dissimilarity: :euclidean`
+    * `dissimilarity: :euclidean | :precomputed`
     * `linkage: :average | :complete | :single | :ward | :weighted`
 
   Our current algorithm is $O(\\frac{n^2}{p} \\cdot \\log(n))$ where $n$ is the number of data points
@@ -33,8 +33,8 @@ defmodule Scholar.Cluster.Hierarchical do
   defstruct [:clades, :dissimilarities, :num_points, :sizes]
 
   @dissimilarity_types [
-    :euclidean
-    # :precomputed
+    :euclidean,
+    :precomputed
   ]
 
   @linkage_types [
@@ -59,6 +59,17 @@ defmodule Scholar.Cluster.Hierarchical do
       Choices:
 
         * `:euclidean` - L2 norm.
+
+        * `:precomputed` - `data` is already a pairwise dissimilarity matrix of shape
+          `{num_obs, num_obs}` and is used as is. It must be symmetric. Its diagonal is
+          ignored, so it may hold any value. This is useful when the dissimilarity is
+          expensive to recompute, comes from outside Scholar, or is not derived from
+          coordinates at all, such as the mutual reachability used by density based
+          clustering.
+
+          Symmetry is not checked, since that would require inspecting the tensor.
+          Note also that `linkage: :ward` assumes euclidean dissimilarities, so pairing
+          it with an arbitrary precomputed matrix is not meaningful.
 
       See "Limitations" in the moduledoc for an explanation of the lack of choices.
       """
@@ -134,6 +145,18 @@ defmodule Scholar.Cluster.Hierarchical do
         num_points: 5,
         sizes: Nx.tensor([2, 2, 3, 5])
       }
+
+  Passing the pairwise dissimilarities directly gives the same model:
+
+      iex> data = Nx.tensor([[2], [7], [9], [0], [3]])
+      iex> dissimilarities = Scholar.Metrics.Distance.pairwise_euclidean(data)
+      iex> Hierarchical.fit(dissimilarities, dissimilarity: :precomputed)
+      %Scholar.Cluster.Hierarchical{
+        clades: Nx.tensor([[0, 4], [1, 2], [3, 5], [6, 7]]),
+        dissimilarities: Nx.tensor([1.0, 2.0, 2.0, 4.0]),
+        num_points: 5,
+        sizes: Nx.tensor([2, 2, 3, 5])
+      }
   """
   deftransform fit(%Nx.Tensor{} = data, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @fit_opts_schema)
@@ -142,7 +165,7 @@ defmodule Scholar.Cluster.Hierarchical do
 
     dissimilarity_fun =
       case dissimilarity do
-        # :precomputed -> &Function.identity/1
+        :precomputed -> &Function.identity/1
         :euclidean -> &Scholar.Metrics.Distance.pairwise_euclidean/1
       end
 
@@ -165,11 +188,18 @@ defmodule Scholar.Cluster.Hierarchical do
       end
 
     n =
-      case Nx.shape(data) do
-        {n, _num_features} ->
+      case {dissimilarity, Nx.shape(data)} do
+        {:precomputed, {n, n}} ->
           n
 
-        other ->
+        {:precomputed, other} ->
+          raise ArgumentError,
+                "Expected a square rank 2 (`{num_obs, num_obs}`) tensor when `dissimilarity: :precomputed`, found shape: #{inspect(other)}."
+
+        {_, {n, _num_features}} ->
+          n
+
+        {_, other} ->
           raise ArgumentError,
                 "Expected a rank 2 (`{num_obs, num_features}`) tensor, found shape: #{inspect(other)}."
       end

@@ -199,7 +199,108 @@ defmodule Scholar.Cluster.HierarchicalTest do
     end
   end
 
+  describe "precomputed dissimilarity" do
+    setup do
+      %{
+        data: Nx.tensor([[1, 5], [2, 5], [1, 4], [4, 5], [5, 5], [5, 4], [1, 2], [1, 1], [2, 1]]),
+        # A dissimilarity that does not come from coordinates and violates the triangle
+        # inequality, since d(0, 2) = 9 is greater than d(0, 1) + d(1, 2) = 2. It cannot be
+        # produced by a euclidean fit. Reference values from
+        # `scipy.cluster.hierarchy.linkage(squareform(d), method=...)`.
+        dissimilarities:
+          Nx.tensor([
+            [0.0, 1.0, 9.0, 8.0, 7.0],
+            [1.0, 0.0, 1.0, 8.0, 7.0],
+            [9.0, 1.0, 0.0, 8.0, 7.0],
+            [8.0, 8.0, 8.0, 0.0, 2.0],
+            [7.0, 7.0, 7.0, 2.0, 0.0]
+          ])
+      }
+    end
+
+    for linkage <- [:average, :complete, :single, :ward, :weighted] do
+      test "#{linkage} matches computing the dissimilarities internally", %{data: data} do
+        linkage = unquote(linkage)
+        dissimilarities = Scholar.Metrics.Distance.pairwise_euclidean(data)
+
+        assert Hierarchical.fit(dissimilarities, dissimilarity: :precomputed, linkage: linkage) ==
+                 Hierarchical.fit(data, dissimilarity: :euclidean, linkage: linkage)
+      end
+    end
+
+    test "single matches scipy", %{dissimilarities: d} do
+      model = Hierarchical.fit(d, dissimilarity: :precomputed, linkage: :single)
+
+      assert model.dissimilarities == Nx.tensor([1.0, 1.0, 2.0, 7.0])
+      assert model.sizes == Nx.tensor([2, 3, 2, 5])
+      assert model.num_points == 5
+    end
+
+    test "complete matches scipy", %{dissimilarities: d} do
+      model = Hierarchical.fit(d, dissimilarity: :precomputed, linkage: :complete)
+
+      assert model.dissimilarities == Nx.tensor([1.0, 2.0, 8.0, 9.0])
+    end
+
+    test "average matches scipy", %{dissimilarities: d} do
+      model = Hierarchical.fit(d, dissimilarity: :precomputed, linkage: :average)
+
+      assert model.dissimilarities == Nx.tensor([1.0, 2.0, 5.0, 7.5])
+    end
+
+    test "weighted matches scipy", %{dissimilarities: d} do
+      model = Hierarchical.fit(d, dissimilarity: :precomputed, linkage: :weighted)
+
+      assert model.dissimilarities == Nx.tensor([1.0, 2.0, 5.0, 7.5])
+    end
+
+    test "the diagonal is ignored", %{dissimilarities: d} do
+      polluted = Nx.put_diagonal(d, Nx.tensor([100.0, 100.0, 100.0, 100.0, 100.0]))
+
+      assert Hierarchical.fit(polluted, dissimilarity: :precomputed) ==
+               Hierarchical.fit(d, dissimilarity: :precomputed)
+    end
+
+    test "labels can be derived from a precomputed model", %{dissimilarities: d} do
+      model = Hierarchical.fit(d, dissimilarity: :precomputed, linkage: :single)
+
+      assert Hierarchical.labels_list(model, cluster_by: [num_clusters: 2]) == [0, 0, 0, 1, 1]
+    end
+
+    test "works with jit_apply", %{data: data} do
+      dissimilarities = Scholar.Metrics.Distance.pairwise_euclidean(data)
+
+      jitted =
+        Nx.Defn.jit_apply(
+          fn d -> Hierarchical.fit(d, dissimilarity: :precomputed, linkage: :single) end,
+          [dissimilarities]
+        )
+
+      assert jitted == Hierarchical.fit(dissimilarities, dissimilarity: :precomputed)
+    end
+  end
+
   describe "errors" do
+    test "need a square tensor when dissimilarity is precomputed" do
+      assert_raise(
+        ArgumentError,
+        "Expected a square rank 2 (`{num_obs, num_obs}`) tensor when `dissimilarity: :precomputed`, found shape: {3, 2}.",
+        fn ->
+          Hierarchical.fit(Nx.tensor([[1, 2], [3, 4], [5, 6]]), dissimilarity: :precomputed)
+        end
+      )
+    end
+
+    test "need a rank 2 tensor when dissimilarity is precomputed" do
+      assert_raise(
+        ArgumentError,
+        "Expected a square rank 2 (`{num_obs, num_obs}`) tensor when `dissimilarity: :precomputed`, found shape: {3}.",
+        fn ->
+          Hierarchical.fit(Nx.tensor([1, 2, 3]), dissimilarity: :precomputed)
+        end
+      )
+    end
+
     test "need a rank 2 tensor" do
       assert_raise(
         ArgumentError,
