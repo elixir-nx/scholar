@@ -205,12 +205,20 @@ defmodule Scholar.Cluster.HDBSCAN do
     cluster_birth = Nx.broadcast(Nx.tensor(0.0, type: Nx.type(dissimilarities)), {total})
     stability = Nx.broadcast(Nx.tensor(0.0, type: Nx.type(dissimilarities)), {total})
 
+    # Clusters are numbered by the order in which they are born during the top-down pass.
+    # `birth_order` maps a cluster to its slot, `birth_cluster` maps a slot back to a cluster.
+    # Two clusters are born per split, so there are at most 2 * (n - 1) slots, plus the root.
+    max_births = 2 * n
+    birth_order = Nx.broadcast(Nx.s64(0), {total})
+    birth_cluster = Nx.broadcast(Nx.s64(-1), {max_births})
+
     # Pass 1, top-down: condense the hierarchy and accumulate the stability that each
     # cluster gains from sub-clusters splitting off.
     {node_cluster, node_fallen, node_lambda, is_cluster, cluster_parent, cluster_birth, stability,
-     _} =
+     birth_order, birth_cluster, _, _} =
       while {node_cluster, node_fallen, node_lambda, is_cluster, cluster_parent, cluster_birth,
-             stability, {clades, dissimilarities, sizes, step = Nx.u32(0)}},
+             stability, birth_order, birth_cluster, births = Nx.s64(0),
+             {clades, dissimilarities, sizes, step = Nx.u32(0)}},
             step < num_merges do
         i = num_merges - 1 - Nx.as_type(step, :s64)
         k = n + i
@@ -309,8 +317,36 @@ defmodule Scholar.Cluster.HDBSCAN do
             Nx.reshape(Nx.select(current >= 0, gained, 0), {1})
           )
 
+        # A split births the left child first, then the right one, matching the order a
+        # top-down walk of the hierarchy would visit them.
+        left_slot = births
+        right_slot = births + 1
+
+        birth_order =
+          Nx.indexed_put(
+            birth_order,
+            children,
+            Nx.stack([
+              Nx.select(left_born, left_slot, birth_order[left]),
+              Nx.select(right_born, right_slot, birth_order[right])
+            ])
+          )
+
+        birth_cluster =
+          Nx.indexed_put(
+            birth_cluster,
+            Nx.stack([left_slot, right_slot]) |> Nx.new_axis(-1),
+            Nx.stack([
+              Nx.select(left_born, left, birth_cluster[left_slot]),
+              Nx.select(right_born, right, birth_cluster[right_slot])
+            ])
+          )
+
+        births = births + Nx.select(left_born, 2, 0)
+
         {node_cluster, node_fallen, node_lambda, is_cluster, cluster_parent, cluster_birth,
-         stability, {clades, dissimilarities, sizes, step + 1}}
+         stability, birth_order, birth_cluster, births,
+         {clades, dissimilarities, sizes, step + 1}}
       end
 
     # Pass 2: individual points that dropped out contribute to their cluster's stability.
@@ -410,15 +446,18 @@ defmodule Scholar.Cluster.HDBSCAN do
         {selected, resolved, {cluster_parent, step + 1}}
       end
 
-    # Number the surviving clusters from 0 in ascending id, then label every point by the
-    # cluster that owns it.
-    cluster_rank = Nx.cumulative_sum(Nx.as_type(selected, :s64)) - 1
+    # Number the surviving clusters from 0 in the order they were born, walking the hierarchy
+    # from the root down, then label every point by the cluster that owns it.
+    born_selected = Nx.take(selected, Nx.max(birth_cluster, 0))
+    born_selected = Nx.select(birth_cluster >= 0, born_selected, Nx.u8(0))
+    rank_by_birth = Nx.cumulative_sum(Nx.as_type(born_selected, :s64)) - 1
 
     point_cluster = Nx.take(node_cluster, Nx.iota({n}))
     owner = Nx.take(resolved, Nx.max(point_cluster, 0))
     owner = Nx.select(point_cluster >= 0, owner, Nx.s64(-1))
 
-    labels = Nx.take(cluster_rank, Nx.max(owner, 0))
+    owner_birth = Nx.take(birth_order, Nx.max(owner, 0))
+    labels = Nx.take(rank_by_birth, Nx.max(owner_birth, 0))
     Nx.select(owner >= 0, labels, Nx.s64(-1)) |> Nx.as_type(:s32)
   end
 
