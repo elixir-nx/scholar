@@ -24,6 +24,16 @@ defmodule Scholar.Cluster.HDBSCAN do
   The time complexity is $O(N^2 \\log N)$ for $N$ samples. The space complexity is $O(N^2)$,
   since the mutual reachability is held as a dense matrix.
 
+  ## Comparing against other implementations
+
+  The mutual reachability contains many exactly equal values by construction: whenever a
+  core distance dominates a pair, every pair it dominates collapses onto that same value.
+  Single linkage is then genuinely ambiguous, and different implementations resolve those
+  ties differently while producing dendrograms of identical height. So the labels here can
+  differ from `sklearn.cluster.HDBSCAN` on such data, without either being wrong. On data
+  where the merge heights are all distinct, and therefore the dendrogram is unique, the two
+  agree.
+
   ## Not yet supported
 
   Compared to `sklearn.cluster.HDBSCAN`, the following are not implemented yet:
