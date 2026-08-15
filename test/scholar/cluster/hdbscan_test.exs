@@ -80,4 +80,80 @@ defmodule Scholar.Cluster.HDBSCANTest do
       refute loose.labels == tight.labels
     end
   end
+
+  describe "metric" do
+    # Each reference comes from sklearn.cluster.HDBSCAN(min_cluster_size=3, min_samples=3,
+    # metric=...).fit(x).labels_ on the same points.
+    test "euclidean is the default" do
+      assert HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3) ==
+               HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3, metric: :euclidean)
+    end
+
+    test "manhattan matches scikit-learn" do
+      model = HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3, metric: {:minkowski, 1})
+
+      assert model.labels ==
+               Nx.tensor([1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0], type: :s32)
+    end
+
+    test "chebyshev matches scikit-learn" do
+      model =
+        HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3, metric: {:minkowski, :infinity})
+
+      assert model.labels ==
+               Nx.tensor([0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2], type: :s32)
+    end
+
+    # The metric feeds both the core distances and the mutual reachability. If it were only
+    # threaded through one of them, or ignored, every metric would return the euclidean
+    # answer. Chebyshev groups the same points but discovers them in a different order, and
+    # cosine disagrees about the grouping itself.
+    test "the metric is honored end to end" do
+      euclidean = HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3)
+
+      chebyshev =
+        HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3, metric: {:minkowski, :infinity})
+
+      cosine = HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3, metric: :cosine)
+
+      refute euclidean.labels == chebyshev.labels
+      refute euclidean.labels == cosine.labels
+      assert Nx.to_flat_list(cosine.labels) |> Enum.any?(&(&1 == -1))
+    end
+
+    test "accepts an anonymous function" do
+      metric = fn a, b -> Scholar.Metrics.Distance.pairwise_squared_euclidean(a, b) end
+      model = HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3, metric: metric)
+
+      # Squared euclidean is monotone in euclidean, so single linkage sees the same order
+      # of merges and the clustering is unchanged.
+      assert model.labels == HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3).labels
+    end
+  end
+
+  describe "errors" do
+    test "x must be rank 2" do
+      assert_raise ArgumentError,
+                   "expected x to have shape {num_samples, num_features}, got tensor with shape: {3}",
+                   fn -> HDBSCAN.fit(Nx.tensor([1, 2, 3])) end
+    end
+
+    test "min_cluster_size must be at least 2" do
+      assert_raise ArgumentError, "expected :min_cluster_size to be at least 2, got: 1", fn ->
+        HDBSCAN.fit(blobs(), min_cluster_size: 1)
+      end
+    end
+
+    test "x must have at least 3 samples" do
+      assert_raise ArgumentError, "expected x to have at least 3 samples, got: 2", fn ->
+        HDBSCAN.fit(Nx.tensor([[1.0, 2.0], [3.0, 4.0]]), min_cluster_size: 2)
+      end
+    end
+
+    test "min_samples may not exceed the number of samples" do
+      assert_raise ArgumentError,
+                   "expected :min_samples to be at most the number of samples (18), got: 19",
+                   fn -> HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 19) end
+    end
+  end
 end
