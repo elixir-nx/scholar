@@ -131,6 +131,84 @@ defmodule Scholar.Cluster.HDBSCANTest do
     end
   end
 
+  # Every expected value here comes from sklearn.cluster.HDBSCAN on the same input.
+  describe "degenerate input" do
+    test "duplicate points merge at distance zero" do
+      # A merge at distance 0 gives an infinite lambda. Getting there involves dividing by
+      # the merge distance, which raises on some backends, so this is a regression test.
+      x = Nx.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [9.0, 9.0], [9.0, 9.0], [9.0, 9.0]])
+      model = HDBSCAN.fit(x, min_cluster_size: 2, min_samples: 2)
+
+      assert model.labels == Nx.tensor([0, 0, 0, 1, 1, 1], type: :s32)
+    end
+
+    test "every point identical is all noise" do
+      model = HDBSCAN.fit(Nx.broadcast(1.0, {8, 2}), min_cluster_size: 3)
+
+      assert model.labels == Nx.broadcast(Nx.tensor(-1, type: :s32), {8})
+    end
+
+    test "evenly spaced collinear points are all noise" do
+      x = Nx.tensor(Enum.map(0..9, &[&1 * 1.0, 0.0]))
+      model = HDBSCAN.fit(x, min_cluster_size: 3)
+
+      assert model.labels == Nx.broadcast(Nx.tensor(-1, type: :s32), {10})
+    end
+
+    test "a single feature" do
+      x = Nx.tensor([[1.0], [1.2], [1.1], [8.0], [8.3], [8.1]])
+      model = HDBSCAN.fit(x, min_cluster_size: 2, min_samples: 2)
+
+      assert model.labels == Nx.tensor([0, 0, 0, 1, 1, 1], type: :s32)
+    end
+
+    test "the smallest accepted input" do
+      x = Nx.tensor([[0.0, 0.0], [1.0, 1.0], [5.0, 5.0]])
+      model = HDBSCAN.fit(x, min_cluster_size: 2)
+
+      assert model.labels == Nx.tensor([-1, -1, -1], type: :s32)
+    end
+
+    test "more features than samples" do
+      key = Nx.Random.key(1)
+      {x, _} = Nx.Random.uniform(key, shape: {6, 30}, type: :f64)
+      model = HDBSCAN.fit(x, min_cluster_size: 2, min_samples: 2)
+
+      assert Nx.shape(model.labels) == {6}
+    end
+
+    test "integer input" do
+      x = Nx.tensor([[1, 2], [2, 2], [2, 3], [1, 3], [8, 7], [8, 8], [7, 8], [7, 7]])
+      model = HDBSCAN.fit(x, min_cluster_size: 3, min_samples: 2)
+
+      assert model.labels == Nx.tensor([0, 0, 0, 0, 1, 1, 1, 1], type: :s32)
+    end
+  end
+
+  describe "compilation and precision" do
+    test "works with jit_apply" do
+      jitted =
+        Nx.Defn.jit_apply(&HDBSCAN.fit(&1, min_cluster_size: 3, min_samples: 3), [blobs()])
+
+      assert jitted.labels == HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3).labels
+    end
+
+    test "is deterministic" do
+      first = HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3)
+
+      for _ <- 1..3 do
+        assert HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3).labels == first.labels
+      end
+    end
+
+    test "f32 and f64 agree on well separated data" do
+      x = blobs()
+
+      assert HDBSCAN.fit(Nx.as_type(x, :f32), min_cluster_size: 3, min_samples: 3).labels ==
+               HDBSCAN.fit(Nx.as_type(x, :f64), min_cluster_size: 3, min_samples: 3).labels
+    end
+  end
+
   describe "errors" do
     test "x must be rank 2" do
       assert_raise ArgumentError,

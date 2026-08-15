@@ -224,8 +224,14 @@ defmodule Scholar.Cluster.HDBSCAN do
         k = n + i
         left = Nx.as_type(clades[[i, 0]], :s64)
         right = Nx.as_type(clades[[i, 1]], :s64)
+        # Duplicate points merge at distance 0, so lambda is infinite there. Both sides of
+        # Nx.select are evaluated, and dividing by zero raises on some backends, so the
+        # denominator is made safe before the division rather than after it.
         dist = dissimilarities[i]
-        lambda = Nx.select(dist > 0, 1 / dist, Nx.Constants.infinity(Nx.type(dissimilarities)))
+        safe_dist = Nx.select(dist > 0, dist, 1)
+
+        lambda =
+          Nx.select(dist > 0, 1 / safe_dist, Nx.Constants.infinity(Nx.type(dissimilarities)))
 
         left_size = subtree_size(sizes, left, n)
         right_size = subtree_size(sizes, right, n)
