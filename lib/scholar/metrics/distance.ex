@@ -605,6 +605,7 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   defn pairwise_squared_euclidean(x, y) do
+    {x, y} = center(x, y)
     y_norm = Nx.sum(y * y, axes: [1]) |> Nx.new_axis(0)
     x_norm = Nx.sum(x * x, axes: [1], keep_axes: true)
     Nx.max(0, x_norm + y_norm - 2 * Nx.dot(x, [-1], y, [-1]))
@@ -631,9 +632,60 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   defn pairwise_squared_euclidean(x) do
+    x = center(x)
     x_norm = Nx.sum(x * x, axes: [1], keep_axes: true)
     dist = Nx.max(0, x_norm + Nx.transpose(x_norm) - 2 * Nx.dot(x, [-1], x, [-1]))
     Nx.put_diagonal(dist, Nx.broadcast(Nx.tensor(0, type: Nx.type(dist)), {Nx.axis_size(x, 0)}))
+  end
+
+  # Shifts x (and y) by the mean of their finite rows before the dot-product
+  # expansion of ||x - y||^2. The expansion is translation invariant, so this
+  # does not change the result, but it keeps the intermediate norms and dot
+  # product close to the scale of the data spread instead of the raw
+  # coordinate magnitude, which is what causes catastrophic cancellation (and,
+  # for very large float64 inputs, overflow) in the unshifted formula.
+  #
+  # The mean only accounts for finite rows so that a non-finite sentinel row
+  # (e.g. the placeholder Inf rows Scholar.Cluster.AffinityPropagation uses
+  # for not-yet-selected exemplars) cannot poison every other row through a
+  # shared Inf/NaN mean; subtracting a finite mean from a non-finite row still
+  # leaves that row non-finite, same as without centering. Integer inputs are
+  # left untouched since they are already exact and the mean would force a
+  # float promotion.
+  defnp center(x, y) do
+    if Nx.Type.integer?(Nx.type(x)) and Nx.Type.integer?(Nx.type(y)) do
+      {x, y}
+    else
+      mean = finite_mean(x, y)
+      {x - mean, y - mean}
+    end
+  end
+
+  defnp finite_mean(x, y) do
+    x_finite = Nx.all(is_finite(x), axes: [1], keep_axes: true)
+    y_finite = Nx.all(is_finite(y), axes: [1], keep_axes: true)
+    x_safe = Nx.select(Nx.broadcast(x_finite, Nx.shape(x)), x, 0)
+    y_safe = Nx.select(Nx.broadcast(y_finite, Nx.shape(y)), y, 0)
+    count = Nx.sum(x_finite) + Nx.sum(y_finite)
+    sum = Nx.sum(x_safe, axes: [0]) + Nx.sum(y_safe, axes: [0])
+    Nx.select(count > 0, sum / Nx.max(count, 1), Nx.tensor(0.0, type: Nx.type(sum)))
+  end
+
+  defnp center(x) do
+    if Nx.Type.integer?(Nx.type(x)) do
+      x
+    else
+      x_finite = Nx.all(is_finite(x), axes: [1], keep_axes: true)
+      x_safe = Nx.select(Nx.broadcast(x_finite, Nx.shape(x)), x, 0)
+      count = Nx.sum(x_finite)
+      sum = Nx.sum(x_safe, axes: [0], keep_axes: true)
+      mean = Nx.select(count > 0, sum / Nx.max(count, 1), Nx.tensor(0.0, type: Nx.type(sum)))
+      x - mean
+    end
+  end
+
+  defnp is_finite(x) do
+    not (Nx.is_nan(x) or Nx.is_infinity(x))
   end
 
   @doc """

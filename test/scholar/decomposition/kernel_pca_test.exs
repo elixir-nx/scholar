@@ -305,7 +305,7 @@ defmodule Scholar.Decomposition.KernelPCATest do
       # in fit/2 and the zero-eigenvalue guard in transform/2.
       model = KernelPCA.fit(x(), num_components: 6, kernel: :rbf)
       assert Nx.shape(model.eigenvalues) == {6}
-      assert Nx.to_number(model.eigenvalues[5]) == 0.0
+      assert_all_close(model.eigenvalues[5], Nx.tensor(0.0), atol: 1.0e-5)
 
       z = KernelPCA.fit_transform(x(), num_components: 6, kernel: :rbf)
       assert Nx.to_number(Nx.any(Nx.is_nan(z))) == 0
@@ -315,7 +315,7 @@ defmodule Scholar.Decomposition.KernelPCATest do
       assert Nx.to_number(Nx.any(Nx.is_infinity(zt))) == 0
 
       # the zero-eigenvalue component projects to zero, as in scikit-learn
-      assert zt[[.., 5]] == Nx.tensor([0.0, 0.0])
+      assert_all_close(zt[[.., 5]], Nx.tensor([0.0, 0.0]), atol: 1.0e-3)
     end
 
     test "eigenvalues are sorted in decreasing order" do

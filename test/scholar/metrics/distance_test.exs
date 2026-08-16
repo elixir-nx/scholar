@@ -74,4 +74,67 @@ defmodule Scholar.Metrics.DistanceTest do
     assert Distance.hamming(Nx.tensor([1, 0, 0]), Nx.tensor([3, 0, 0])) ==
              Nx.tensor(0.3333333432674408)
   end
+
+  describe "pairwise_squared_euclidean precision" do
+    test "large-magnitude f32 coordinates do not catastrophically cancel" do
+      x = Nx.tensor([[100_000.0, 100_000.0]], type: :f32)
+      y = Nx.tensor([[100_000.0, 100_000.1]], type: :f32)
+
+      assert_all_close(Distance.pairwise_squared_euclidean(x, y), Nx.tensor([[0.01]]),
+        atol: 1.0e-3
+      )
+    end
+
+    test "very large f64 coordinates do not overflow" do
+      x = Nx.tensor([[1.0e200, 0.0]], type: :f64)
+      y = Nx.tensor([[1.0e200, 1.0]], type: :f64)
+
+      assert_all_close(Distance.pairwise_squared_euclidean(x, y), Nx.tensor([[1.0]]))
+    end
+
+    test "a non-finite sentinel row does not poison the other rows" do
+      # A row that is entirely :infinity (as Scholar.Cluster.AffinityPropagation
+      # uses as a placeholder for not-yet-selected exemplars) can only ever
+      # produce :infinity or NaN against it, never a small/wrong finite value
+      # that could win an argmin. Callers already normalize NaN to :infinity
+      # (see AffinityPropagation.predict/2), so that normalized result must
+      # always be :infinity.
+      x = Nx.tensor([[1.0, 2.0], [3.0, 4.0]])
+      y = Nx.tensor([[:infinity, :infinity], [1.0, 2.0]])
+
+      result = Distance.pairwise_squared_euclidean(x, y)
+      normalized = Nx.select(Nx.is_nan(result), Nx.Constants.infinity(Nx.type(result)), result)
+
+      assert_all_close(result[[.., 1]], Nx.tensor([0.0, 8.0]))
+      assert Nx.to_number(Nx.all(Nx.is_infinity(normalized[[.., 0]]))) == 1
+    end
+
+    test "a non-finite sentinel row does not poison the other rows (single-argument form)" do
+      x = Nx.tensor([[:infinity, :infinity], [1.0, 2.0], [3.0, 4.0]])
+
+      result = Distance.pairwise_squared_euclidean(x)
+      normalized = Nx.select(Nx.is_nan(result), Nx.Constants.infinity(Nx.type(result)), result)
+
+      assert_all_close(result[[1..2, 1..2]], Nx.tensor([[0.0, 8.0], [8.0, 0.0]]))
+      assert Nx.to_number(Nx.all(Nx.is_infinity(normalized[[0, 1..2]]))) == 1
+    end
+
+    test "integer input stays exact and integer-typed" do
+      x = Nx.tensor([[1, 2, 5], [3, 4, 3]])
+      y = Nx.tensor([[8, 3, 1], [2, 5, 2]])
+
+      result = Distance.pairwise_squared_euclidean(x, y)
+
+      assert Nx.type(result) == {:s, 32}
+      assert result == Nx.tensor([[66, 19], [30, 3]])
+    end
+
+    test "works with jit_apply" do
+      x = Nx.tensor([[100_000.0, 100_000.0]], type: :f32)
+      y = Nx.tensor([[100_000.0, 100_000.1]], type: :f32)
+
+      jit_result = Nx.Defn.jit_apply(&Distance.pairwise_squared_euclidean/2, [x, y])
+      assert_all_close(jit_result, Distance.pairwise_squared_euclidean(x, y))
+    end
+  end
 end
