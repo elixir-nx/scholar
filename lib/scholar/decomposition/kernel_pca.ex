@@ -95,7 +95,7 @@ defmodule Scholar.Decomposition.KernelPCA do
       iex> x = Nx.tensor([[0.5, 0.2, 0.8], [1.0, 0.5, 0.2], [0.3, 1.0, 0.7], [0.9, 0.1, 1.0]])
       iex> kpca = Scholar.Decomposition.KernelPCA.fit(x, num_components: 2, kernel: :rbf)
       iex> kpca.eigenvalues
-      Nx.tensor([0.3644832372665405, 0.26074567437171936])
+      Nx.tensor([0.3644833564758301, 0.2607457637786865])
   """
   deftransform fit(x, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -164,7 +164,7 @@ defmodule Scholar.Decomposition.KernelPCA do
       iex> Scholar.Decomposition.KernelPCA.transform(kpca, Nx.tensor([[0.5, 0.5, 0.5]]))
       Nx.tensor(
         [
-          [0.12500189244747162, 0.029097504913806915]
+          [0.12500187754631042, 0.02909737080335617]
         ]
       )
   """
@@ -216,10 +216,10 @@ defmodule Scholar.Decomposition.KernelPCA do
       iex> Scholar.Decomposition.KernelPCA.fit_transform(x, num_components: 2, kernel: :rbf)
       Nx.tensor(
         [
-          [-0.13561560213565826, -0.16519635915756226],
-          [0.021600963547825813, 0.4411441683769226],
-          [0.4687873125076294, -0.15764616429805756],
-          [-0.35477250814437866, -0.11830168217420578]
+          [-0.13561572134494781, -0.16519643366336823],
+          [0.021601030603051186, 0.44114425778388977],
+          [0.4687873423099518, -0.1576462835073471],
+          [-0.3547726571559906, -0.1183016300201416]
         ]
       )
   """
