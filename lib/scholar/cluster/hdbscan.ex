@@ -5,7 +5,8 @@ defmodule Scholar.Cluster.HDBSCAN do
   HDBSCAN turns DBSCAN into a hierarchical algorithm and then extracts a flat clustering
   from that hierarchy. Unlike `Scholar.Cluster.DBSCAN` it does not need an `eps` radius,
   so it can recover clusters of differing densities, and points that belong to no cluster
-  are labelled as noise.
+  are labelled as noise. The root is never returned as a cluster, so data with no real
+  split in it comes back as all noise.
 
   The algorithm proceeds in four steps:
 
@@ -33,18 +34,6 @@ defmodule Scholar.Cluster.HDBSCAN do
   differ from `sklearn.cluster.HDBSCAN` on such data, without either being wrong. On data
   where the merge heights are all distinct, and therefore the dendrogram is unique, the two
   agree on which points are grouped together, up to which cluster gets which integer id.
-
-  ## Not yet supported
-
-  Compared to `sklearn.cluster.HDBSCAN`, the following are not implemented yet:
-
-    * `cluster_selection_method: :leaf`, which selects leaf clusters instead of applying
-      the excess of mass criterion.
-    * `cluster_selection_epsilon`, which merges clusters below a distance threshold.
-    * `max_cluster_size`.
-    * `allow_single_cluster`, so the root is never returned as a cluster and a dataset with
-      no real split comes back as all noise.
-    * Membership probabilities.
 
   ## References
 
