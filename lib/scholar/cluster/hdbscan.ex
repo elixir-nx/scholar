@@ -178,7 +178,19 @@ defmodule Scholar.Cluster.HDBSCAN do
     # overflows, and on an unsigned one the subtraction wraps, which makes the matrix
     # asymmetric and the clustering meaningless. Floating point first.
     distances = metric.(to_float(x), to_float(x))
-    core = Nx.sort(distances, axis: 1)[[.., min_samples - 1]]
+
+    # Only the min_samples-th smallest distance in each row is needed, so select it
+    # rather than sorting the whole row. `min_samples` is validated to be at most the
+    # number of samples above, so `k` is always in range. Negated because `top_k/2`
+    # takes the largest.
+    core =
+      distances
+      |> Nx.negate()
+      |> Nx.top_k(k: min_samples)
+      |> elem(0)
+      |> Nx.negate()
+      |> Nx.slice_along_axis(min_samples - 1, 1, axis: 1)
+      |> Nx.squeeze(axes: [1])
 
     Nx.max(Nx.max(Nx.new_axis(core, 1), Nx.new_axis(core, 0)), distances)
   end
