@@ -3,10 +3,11 @@ defmodule Scholar.Cluster.HDBSCANTest do
   alias Scholar.Cluster.HDBSCAN
   doctest HDBSCAN
 
-  # Three well separated groups of six. Chosen so that every merge height in the single
-  # linkage tree over the mutual reachability is distinct, which makes the dendrogram
+  # Three well separated groups of six. Chosen so that the merge heights in the single
+  # linkage tree over the mutual reachability are distinct, which makes the dendrogram
   # unique and therefore forces any correct implementation to the same answer. That is
   # what lets the assertions below compare labels exactly rather than up to renumbering.
+  # This holds at `min_samples: 3`; see the `min_samples: 4` test for the exception.
   defp blobs do
     Nx.tensor([
       [1.15, 1.585],
@@ -30,6 +31,18 @@ defmodule Scholar.Cluster.HDBSCANTest do
     ])
   end
 
+  # The points of each cluster, ignoring which id the cluster was given.
+  defp groups(labels) do
+    labels
+    |> Nx.to_flat_list()
+    |> Enum.with_index()
+    |> Enum.reject(fn {label, _} -> label == -1 end)
+    |> Enum.group_by(fn {label, _} -> label end, fn {_, index} -> index end)
+    |> Map.values()
+    |> Enum.map(&Enum.sort/1)
+    |> Enum.sort()
+  end
+
   describe "fit" do
     # Reference: sklearn.cluster.HDBSCAN(min_cluster_size=3, min_samples=3).fit(x).labels_
     test "recovers three separated blobs" do
@@ -40,11 +53,17 @@ defmodule Scholar.Cluster.HDBSCANTest do
     end
 
     # Reference: sklearn.cluster.HDBSCAN(min_cluster_size=4, min_samples=4).fit(x).labels_
+    # groups the same three blobs. At this `min_samples` two merges share a height, so
+    # unlike the case above the tree is not unique and which blob gets id 1 and which
+    # gets 2 is not determined. Compare the grouping rather than the ids.
     test "a larger min_cluster_size keeps the same three blobs" do
       model = HDBSCAN.fit(blobs(), min_cluster_size: 4, min_samples: 4)
 
-      assert model.labels ==
-               Nx.tensor([1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0], type: :s32)
+      assert groups(model.labels) == [
+               [0, 1, 2, 3, 4, 5],
+               [6, 7, 8, 9, 10, 11],
+               [12, 13, 14, 15, 16, 17]
+             ]
     end
 
     test "a min_cluster_size larger than any blob leaves only noise" do
