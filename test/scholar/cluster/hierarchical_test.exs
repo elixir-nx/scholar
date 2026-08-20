@@ -20,28 +20,31 @@ defmodule Scholar.Cluster.HierarchicalTest do
       data = Nx.tensor([[1, 5], [2, 5], [1, 4], [4, 5], [5, 5], [5, 4], [1, 2], [1, 1], [2, 1]])
 
       # This diagram represents the sequence of expected merges. The data starts off with all
-      # points as singleton clades. The first step of the algorithm merges singleton clades
-      # 0: [0] and 1: [1] to form clade 9: [0, 1]. This process continues until all clades have
-      # been merged into a single clade with all points.
+      # points as singleton clades. The algorithm builds a chain of nearest neighbors (a point,
+      # its nearest neighbor, that neighbor's nearest, ...) and merges as soon as the last two
+      # entries in the chain are each other's nearest neighbor, then keeps extending the same
+      # chain from what is left rather than restarting. That is why, below, clade 9: [0, 1]
+      # immediately pulls in point 2 (its nearest neighbor is now clade 9) before the algorithm
+      # moves on to points 3 and 4, rather than growing every clade one round at a time.
       #
       #       0   1   2   3   4   5   6   7   8
       #    8: [0] [1] [2] [3] [4] [5] [6] [7] [8]
       #       9    2   3   4   5   6   7   8
       #    9: [01] [2] [3] [4] [5] [6] [7] [8]
       #       ----
-      #       9    2   10   5   6   7   8
-      #   10: [01] [2] [34] [5] [6] [7] [8]
-      #                ----
-      #       9    2   10   5   11   8
-      #   11: [01] [2] [34] [5] [67] [8]
-      #                         ----
-      #       12    10   5   11   8
-      #   12: [012] [34] [5] [67] [8]
+      #       10   3   4   5   6   7   8
+      #   10: [012] [3] [4] [5] [6] [7] [8]
       #       -----
-      #       12    13    11   8
-      #   13: [012] [345] [67] [8]
+      #       10    11   5   6   7   8
+      #   11: [012] [34] [5] [6] [7] [8]
+      #                ----
+      #       10    12    6   7   8
+      #   12: [012] [345] [6] [7] [8]
       #             -----
-      #       12    13    14
+      #       10    12    13   8
+      #   13: [012] [345] [67] [8]
+      #                    ----
+      #       10    12    14
       #   14: [012] [345] [678]
       #                   -----
       #       15       14
@@ -57,19 +60,19 @@ defmodule Scholar.Cluster.HierarchicalTest do
       assert model.clades ==
                Nx.tensor([
                  [0, 1],
-                 [3, 4],
-                 [6, 7],
                  [2, 9],
-                 [5, 10],
-                 [8, 11],
-                 [12, 13],
+                 [3, 4],
+                 [5, 11],
+                 [6, 7],
+                 [8, 13],
+                 [10, 12],
                  [14, 15]
                ])
 
       assert model.dissimilarities ==
                Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0])
 
-      assert model.sizes == Nx.tensor([2, 2, 2, 3, 3, 3, 6, 9])
+      assert model.sizes == Nx.tensor([2, 3, 2, 3, 2, 3, 6, 9])
 
       # The clustering part of the algorithm uses the `cluster_by: [num_clusters: 3]` option to
       # take the model and form 3 clusters.
@@ -177,9 +180,9 @@ defmodule Scholar.Cluster.HierarchicalTest do
 
     test "cluster by number of clusters", %{model: model} do
       labels_map = Hierarchical.labels_map(model, cluster_by: [num_clusters: 3])
-      assert labels_map == %{0 => [0, 4], 1 => [1, 2], 2 => [3]}
+      assert labels_map == %{0 => [0, 3, 4], 1 => [1], 2 => [2]}
       labels_list = Hierarchical.labels_list(model, cluster_by: [num_clusters: 3])
-      assert labels_list == [0, 1, 1, 2, 0]
+      assert labels_list == [0, 1, 2, 0, 0]
     end
 
     test "remaps clade ids after sorting dendrogram rows" do
@@ -196,6 +199,33 @@ defmodule Scholar.Cluster.HierarchicalTest do
       labels = Hierarchical.labels_list(model, cluster_by: [num_clusters: 5])
       assert length(labels) == 50
       assert labels |> Enum.uniq() |> length() == 5
+    end
+
+    test "tied merge heights still leave every dendrogram row in ascending order" do
+      # Duplicate points force merges to tie. Remapping clade ids to their final,
+      # sorted-by-dissimilarity numbering is a permutation, not a monotonic one, so
+      # on a tie it can swap the two children of a row and leave it descending.
+      data =
+        Nx.tensor([
+          [0.0, 0.0],
+          [0.0, 1.0],
+          [0.0, 0.0],
+          [1.0, 1.0],
+          [1.0, 0.0],
+          [1.0, 1.0],
+          [2.0, 0.0],
+          [2.0, 1.0]
+        ])
+
+      model = Hierarchical.fit(data, linkage: :complete)
+
+      assert model.dissimilarities |> Nx.to_flat_list() |> Enum.uniq() |> length() <
+               model.num_points - 1,
+             "expected tied merge heights, which is what this test is about"
+
+      assert model.clades
+             |> Nx.to_list()
+             |> Enum.all?(fn [left, right] -> left < right end)
     end
   end
 
@@ -322,6 +352,26 @@ defmodule Scholar.Cluster.HierarchicalTest do
       assert model.num_points == 6
       assert Nx.to_number(Nx.all(Nx.not_equal(model.clades, -1))) == 1
       assert Nx.to_number(Nx.all(Nx.greater(model.sizes, 0))) == 1
+    end
+
+    test "several unreachable clades report every merge that could not be made" do
+      # Only 0 and 1 have a finite distance to anything. Points 2 and 3 are infinitely
+      # far from everyone including each other, so two of the three merges have nothing
+      # to justify them, not just the last one.
+      d =
+        Nx.tensor([
+          [0.0, 1.0, :infinity, :infinity],
+          [1.0, 0.0, :infinity, :infinity],
+          [:infinity, :infinity, 0.0, :infinity],
+          [:infinity, :infinity, :infinity, 0.0]
+        ])
+
+      model = Hierarchical.fit(d, dissimilarity: :precomputed, linkage: :single)
+
+      assert Nx.to_flat_list(model.sizes) == [2, 0, 0]
+      assert Nx.to_flat_list(model.dissimilarities) |> Enum.take(1) == [1.0]
+      assert Nx.to_number(Nx.all(Nx.is_nan(model.dissimilarities[1..2]))) == 1
+      assert Nx.to_flat_list(model.clades[1..2]) == [-1, -1, -1, -1]
     end
   end
 
