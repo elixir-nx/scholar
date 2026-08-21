@@ -227,6 +227,44 @@ defmodule Scholar.Cluster.HierarchicalTest do
              |> Nx.to_list()
              |> Enum.all?(fn [left, right] -> left < right end)
     end
+
+    test "tied nearest neighbors still merge every point exactly once" do
+      # Integer coordinates over a small range, so distances tie constantly and a
+      # clade's nearest neighbor is very often not unique. The chain extension can
+      # then walk back onto a clade it already holds, and the duplicate outlives the
+      # merge that consumed it, so it gets merged a second time: a clade is used
+      # twice, the sizes stop adding up, and the tree never closes over every point.
+      data =
+        Nx.tensor([
+          [0.0, 2.0, 2.0],
+          [1.0, 3.0, 1.0],
+          [2.0, 3.0, 1.0],
+          [0.0, 0.0, 0.0],
+          [0.0, 1.0, 3.0],
+          [3.0, 0.0, 3.0],
+          [1.0, 1.0, 1.0],
+          [1.0, 1.0, 3.0],
+          [2.0, 2.0, 1.0],
+          [1.0, 0.0, 1.0],
+          [1.0, 1.0, 3.0],
+          [1.0, 0.0, 0.0],
+          [3.0, 2.0, 3.0],
+          [0.0, 3.0, 1.0],
+          [1.0, 1.0, 0.0],
+          [3.0, 2.0, 3.0],
+          [2.0, 0.0, 0.0],
+          [0.0, 1.0, 0.0]
+        ])
+
+      model = Hierarchical.fit(data, linkage: :single)
+
+      # The last merge has to gather every point.
+      assert Nx.to_number(model.sizes[-1]) == model.num_points
+
+      # And no clade may be merged into two different parents.
+      children = model.clades |> Nx.to_flat_list()
+      assert length(children) == children |> Enum.uniq() |> length()
+    end
   end
 
   describe "precomputed dissimilarity" do
