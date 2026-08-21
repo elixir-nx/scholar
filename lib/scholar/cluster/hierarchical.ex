@@ -295,10 +295,12 @@ defmodule Scholar.Cluster.Hierarchical do
         chain_length = Nx.select(needs_start, 1, chain_length)
 
         # Extend the chain until its last two entries are mutual nearest neighbors.
-        # Bounded by n: a real chain can never revisit a clade before terminating,
-        # so exceeding n extensions only happens with a non-finite dissimilarity
-        # (from NaN or infinite input), where argmin's tie-breaking can land on an
-        # already-dead clade and loop without ever finding a genuine mutual pair.
+        # Bounded by n: the distance along a chain strictly decreases, so a chain
+        # can never revisit a clade before terminating, provided ties end it rather
+        # than extend it (see `previous_is_nearest` below). Exceeding n extensions
+        # then only happens with a non-finite dissimilarity (from NaN or infinite
+        # input), where argmin's tie-breaking can land on an already-dead clade and
+        # loop without ever finding a genuine mutual pair.
         {chain, chain_length, found, _steps, merge_diss, _pairwise, _alive} =
           while {chain, chain_length, found = Nx.u8(0), steps = 0,
                  _chain_diss = Nx.Constants.infinity(Nx.type(pairwise)), pairwise, alive},
@@ -327,17 +329,44 @@ defmodule Scholar.Cluster.Hierarchical do
             # comment above); treat it as stalled rather than let the chain merge a
             # clade with itself.
             self_match = nearest == tip
-            found = nearest == previous and not self_match
+
+            # The chain terminates whenever the previous entry is *a* nearest
+            # neighbor of the tip, not only when it is the one argmin happens to
+            # return. The two differ exactly when the tip's nearest distance is
+            # tied, and preferring the previous entry there is what keeps the
+            # chain from walking back onto a clade it already holds: a duplicated
+            # entry survives the merge that pops its other occurrence, and is then
+            # merged a second time, after it is already gone. The chain can only
+            # cycle back on its immediate predecessor while distances strictly
+            # decrease, which ties break.
+            previous_is_nearest =
+              chain_length > 1 and
+                Nx.take(row, Nx.max(previous, 0)) == chain_diss
+
+            # `nearest == previous` on its own would miss a tie, and comparing the
+            # distances on its own would miss a NaN, which is never equal to
+            # itself. Either one ending the chain is enough.
+            found = (previous_is_nearest or nearest == previous) and not self_match
+
+            # The chain holds live clades and so cannot outgrow its buffer, but a
+            # non-finite dissimilarity can stall it without ever finding a pair, and
+            # a write past the end would otherwise be silently clamped onto the last
+            # slot. Treat it as stalled, like a self match.
+            stalled = self_match or chain_length >= n
 
             chain =
               Nx.select(
-                found or self_match,
+                found or stalled,
                 chain,
-                Nx.indexed_put(chain, Nx.reshape(chain_length, {1, 1}), Nx.reshape(nearest, {1}))
+                Nx.indexed_put(
+                  chain,
+                  Nx.reshape(Nx.min(chain_length, n - 1), {1, 1}),
+                  Nx.reshape(nearest, {1})
+                )
               )
 
-            chain_length = Nx.select(found or self_match, chain_length, chain_length + 1)
-            steps = Nx.select(self_match, n + 1, steps + 1)
+            chain_length = Nx.select(found or stalled, chain_length, chain_length + 1)
+            steps = Nx.select(stalled, n + 1, steps + 1)
             {chain, chain_length, found, steps, chain_diss, pairwise, alive}
           end
 
