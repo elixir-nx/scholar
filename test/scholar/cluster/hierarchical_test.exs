@@ -164,6 +164,28 @@ defmodule Scholar.Cluster.HierarchicalTest do
                  4.1218791007995605
                ])
     end
+
+    test "ward does not take the square root of a negative number" do
+      # Merged clades are masked out of the matrix rather than blanked, so their
+      # rows keep stale values that ward's update still reads. The Lance-Williams
+      # term can then go negative for a dead column, and the square root of that
+      # raises on the binary backend and is a silent NaN under EXLA.
+      data =
+        Nx.tensor([
+          [0.0, 0.0],
+          [2.0, 1.0],
+          [2.0, 0.0],
+          [2.0, 1.0],
+          [2.0, 1.0],
+          [1.0, 1.0],
+          [1.0, 0.0],
+          [0.0, 2.0]
+        ])
+
+      model = Hierarchical.fit(data, linkage: :ward)
+
+      refute model.dissimilarities |> Nx.is_nan() |> Nx.any() |> Nx.to_number() == 1
+    end
   end
 
   describe "cluster labels" do

@@ -550,8 +550,17 @@ defmodule Scholar.Cluster.Hierarchical do
   defnp single(dac, dbc, _dab, _sa, _sb, _sc),
     do: Nx.min(dac, dbc)
 
+  # The clamp is not cosmetic. Merged clades are masked out through `alive` rather
+  # than blanked out of the matrix, so their rows keep stale values that this still
+  # reads for the dead columns, where the term above can come out negative. Those
+  # columns are never used, but the square root of a negative raises on the binary
+  # backend, so it has to stay finite. It also absorbs a term that rounds just below
+  # zero, which is possible here even on live columns.
   defnp ward(dac, dbc, dab, sa, sb, sk),
-    do: Nx.sqrt(((sa + sk) * dac ** 2 + (sb + sk) * dbc ** 2 - sk * dab ** 2) / (sa + sb + sk))
+    do:
+      Nx.sqrt(
+        Nx.max(((sa + sk) * dac ** 2 + (sb + sk) * dbc ** 2 - sk * dab ** 2) / (sa + sb + sk), 0)
+      )
 
   defnp weighted(dac, dbc, _dab, _sa, _sb, _sc),
     do: (dac + dbc) / 2
