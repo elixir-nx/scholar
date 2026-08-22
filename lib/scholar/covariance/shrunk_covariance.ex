@@ -51,14 +51,14 @@ defmodule Scholar.Covariance.ShrunkCovariance do
       #Nx.Tensor<
         f32[2][2]
         [
-          [0.7721845507621765, 0.19141492247581482],
-          [0.19141492247581482, 0.33952537178993225]
+          [0.77218455, 0.19141492],
+          [0.19141492, 0.33952537]
         ]
       >
       iex> model.location
       #Nx.Tensor<
         f32[2]
-        [0.18202415108680725, -0.09216632694005966]
+        [0.18202415, -0.09216633]
       >
       iex> key = Nx.Random.key(0)
       iex> {x, _new_key} = Nx.Random.multivariate_normal(key, Nx.tensor([0.0, 0.0]), Nx.tensor([[0.8, 0.3], [0.2, 0.4]]), shape: {10}, type: :f32)
@@ -67,8 +67,8 @@ defmodule Scholar.Covariance.ShrunkCovariance do
       #Nx.Tensor<
         f32[2][2]
         [
-          [0.7000747323036194, 0.1276099532842636],
-          [0.1276099532842636, 0.41163527965545654]
+          [0.70007473, 0.12760995],
+          [0.12760995, 0.41163528]
         ]
       >
       iex> model.location

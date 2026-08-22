@@ -214,12 +214,12 @@ defmodule Scholar.Linear.BayesianRidgeRegression do
       iex> model.coefficients
       #Nx.Tensor<
         f32[1]
-        [0.9999999403953552]
+        [0.99999994]
       >
       iex> model.intercept
       #Nx.Tensor<
         f32
-        4.76837158203125e-7
+        4.7683716e-7
       >
   """
   deftransform fit(x, y, opts \\ []) do

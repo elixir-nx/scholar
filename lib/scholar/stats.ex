@@ -97,7 +97,7 @@ defmodule Scholar.Stats do
       iex> Scholar.Stats.skew(x)
       #Nx.Tensor<
         f32[3]
-        [0.9794093370437622, -0.8164965510368347, 0.9220733642578125]
+        [0.97940934, -0.81649655, 0.92207336]
       >
   """
 
@@ -134,7 +134,7 @@ defmodule Scholar.Stats do
       iex> Scholar.Stats.kurtosis(x)
       #Nx.Tensor<
         f32[3]
-        [-0.7980852127075195, -1.0, -0.8394768238067627]
+        [-0.7980852, -1.0, -0.8394768]
       >
   """
   deftransform kurtosis(tensor, opts \\ []) do

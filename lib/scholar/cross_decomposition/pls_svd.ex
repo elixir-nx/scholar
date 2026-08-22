@@ -90,7 +90,7 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
       iex> model.y_std
       #Nx.Tensor<
         f32[2]
-        [5.467098712921143, 5.661198616027832]
+        [5.4670987, 5.6611986]
       >
       iex> model.x_weights
       #Nx.Tensor<

@@ -323,7 +323,7 @@ defmodule Scholar.Metrics.Distance do
       iex> Scholar.Metrics.Distance.minkowski(x, y, p: 2.5, axes: [0])
       #Nx.Tensor<
         f32[3]
-        [7.021548271179199, 1.3195079565048218, 4.049539089202881]
+        [7.0215483, 1.319508, 4.049539]
       >
 
       iex> x = Nx.tensor([[6, 2, 9], [2, 5, 3]])
@@ -331,7 +331,7 @@ defmodule Scholar.Metrics.Distance do
       iex> Scholar.Metrics.Distance.minkowski(x, y, p: 2.5)
       #Nx.Tensor<
         f32
-        9.621805191040039
+        9.621805
       >
   """
   deftransform minkowski(x, y, opts \\ []) do

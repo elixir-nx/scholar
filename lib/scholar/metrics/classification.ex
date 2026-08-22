@@ -602,7 +602,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.balanced_accuracy_score(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32
-        0.3333333432674408
+        0.33333334
       >
       iex> y_true = Nx.tensor([0, 1, 2, 0, 1, 2], type: :u64)
       iex> y_pred = Nx.tensor([0, 2, 1, 0, 0, 1], type: :u64)
@@ -665,17 +665,17 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(1), num_classes: 3)
       #Nx.Tensor<
         f32[3]
-        [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
+        [0.6666667, 0.6666667, 0.4]
       >
       iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3)
       #Nx.Tensor<
         f32[3]
-        [0.6666666865348816, 0.5555555820465088, 0.625]
+        [0.6666667, 0.5555556, 0.625]
       >
       iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.f32(0.5), num_classes: 3)
       #Nx.Tensor<
         f32[3]
-        [0.6666666865348816, 0.8333333134651184, 0.29411765933036804]
+        [0.6666667, 0.8333333, 0.29411766]
       >
       iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3, average: :macro)
       #Nx.Tensor<
@@ -758,7 +758,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3, average: :weighted)
       {Nx.f32([0.6666666865348816, 1.0, 0.25]),
        Nx.f32([0.6666666865348816, 0.5, 1.0]),
-       Nx.f32(0.6399999856948853),
+       Nx.f32(0.64),
        Nx.Constants.nan()}
       iex> Scholar.Metrics.Classification.precision_recall_fscore_support(y_true, y_pred, num_classes: 3, average: :micro)
       {Nx.f32(0.6000000238418579),
@@ -854,12 +854,12 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.f1_score(y_true, y_pred, num_classes: 3)
       #Nx.Tensor<
         f32[3]
-        [0.6666666865348816, 0.6666666865348816, 0.4000000059604645]
+        [0.6666667, 0.6666667, 0.4]
       >
       iex> Scholar.Metrics.Classification.f1_score(y_true, y_pred, num_classes: 3, average: :macro)
       #Nx.Tensor<
         f32
-        0.5777778029441833
+        0.5777778
       >
       iex> Scholar.Metrics.Classification.f1_score(y_true, y_pred, num_classes: 3, average: :weighted)
       #Nx.Tensor<
@@ -1183,7 +1183,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.brier_score_loss(y_true, y_prob)
       #Nx.Tensor<
         f32
-        0.03750000149011612
+        0.0375
       >
   """
   deftransform brier_score_loss(y_true, y_prob, opts \\ []) do
@@ -1214,7 +1214,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.cohen_kappa_score(y1, y2, num_classes: 3)
       #Nx.Tensor<
         f32
-        0.21739131212234497
+        0.21739131
       >
 
       iex> y1 = Nx.tensor([0, 1, 1, 0, 1, 2])
@@ -1222,7 +1222,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.cohen_kappa_score(y1, y2, num_classes: 3, weighting_type: :linear)
       #Nx.Tensor<
         f32
-        0.3571428060531616
+        0.3571428
       >
   """
   deftransform cohen_kappa_score(y1, y2, opts \\ []) do
@@ -1278,18 +1278,18 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.log_loss(y_true, y_prob, num_classes: 2)
       #Nx.Tensor<
         f32
-        0.17380733788013458
+        0.17380734
       >
       iex> Scholar.Metrics.Classification.log_loss(y_true, y_prob, num_classes: 2, normalize: false)
       #Nx.Tensor<
         f32
-        0.6952293515205383
+        0.69522935
       >
       iex> weights = Nx.tensor([0.7, 2.3, 1.3, 0.34])
       iex(361)> Scholar.Metrics.Classification.log_loss(y_true, y_prob, num_classes: 2, sample_weights: weights)
       #Nx.Tensor<
         f32
-        0.22717177867889404
+        0.22717178
       >
   """
   deftransform log_loss(y_true, y_prob, opts \\ []) do
@@ -1363,7 +1363,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.top_k_accuracy_score(y_true, y_score, k: 2, num_classes: 3)
       #Nx.Tensor<
         f32
-        0.800000011920929
+        0.8
       >
 
       iex> y_true = Nx.tensor([0, 1, 2, 2, 0])
@@ -1379,7 +1379,7 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.top_k_accuracy_score(y_true, y_score, k: 1, num_classes: 2)
       #Nx.Tensor<
         f32
-        0.20000000298023224
+        0.2
       >
   """
   deftransform top_k_accuracy_score(y_true, y_prob, opts \\ []) do

@@ -412,7 +412,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.r2_score(y_true, y_pred)
       #Nx.Tensor<
         f32
-        0.9486081600189209
+        0.94860816
       >
 
       iex> y_true = Nx.tensor([[3, -0.5], [2, 7]], type: {:f, 32})
@@ -420,7 +420,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.r2_score(y_true, y_pred, axes: [0])
       #Nx.Tensor<
         f32[2]
-        [0.6800000071525574, 0.9559956192970276]
+        [0.68, 0.9559956]
       >
 
       iex> y_true = Nx.tensor([-2.0, -2.0, -2.0], type: :f64)
@@ -485,7 +485,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.explained_variance_score(y_true, y_pred)
       #Nx.Tensor<
         f32
-        0.9571734666824341
+        0.95717347
       >
 
       iex> y_true = Nx.tensor([-2.0, -2.0, -2.0], type: :f64)
@@ -525,7 +525,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.explained_variance_score(y_true, y_pred, axes: [0])
       #Nx.Tensor<
         f32[2]
-        [0.75, 0.995555579662323]
+        [0.75, 0.9955556]
       >
   """
   deftransform explained_variance_score(y_true, y_pred, opts \\ []) do
