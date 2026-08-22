@@ -401,6 +401,34 @@ defmodule Scholar.Cluster.HierarchicalTest do
       assert Nx.to_number(model.sizes[-1]) == 0
     end
 
+    test "an infinite coordinate does not run the chain past the end of its buffer" do
+      # An infinite coordinate puts both :infinity and :nan in the distance matrix, since
+      # subtracting infinities gives NaN. The chain can then keep extending without ever
+      # finding a mutual pair, and walking past the end of its own buffer raises instead
+      # of reporting the merges it could not make.
+      x = Nx.tensor([[0.0, 0.0], [1.0, 1.0], [2.0, 2.0], [:infinity, 0.0]])
+
+      model = Hierarchical.fit(x, linkage: :complete)
+
+      assert model.num_points == 4
+      assert Nx.shape(model.clades) == {3, 2}
+
+      # Whatever it did merge is still a well formed tree: no clade merged twice, and no
+      # row naming a clade that is not born yet.
+      made =
+        Nx.to_flat_list(model.clades)
+        |> Enum.chunk_every(2)
+        |> Enum.zip(Nx.to_flat_list(model.sizes))
+        |> Enum.reject(fn {_pair, size} -> size == 0 end)
+
+      children = Enum.flat_map(made, fn {pair, _size} -> pair end)
+      assert children == Enum.uniq(children)
+
+      assert Enum.all?(Enum.with_index(made), fn {{[a, b], _size}, k} ->
+               a < model.num_points + k and b < model.num_points + k
+             end)
+    end
+
     test "a NaN coordinate still makes every merge" do
       # NaN alone does not stall the loop: argmin keeps picking a mutual pair, so every
       # merge is made. The dissimilarities really are NaN here, since the distances are,
