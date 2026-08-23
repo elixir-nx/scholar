@@ -61,12 +61,12 @@ defmodule Scholar.Covariance.LedoitWolf do
       iex> model.shrinkage
       #Nx.Tensor<
         f32
-        0.15034137666225433
+        0.15034138
       >
       iex> model.location
       #Nx.Tensor<
         f32[2]
-        [0.17184630036354065, 0.3276958167552948]
+        [0.1718463, 0.32769582]
       >
 
       iex> key = Nx.Random.key(0)
@@ -84,12 +84,12 @@ defmodule Scholar.Covariance.LedoitWolf do
       iex> model.shrinkage
       #Nx.Tensor<
         f32
-        0.1908363401889801
+        0.19083634
       >
       iex> model.location
       #Nx.Tensor<
         f32[3]
-        [1.1228725910186768, 0.5419300198554993, 0.8678852319717407]
+        [1.1228726, 0.54193, 0.86788523]
       >
 
       iex> key = Nx.Random.key(0)
