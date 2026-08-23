@@ -74,7 +74,7 @@ defmodule Scholar.Covariance.ShrunkCovariance do
       iex> model.location
       #Nx.Tensor<
         f32[2]
-        [0.18202415108680725, -0.09216632694005966]
+        [0.18202415, -0.09216633]
       >
   """
 
