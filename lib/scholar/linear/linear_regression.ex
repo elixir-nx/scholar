@@ -58,12 +58,12 @@ defmodule Scholar.Linear.LinearRegression do
       iex> model.coefficients
       #Nx.Tensor<
         f32[2]
-        [-0.49724647402763367, -0.7010394930839539]
+        [-0.50000006, -0.6999999]
       >
       iex> model.intercept
       #Nx.Tensor<
         f32
-        5.8964691162109375
+        5.9
       >
   """
   deftransform fit(x, y, opts \\ []) do
@@ -126,7 +126,7 @@ defmodule Scholar.Linear.LinearRegression do
       iex> model = Scholar.Linear.LinearRegression.fit(x, y)
       iex> Scholar.Linear.LinearRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
       Nx.tensor(
-        [4.200936794281006]
+        [4.2]
       )
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
