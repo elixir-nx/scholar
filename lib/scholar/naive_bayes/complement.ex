@@ -186,7 +186,7 @@ defmodule Scholar.NaiveBayes.Complement do
     sample_weights = Nx.tensor(sample_weights, type: x_type)
 
     {priors, opts} = Keyword.pop(opts, :priors, Nx.tensor(0.0, type: x_type))
-    class_priors = Nx.tensor(priors)
+    class_priors = Nx.tensor(priors, type: x_type)
     {alpha, opts} = Keyword.pop!(opts, :alpha)
     alpha = Nx.tensor(alpha, type: x_type)
 
@@ -385,7 +385,8 @@ defmodule Scholar.NaiveBayes.Complement do
           Nx.log(class_count) - Nx.log(Nx.sum(class_count))
 
         true ->
-          Nx.broadcast(-Nx.log(num_classes), {num_classes})
+          num_classes_t = Nx.tensor(1.0, type: x_type) * num_classes
+          Nx.broadcast(-Nx.log(num_classes_t), {num_classes})
       end
 
     %__MODULE__{
