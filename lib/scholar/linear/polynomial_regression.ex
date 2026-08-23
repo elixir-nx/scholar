@@ -67,12 +67,12 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> model.coefficients
       #Nx.Tensor<
         f32[2]
-        [-0.49724647402763367, -0.7010394930839539]
+        [-0.50000006, -0.6999999]
       >
       iex> model.intercept
       #Nx.Tensor<
         f32
-        5.8964691162109375
+        5.9
       >
       iex> model.degree
       1
@@ -83,12 +83,12 @@ defmodule Scholar.Linear.PolynomialRegression do
       iex> model.coefficients
       #Nx.Tensor<
         f32[5]
-        [-0.021396614611148834, -0.004854436963796616, -0.08849868923425674, -0.06221142038702965, -0.04369127005338669]
+        [-0.021405932, -0.004853379, -0.08853575, -0.062225383, -0.043680415]
       >
       iex> model.intercept
       #Nx.Tensor<
         f32
-        4.418517112731934
+        4.4188204
       >
       iex> model.degree
       2
