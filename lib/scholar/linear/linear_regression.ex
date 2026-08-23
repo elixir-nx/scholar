@@ -100,7 +100,20 @@ defmodule Scholar.Linear.LinearRegression do
          Nx.broadcast(Nx.tensor(0.0, type: Nx.type(b)), {b_offset_shape})}
       end
 
+    # The scale of the data before centering, used below to tell a genuinely
+    # tiny coefficient direction from floating point noise left by centering.
+    # Centering can be mathematically exact zero (a single sample, or samples
+    # that coincide after weighting) without landing on exact zero in floating
+    # point, since a - weighted_mean(a) is not guaranteed to round-trip to 0
+    # the way a - a is. `pinv` has no way to tell that noise apart from a real
+    # near-zero singular value, since it only sees the centered, already tiny
+    # scale, so it gets snapped here instead, before it can be inverted into a
+    # large spurious coefficient.
+    a_scale = Nx.reduce_max(Nx.abs(a)) + 1.0e-30
+    tol = max(Nx.axis_size(a, 0), Nx.axis_size(a, 1)) * Nx.Constants.epsilon(Nx.type(a)) * a_scale
+
     {a, b} = {a - a_offset, b - b_offset}
+    a = Nx.select(Nx.abs(a) < tol, 0.0, a)
 
     {a, b} =
       if opts[:sample_weights_flag] do
