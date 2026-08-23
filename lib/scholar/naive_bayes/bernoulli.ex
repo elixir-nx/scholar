@@ -10,14 +10,13 @@ defmodule Scholar.NaiveBayes.Bernoulli do
   import Scholar.Shared
 
   @derive {Nx.Container,
-           keep: [:binarize],
            containers: [
              :feature_count,
              :class_count,
              :class_log_priors,
              :feature_log_probability
            ]}
-  defstruct [:feature_count, :class_count, :class_log_priors, :feature_log_probability, :binarize]
+  defstruct [:feature_count, :class_count, :class_log_priors, :feature_log_probability]
 
   opts_schema = [
     num_classes: [
@@ -128,8 +127,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
                 [-1.0986123085021973, -1.0986123085021973, -0.40546512603759766],
                 [-0.28768205642700195, -0.28768205642700195, -0.28768205642700195]
               ]
-            ),
-            binarize: 1.0
+            )
           }
 
       iex> x = Nx.iota({4, 3})
@@ -155,8 +153,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
                 [-23.025850296020508, 0.0, 0.0],
                 [0.0, 0.0, 0.0]
               ]
-            ),
-            binarize: 0.0
+            )
           }
   """
 
@@ -291,8 +288,7 @@ defmodule Scholar.NaiveBayes.Bernoulli do
       class_count: class_count,
       class_log_priors: class_log_priors,
       feature_count: feature_count,
-      feature_log_probability: feature_log_probability,
-      binarize: opts[:binarize]
+      feature_log_probability: feature_log_probability
     }
   end
 
@@ -347,8 +343,8 @@ defmodule Scholar.NaiveBayes.Bernoulli do
       #Nx.Tensor<
         f32[2][3]
         [
-          [-1.4696369, -2.162784, -0.42314053],
-          [-1.4696369, -2.162784, -0.42314053]
+          [-4.7047806, -12.329399, -0.009097099],
+          [-8.750494, -19.147701, -1.5830994e-4]
         ]
       >
   """
@@ -377,8 +373,8 @@ defmodule Scholar.NaiveBayes.Bernoulli do
       #Nx.Tensor<
         f32[2][3]
         [
-          [0.23000899, 0.11500449, 0.65498656],
-          [0.23000899, 0.11500449, 0.65498656]
+          [0.0090519, 4.419875e-6, 0.99094415],
+          [1.5838306e-4, 4.8334696e-9, 0.9998417]
         ]
       >
   """
@@ -399,8 +395,8 @@ defmodule Scholar.NaiveBayes.Bernoulli do
       #Nx.Tensor<
         f32[2][3]
         [
-          [-2.6026897, -3.295837, -1.5561934],
-          [-2.6026897, -3.295837, -1.5561934]
+          [3.6356335, -3.988985, 8.331317],
+          [10.567104, 0.16989732, 19.31744]
         ]
       >
   """
@@ -425,17 +421,10 @@ defmodule Scholar.NaiveBayes.Bernoulli do
   defnp joint_log_likelihood(
           %__MODULE__{
             feature_log_probability: feature_log_probability,
-            class_log_priors: class_log_priors,
-            binarize: binarize
+            class_log_priors: class_log_priors
           },
           x
         ) do
-    x =
-      case binarize do
-        nil -> x
-        threshold -> Scholar.Preprocessing.Binarizer.fit_transform(x, threshold: threshold)
-      end
-
     neg_prob = Nx.log(1 - Nx.exp(feature_log_probability))
     jll = Nx.dot(x, [1], feature_log_probability - neg_prob, [1])
     jll + class_log_priors + Nx.sum(neg_prob, axes: [1])
