@@ -272,10 +272,11 @@ defmodule Scholar.NaiveBayes.Categorical do
     end
 
     num_categories =
-      (opts[:min_categories] || x)
-      |> Nx.reduce_max()
-      |> Nx.add(1)
-      |> Nx.to_number()
+      if min_categories_flag do
+        min_categories |> Nx.reduce_max() |> Nx.to_number() |> trunc()
+      else
+        x |> Nx.reduce_max() |> Nx.add(1) |> Nx.to_number() |> trunc()
+      end
 
     opts =
       opts ++
@@ -360,7 +361,7 @@ defmodule Scholar.NaiveBayes.Categorical do
   """
 
   defn predict(%__MODULE__{} = model, x, classes) do
-    check_dim(x, Nx.axis_size(model.feature_count, 1))
+    check_dim(x, Nx.axis_size(model.feature_count, 0))
 
     if Nx.rank(classes) != 1 do
       raise ArgumentError,
@@ -401,7 +402,7 @@ defmodule Scholar.NaiveBayes.Categorical do
   """
 
   defn predict_log_probability(%__MODULE__{} = model, x) do
-    check_dim(x, Nx.axis_size(model.feature_count, 1))
+    check_dim(x, Nx.axis_size(model.feature_count, 0))
     jll = joint_log_likelihood(model, x)
 
     log_proba_x =
@@ -453,7 +454,7 @@ defmodule Scholar.NaiveBayes.Categorical do
   """
 
   defn predict_joint_log_probability(%__MODULE__{} = model, x) do
-    check_dim(x, Nx.axis_size(model.feature_count, 1))
+    check_dim(x, Nx.axis_size(model.feature_count, 0))
     joint_log_likelihood(model, x)
   end
 
