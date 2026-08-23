@@ -29,7 +29,12 @@ defmodule Scholar.NaiveBayes.Categorical do
       """
     ],
     alpha: [
-      type: {:or, [:float, {:list, :float}]},
+      type:
+        {:or,
+         [
+           {:custom, Scholar.Options, :non_negative_number, []},
+           {:list, {:custom, Scholar.Options, :non_negative_number, []}}
+         ]},
       default: 1.0,
       doc: ~S"""
       Additive (Laplace/Lidstone) smoothing parameter
@@ -235,7 +240,7 @@ defmodule Scholar.NaiveBayes.Categorical do
     priors_flag = opts[:class_priors] != nil
 
     {class_priors, opts} = Keyword.pop(opts, :class_priors, :nan)
-    class_priors = Nx.tensor(class_priors)
+    class_priors = Nx.tensor(class_priors, type: type)
 
     if priors_flag and Nx.size(class_priors) != num_classes do
       raise ArgumentError,
@@ -333,7 +338,8 @@ defmodule Scholar.NaiveBayes.Categorical do
           Nx.log(class_count) - Nx.log(Nx.sum(class_count))
 
         true ->
-          Nx.broadcast(-Nx.log(num_classes), {num_classes})
+          num_classes_t = Nx.tensor(1.0, type: type) * num_classes
+          Nx.broadcast(-Nx.log(num_classes_t), {num_classes})
       end
 
     %__MODULE__{
@@ -477,14 +483,22 @@ defmodule Scholar.NaiveBayes.Categorical do
           },
           x
         ) do
+    # jll accumulates one {num_samples, num_classes} term per feature. Note
+    # that this is not the shape of x: feature_log_probability is
+    # {num_features, num_classes, num_categories}, so num_classes comes from
+    # its axis 1, not from x's second axis.
+    num_samples = Nx.axis_size(x, 0)
+    num_classes = Nx.axis_size(feature_log_probability, 1)
+
     {_, jll} =
-      while {{i = 0, feature_log_probability, x}, jll = Nx.broadcast(0.0, Nx.shape(x))},
+      while {{i = 0, feature_log_probability, x},
+             jll = Nx.broadcast(0.0, {num_samples, num_classes})},
             i < Nx.axis_size(x, 1) do
         indices = Nx.slice_along_axis(x, i, 1, axis: 1) |> Nx.squeeze(axes: [1])
 
         jll =
           Nx.slice_along_axis(feature_log_probability, i, 1, axis: 0)
-          |> Nx.squeeze()
+          |> Nx.squeeze(axes: [0])
           |> Nx.take(indices, axis: 1)
           |> Nx.transpose()
           |> Nx.add(jll)
