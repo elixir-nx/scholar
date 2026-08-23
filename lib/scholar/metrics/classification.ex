@@ -680,17 +680,17 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3, average: :macro)
       #Nx.Tensor<
         f32
-        0.6157407760620117
+        0.6157408
       >
       iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.u32(2), num_classes: 3, average: :weighted)
       #Nx.Tensor<
         f32
-        0.5958333611488342
+        0.59583336
       >
       iex> Scholar.Metrics.Classification.fbeta_score(y_true, y_pred, Nx.f32(0.5), num_classes: 3, average: :micro)
       #Nx.Tensor<
         f32
-        0.6000000238418579
+        0.6
       >
       iex> Scholar.Metrics.Classification.fbeta_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), Nx.tensor(0.5), num_classes: 2, average: :none)
       #Nx.Tensor<
@@ -864,12 +864,12 @@ defmodule Scholar.Metrics.Classification do
       iex> Scholar.Metrics.Classification.f1_score(y_true, y_pred, num_classes: 3, average: :weighted)
       #Nx.Tensor<
         f32
-        0.6399999856948853
+        0.64
       >
       iex> Scholar.Metrics.Classification.f1_score(y_true, y_pred, num_classes: 3, average: :micro)
       #Nx.Tensor<
         f32
-        0.6000000238418579
+        0.6
       >
       iex> Scholar.Metrics.Classification.f1_score(Nx.tensor([1, 0, 1, 0]), Nx.tensor([0, 1, 0, 1]), num_classes: 2, average: :none)
       #Nx.Tensor<
