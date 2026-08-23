@@ -1027,4 +1027,90 @@ defmodule Scholar.NaiveBayes.CategoricalTest do
       )
     end
   end
+
+  describe "predict with num_features != num_classes" do
+    test "predicts when the feature count differs from the class count" do
+      # Every doctest and existing test happens to use num_features ==
+      # num_classes, which is the only case where a jll accumulator sized
+      # from x instead of from the class axis works.
+      x = Nx.tensor([[1, 2, 2], [1, 2, 1], [2, 2, 0], [0, 1, 2], [2, 0, 1]])
+      y = Nx.tensor([0, 1, 1, 0, 1])
+      model = Categorical.fit(x, y, num_classes: 2)
+
+      x_test = Nx.tensor([[1, 2, 2], [2, 0, 1], [0, 1, 0]])
+
+      assert Nx.shape(Categorical.predict_probability(model, x_test)) == {3, 2}
+      assert Categorical.predict(model, x_test, Nx.tensor([0, 1])) == Nx.tensor([0, 1, 0])
+
+      # Reference: sklearn.naive_bayes.CategoricalNB on the same data.
+      assert_all_close(
+        Categorical.predict_probability(model, x_test),
+        Nx.tensor([
+          [0.6973365617433412, 0.3026634382566586],
+          [0.060150375939849614, 0.9398496240601504],
+          [0.6973365617433416, 0.3026634382566585]
+        ]),
+        atol: 1.0e-5
+      )
+    end
+
+    test "check_dim validates against the feature count, not the class count" do
+      x = Nx.tensor([[1, 2, 2], [1, 2, 1], [2, 2, 0], [0, 1, 2], [2, 0, 1]])
+      y = Nx.tensor([0, 1, 1, 0, 1])
+      model = Categorical.fit(x, y, num_classes: 2)
+
+      # 3 features, as used for fitting: must be accepted.
+      assert Nx.shape(Categorical.predict_probability(model, Nx.tensor([[1, 2, 2]]))) == {1, 2}
+
+      # 2 features: must be rejected even though it matches num_classes.
+      assert_raise ArgumentError, fn ->
+        Categorical.predict_probability(model, Nx.tensor([[1, 2]]))
+      end
+    end
+  end
+
+  describe "option validation" do
+    test "rejects a negative alpha instead of silently producing NaN" do
+      x = Nx.tensor([[1, 0, 1], [0, 1, 1], [1, 1, 0]])
+      y = Nx.tensor([0, 1, 1])
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Categorical.fit(x, y, num_classes: 2, alpha: -1.0)
+      end
+
+      assert_raise NimbleOptions.ValidationError, fn ->
+        Categorical.fit(x, y, num_classes: 2, alpha: [1.0, -2.0, 1.0])
+      end
+    end
+
+    test "min_categories actually sizes the category axis" do
+      x = Nx.tensor([[1, 2, 3], [1, 3, 4], [2, 2, 3], [1, 1, 3], [2, 1, 4]])
+      y = Nx.tensor([0, 1, 2, 1, 0])
+
+      # Without the option the category count is inferred from the data (max 4
+      # -> 5 categories). Asking for 7 must widen the axis to 7, matching
+      # sklearn's CategoricalNB(min_categories=...) semantics.
+      inferred = Categorical.fit(x, y, num_classes: 3)
+      assert Nx.axis_size(inferred.feature_count, 2) == 5
+
+      widened = Categorical.fit(x, y, num_classes: 3, min_categories: [7, 7, 7])
+      assert Nx.axis_size(widened.feature_count, 2) == 7
+    end
+
+    test "keeps class_log_priors in the same type as the rest of the model" do
+      x = Nx.tensor([[1, 0, 1], [0, 1, 1], [1, 1, 0]])
+      y = Nx.tensor([0, 1, 1])
+
+      for opts <- [
+            [num_classes: 2],
+            [num_classes: 2, class_priors: [0.3, 0.7]],
+            [num_classes: 2, fit_priors: false]
+          ] do
+        model = Categorical.fit(x, y, opts)
+
+        assert Nx.type(model.class_log_priors) == Nx.type(model.feature_log_probability),
+               "class_log_priors downcast for opts: #{inspect(opts)}"
+      end
+    end
+  end
 end
