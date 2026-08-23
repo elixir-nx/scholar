@@ -197,7 +197,7 @@ defmodule Scholar.NaiveBayes.Multinomial do
     priors_flag = opts[:class_priors] != nil
 
     {class_priors, opts} = Keyword.pop(opts, :class_priors, :nan)
-    class_priors = Nx.tensor(class_priors)
+    class_priors = Nx.tensor(class_priors, type: type)
 
     if priors_flag and Nx.size(class_priors) != num_classes do
       raise ArgumentError,
@@ -271,7 +271,8 @@ defmodule Scholar.NaiveBayes.Multinomial do
           Nx.log(class_count) - Nx.log(Nx.sum(class_count))
 
         true ->
-          Nx.broadcast(-Nx.log(num_classes), {num_classes})
+          num_classes_t = Nx.tensor(1.0, type: type) * num_classes
+          Nx.broadcast(-Nx.log(num_classes_t), {num_classes})
       end
 
     %__MODULE__{
