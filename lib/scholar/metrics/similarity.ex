@@ -42,7 +42,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.jaccard(x, y)
       #Nx.Tensor<
         f32
-        0.1428571492433548
+        0.14285715
       >
 
       iex> x = Nx.tensor([1, 2, 3, 5, 7])
@@ -58,7 +58,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.jaccard(x, y, axis: 1)
       #Nx.Tensor<
         f32[2]
-        [0.20000000298023224, 0.5]
+        [0.2, 0.5]
       >
 
       iex> x = Nx.tensor([1, 2])
@@ -66,7 +66,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.jaccard(x, y)
       #Nx.Tensor<
         f32
-        0.6666666865348816
+        0.6666667
       >
   """
   deftransform jaccard(x, y, opts \\ []) do
@@ -130,7 +130,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.binary_jaccard(x, y)
       #Nx.Tensor<
         f32
-        0.4000000059604645
+        0.4
       >
 
       iex> x = Nx.tensor([[1,1,0,1], [1,1,0,1]])
@@ -138,7 +138,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.binary_jaccard(x, y)
       #Nx.Tensor<
         f32
-        0.8333333134651184
+        0.8333333
       >
 
       iex> x = Nx.tensor([[1,1,0,1], [1,1,0,1]])
@@ -146,7 +146,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.binary_jaccard(x, y, axis: 1)
       #Nx.Tensor<
         f32[2]
-        [1.0, 0.6666666865348816]
+        [1.0, 0.6666667]
       >
 
       iex> x = Nx.tensor([1, 1])
@@ -208,7 +208,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.dice_coefficient(x, y)
       #Nx.Tensor<
         f32
-        0.4000000059604645
+        0.4
       >
 
       iex> x = Nx.iota({2,3})
@@ -216,7 +216,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.dice_coefficient(x, y, axis: 1)
       #Nx.Tensor<
         f32[2]
-        [0.3333333134651184, 0.6666666865348816]
+        [0.3333333, 0.6666667]
       >
 
       iex> x = Nx.tensor([1, 2])
@@ -224,7 +224,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.dice_coefficient(x, y)
       #Nx.Tensor<
         f32
-        0.800000011920929
+        0.8
       >
   """
   defn dice_coefficient(x, y, opts \\ []) do
@@ -247,7 +247,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.dice_coefficient_binary(x, y)
       #Nx.Tensor<
         f32
-        0.5714285969734192
+        0.5714286
       >
 
       iex> x = Nx.tensor([[1,1,0,1], [1,1,0,1]])
@@ -255,7 +255,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.dice_coefficient_binary(x, y)
       #Nx.Tensor<
         f32
-        0.9090909361839294
+        0.90909094
       >
 
       iex> x = Nx.tensor([[1,1,0,1], [1,1,0,1]])
@@ -263,7 +263,7 @@ defmodule Scholar.Metrics.Similarity do
       iex> Scholar.Metrics.Similarity.dice_coefficient_binary(x, y, axis: 1)
       #Nx.Tensor<
         f32[2]
-        [1.0, 0.800000011920929]
+        [1.0, 0.8]
       >
 
       iex> x = Nx.tensor([1, 1])

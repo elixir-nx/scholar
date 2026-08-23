@@ -39,7 +39,7 @@ defmodule Scholar.Metrics.Clustering do
       iex> Scholar.Metrics.Clustering.silhouette_samples(x, labels, num_clusters: 2)
       #Nx.Tensor<
         f32[5]
-        [0.7647753357887268, 0.7781199216842651, 0.6754303574562073, 0.4934419095516205, 0.6627992391586304]
+        [0.76477534, 0.7781199, 0.67543036, 0.4934419, 0.66279924]
       >
 
       iex> x = Nx.tensor([[0.1, 0], [0, 1], [22, 65], [42, 3], [4.2, 51]])
@@ -47,7 +47,7 @@ defmodule Scholar.Metrics.Clustering do
       iex> Scholar.Metrics.Clustering.silhouette_samples(x, labels, num_clusters: 3)
       #Nx.Tensor<
         f32[5]
-        [0.0, -0.9782053232192993, 0.0, -0.18546827137470245, -0.592965841293335]
+        [0.0, -0.9782053, 0.0, -0.18546827, -0.59296584]
       >
   """
   deftransform silhouette_samples(x, labels, opts \\ []) do
@@ -75,7 +75,7 @@ defmodule Scholar.Metrics.Clustering do
       iex> Scholar.Metrics.Clustering.silhouette_score(x, labels, num_clusters: 2)
       #Nx.Tensor<
         f32
-        0.6749133467674255
+        0.67491335
       >
 
       iex> x = Nx.tensor([[0.1, 0], [0, 1], [22, 65], [42, 3], [4.2, 51]])
@@ -83,7 +83,7 @@ defmodule Scholar.Metrics.Clustering do
       iex> Scholar.Metrics.Clustering.silhouette_score(x, labels, num_clusters: 3)
       #Nx.Tensor<
         f32
-        -0.35132789611816406
+        -0.3513279
       >
   """
   deftransform silhouette_score(x, labels, opts \\ []) do

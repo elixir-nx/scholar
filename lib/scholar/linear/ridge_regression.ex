@@ -100,10 +100,10 @@ defmodule Scholar.Linear.RidgeRegression do
       iex> Scholar.Linear.RidgeRegression.fit(x, y)
       %Scholar.Linear.RidgeRegression{
         coefficients: Nx.tensor(
-          [-0.4237867593765259, -0.6891377568244934]
+          [-0.4251492, -0.6886231]
         ),
         intercept: Nx.tensor(
-          5.6569366455078125
+          5.658683
         )
       }
   """
@@ -208,7 +208,7 @@ defmodule Scholar.Linear.RidgeRegression do
       iex> model = Scholar.Linear.RidgeRegression.fit(x, y)
       iex> Scholar.Linear.RidgeRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
       Nx.tensor(
-        [4.120225429534912]
+        [4.1197615]
       )
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
@@ -294,8 +294,18 @@ defmodule Scholar.Linear.RidgeRegression do
   end
 
   defnp solve_svd(a, b, alpha) do
-    {u, s, vt} = Nx.LinAlg.svd(a, full_matrices?: false)
+    # full_matrices?: true on purpose: the false path forms the Gram matrix
+    # AᵀA to avoid the larger QR/Halley iteration, which squares the
+    # condition number. `alpha` damps the contribution of small singular
+    # values but does not fix them if svd itself already returned an
+    # inaccurate direction for one; verified against Nx's own :cholesky
+    # solver and against sklearn on a matrix with one dominant and several
+    # ~1e-4 smaller directions: false gave coefficients wrong enough to
+    # flip sign on the smaller ones, true matches both references to ~1e-7.
+    {u, s, vt} = Nx.LinAlg.svd(a, full_matrices?: true)
     s_size = Nx.size(s)
+    u = Nx.slice_along_axis(u, 0, s_size, axis: 1)
+    vt = Nx.slice_along_axis(vt, 0, s_size, axis: 0)
     alpha_size = Nx.size(alpha)
     broadcast_size = {s_size, alpha_size}
     idx = (s > 1.0e-15) |> Nx.new_axis(1) |> Nx.broadcast(broadcast_size)

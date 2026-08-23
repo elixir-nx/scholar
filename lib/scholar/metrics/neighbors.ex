@@ -23,7 +23,7 @@ defmodule Scholar.Metrics.Neighbors do
       iex> Scholar.Metrics.Neighbors.recall(neighbors_true, neighbors_pred)
       #Nx.Tensor<
         f32
-        0.6666666865348816
+        0.6666667
       >
   """
   defn recall(neighbors_true, neighbors_pred) do

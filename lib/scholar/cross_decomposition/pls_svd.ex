@@ -90,15 +90,15 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
       iex> model.y_std
       #Nx.Tensor<
         f32[2]
-        [5.467098712921143, 5.661198616027832]
+        [5.4670987, 5.6611986]
       >
       iex> model.x_weights
       #Nx.Tensor<
         f32[3][2]
         [
-          [0.521888256072998, -0.11256571859121323],
-          [0.6170258522033691, 0.7342619299888611],
-          [0.5889922380447388, -0.6694686412811279]
+          [0.5218878, -0.11256802],
+          [0.6170291, 0.7342591],
+          [0.58898926, -0.66947126]
         ]
       >
   """
@@ -115,7 +115,15 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
 
     c = Nx.dot(x, [0], y, [0])
 
-    {u, _s, vt} = Nx.LinAlg.svd(c, full_matrices?: false)
+    # full_matrices?: true on purpose: the false path forms the Gram matrix
+    # CᵀC to avoid the larger QR/Halley iteration, which squares the
+    # condition number and can cost the smaller singular vectors real
+    # precision (Nx.LinAlg.svd's own docs call this out). C here is the
+    # cross-covariance of two already small, already centered and scaled
+    # blocks, so its singular values are routinely far apart, exactly the
+    # regime that trade-off hurts. true costs more but keeps x_weights and
+    # y_weights properly orthonormal.
+    {u, _s, vt} = Nx.LinAlg.svd(c, full_matrices?: true)
     u = Nx.slice_along_axis(u, 0, num_components, axis: 1)
     vt = Nx.slice_along_axis(vt, 0, num_components, axis: 0)
     {u, vt} = Scholar.Decomposition.Utils.flip_svd(u, vt)
@@ -171,20 +179,20 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
       #Nx.Tensor<
         f32[4][2]
         [
-          [-1.397004246711731, -0.10283949971199036],
-          [-1.1967883110046387, 0.17159013450145721],
-          [0.5603229403495789, -0.10849219560623169],
-          [2.0334696769714355, 0.039741579443216324]
+          [-1.3970047, -0.10283327],
+          [-1.1967875, 0.17159548],
+          [0.56032246, -0.10849468],
+          [2.0334697, 0.039732467]
         ]
       >
       iex> y
       #Nx.Tensor<
         f32[4][2]
         [
-          [-1.2260178327560425, -0.019306711852550507],
-          [-0.9602956175804138, 0.04015407711267471],
-          [0.3249155580997467, -0.04311027377843857],
-          [1.8613981008529663, 0.022262824699282646]
+          [-1.226018, -0.019301286],
+          [-0.9602954, 0.040158324],
+          [0.32491535, -0.043111708],
+          [1.8613981, 0.022254586]
         ]
       >
 
@@ -252,20 +260,20 @@ defmodule Scholar.CrossDecomposition.PLSSVD do
       #Nx.Tensor<
         f32[4][2]
         [
-          [-1.397004246711731, -0.10283949971199036],
-          [-1.1967883110046387, 0.17159013450145721],
-          [0.5603229403495789, -0.10849219560623169],
-          [2.0334696769714355, 0.039741579443216324]
+          [-1.3970047, -0.10283327],
+          [-1.1967875, 0.17159548],
+          [0.56032246, -0.10849468],
+          [2.0334697, 0.039732467]
         ]
       >
       iex> y
       #Nx.Tensor<
         f32[4][2]
         [
-          [-1.2260178327560425, -0.019306711852550507],
-          [-0.9602956175804138, 0.04015407711267471],
-          [0.3249155580997467, -0.04311027377843857],
-          [1.8613981008529663, 0.022262824699282646]
+          [-1.226018, -0.019301286],
+          [-0.9602954, 0.040158324],
+          [0.32491535, -0.043111708],
+          [1.8613981, 0.022254586]
         ]
       >
 
