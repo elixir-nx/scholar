@@ -134,6 +134,30 @@ defmodule KNNImputterTest do
       # and its nearest donors on cols 0/1 are rows 0 and 1.
       assert_all_close(result[3], Nx.tensor([1.3, 2.3, 550.0]))
     end
+
+    test "keeps the input's float type through fit and transform" do
+      # row_distances and the NaN placeholder used to default to f32
+      # regardless of the input type, so an f64 tensor crashed inside the
+      # while loop as soon as a value needed imputing (type mismatch
+      # between the f32 accumulator and the f64 result).
+      x =
+        Nx.tensor(
+          [
+            [0.1, 0.2, 500.123456789],
+            [0.11, 0.21, 600.987654321],
+            [:nan, :nan, 5.000000001],
+            [50.0, 80.0, 5.100000002],
+            [60.0, 90.0, 4.900000003]
+          ],
+          type: :f64
+        )
+
+      imputer = KNNImputter.fit(x, num_neighbors: 2)
+      result = KNNImputter.transform(imputer, x)
+
+      assert Nx.type(result) == {:f, 64}
+      assert_all_close(result[2], Nx.tensor([55.0, 85.0, 5.0], type: :f64), atol: 1.0e-9)
+    end
   end
 
   describe "errors" do
