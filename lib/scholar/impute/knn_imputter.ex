@@ -199,17 +199,12 @@ defmodule Scholar.Impute.KNNImputter do
     # minus nan column
     coordinates = coordinates - 1
 
-    # a donor with no value in nan_col cannot be used to fill it - this also
-    # rules out the row itself as its own neighbor, since the row's value at
-    # nan_col is NaN by construction (that's what we're trying to impute)
+    # a donor missing nan_col is unusable, which also rules out the row itself
     if Nx.is_nan(potential_neighbor[nan_col]) do
       Nx.Constants.infinity(Nx.type(row))
     else
-      # columns usable for the comparison: present in both row and donor,
-      # excluding nan_col. Any OTHER missing value in either row (row can
-      # have more than one NaN, not just nan_col) must be excluded here too,
-      # or it poisons the sum with NaN and every donor ends up looking
-      # equally (infinitely) far, regardless of how close it really is.
+      # exclude any column where either row is NaN, not just nan_col, or a
+      # second missing value poisons the distance for every donor
       usable =
         row
         |> Nx.is_nan()
@@ -219,8 +214,6 @@ defmodule Scholar.Impute.KNNImputter do
 
       present_coordinates = Nx.sum(usable)
 
-      # if row and donor share no other valid column, the donor gives no
-      # information about this row and must not be picked as a neighbor
       if present_coordinates == 0 do
         Nx.Constants.infinity(Nx.type(row))
       else
