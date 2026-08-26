@@ -21,12 +21,16 @@ defmodule KNNImputterTest do
 
       assert missing_values == :nan
 
+      # row 3 has three missing values (cols 0, 1, 2), not just one. Its
+      # nearest donors, verified against sklearn.impute.KNNImputer on this
+      # same matrix, are rows 1 and 4 (avg 10.0/11.0 on their shared column),
+      # not rows 0 and 1.
       assert statistics ==
                Nx.tensor([
                  [:nan, :nan, :nan, :nan],
                  [:nan, :nan, :nan, :nan],
                  [:nan, :nan, 4.0, 5.0],
-                 [2.0, 3.0, 4.0, :nan],
+                 [10.0, 11.0, 6.0, :nan],
                  [:nan, :nan, :nan, :nan]
                ])
 
@@ -35,7 +39,7 @@ defmodule KNNImputterTest do
                  [0.0, 1.0, 2.0, 3.0],
                  [4.0, 5.0, 6.0, 7.0],
                  [8.0, 9.0, 4.0, 5.0],
-                 [2.0, 3.0, 4.0, 15.0],
+                 [10.0, 11.0, 6.0, 15.0],
                  [16.0, 17.0, 6.0, 19.0]
                ])
     end
@@ -51,12 +55,14 @@ defmodule KNNImputterTest do
 
       assert missing_values == :nan
 
+      # with a single neighbor, sklearn picks row 4 as row 3's closest donor
+      # on their one shared column, not row 0.
       assert statistics ==
                Nx.tensor([
                  [:nan, :nan, :nan, :nan],
                  [:nan, :nan, :nan, :nan],
-                 [:nan, :nan, 2.0, 3.0],
-                 [0.0, 1.0, 2.0, :nan],
+                 [:nan, :nan, 6.0, 7.0],
+                 [16.0, 17.0, 6.0, :nan],
                  [:nan, :nan, :nan, :nan]
                ])
 
@@ -64,8 +70,8 @@ defmodule KNNImputterTest do
                Nx.tensor([
                  [0.0, 1.0, 2.0, 3.0],
                  [4.0, 5.0, 6.0, 7.0],
-                 [8.0, 9.0, 2.0, 3.0],
-                 [0.0, 1.0, 2.0, 15.0],
+                 [8.0, 9.0, 6.0, 7.0],
+                 [16.0, 17.0, 6.0, 15.0],
                  [16.0, 17.0, 6.0, 19.0]
                ])
     end
@@ -100,6 +106,33 @@ defmodule KNNImputterTest do
                  [2.0, 3.0, 4.0, 15.0],
                  [16.0, 17.0, 6.0, 5.0]
                ])
+    end
+
+    test "picks donors by actual distance for a row with two missing values, not by row index" do
+      # Rows 0 and 1 are low-index but far from row 2 on their one shared
+      # column; rows 5 and 6 are high-index but genuinely close. A row with
+      # two missing values must still be matched to its real nearest
+      # neighbors instead of defaulting to the first num_neighbors rows.
+      # Reference: sklearn.impute.KNNImputer(n_neighbors=2) on this matrix
+      # imputes row 2 to [55.0, 85.0, 5.0].
+      x =
+        Nx.tensor([
+          [1.0, 2.0, 500.0],
+          [1.1, 2.1, 600.0],
+          [:nan, :nan, 5.0],
+          [1.3, 2.3, :nan],
+          [10.0, 20.0, 700.0],
+          [50.0, 80.0, 5.1],
+          [60.0, 90.0, 4.9]
+        ])
+
+      imputer = KNNImputter.fit(x, num_neighbors: 2)
+      result = KNNImputter.transform(imputer, x)
+
+      assert_all_close(result[2], Nx.tensor([55.0, 85.0, 5.0]))
+      # row 3 has a single missing value, unaffected by the multi-NaN bug,
+      # and its nearest donors on cols 0/1 are rows 0 and 1.
+      assert_all_close(result[3], Nx.tensor([1.3, 2.3, 550.0]))
     end
   end
 
