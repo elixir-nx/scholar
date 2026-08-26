@@ -124,7 +124,7 @@ defmodule Scholar.Impute.KNNImputter do
     {num_rows, num_cols} = Nx.shape(x)
     num_neighbors = opts[:num_neighbors]
 
-    placeholder_value = Nx.tensor(:nan)
+    placeholder_value = Nx.tensor(:nan, type: Nx.type(x))
 
     values_to_impute = Nx.broadcast(placeholder_value, x)
 
@@ -160,7 +160,7 @@ defmodule Scholar.Impute.KNNImputter do
     rows = opts[:rows]
     num_neighbors = opts[:num_neighbors]
 
-    row_distances = Nx.iota({rows}, type: {:f, 32})
+    row_distances = Nx.iota({rows}, type: Nx.type(x))
 
     row_with_value_to_fill = x[nan_row]
 
