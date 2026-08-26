@@ -17,9 +17,9 @@ defmodule Scholar.PreprocessingTest do
       assert_all_close(Preprocessing.standard_scale(data), expected)
     end
 
-    test "leaves data as it is when variance is zero" do
+    test "centers data around zero when variance is zero" do
       data = 42.0
-      expected = Nx.tensor(data)
+      expected = Nx.tensor(0.0)
       assert Preprocessing.standard_scale(data) == expected
     end
   end

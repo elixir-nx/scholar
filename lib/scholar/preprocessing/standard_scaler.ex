@@ -73,7 +73,6 @@ defmodule Scholar.Preprocessing.StandardScaler do
   defnp fit_n(tensor, opts) do
     std = Nx.standard_deviation(tensor, axes: opts[:axes], keep_axes: true)
     mean_reduced = Nx.mean(tensor, axes: opts[:axes], keep_axes: true)
-    mean_reduced = Nx.select(std == 0, 0.0, mean_reduced)
     %__MODULE__{standard_deviation: std, mean: mean_reduced}
   end
 
