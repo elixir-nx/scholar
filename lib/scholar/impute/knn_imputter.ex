@@ -124,7 +124,7 @@ defmodule Scholar.Impute.KNNImputter do
     {num_rows, num_cols} = Nx.shape(x)
     num_neighbors = opts[:num_neighbors]
 
-    placeholder_value = Nx.tensor(:nan)
+    placeholder_value = Nx.tensor(:nan, type: Nx.type(x))
 
     values_to_impute = Nx.broadcast(placeholder_value, x)
 
@@ -160,7 +160,7 @@ defmodule Scholar.Impute.KNNImputter do
     rows = opts[:rows]
     num_neighbors = opts[:num_neighbors]
 
-    row_distances = Nx.iota({rows}, type: {:f, 32})
+    row_distances = Nx.iota({rows}, type: Nx.type(x))
 
     row_with_value_to_fill = x[nan_row]
 
@@ -199,49 +199,29 @@ defmodule Scholar.Impute.KNNImputter do
     # minus nan column
     coordinates = coordinates - 1
 
-    # inputes zeros in nan_col to calculate distance with squared_euclidean
-    new_row = Nx.indexed_put(row, Nx.new_axis(nan_col, 0), Nx.tensor(0))
+    # a donor missing nan_col is unusable, which also rules out the row itself
+    if Nx.is_nan(potential_neighbor[nan_col]) do
+      Nx.Constants.infinity(Nx.type(row))
+    else
+      # exclude any column where either row is NaN, not just nan_col, or a
+      # second missing value poisons the distance for every donor
+      usable =
+        row
+        |> Nx.is_nan()
+        |> Nx.logical_or(Nx.is_nan(potential_neighbor))
+        |> Nx.logical_not()
+        |> Nx.indexed_put(Nx.new_axis(nan_col, 0), Nx.tensor(0, type: :u8))
 
-    # if potential neighbor has nan in nan_col, we don't want to calculate distance and the case if potential_neighbour is the row to impute
-    {potential_neighbor} =
-      if Nx.is_nan(potential_neighbor[nan_col]) do
-        potential_neighbor =
-          Nx.broadcast(Nx.Constants.infinity(Nx.type(potential_neighbor)), potential_neighbor)
+      present_coordinates = Nx.sum(usable)
 
-        {potential_neighbor}
-      else
-        # inputes zeros in nan_col to calculate distance with squared_euclidean - distance will be 0 so no change to the distance value
-        potential_neighbor =
-          Nx.indexed_put(
-            potential_neighbor,
-            Nx.new_axis(nan_col, 0),
-            Nx.tensor(0, type: Nx.type(row))
-          )
-
-        {potential_neighbor}
-      end
-
-    # calculates how many values are present in the row without nan_col to calculate weight for the distance
-    present_coordinates = Nx.sum(Nx.logical_not(Nx.is_nan(potential_neighbor))) - 1
-
-    # if row has all nans we skip it
-    {weight, potential_neighbor} =
       if present_coordinates == 0 do
-        potential_neighbor =
-          Nx.broadcast(Nx.Constants.infinity(Nx.type(potential_neighbor)), potential_neighbor)
-
-        weight = 0
-        {weight, potential_neighbor}
+        Nx.Constants.infinity(Nx.type(row))
       else
-        potential_neighbor = Nx.select(Nx.is_nan(potential_neighbor), new_row, potential_neighbor)
+        masked_row = Nx.select(usable, row, 0)
+        masked_neighbor = Nx.select(usable, potential_neighbor, 0)
         weight = coordinates / present_coordinates
-        {weight, potential_neighbor}
+        Nx.sqrt(weight * squared_euclidean(masked_row, masked_neighbor))
       end
-
-    # calculating weighted euclidian distance
-    distance = Nx.sqrt(weight * squared_euclidean(new_row, potential_neighbor))
-
-    # return inf if potential_row is row to impute
-    Nx.select(Nx.is_nan(distance), Nx.Constants.infinity(Nx.type(distance)), distance)
+    end
   end
 end
