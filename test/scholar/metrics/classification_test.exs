@@ -4,6 +4,40 @@ defmodule Scholar.Metrics.ClassificationTest do
   alias Scholar.Metrics.Classification
   doctest Classification
 
+  test "confusion_matrix - sample weights as a tensor match the same weights as a list" do
+    y_true = Nx.tensor([0, 0, 1, 1], type: :u32)
+    y_pred = Nx.tensor([0, 1, 1, 1], type: :u32)
+
+    from_list =
+      Classification.confusion_matrix(y_true, y_pred,
+        num_classes: 2,
+        sample_weights: [1, 2, 1, 1]
+      )
+
+    from_tensor =
+      Classification.confusion_matrix(y_true, y_pred,
+        num_classes: 2,
+        sample_weights: Nx.tensor([1, 2, 1, 1])
+      )
+
+    assert from_tensor == from_list
+  end
+
+  test "confusion_matrix - a scalar sample weight applies to every sample" do
+    y_true = Nx.tensor([0, 0, 1, 1], type: :u32)
+    y_pred = Nx.tensor([0, 1, 1, 1], type: :u32)
+
+    weighted =
+      Classification.confusion_matrix(y_true, y_pred,
+        num_classes: 2,
+        sample_weights: Nx.tensor(2)
+      )
+
+    unweighted = Classification.confusion_matrix(y_true, y_pred, num_classes: 2)
+
+    assert Nx.to_flat_list(weighted) == Nx.to_flat_list(Nx.multiply(unweighted, 2))
+  end
+
   test "roc_curve - y_score with repeated elements" do
     y_score = Nx.tensor([0.1, 0.1, 0.2, 0.2, 0.3, 0.3])
     y_true = Nx.tensor([0, 0, 1, 1, 1, 1])
