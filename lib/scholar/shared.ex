@@ -59,7 +59,9 @@ defmodule Scholar.Shared do
         Nx.tensor(weights, type: type)
 
       Nx.is_tensor(weights) and Nx.shape(weights) in [{}, {num_samples}] ->
-        weights |> Nx.broadcast({num_samples}) |> Nx.as_type(type)
+        weights = Nx.broadcast(weights, {num_samples})
+        # :type is optional, and the branches above already work without it
+        if type, do: Nx.as_type(weights, type), else: weights
 
       true ->
         raise ArgumentError,
