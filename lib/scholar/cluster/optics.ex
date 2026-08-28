@@ -10,8 +10,29 @@ defmodule Scholar.Cluster.OPTICS do
   """
   import Nx.Defn
 
-  @derive {Nx.Container, containers: [:labels, :min_samples, :max_eps, :eps, :algorithm]}
-  defstruct [:labels, :min_samples, :max_eps, :eps, :algorithm]
+  @derive {Nx.Container,
+           containers: [
+             :labels,
+             :min_samples,
+             :max_eps,
+             :eps,
+             :algorithm,
+             :reachability,
+             :core_distances,
+             :ordering,
+             :predecessor
+           ]}
+  defstruct [
+    :labels,
+    :min_samples,
+    :max_eps,
+    :eps,
+    :algorithm,
+    :reachability,
+    :core_distances,
+    :ordering,
+    :predecessor
+  ]
 
   opts = [
     min_samples: [
@@ -65,9 +86,26 @@ defmodule Scholar.Cluster.OPTICS do
 
   ## Return Values
 
-  The function returns a labels tensor of shape `{n_samples}`.
-  Cluster labels for each point in the dataset given to `fit`.
-  Noisy samples are labeled as -1.
+  The function returns a struct with the following fields:
+
+    * `:labels` - tensor of shape `{n_samples}`. Cluster labels for each
+      point in the dataset given to `fit`. Noisy samples are labeled as -1.
+
+    * `:reachability` - tensor of shape `{n_samples}`, indexed by sample.
+      Reachability distance of each sample. Use `reachability[ordering]`
+      to read it in cluster order.
+
+    * `:core_distances` - tensor of shape `{n_samples}`, indexed by sample.
+      Distance at which each sample becomes a core point. A sample that
+      never becomes core has a distance of infinity.
+
+    * `:ordering` - tensor of shape `{n_samples}`. The cluster-ordered
+      list of sample indices, which is what a reachability plot is drawn
+      against.
+
+    * `:predecessor` - tensor of shape `{n_samples}`, indexed by sample.
+      Sample that each sample was reached from. Seed samples have a
+      predecessor of -1.
 
   ## Examples
 
@@ -115,10 +153,15 @@ defmodule Scholar.Cluster.OPTICS do
 
     x = Scholar.Shared.to_float(x)
     module = validate_options(x, opts)
+    {labels, reachability, core_distances, ordering, predecessor} = fit_p(x, module)
 
     %__MODULE__{
       module
-      | labels: fit_p(x, module)
+      | labels: labels,
+        reachability: reachability,
+        core_distances: core_distances,
+        ordering: ordering,
+        predecessor: predecessor
     }
   end
 
@@ -172,19 +215,28 @@ defmodule Scholar.Cluster.OPTICS do
             """
     end
 
+    n_samples = Nx.axis_size(x, 0)
+
     %__MODULE__{
-      labels: Nx.broadcast(-1, {Nx.axis_size(x, 0)}),
+      labels: Nx.broadcast(-1, {n_samples}),
       min_samples: min_samples,
       max_eps: max_eps,
       eps: eps,
-      algorithm: model
+      algorithm: model,
+      reachability: Nx.broadcast(Nx.Constants.infinity(Nx.type(x)), {n_samples}),
+      core_distances: Nx.broadcast(Nx.Constants.infinity(Nx.type(x)), {n_samples}),
+      ordering: Nx.broadcast(0, {n_samples}),
+      predecessor: Nx.broadcast(-1, {n_samples})
     }
   end
 
   defnp fit_p(x, module) do
-    {core_distances, reachability, _predecessor, ordering} = compute_optics_graph(x, module)
+    {core_distances, reachability, predecessor, ordering} = compute_optics_graph(x, module)
+    labels = cluster_optics_dbscan(reachability, core_distances, ordering, module)
 
-    cluster_optics_dbscan(reachability, core_distances, ordering, module)
+    # core_distances carries a trailing size-1 axis from the neighbor search
+    # it is sliced out of; every other field here is already flat.
+    {labels, reachability, Nx.flatten(core_distances), ordering, predecessor}
   end
 
   defnp compute_optics_graph(x, %__MODULE__{max_eps: max_eps, min_samples: min_samples} = module) do
