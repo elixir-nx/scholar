@@ -47,7 +47,9 @@ defmodule Scholar.Manifold.Trimap do
       type: :pos_integer,
       default: 5,
       doc: ~S"""
-      Number of outliers to sample.
+      Number of outliers to sample per inlier. `num_inliers * num_outliers`
+      cannot exceed `num_samples - num_inliers - 1`, the number of points
+      outside an anchor's own neighborhood.
       """
     ],
     num_random: [
