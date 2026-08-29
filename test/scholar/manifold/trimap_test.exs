@@ -392,5 +392,23 @@ defmodule Scholar.Manifold.TrimapTest do
                      )
                    end
     end
+
+    test "init_embeddings with the wrong number of columns" do
+      x = Nx.iota({20, 6})
+      key = Nx.Random.key(42)
+      {init_embeddings, _} = Nx.Random.uniform(Nx.Random.key(3), shape: {20, 3})
+
+      assert_raise ArgumentError,
+                   "init_embeddings must have num_components (2) columns, got: 3",
+                   fn ->
+                     Trimap.transform(x,
+                       num_components: 2,
+                       key: key,
+                       num_inliers: 3,
+                       num_outliers: 1,
+                       init_embeddings: init_embeddings
+                     )
+                   end
+    end
   end
 end

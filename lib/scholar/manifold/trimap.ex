@@ -498,6 +498,13 @@ defmodule Scholar.Manifold.Trimap do
               "outside an anchor's own neighborhood, got: #{opts[:num_inliers] * opts[:num_outliers]}"
     end
 
+    if Nx.rank(init_embeddings) != 0 and
+         Nx.axis_size(init_embeddings, 1) != opts[:num_components] do
+      raise ArgumentError,
+            "init_embeddings must have num_components (#{opts[:num_components]}) columns, " <>
+              "got: #{Nx.axis_size(init_embeddings, 1)}"
+    end
+
     unless (Nx.rank(triplets) == Nx.rank(weights) and Nx.rank(triplets) == 0) or
              (Nx.rank(triplets) == 2 and Nx.rank(weights) == 1 and
                 Nx.axis_size(triplets, 0) == Nx.axis_size(weights, 0)) do
