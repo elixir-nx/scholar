@@ -278,7 +278,9 @@ defmodule Scholar.Manifold.Trimap do
     distances =
       (handle_dist(inputs[anchors], inputs[hits], opts) ** 2) |> Nx.reshape({num_points, :auto})
 
-    sigmas = Nx.max(Nx.mean(Nx.sqrt(distances[[.., 3..5]]), axes: [1]), 1.0e-10)
+    # the scale is the mean distance to the 4th-6th neighbor, or as many of those as exist
+    sigmas =
+      Nx.max(Nx.mean(Nx.sqrt(distances[[.., 3..min(5, num_neighbors - 1)]]), axes: [1]), 1.0e-10)
 
     scaled_distances = distances / (Nx.reshape(sigmas, {:auto, 1}) * sigmas[neighbors])
     sort_indices = Nx.argsort(scaled_distances, axis: 1)
