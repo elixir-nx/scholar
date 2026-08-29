@@ -181,7 +181,8 @@ defmodule Scholar.Manifold.Trimap do
         end
       end
 
-    Nx.take(is_in, order1)
+    # order1 sorted tensor1; argsort inverts it to put the answers back in the input's order
+    Nx.take(is_in, Nx.argsort(order1))
   end
 
   defnp rejection_sample(key, shape, rejects, opts \\ []) do

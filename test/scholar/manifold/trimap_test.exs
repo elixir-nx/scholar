@@ -202,6 +202,39 @@ defmodule Scholar.Manifold.TrimapTest do
 
       assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
+
+    test "outlier sampling that has to retry" do
+      key = Nx.Random.key(42)
+      {x, _} = Nx.Random.uniform(Nx.Random.key(4), shape: {10, 3})
+
+      # 6 outliers per anchor out of the 6 points outside its neighborhood, so the
+      # first draw always collides and rejection sampling has to resample
+      res =
+        Trimap.transform(x,
+          num_components: 2,
+          key: key,
+          num_inliers: 3,
+          num_outliers: 2,
+          num_random: 2,
+          num_iters: 100
+        )
+
+      expected =
+        Nx.tensor([
+          [10.7711763381958, 4.751033782958984],
+          [20.177593231201172, 15.467020988464355],
+          [2.4794745445251465, 19.923784255981445],
+          [9.068700790405273, 4.932981491088867],
+          [10.389301300048828, 4.25684928894043],
+          [20.413013458251953, 13.008362770080566],
+          [4.308704853057861, 19.454608917236328],
+          [18.78362464904785, 18.64022445678711],
+          [1.4547451734542847, 20.409406661987305],
+          [8.286545753479004, 1.9438791275024414]
+        ])
+
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
+    end
   end
 
   describe "errors" do
