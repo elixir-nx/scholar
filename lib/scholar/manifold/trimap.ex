@@ -51,10 +51,11 @@ defmodule Scholar.Manifold.Trimap do
       """
     ],
     num_random: [
-      type: :pos_integer,
+      type: :non_neg_integer,
       default: 3,
       doc: ~S"""
-      Number of random triplets to sample.
+      Number of random triplets to sample per point. Set to 0 to use only the
+      nearest neighbor triplets.
       """
     ],
     weight_temp: [

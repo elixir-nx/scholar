@@ -273,6 +273,37 @@ defmodule Scholar.Manifold.TrimapTest do
       assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
 
+    test "num_random set to zero" do
+      key = Nx.Random.key(42)
+      {x, _} = Nx.Random.uniform(Nx.Random.key(3), shape: {10, 6})
+
+      res =
+        Trimap.transform(x,
+          num_components: 2,
+          key: key,
+          num_inliers: 3,
+          num_outliers: 1,
+          num_random: 0,
+          num_iters: 100
+        )
+
+      expected =
+        Nx.tensor([
+          [14.64638900756836, 4.130362510681152],
+          [14.39341926574707, 11.968405723571777],
+          [10.877017974853516, 12.163773536682129],
+          [20.414138793945312, 20.422441482543945],
+          [13.235034942626953, 3.089409351348877],
+          [8.24937915802002, 10.1371431350708],
+          [12.3439302444458, 12.452646255493164],
+          [1.4550071954727173, 1.601865530014038],
+          [15.539610862731934, 5.656279563903809],
+          [1.4515089988708496, 1.460447072982788]
+        ])
+
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
+    end
+
     test "outlier sampling that has to retry" do
       key = Nx.Random.key(42)
       {x, _} = Nx.Random.uniform(Nx.Random.key(4), shape: {10, 3})
