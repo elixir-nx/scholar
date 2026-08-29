@@ -504,26 +504,26 @@ defmodule Scholar.Manifold.Trimap do
   end
 
   defnp transform_n(inputs, key, triplets, weights, init_embeddings, opts \\ []) do
-    {num_points, num_components} = Nx.shape(inputs)
+    {num_points, num_features} = Nx.shape(inputs)
 
-    {triplets, weights, key, applied_pca?} =
+    {inputs, triplets, weights, key, applied_pca?} =
       case triplets do
         {} ->
           {inputs, applied_pca} =
-            if num_components > @dim_pca do
+            if num_features > @dim_pca do
+              num_pca = min(@dim_pca, min(num_points, num_features))
               inputs = inputs - Nx.mean(inputs, axes: [0])
-              {u, s, vt} = Nx.LinAlg.SVD.svd(inputs, full_matrices: false)
-              inputs = Nx.dot(u[[.., 0..@dim_pca]] * s[0..@dim_pca], vt[[0..@dim_pca, ..]])
-              {inputs, Nx.u8(1)}
+              {u, s, _vt} = Nx.LinAlg.svd(inputs, full_matrices?: false)
+              {u[[.., 0..(num_pca - 1)]] * s[0..(num_pca - 1)], Nx.u8(1)}
             else
               {inputs, Nx.u8(0)}
             end
 
           {triplets, weights, key} = generate_triplets(key, inputs, opts)
-          {triplets, weights, key, applied_pca}
+          {inputs, triplets, weights, key, applied_pca}
 
         _ ->
-          {triplets, weights, key, Nx.u8(0)}
+          {inputs, triplets, weights, key, Nx.u8(0)}
       end
 
     embeddings =

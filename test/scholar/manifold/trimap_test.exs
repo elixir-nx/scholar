@@ -203,6 +203,27 @@ defmodule Scholar.Manifold.TrimapTest do
       assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
 
+    test "inputs with more than 100 features are reduced to their principal components" do
+      key = Nx.Random.key(42)
+      {x, _} = Nx.Random.uniform(Nx.Random.key(11), shape: {30, 105}, type: :f64)
+
+      # 30 points span at most 30 components, so the reduction keeps all of u * s
+      {u, s, _vt} = Nx.LinAlg.svd(Nx.subtract(x, Nx.mean(x, axes: [0])), full_matrices?: false)
+      projection = Nx.multiply(u, s)
+
+      opts = [num_components: 2, key: key, num_inliers: 3, num_outliers: 2, num_iters: 10]
+
+      # everything downstream, the default initialization included, must see the
+      # projection rather than the original features
+      assert_all_close(
+        Trimap.transform(x, opts),
+        Trimap.transform(
+          projection,
+          opts ++ [init_embeddings: Nx.multiply(0.01, projection[[.., 0..1]])]
+        )
+      )
+    end
+
     test "three points" do
       key = Nx.Random.key(42)
       {x, _} = Nx.Random.uniform(Nx.Random.key(1), shape: {3, 4})
