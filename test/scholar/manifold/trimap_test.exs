@@ -375,5 +375,22 @@ defmodule Scholar.Manifold.TrimapTest do
                      )
                    end
     end
+
+    test "num_inliers times num_outliers larger than the pool of non-neighbors" do
+      x = Nx.iota({20, 6})
+      key = Nx.Random.key(42)
+
+      assert_raise ArgumentError,
+                   "num_inliers * num_outliers must be at most 16, the number of points " <>
+                     "outside an anchor's own neighborhood, got: 18",
+                   fn ->
+                     Trimap.transform(x,
+                       num_components: 2,
+                       key: key,
+                       num_inliers: 3,
+                       num_outliers: 6
+                     )
+                   end
+    end
   end
 end

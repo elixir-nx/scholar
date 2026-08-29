@@ -487,6 +487,17 @@ defmodule Scholar.Manifold.Trimap do
       raise ArgumentError, "Number of points must be greater than 2"
     end
 
+    num_points = Nx.axis_size(inputs, 0)
+    available = num_points - opts[:num_inliers] - 1
+
+    # sampling outliers rejects the anchor and its inliers, and never repeats a draw,
+    # so a wider request than the remaining pool loops forever
+    if Nx.rank(triplets) == 0 and opts[:num_inliers] * opts[:num_outliers] > available do
+      raise ArgumentError,
+            "num_inliers * num_outliers must be at most #{available}, the number of points " <>
+              "outside an anchor's own neighborhood, got: #{opts[:num_inliers] * opts[:num_outliers]}"
+    end
+
     unless (Nx.rank(triplets) == Nx.rank(weights) and Nx.rank(triplets) == 0) or
              (Nx.rank(triplets) == 2 and Nx.rank(weights) == 1 and
                 Nx.axis_size(triplets, 0) == Nx.axis_size(weights, 0)) do
