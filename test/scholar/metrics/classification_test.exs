@@ -35,7 +35,7 @@ defmodule Scholar.Metrics.ClassificationTest do
 
     unweighted = Classification.confusion_matrix(y_true, y_pred, num_classes: 2)
 
-    assert Nx.to_flat_list(weighted) == Nx.to_flat_list(Nx.multiply(unweighted, 2))
+    assert_all_close(weighted, Nx.multiply(unweighted, 2))
   end
 
   test "roc_curve - y_score with repeated elements" do

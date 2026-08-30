@@ -11,7 +11,7 @@ defmodule Scholar.Preprocessing.BinarizerTest do
 
       result = jit_binarizer.(tensor, threshold: 2.0)
 
-      assert Nx.to_flat_list(result) == [0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
+      assert_all_close(result, Nx.tensor([[0.0, 0.0, 0.0], [1.0, 1.0, 1.0], [0.0, 0.0, 0.0]]))
     end
 
     test "binarize values with default threshold" do
@@ -19,7 +19,7 @@ defmodule Scholar.Preprocessing.BinarizerTest do
 
       result = Binarizer.fit_transform(tensor)
 
-      assert Nx.to_flat_list(result) == [0.0, 0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0]
+      assert_all_close(result, Nx.tensor([[0.0, 0.0, 1.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]]))
     end
 
     test "binarize with threshold less than 0" do
@@ -28,7 +28,7 @@ defmodule Scholar.Preprocessing.BinarizerTest do
 
       result = jit_binarizer.(tensor, threshold: -0.2)
 
-      assert Nx.to_flat_list(result) == [1.0, 1.0, 0.0, 1.0, 0.0, 0.0]
+      assert_all_close(result, Nx.tensor([[1.0, 1.0, 0.0], [1.0, 0.0, 0.0]]))
     end
   end
 end

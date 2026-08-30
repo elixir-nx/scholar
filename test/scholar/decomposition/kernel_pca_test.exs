@@ -320,8 +320,7 @@ defmodule Scholar.Decomposition.KernelPCATest do
 
     test "eigenvalues are sorted in decreasing order" do
       model = KernelPCA.fit(x(), num_components: 4, kernel: :rbf)
-      sorted = model.eigenvalues |> Nx.to_flat_list() |> Enum.sort(:desc)
-      assert Nx.to_flat_list(model.eigenvalues) == sorted
+      assert_all_close(model.eigenvalues, Nx.sort(model.eigenvalues, direction: :desc))
     end
 
     test "matches scikit-learn on a larger dataset" do

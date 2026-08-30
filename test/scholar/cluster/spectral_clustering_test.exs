@@ -263,7 +263,7 @@ defmodule Scholar.Cluster.SpectralClusteringTest do
           [x]
         )
 
-      assert Nx.to_flat_list(jitted.labels) == Nx.to_flat_list(direct.labels)
+      assert_all_close(jitted.labels, direct.labels)
       assert_all_close(jitted.embedding, direct.embedding, atol: 1.0e-12)
     end
 
@@ -271,7 +271,7 @@ defmodule Scholar.Cluster.SpectralClusteringTest do
       x = Nx.tensor([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], type: :f64)
       model = SpectralClustering.fit(x, num_clusters: 4, key: key())
 
-      assert model.labels |> Nx.sort() |> Nx.to_flat_list() == [0, 1, 2, 3]
+      assert_all_close(Nx.sort(model.labels), Nx.tensor([0, 1, 2, 3]))
     end
   end
 

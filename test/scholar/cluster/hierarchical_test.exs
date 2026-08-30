@@ -394,10 +394,10 @@ defmodule Scholar.Cluster.HierarchicalTest do
 
       assert model.num_points == 4
       # The two finite merges are made and kept, in ascending order.
-      assert Nx.to_flat_list(model.dissimilarities) |> Enum.take(2) == [1.0, 1.0]
+      assert_all_close(model.dissimilarities[0..1], Nx.tensor([1.0, 1.0]))
       # The merge that could not be made is reported instead of guessed.
       assert Nx.to_number(Nx.is_nan(model.dissimilarities[-1])) == 1
-      assert Nx.to_flat_list(model.clades[-1]) == [-1, -1]
+      assert_all_close(model.clades[-1], Nx.tensor([-1, -1]))
       assert Nx.to_number(model.sizes[-1]) == 0
     end
 
@@ -456,10 +456,10 @@ defmodule Scholar.Cluster.HierarchicalTest do
 
       model = Hierarchical.fit(d, dissimilarity: :precomputed, linkage: :single)
 
-      assert Nx.to_flat_list(model.sizes) == [2, 0, 0]
-      assert Nx.to_flat_list(model.dissimilarities) |> Enum.take(1) == [1.0]
+      assert_all_close(model.sizes, Nx.tensor([2, 0, 0]))
+      assert_all_close(model.dissimilarities[0], Nx.tensor(1.0))
       assert Nx.to_number(Nx.all(Nx.is_nan(model.dissimilarities[1..2]))) == 1
-      assert Nx.to_flat_list(model.clades[1..2]) == [-1, -1, -1, -1]
+      assert_all_close(model.clades[1..2], Nx.tensor([[-1, -1], [-1, -1]]))
     end
   end
 

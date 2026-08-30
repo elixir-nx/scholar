@@ -29,14 +29,14 @@ defmodule Scholar.Neighbors.KDTreeTest do
     test "float" do
       tree = KDTree.fit(Nx.as_type(example(), :f32))
       assert tree.levels == 4
-      assert Nx.to_flat_list(tree.indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
+      assert_all_close(tree.indices, Nx.tensor([1, 5, 9, 3, 6, 2, 8, 0, 7, 4]))
       assert tree.num_neighbors == 3
     end
 
     test "sample" do
       tree = KDTree.fit(example())
       assert tree.levels == 4
-      assert Nx.to_flat_list(tree.indices) == [1, 5, 9, 3, 6, 2, 8, 0, 7, 4]
+      assert_all_close(tree.indices, Nx.tensor([1, 5, 9, 3, 6, 2, 8, 0, 7, 4]))
       assert tree.num_neighbors == 3
     end
   end

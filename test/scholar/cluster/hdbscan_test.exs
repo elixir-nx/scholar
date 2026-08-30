@@ -137,7 +137,7 @@ defmodule Scholar.Cluster.HDBSCANTest do
 
       refute euclidean.labels == chebyshev.labels
       refute euclidean.labels == cosine.labels
-      assert Nx.to_flat_list(cosine.labels) |> Enum.any?(&(&1 == -1))
+      assert_all_close(Nx.any(Nx.equal(cosine.labels, -1)), Nx.tensor(1))
     end
 
     test "accepts an anonymous function" do

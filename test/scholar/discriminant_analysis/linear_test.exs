@@ -42,7 +42,7 @@ defmodule Scholar.DiscriminantAnalysis.LinearTest do
       model = Linear.fit(x, y, num_classes: 3)
 
       preds = Linear.predict(model, three_class_test_points())
-      assert Nx.to_flat_list(preds) == [0, 1, 2, 0]
+      assert_all_close(preds, Nx.tensor([0, 1, 2, 0]))
     end
 
     test "separates two classes" do
@@ -59,7 +59,7 @@ defmodule Scholar.DiscriminantAnalysis.LinearTest do
       y = Nx.tensor([0, 0, 0, 1, 1, 1])
       model = Linear.fit(x, y, num_classes: 2)
 
-      assert Nx.to_flat_list(Linear.predict(model, x)) == [0, 0, 0, 1, 1, 1]
+      assert_all_close(Linear.predict(model, x), Nx.tensor([0, 0, 0, 1, 1, 1]))
     end
 
     test "recovers the fitted parameters" do
@@ -188,7 +188,7 @@ defmodule Scholar.DiscriminantAnalysis.LinearTest do
 
       decision = Linear.decision_function(model, three_class_test_points())
       assert_all_close(decision, expected_decision, atol: 1.0e-6)
-      assert Nx.to_flat_list(Linear.predict(model, three_class_test_points())) == [0, 1, 2, 0]
+      assert_all_close(Linear.predict(model, three_class_test_points()), Nx.tensor([0, 1, 2, 0]))
     end
   end
 
@@ -205,7 +205,7 @@ defmodule Scholar.DiscriminantAnalysis.LinearTest do
       y = Nx.tensor([0, 0, 1, 1])
       model = Linear.fit(x, y, num_classes: 2)
       assert Nx.type(model.coefficients) == {:f, 32}
-      assert Nx.to_flat_list(Linear.predict(model, x)) == [0, 0, 1, 1]
+      assert_all_close(Linear.predict(model, x), Nx.tensor([0, 0, 1, 1]))
     end
 
     test "works inside jit" do
@@ -220,7 +220,7 @@ defmodule Scholar.DiscriminantAnalysis.LinearTest do
           [x, y, xt]
         )
 
-      assert Nx.to_flat_list(jitted) == Nx.to_flat_list(direct)
+      assert_all_close(jitted, direct)
     end
   end
 
