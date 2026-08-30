@@ -202,6 +202,140 @@ defmodule Scholar.Manifold.TrimapTest do
 
       assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
     end
+
+    test "inputs with more than 100 features are reduced to their principal components" do
+      key = Nx.Random.key(42)
+      {x, _} = Nx.Random.uniform(Nx.Random.key(11), shape: {30, 105}, type: :f64)
+
+      # 30 points span at most 30 components, so the reduction keeps all of u * s
+      {u, s, _vt} = Nx.LinAlg.svd(Nx.subtract(x, Nx.mean(x, axes: [0])), full_matrices?: false)
+      projection = Nx.multiply(u, s)
+
+      opts = [num_components: 2, key: key, num_inliers: 3, num_outliers: 2, num_iters: 10]
+
+      # everything downstream, the default initialization included, must see the
+      # projection rather than the original features
+      assert_all_close(
+        Trimap.transform(x, opts),
+        Trimap.transform(
+          projection,
+          opts ++ [init_embeddings: Nx.multiply(0.01, projection[[.., 0..1]])]
+        )
+      )
+    end
+
+    test "three points" do
+      key = Nx.Random.key(42)
+      {x, _} = Nx.Random.uniform(Nx.Random.key(1), shape: {3, 4})
+
+      res =
+        Trimap.transform(x,
+          num_components: 2,
+          key: key,
+          num_inliers: 1,
+          num_outliers: 1,
+          num_random: 1,
+          num_iters: 100
+        )
+
+      expected =
+        Nx.tensor([
+          [5.157116413116455, 5.203591823577881],
+          [20.418094635009766, 20.411230087280273],
+          [1.4575116634368896, 1.4591535329818726]
+        ])
+
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
+    end
+
+    test "four points" do
+      key = Nx.Random.key(42)
+      {x, _} = Nx.Random.uniform(Nx.Random.key(2), shape: {4, 4})
+
+      res =
+        Trimap.transform(x,
+          num_components: 2,
+          key: key,
+          num_inliers: 1,
+          num_outliers: 2,
+          num_random: 1,
+          num_iters: 100
+        )
+
+      expected =
+        Nx.tensor([
+          [1.459843397140503, 6.352163791656494],
+          [20.399131774902344, 20.404085159301758],
+          [20.421730041503906, 20.41226577758789],
+          [1.4555573463439941, 1.45782470703125]
+        ])
+
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
+    end
+
+    test "num_random set to zero" do
+      key = Nx.Random.key(42)
+      {x, _} = Nx.Random.uniform(Nx.Random.key(3), shape: {10, 6})
+
+      res =
+        Trimap.transform(x,
+          num_components: 2,
+          key: key,
+          num_inliers: 3,
+          num_outliers: 1,
+          num_random: 0,
+          num_iters: 100
+        )
+
+      expected =
+        Nx.tensor([
+          [14.64638900756836, 4.130362510681152],
+          [14.39341926574707, 11.968405723571777],
+          [10.877017974853516, 12.163773536682129],
+          [20.414138793945312, 20.422441482543945],
+          [13.235034942626953, 3.089409351348877],
+          [8.24937915802002, 10.1371431350708],
+          [12.3439302444458, 12.452646255493164],
+          [1.4550071954727173, 1.601865530014038],
+          [15.539610862731934, 5.656279563903809],
+          [1.4515089988708496, 1.460447072982788]
+        ])
+
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
+    end
+
+    test "outlier sampling that has to retry" do
+      key = Nx.Random.key(42)
+      {x, _} = Nx.Random.uniform(Nx.Random.key(4), shape: {10, 3})
+
+      # 6 outliers per anchor out of the 6 points outside its neighborhood, so the
+      # first draw always collides and rejection sampling has to resample
+      res =
+        Trimap.transform(x,
+          num_components: 2,
+          key: key,
+          num_inliers: 3,
+          num_outliers: 2,
+          num_random: 2,
+          num_iters: 100
+        )
+
+      expected =
+        Nx.tensor([
+          [10.7711763381958, 4.751033782958984],
+          [20.177593231201172, 15.467020988464355],
+          [2.4794745445251465, 19.923784255981445],
+          [9.068700790405273, 4.932981491088867],
+          [10.389301300048828, 4.25684928894043],
+          [20.413013458251953, 13.008362770080566],
+          [4.308704853057861, 19.454608917236328],
+          [18.78362464904785, 18.64022445678711],
+          [1.4547451734542847, 20.409406661987305],
+          [8.286545753479004, 1.9438791275024414]
+        ])
+
+      assert_all_close(res, expected, atol: 1.0e-3, rtol: 1.0e-3)
+    end
   end
 
   describe "errors" do
@@ -238,6 +372,41 @@ defmodule Scholar.Manifold.TrimapTest do
                        num_outliers: 1,
                        triplets: triplets,
                        weights: weights
+                     )
+                   end
+    end
+
+    test "num_inliers times num_outliers larger than the pool of non-neighbors" do
+      x = Nx.iota({20, 6})
+      key = Nx.Random.key(42)
+
+      assert_raise ArgumentError,
+                   "num_inliers * num_outliers must be at most 16, the number of points " <>
+                     "outside an anchor's own neighborhood, got: 18",
+                   fn ->
+                     Trimap.transform(x,
+                       num_components: 2,
+                       key: key,
+                       num_inliers: 3,
+                       num_outliers: 6
+                     )
+                   end
+    end
+
+    test "init_embeddings with the wrong number of columns" do
+      x = Nx.iota({20, 6})
+      key = Nx.Random.key(42)
+      {init_embeddings, _} = Nx.Random.uniform(Nx.Random.key(3), shape: {20, 3})
+
+      assert_raise ArgumentError,
+                   "init_embeddings must have num_components (2) columns, got: 3",
+                   fn ->
+                     Trimap.transform(x,
+                       num_components: 2,
+                       key: key,
+                       num_inliers: 3,
+                       num_outliers: 1,
+                       init_embeddings: init_embeddings
                      )
                    end
     end

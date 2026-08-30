@@ -47,14 +47,17 @@ defmodule Scholar.Manifold.Trimap do
       type: :pos_integer,
       default: 5,
       doc: ~S"""
-      Number of outliers to sample.
+      Number of outliers to sample per inlier. `num_inliers * num_outliers`
+      cannot exceed `num_samples - num_inliers - 1`, the number of points
+      outside an anchor's own neighborhood.
       """
     ],
     num_random: [
-      type: :pos_integer,
+      type: :non_neg_integer,
       default: 3,
       doc: ~S"""
-      Number of random triplets to sample.
+      Number of random triplets to sample per point. Set to 0 to use only the
+      nearest neighbor triplets.
       """
     ],
     weight_temp: [
@@ -181,7 +184,8 @@ defmodule Scholar.Manifold.Trimap do
         end
       end
 
-    Nx.take(is_in, order1)
+    # order1 sorted tensor1; argsort inverts it to put the answers back in the input's order
+    Nx.take(is_in, Nx.argsort(order1))
   end
 
   defnp rejection_sample(key, shape, rejects, opts \\ []) do
@@ -277,7 +281,9 @@ defmodule Scholar.Manifold.Trimap do
     distances =
       (handle_dist(inputs[anchors], inputs[hits], opts) ** 2) |> Nx.reshape({num_points, :auto})
 
-    sigmas = Nx.max(Nx.mean(Nx.sqrt(distances[[.., 3..5]]), axes: [1]), 1.0e-10)
+    # the scale is the mean distance to the 4th-6th neighbor, or as many of those as exist
+    sigmas =
+      Nx.max(Nx.mean(Nx.sqrt(distances[[.., 3..min(5, num_neighbors - 1)]]), axes: [1]), 1.0e-10)
 
     scaled_distances = distances / (Nx.reshape(sigmas, {:auto, 1}) * sigmas[neighbors])
     sort_indices = Nx.argsort(scaled_distances, axis: 1)
@@ -483,6 +489,24 @@ defmodule Scholar.Manifold.Trimap do
       raise ArgumentError, "Number of points must be greater than 2"
     end
 
+    num_points = Nx.axis_size(inputs, 0)
+    available = num_points - opts[:num_inliers] - 1
+
+    # sampling outliers rejects the anchor and its inliers, and never repeats a draw,
+    # so a wider request than the remaining pool loops forever
+    if Nx.rank(triplets) == 0 and opts[:num_inliers] * opts[:num_outliers] > available do
+      raise ArgumentError,
+            "num_inliers * num_outliers must be at most #{available}, the number of points " <>
+              "outside an anchor's own neighborhood, got: #{opts[:num_inliers] * opts[:num_outliers]}"
+    end
+
+    if Nx.rank(init_embeddings) != 0 and
+         Nx.axis_size(init_embeddings, 1) != opts[:num_components] do
+      raise ArgumentError,
+            "init_embeddings must have num_components (#{opts[:num_components]}) columns, " <>
+              "got: #{Nx.axis_size(init_embeddings, 1)}"
+    end
+
     unless (Nx.rank(triplets) == Nx.rank(weights) and Nx.rank(triplets) == 0) or
              (Nx.rank(triplets) == 2 and Nx.rank(weights) == 1 and
                 Nx.axis_size(triplets, 0) == Nx.axis_size(weights, 0)) do
@@ -501,26 +525,26 @@ defmodule Scholar.Manifold.Trimap do
   end
 
   defnp transform_n(inputs, key, triplets, weights, init_embeddings, opts \\ []) do
-    {num_points, num_components} = Nx.shape(inputs)
+    {num_points, num_features} = Nx.shape(inputs)
 
-    {triplets, weights, key, applied_pca?} =
+    {inputs, triplets, weights, key, applied_pca?} =
       case triplets do
         {} ->
           {inputs, applied_pca} =
-            if num_components > @dim_pca do
+            if num_features > @dim_pca do
+              num_pca = min(@dim_pca, min(num_points, num_features))
               inputs = inputs - Nx.mean(inputs, axes: [0])
-              {u, s, vt} = Nx.LinAlg.SVD.svd(inputs, full_matrices: false)
-              inputs = Nx.dot(u[[.., 0..@dim_pca]] * s[0..@dim_pca], vt[[0..@dim_pca, ..]])
-              {inputs, Nx.u8(1)}
+              {u, s, _vt} = Nx.LinAlg.svd(inputs, full_matrices?: false)
+              {u[[.., 0..(num_pca - 1)]] * s[0..(num_pca - 1)], Nx.u8(1)}
             else
               {inputs, Nx.u8(0)}
             end
 
           {triplets, weights, key} = generate_triplets(key, inputs, opts)
-          {triplets, weights, key, applied_pca}
+          {inputs, triplets, weights, key, applied_pca}
 
         _ ->
-          {triplets, weights, key, Nx.u8(0)}
+          {inputs, triplets, weights, key, Nx.u8(0)}
       end
 
     embeddings =
