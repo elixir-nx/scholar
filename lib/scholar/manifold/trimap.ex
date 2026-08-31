@@ -474,8 +474,16 @@ defmodule Scholar.Manifold.Trimap do
 
   ## Examples
 
-      iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(42), shape: {30, 5})
-      iex> Scholar.Manifold.Trimap.transform(inputs, num_components: 2, num_inliers: 3, num_outliers: 1, key: key, knn_algorithm: :nndescent)
+      iex> {inputs, key} = Nx.Random.uniform(Nx.Random.key(42), shape: {5, 3})
+      iex> Scholar.Manifold.Trimap.transform(inputs,
+      ...>   num_components: 2,
+      ...>   num_inliers: 1,
+      ...>   num_outliers: 1,
+      ...>   num_random: 1,
+      ...>   num_iters: 10,
+      ...>   key: key,
+      ...>   knn_algorithm: :brute
+      ...> )
   """
   deftransform transform(inputs, opts \\ []) do
     opts = NimbleOptions.validate!(opts, @opts_schema)

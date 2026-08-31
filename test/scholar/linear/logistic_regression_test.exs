@@ -3,14 +3,35 @@ defmodule Scholar.Linear.LogisticRegressionTest do
   alias Scholar.Linear.LogisticRegression
   doctest LogisticRegression
 
-  test "Iris Data Set - multinomial logistic regression test" do
-    {x_train, x_test, y_train, y_test} = iris_data()
+  test "multinomial logistic regression" do
+    x_train =
+      Nx.tensor([
+        [-2.0, -2.0],
+        [-2.0, -1.0],
+        [-1.0, -2.0],
+        [2.0, 2.0],
+        [2.0, 1.0],
+        [1.0, 2.0],
+        [2.0, -2.0],
+        [2.0, -1.0],
+        [1.0, -2.0]
+      ])
 
-    model = LogisticRegression.fit(x_train, y_train, num_classes: 3, alpha: 0.0)
+    y_train = Nx.tensor([0, 0, 0, 1, 1, 1, 2, 2, 2])
+    x_test = Nx.tensor([[-1.5, -1.5], [1.5, 1.5], [1.5, -1.5]])
+    y_test = Nx.tensor([0, 1, 2])
+
+    model =
+      LogisticRegression.fit(x_train, y_train,
+        num_classes: 3,
+        alpha: 0.0,
+        max_iterations: 10
+      )
+
     res = LogisticRegression.predict(model, x_test)
     accuracy = Scholar.Metrics.Classification.accuracy(res, y_test)
 
-    assert Nx.to_number(accuracy) >= 0.96
+    assert_all_close(accuracy, Nx.tensor(1.0))
   end
 
   describe "errors" do
@@ -75,31 +96,21 @@ defmodule Scholar.Linear.LogisticRegressionTest do
 
   describe "linearly separable data" do
     test "1D" do
-      key = Nx.Random.key(12)
-      {x1, key} = Nx.Random.uniform(key, -2, -1, shape: {1000, 1})
-      {x2, _key} = Nx.Random.uniform(key, 1, 2, shape: {1000, 1})
-      x = Nx.concatenate([x1, x2])
-      y1 = Nx.broadcast(0, {1000})
-      y2 = Nx.broadcast(1, {1000})
-      y = Nx.concatenate([y1, y2])
-      model = LogisticRegression.fit(x, y, num_classes: 2)
+      x = Nx.tensor([[-2.0], [-1.0], [1.0], [2.0]])
+      y = Nx.tensor([0, 0, 1, 1])
+      model = LogisticRegression.fit(x, y, num_classes: 2, max_iterations: 10)
       y_pred = LogisticRegression.predict(model, x)
       accuracy = Scholar.Metrics.Classification.accuracy(y, y_pred)
-      assert Nx.to_number(accuracy) == 1.0
+      assert_all_close(accuracy, Nx.tensor(1.0))
     end
 
     test "2D" do
-      key = Nx.Random.key(12)
-      {x1, key} = Nx.Random.uniform(key, -2, -1, shape: {1000, 2})
-      {x2, _key} = Nx.Random.uniform(key, 1, 2, shape: {1000, 2})
-      x = Nx.concatenate([x1, x2])
-      y1 = Nx.broadcast(0, {1000})
-      y2 = Nx.broadcast(1, {1000})
-      y = Nx.concatenate([y1, y2])
-      model = LogisticRegression.fit(x, y, num_classes: 2)
+      x = Nx.tensor([[-2.0, -1.0], [-1.0, -2.0], [1.0, 2.0], [2.0, 1.0]])
+      y = Nx.tensor([0, 0, 1, 1])
+      model = LogisticRegression.fit(x, y, num_classes: 2, max_iterations: 10)
       y_pred = LogisticRegression.predict(model, x)
       accuracy = Scholar.Metrics.Classification.accuracy(y, y_pred)
-      assert Nx.to_number(accuracy) == 1.0
+      assert_all_close(accuracy, Nx.tensor(1.0))
     end
   end
 end

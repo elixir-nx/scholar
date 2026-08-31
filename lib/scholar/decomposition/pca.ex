@@ -438,16 +438,16 @@ defmodule Scholar.Decomposition.PCA do
 
   ## Examples
 
-      iex> x = Scidata.Iris.download() |> elem(0) |> Enum.take(6) |> Nx.tensor()
-      iex> Scholar.Decomposition.PCA.fit_transform(x, num_components: 2)
+      iex> x = Nx.tensor([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+      iex> Scholar.Decomposition.PCA.fit_transform(x, num_components: 1)
       Nx.tensor(
         [
-          [0.16341472, -0.017230444],
-          [-0.33249766, 0.1893504],
-          [-0.32686582, -0.10110473],
-          [-0.42023695, -0.005525116],
-          [0.1768687, -0.14014886],
-          [0.7393165, 0.074657336]
+          [1.3834057],
+          [2.221898],
+          [3.6053035],
+          [-1.3834057],
+          [-2.221898],
+          [-3.6053035]
         ]
       )
   """
