@@ -1,5 +1,5 @@
 defmodule Scholar.Neighbors.NNDescentTest do
-  use ExUnit.Case, async: true
+  use Scholar.Case, async: true
   alias Scholar.Neighbors.NNDescent
   doctest NNDescent
 

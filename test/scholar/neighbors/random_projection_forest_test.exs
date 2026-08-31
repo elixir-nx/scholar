@@ -1,5 +1,5 @@
 defmodule Scholar.Neighbors.RandomProjectionForestTest do
-  use ExUnit.Case, async: true
+  use Scholar.Case, async: true
   alias Scholar.Neighbors.RandomProjectionForest
   doctest RandomProjectionForest
 
