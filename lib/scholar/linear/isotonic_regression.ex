@@ -393,38 +393,47 @@ defmodule Scholar.Linear.IsotonicRegression do
     current_weight = Nx.tensor(0, type: Nx.type(sample_weights))
 
     index = 0
+    started = Nx.u8(0)
 
-    {{x_output, y_output, sample_weights_output, index, current_x, current_y, current_weight}, _} =
+    {{x_output, y_output, sample_weights_output, index, current_x, current_y, current_weight,
+      _started}, _} =
       while {{x_output, y_output, sample_weights_output, index, current_x, current_y,
-              current_weight}, {j = 0, eps = 1.0e-10, y, x, sample_weights}},
+              current_weight, started}, {j = 0, eps = 1.0e-10, y, x, sample_weights}},
             j < Nx.axis_size(x, 0) do
         x_j = x[j]
 
-        {x_output, y_output, sample_weights_output, index, current_x, current_weight, current_y} =
-          if x_j - current_x >= eps do
-            x_output = Nx.indexed_put(x_output, Nx.new_axis(index, 0), current_x)
-            y_output = Nx.indexed_put(y_output, Nx.new_axis(index, 0), current_y / current_weight)
+        {x_output, y_output, sample_weights_output, index, current_x, current_weight, current_y,
+         started} =
+          cond do
+            # sklearn drops these samples before fitting; keeping them makes a group
+            # whose total weight is zero, and its mean is then 0 / 0
+            sample_weights[j] <= 0 ->
+              {x_output, y_output, sample_weights_output, index, current_x, current_weight,
+               current_y, started}
 
-            sample_weights_output =
-              Nx.indexed_put(sample_weights_output, Nx.new_axis(index, 0), current_weight)
+            not started ->
+              {x_output, y_output, sample_weights_output, index, x_j, sample_weights[j],
+               y[j] * sample_weights[j], Nx.u8(1)}
 
-            index = index + 1
-            current_x = x_j
-            current_weight = sample_weights[j]
-            current_y = y[j] * sample_weights[j]
+            x_j - current_x >= eps ->
+              x_output = Nx.indexed_put(x_output, Nx.new_axis(index, 0), current_x)
 
-            {x_output, y_output, sample_weights_output, index, current_x, current_weight,
-             current_y}
-          else
-            current_weight = current_weight + sample_weights[j]
-            current_y = current_y + y[j] * sample_weights[j]
+              y_output =
+                Nx.indexed_put(y_output, Nx.new_axis(index, 0), current_y / current_weight)
 
-            {x_output, y_output, sample_weights_output, index, current_x, current_weight,
-             current_y}
+              sample_weights_output =
+                Nx.indexed_put(sample_weights_output, Nx.new_axis(index, 0), current_weight)
+
+              {x_output, y_output, sample_weights_output, index + 1, x_j, sample_weights[j],
+               y[j] * sample_weights[j], started}
+
+            true ->
+              {x_output, y_output, sample_weights_output, index, current_x,
+               current_weight + sample_weights[j], current_y + y[j] * sample_weights[j], started}
           end
 
-        {{x_output, y_output, sample_weights_output, index, current_x, current_y, current_weight},
-         {j + 1, eps, y, x, sample_weights}}
+        {{x_output, y_output, sample_weights_output, index, current_x, current_y, current_weight,
+          started}, {j + 1, eps, y, x, sample_weights}}
       end
 
     x_output = Nx.indexed_put(x_output, Nx.new_axis(index, 0), current_x)

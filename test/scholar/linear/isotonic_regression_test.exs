@@ -166,6 +166,28 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
         Nx.tensor([4.5, 4.5, 4.5, 4.5, 3.0])
       )
     end
+
+    test "fit drops samples with zero weight" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      weighted =
+        IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4, 5]), Nx.tensor([1, 5, 3, 4, 5]),
+          sample_weights: [1, 0, 1, 1, 1]
+        )
+        |> IsotonicRegression.preprocess()
+
+      # dropping the zero-weight sample by hand has to give the same model
+      dropped =
+        IsotonicRegression.fit(Nx.tensor([1, 3, 4, 5]), Nx.tensor([1, 3, 4, 5]))
+        |> IsotonicRegression.preprocess()
+
+      assert_all_close(weighted.x_thresholds, dropped.x_thresholds)
+      assert_all_close(weighted.y_thresholds, dropped.y_thresholds)
+
+      assert_all_close(
+        IsotonicRegression.predict(weighted, Nx.tensor([1, 2, 3, 4, 5])),
+        Nx.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+      )
+    end
   end
 
   test "preprocess" do
