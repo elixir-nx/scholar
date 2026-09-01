@@ -113,7 +113,7 @@ defmodule Scholar.Cluster.MeanShiftTest do
       assert settled.iterations == Nx.u32(8)
 
       # seeds cut off early have not merged yet, so more of them survive
-      assert Nx.to_number(truncated.num_clusters) > Nx.to_number(settled.num_clusters)
+      assert Nx.greater(truncated.num_clusters, settled.num_clusters) == Nx.u8(1)
     end
 
     test "fit from a given set of seeds" do
@@ -149,6 +149,21 @@ defmodule Scholar.Cluster.MeanShiftTest do
       assert Nx.type(f32.cluster_centers) == {:f, 32}
     end
 
+    test "fit with samples and seeds of different types" do
+      seeds = Nx.tensor([[1.0, 1.0], [8.0, 8.0]])
+
+      # the seeds carry the loop's accumulator, so a wider sample type has to
+      # widen them too rather than fail to match
+      wide = MeanShift.fit(Nx.as_type(blobs(), :f64), bandwidth: 1.0, seeds: seeds)
+      assert Nx.type(wide.cluster_centers) == {:f, 64}
+
+      narrow =
+        MeanShift.fit(blobs(), bandwidth: 1.0, seeds: Nx.as_type(seeds, :f64))
+
+      assert Nx.type(narrow.cluster_centers) == {:f, 64}
+      assert_all_close(wide.cluster_centers, narrow.cluster_centers)
+    end
+
     test "works with jit_apply" do
       direct = MeanShift.fit(blobs(), bandwidth: 1.0)
       jitted = Nx.Defn.jit_apply(&MeanShift.fit/2, [blobs(), [bandwidth: 1.0]])
@@ -161,15 +176,19 @@ defmodule Scholar.Cluster.MeanShiftTest do
 
   test "prune" do
     model = MeanShift.fit(blobs(), bandwidth: 1.0)
-
-    # fit keeps one row per seed so the shapes stay static
-    assert Nx.axis_size(model.cluster_centers, 0) == 8
-    assert model.num_clusters == Nx.u32(3)
-
     pruned = MeanShift.prune(model)
-    assert Nx.axis_size(pruned.cluster_centers, 0) == 3
 
-    # the labels have to keep pointing at the same centers after renumbering
+    assert model.num_clusters == Nx.u32(3)
+    assert pruned.num_clusters == model.num_clusters
+
+    # fit keeps one row per seed, so pruning has to leave exactly the rows that
+    # did not lose to a stronger center
+    assert_all_close(
+      pruned.cluster_centers,
+      Nx.tensor([[8.0, 8.0], [1.0333334, 1.05], [1.05, 8.05]])
+    )
+
+    # and the labels have to keep pointing at the same centers after renumbering
     assert_all_close(
       Nx.take(pruned.cluster_centers, pruned.labels),
       Nx.take(model.cluster_centers, model.labels)

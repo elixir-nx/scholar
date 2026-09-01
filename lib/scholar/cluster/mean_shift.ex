@@ -37,7 +37,9 @@ defmodule Scholar.Cluster.MeanShift do
       type: :pos_integer,
       doc: """
       The maximum number of times every seed is moved. Seeds stop early once
-      none of them moves further than `bandwidth / 1000`.
+      none of them moves further than `bandwidth / 1000`. Note that
+      scikit-learn's `max_iter` checks the limit after moving, so it takes one
+      more step than the number given.
       """
     ],
     cluster_all: [
@@ -82,7 +84,8 @@ defmodule Scholar.Cluster.MeanShift do
 
     * `:num_clusters` - The number of centers that survived.
 
-    * `:iterations` - How many times the seeds were moved before they settled.
+    * `:iterations` - How many times the seeds were moved. This is at least one,
+      since the seeds have to move once for their movement to be measured.
 
   ## Examples
 
@@ -130,15 +133,21 @@ defmodule Scholar.Cluster.MeanShift do
         _ -> to_float(seeds)
       end
 
+    # the seeds carry the loop's accumulator, so they and the samples have to
+    # agree on a type or the moved seeds come back wider than they went in
+    type = Nx.Type.merge(Nx.type(x), Nx.type(seeds))
+    x = Nx.as_type(x, type)
+    seeds = Nx.as_type(seeds, type)
+
     bandwidth = opts[:bandwidth]
     {centers, iterations} = shift_seeds(x, seeds, bandwidth, opts)
 
-    intensity = intensity(x, centers, bandwidth)
-    order = strongest_first(intensity, centers)
+    gathered = intensity(x, centers, bandwidth)
+    order = strongest_first(gathered, centers)
     centers = Nx.take(centers, order)
 
     # a seed that never had a sample in reach describes no mode at all
-    kept = drop_duplicate_modes(centers, bandwidth) and Nx.take(intensity, order) > 0
+    kept = drop_duplicate_modes(centers, bandwidth) and Nx.take(gathered, order) > 0
     num_clusters = Nx.sum(kept)
 
     distances =
