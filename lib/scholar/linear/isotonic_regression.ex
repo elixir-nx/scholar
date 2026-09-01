@@ -326,6 +326,7 @@ defmodule Scholar.Linear.IsotonicRegression do
       model
       | x_thresholds: x,
         y_thresholds: y,
+        cutoff_index: Nx.subtract(Nx.axis_size(x, 0), 1),
         preprocess: Scholar.Interpolation.Linear.fit(x, y)
     }
   end

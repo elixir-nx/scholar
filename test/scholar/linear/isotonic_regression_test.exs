@@ -332,6 +332,20 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
     assert_all_close(two_points.y_thresholds, Nx.tensor([3.0, 4.0]))
   end
 
+  test "cutoff_index follows the thresholds preprocess kept" do
+    model =
+      IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4]), Nx.tensor([5, 5, 5, 5]))
+      |> IsotonicRegression.preprocess()
+
+    assert model.cutoff_index == Nx.tensor(1)
+
+    # a stale index makes a second pass read past the end of the tensor
+    assert_all_close(
+      IsotonicRegression.preprocess(model).y_thresholds,
+      model.y_thresholds
+    )
+  end
+
   test "out_of_bounds decides what happens outside the fitted range" do
     # Expected values from scikit-learn 1.6.1 on this data.
     x = Nx.tensor([1, 2, 3])
