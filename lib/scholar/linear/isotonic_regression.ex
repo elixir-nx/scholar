@@ -148,7 +148,8 @@ defmodule Scholar.Linear.IsotonicRegression do
       }
   """
   deftransform fit(x, y, opts \\ []) do
-    {n_samples} = Nx.shape(x)
+    check_input_shape(x)
+    n_samples = Nx.axis_size(x, 0)
     y = LinearHelpers.validate_y_shape(y, n_samples, __MODULE__)
 
     opts = NimbleOptions.validate!(opts, @opts_schema)

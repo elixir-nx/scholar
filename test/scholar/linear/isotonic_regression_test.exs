@@ -189,6 +189,21 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       )
     end
 
+    test "fit accepts the column shape check_input_shape allows" do
+      y = Nx.tensor([1, 3, 6, 8, 9, 10])
+
+      column =
+        IsotonicRegression.fit(Nx.tensor([[1], [4], [7], [9], [10], [11]]), y)
+        |> IsotonicRegression.preprocess()
+
+      flat =
+        IsotonicRegression.fit(Nx.tensor([1, 4, 7, 9, 10, 11]), y)
+        |> IsotonicRegression.preprocess()
+
+      assert_all_close(column.x_thresholds, flat.x_thresholds)
+      assert_all_close(column.y_thresholds, flat.y_thresholds)
+    end
+
     test "fit with :increasing? as :auto follows the rank correlation" do
       # Expected values from scikit-learn 1.6.1 on this data.
       # the outlier drags an ordinary least squares slope to -5 while Spearman's rho
