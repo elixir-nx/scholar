@@ -315,4 +315,26 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
     # Fitted with the default :increasing?, so predictions must not decrease with x.
     assert a <= b and b <= c
   end
+
+  test "out_of_bounds decides what happens outside the fitted range" do
+    # Expected values from scikit-learn 1.6.1 on this data.
+    x = Nx.tensor([1, 2, 3])
+    y = Nx.tensor([1, 2, 3])
+    to_predict = Nx.tensor([0.0, 2.0, 9.0])
+
+    clipped =
+      IsotonicRegression.fit(x, y, out_of_bounds: :clip) |> IsotonicRegression.preprocess()
+
+    assert_all_close(
+      IsotonicRegression.predict(clipped, to_predict),
+      Nx.tensor([1.0, 2.0, 3.0])
+    )
+
+    # :nan is the documented default
+    nan = IsotonicRegression.fit(x, y) |> IsotonicRegression.preprocess()
+    predictions = IsotonicRegression.predict(nan, to_predict)
+
+    assert Nx.is_nan(predictions) == Nx.tensor([1, 0, 1], type: :u8)
+    assert_all_close(predictions[1], Nx.tensor(2.0))
+  end
 end

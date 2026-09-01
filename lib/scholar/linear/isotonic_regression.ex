@@ -15,6 +15,7 @@ defmodule Scholar.Linear.IsotonicRegression do
 
   @derive {
     Nx.Container,
+    keep: [:out_of_bounds],
     containers: [
       :increasing,
       :x_min,
@@ -32,7 +33,8 @@ defmodule Scholar.Linear.IsotonicRegression do
     :y_thresholds,
     :increasing,
     :cutoff_index,
-    :preprocess
+    :preprocess,
+    :out_of_bounds
   ]
 
   @type t() :: %__MODULE__{
@@ -42,7 +44,8 @@ defmodule Scholar.Linear.IsotonicRegression do
           y_thresholds: Nx.Tensor.t(),
           increasing: Nx.Tensor.t(),
           cutoff_index: Nx.Tensor.t(),
-          preprocess: tuple() | Scholar.Interpolation.Linear.t()
+          preprocess: tuple() | Scholar.Interpolation.Linear.t(),
+          out_of_bounds: :clip | :nan
         }
 
   opts = [
@@ -140,7 +143,8 @@ defmodule Scholar.Linear.IsotonicRegression do
         cutoff_index: Nx.tensor(
           5
         ),
-        preprocess: {}
+        preprocess: {},
+        out_of_bounds: :nan
       }
   """
   deftransform fit(x, y, opts \\ []) do
@@ -194,7 +198,8 @@ defmodule Scholar.Linear.IsotonicRegression do
       y_thresholds: y,
       increasing: increasing,
       cutoff_index: index_cut,
-      preprocess: {}
+      preprocess: {},
+      out_of_bounds: opts[:out_of_bounds]
     }
   end
 
@@ -222,12 +227,25 @@ defmodule Scholar.Linear.IsotonicRegression do
     check_preprocess(model)
 
     x = Nx.flatten(x)
-    x = Nx.clip(x, model.x_min, model.x_max)
 
-    Scholar.Interpolation.Linear.predict(
-      model.preprocess,
-      x
-    )
+    predictions =
+      Scholar.Interpolation.Linear.predict(
+        model.preprocess,
+        Nx.clip(x, model.x_min, model.x_max)
+      )
+
+    handle_out_of_bounds(predictions, x, model)
+  end
+
+  deftransformp handle_out_of_bounds(predictions, x, model) do
+    case model.out_of_bounds do
+      :clip -> predictions
+      :nan -> nan_out_of_bounds(predictions, x, model.x_min, model.x_max)
+    end
+  end
+
+  defnp nan_out_of_bounds(predictions, x, x_min, x_max) do
+    Nx.select(x < x_min or x > x_max, Nx.Constants.nan(), predictions)
   end
 
   @doc """
@@ -271,7 +289,8 @@ defmodule Scholar.Linear.IsotonicRegression do
           x: Nx.tensor(
             [1.0, 4.0, 7.0, 9.0, 10.0, 11.0]
           )
-        }
+        },
+        out_of_bounds: :nan
       }
   """
   def preprocess(%__MODULE__{} = model, trim_duplicates \\ true) do
