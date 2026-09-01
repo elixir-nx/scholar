@@ -188,6 +188,23 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
         Nx.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
       )
     end
+
+    test "fit with :increasing? as :auto follows the rank correlation" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      # the outlier drags an ordinary least squares slope to -5 while Spearman's rho
+      # stays at 0.45, and scikit-learn calls this increasing
+      x = Nx.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+      y = Nx.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, -100])
+
+      assert IsotonicRegression.fit(x, y).increasing == Nx.u8(1)
+
+      assert IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4, 5]), Nx.tensor([2, 2, 2, 3, 1])).increasing ==
+               Nx.u8(0)
+
+      # a constant input leaves the correlation undefined, and scikit-learn picks decreasing
+      assert IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4]), Nx.tensor([5, 5, 5, 5])).increasing ==
+               Nx.u8(0)
+    end
   end
 
   test "preprocess" do

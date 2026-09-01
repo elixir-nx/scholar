@@ -548,10 +548,27 @@ defmodule Scholar.Linear.IsotonicRegression do
     if increasing, do: y, else: Nx.reverse(y)
   end
 
+  # sign of Spearman's rho, matching sklearn; a constant input makes it undefined
+  # and the comparison then picks decreasing
   defnp check_increasing(x, y) do
-    x = Nx.new_axis(x, -1)
-    y = Nx.new_axis(y, -1)
-    model = Scholar.Linear.LinearRegression.fit(x, y)
-    model.coefficients[0] >= 0
+    rank_x = average_rank(Nx.flatten(x))
+    rank_y = average_rank(Nx.flatten(y))
+
+    centered_x = rank_x - Nx.mean(rank_x)
+    centered_y = rank_y - Nx.mean(rank_y)
+
+    rho =
+      Nx.sum(centered_x * centered_y) /
+        Nx.sqrt(Nx.sum(centered_x ** 2) * Nx.sum(centered_y ** 2))
+
+    rho >= 0
+  end
+
+  defnp average_rank(t) do
+    column = Nx.new_axis(t, 1)
+    row = Nx.new_axis(t, 0)
+    smaller = Nx.sum(row < column, axes: [1])
+    tied = Nx.sum(row == column, axes: [1])
+    smaller + (tied + 1) / 2
   end
 end
