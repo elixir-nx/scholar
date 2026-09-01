@@ -299,7 +299,7 @@ defmodule Scholar.Linear.IsotonicRegression do
     y = model.y_thresholds[0..cutoff]
 
     {x, y} =
-      if trim_duplicates do
+      if trim_duplicates and Nx.axis_size(y, 0) > 2 do
         keep_mask =
           Nx.logical_or(
             Nx.not_equal(y[1..-2//1], y[0..-3//1]),

@@ -316,6 +316,22 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
     assert a <= b and b <= c
   end
 
+  test "preprocess with fewer than three thresholds" do
+    # Expected values from scikit-learn 1.6.1 on this data.
+    constant =
+      IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4]), Nx.tensor([5, 5, 5, 5]))
+      |> IsotonicRegression.preprocess()
+
+    assert_all_close(constant.x_thresholds, Nx.tensor([1.0, 4.0]))
+    assert_all_close(constant.y_thresholds, Nx.tensor([5.0, 5.0]))
+
+    two_points =
+      IsotonicRegression.fit(Nx.tensor([1, 2]), Nx.tensor([3, 4]))
+      |> IsotonicRegression.preprocess()
+
+    assert_all_close(two_points.y_thresholds, Nx.tensor([3.0, 4.0]))
+  end
+
   test "out_of_bounds decides what happens outside the fitted range" do
     # Expected values from scikit-learn 1.6.1 on this data.
     x = Nx.tensor([1, 2, 3])
