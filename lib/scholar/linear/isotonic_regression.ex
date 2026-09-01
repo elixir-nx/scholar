@@ -505,14 +505,15 @@ defmodule Scholar.Linear.IsotonicRegression do
 
     i = if(increasing, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size) |> Nx.as_type(:u32)
 
+    # the blocks run to y_size, which trails the placeholder slots when decreasing
     {y, _} =
-      while {y, {target, i, _k = Nx.u32(0), max_size}}, i < max_size + 1 do
+      while {y, {target, i, _k = Nx.u32(0), y_size}}, i < y_size + 1 do
         k = target[i] + 1
         indices = Nx.iota({Nx.axis_size(y, 0)}, type: :u32)
         in_range? = Nx.logical_and(i + 1 <= indices, indices < k)
         y = Nx.select(in_range?, y[i], y)
         i = k
-        {y, {target, i, k, max_size}}
+        {y, {target, i, k, y_size}}
       end
 
     if increasing, do: y, else: Nx.reverse(y)

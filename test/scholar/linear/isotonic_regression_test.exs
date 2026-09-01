@@ -150,6 +150,22 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       model = Scholar.Linear.IsotonicRegression.fit(x, y, sample_weights: sample_weights)
       assert model.increasing == Nx.u8(0)
     end
+
+    test "fit decreasing with tied x stays monotonic" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      model =
+        IsotonicRegression.fit(Nx.tensor([0, 0, 1, 1, 2]), Nx.tensor([4, 4, 5, 5, 3]),
+          increasing: false
+        )
+        |> IsotonicRegression.preprocess()
+
+      assert_all_close(model.y_thresholds, Nx.tensor([4.5, 4.5, 3.0]))
+
+      assert_all_close(
+        IsotonicRegression.predict(model, Nx.tensor([0, 0, 1, 1, 2])),
+        Nx.tensor([4.5, 4.5, 4.5, 4.5, 3.0])
+      )
+    end
   end
 
   test "preprocess" do
