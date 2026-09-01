@@ -150,6 +150,76 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
       model = Scholar.Linear.IsotonicRegression.fit(x, y, sample_weights: sample_weights)
       assert model.increasing == Nx.u8(0)
     end
+
+    test "fit decreasing with tied x stays monotonic" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      model =
+        IsotonicRegression.fit(Nx.tensor([0, 0, 1, 1, 2]), Nx.tensor([4, 4, 5, 5, 3]),
+          increasing: false
+        )
+        |> IsotonicRegression.preprocess()
+
+      assert_all_close(model.y_thresholds, Nx.tensor([4.5, 4.5, 3.0]))
+
+      assert_all_close(
+        IsotonicRegression.predict(model, Nx.tensor([0, 0, 1, 1, 2])),
+        Nx.tensor([4.5, 4.5, 4.5, 4.5, 3.0])
+      )
+    end
+
+    test "fit drops samples with zero weight" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      weighted =
+        IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4, 5]), Nx.tensor([1, 5, 3, 4, 5]),
+          sample_weights: [1, 0, 1, 1, 1]
+        )
+        |> IsotonicRegression.preprocess()
+
+      # dropping the zero-weight sample by hand has to give the same model
+      dropped =
+        IsotonicRegression.fit(Nx.tensor([1, 3, 4, 5]), Nx.tensor([1, 3, 4, 5]))
+        |> IsotonicRegression.preprocess()
+
+      assert_all_close(weighted.x_thresholds, dropped.x_thresholds)
+      assert_all_close(weighted.y_thresholds, dropped.y_thresholds)
+
+      assert_all_close(
+        IsotonicRegression.predict(weighted, Nx.tensor([1, 2, 3, 4, 5])),
+        Nx.tensor([1.0, 2.0, 3.0, 4.0, 5.0])
+      )
+    end
+
+    test "fit accepts the column shape check_input_shape allows" do
+      y = Nx.tensor([1, 3, 6, 8, 9, 10])
+
+      column =
+        IsotonicRegression.fit(Nx.tensor([[1], [4], [7], [9], [10], [11]]), y)
+        |> IsotonicRegression.preprocess()
+
+      flat =
+        IsotonicRegression.fit(Nx.tensor([1, 4, 7, 9, 10, 11]), y)
+        |> IsotonicRegression.preprocess()
+
+      assert_all_close(column.x_thresholds, flat.x_thresholds)
+      assert_all_close(column.y_thresholds, flat.y_thresholds)
+    end
+
+    test "fit with :increasing? as :auto follows the rank correlation" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      # the outlier drags an ordinary least squares slope to -5 while Spearman's rho
+      # stays at 0.45, and scikit-learn calls this increasing
+      x = Nx.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+      y = Nx.tensor([1, 2, 3, 4, 5, 6, 7, 8, 9, -100])
+
+      assert IsotonicRegression.fit(x, y).increasing == Nx.u8(1)
+
+      assert IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4, 5]), Nx.tensor([2, 2, 2, 3, 1])).increasing ==
+               Nx.u8(0)
+
+      # a constant input leaves the correlation undefined, and scikit-learn picks decreasing
+      assert IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4]), Nx.tensor([5, 5, 5, 5])).increasing ==
+               Nx.u8(0)
+    end
   end
 
   test "preprocess" do
@@ -276,5 +346,57 @@ defmodule Scholar.Linear.IsotonicRegressionTest do
 
     # Fitted with the default :increasing?, so predictions must not decrease with x.
     assert a <= b and b <= c
+  end
+
+  test "preprocess with fewer than three thresholds" do
+    # Expected values from scikit-learn 1.6.1 on this data.
+    constant =
+      IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4]), Nx.tensor([5, 5, 5, 5]))
+      |> IsotonicRegression.preprocess()
+
+    assert_all_close(constant.x_thresholds, Nx.tensor([1.0, 4.0]))
+    assert_all_close(constant.y_thresholds, Nx.tensor([5.0, 5.0]))
+
+    two_points =
+      IsotonicRegression.fit(Nx.tensor([1, 2]), Nx.tensor([3, 4]))
+      |> IsotonicRegression.preprocess()
+
+    assert_all_close(two_points.y_thresholds, Nx.tensor([3.0, 4.0]))
+  end
+
+  test "cutoff_index follows the thresholds preprocess kept" do
+    model =
+      IsotonicRegression.fit(Nx.tensor([1, 2, 3, 4]), Nx.tensor([5, 5, 5, 5]))
+      |> IsotonicRegression.preprocess()
+
+    assert model.cutoff_index == Nx.tensor(1)
+
+    # a stale index makes a second pass read past the end of the tensor
+    assert_all_close(
+      IsotonicRegression.preprocess(model).y_thresholds,
+      model.y_thresholds
+    )
+  end
+
+  test "out_of_bounds decides what happens outside the fitted range" do
+    # Expected values from scikit-learn 1.6.1 on this data.
+    x = Nx.tensor([1, 2, 3])
+    y = Nx.tensor([1, 2, 3])
+    to_predict = Nx.tensor([0.0, 2.0, 9.0])
+
+    clipped =
+      IsotonicRegression.fit(x, y, out_of_bounds: :clip) |> IsotonicRegression.preprocess()
+
+    assert_all_close(
+      IsotonicRegression.predict(clipped, to_predict),
+      Nx.tensor([1.0, 2.0, 3.0])
+    )
+
+    # :nan is the documented default
+    nan = IsotonicRegression.fit(x, y) |> IsotonicRegression.preprocess()
+    predictions = IsotonicRegression.predict(nan, to_predict)
+
+    assert Nx.is_nan(predictions) == Nx.tensor([1, 0, 1], type: :u8)
+    assert_all_close(predictions[1], Nx.tensor(2.0))
   end
 end

@@ -15,6 +15,7 @@ defmodule Scholar.Linear.IsotonicRegression do
 
   @derive {
     Nx.Container,
+    keep: [:out_of_bounds],
     containers: [
       :increasing,
       :x_min,
@@ -32,7 +33,8 @@ defmodule Scholar.Linear.IsotonicRegression do
     :y_thresholds,
     :increasing,
     :cutoff_index,
-    :preprocess
+    :preprocess,
+    :out_of_bounds
   ]
 
   @type t() :: %__MODULE__{
@@ -42,7 +44,8 @@ defmodule Scholar.Linear.IsotonicRegression do
           y_thresholds: Nx.Tensor.t(),
           increasing: Nx.Tensor.t(),
           cutoff_index: Nx.Tensor.t(),
-          preprocess: tuple() | Scholar.Interpolation.Linear.t()
+          preprocess: tuple() | Scholar.Interpolation.Linear.t(),
+          out_of_bounds: :clip | :nan
         }
 
   opts = [
@@ -140,11 +143,13 @@ defmodule Scholar.Linear.IsotonicRegression do
         cutoff_index: Nx.tensor(
           5
         ),
-        preprocess: {}
+        preprocess: {},
+        out_of_bounds: :nan
       }
   """
   deftransform fit(x, y, opts \\ []) do
-    {n_samples} = Nx.shape(x)
+    check_input_shape(x)
+    n_samples = Nx.axis_size(x, 0)
     y = LinearHelpers.validate_y_shape(y, n_samples, __MODULE__)
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
@@ -194,7 +199,8 @@ defmodule Scholar.Linear.IsotonicRegression do
       y_thresholds: y,
       increasing: increasing,
       cutoff_index: index_cut,
-      preprocess: {}
+      preprocess: {},
+      out_of_bounds: opts[:out_of_bounds]
     }
   end
 
@@ -222,12 +228,25 @@ defmodule Scholar.Linear.IsotonicRegression do
     check_preprocess(model)
 
     x = Nx.flatten(x)
-    x = Nx.clip(x, model.x_min, model.x_max)
 
-    Scholar.Interpolation.Linear.predict(
-      model.preprocess,
-      x
-    )
+    predictions =
+      Scholar.Interpolation.Linear.predict(
+        model.preprocess,
+        Nx.clip(x, model.x_min, model.x_max)
+      )
+
+    handle_out_of_bounds(predictions, x, model)
+  end
+
+  deftransformp handle_out_of_bounds(predictions, x, model) do
+    case model.out_of_bounds do
+      :clip -> predictions
+      :nan -> nan_out_of_bounds(predictions, x, model.x_min, model.x_max)
+    end
+  end
+
+  defnp nan_out_of_bounds(predictions, x, x_min, x_max) do
+    Nx.select(x < x_min or x > x_max, Nx.Constants.nan(), predictions)
   end
 
   @doc """
@@ -271,7 +290,8 @@ defmodule Scholar.Linear.IsotonicRegression do
           x: Nx.tensor(
             [1.0, 4.0, 7.0, 9.0, 10.0, 11.0]
           )
-        }
+        },
+        out_of_bounds: :nan
       }
   """
   def preprocess(%__MODULE__{} = model, trim_duplicates \\ true) do
@@ -280,7 +300,7 @@ defmodule Scholar.Linear.IsotonicRegression do
     y = model.y_thresholds[0..cutoff]
 
     {x, y} =
-      if trim_duplicates do
+      if trim_duplicates and Nx.axis_size(y, 0) > 2 do
         keep_mask =
           Nx.logical_or(
             Nx.not_equal(y[1..-2//1], y[0..-3//1]),
@@ -307,6 +327,7 @@ defmodule Scholar.Linear.IsotonicRegression do
       model
       | x_thresholds: x,
         y_thresholds: y,
+        cutoff_index: Nx.subtract(Nx.axis_size(x, 0), 1),
         preprocess: Scholar.Interpolation.Linear.fit(x, y)
     }
   end
@@ -393,38 +414,47 @@ defmodule Scholar.Linear.IsotonicRegression do
     current_weight = Nx.tensor(0, type: Nx.type(sample_weights))
 
     index = 0
+    started = Nx.u8(0)
 
-    {{x_output, y_output, sample_weights_output, index, current_x, current_y, current_weight}, _} =
+    {{x_output, y_output, sample_weights_output, index, current_x, current_y, current_weight,
+      _started}, _} =
       while {{x_output, y_output, sample_weights_output, index, current_x, current_y,
-              current_weight}, {j = 0, eps = 1.0e-10, y, x, sample_weights}},
+              current_weight, started}, {j = 0, eps = 1.0e-10, y, x, sample_weights}},
             j < Nx.axis_size(x, 0) do
         x_j = x[j]
 
-        {x_output, y_output, sample_weights_output, index, current_x, current_weight, current_y} =
-          if x_j - current_x >= eps do
-            x_output = Nx.indexed_put(x_output, Nx.new_axis(index, 0), current_x)
-            y_output = Nx.indexed_put(y_output, Nx.new_axis(index, 0), current_y / current_weight)
+        {x_output, y_output, sample_weights_output, index, current_x, current_weight, current_y,
+         started} =
+          cond do
+            # sklearn drops these samples before fitting; keeping them makes a group
+            # whose total weight is zero, and its mean is then 0 / 0
+            sample_weights[j] <= 0 ->
+              {x_output, y_output, sample_weights_output, index, current_x, current_weight,
+               current_y, started}
 
-            sample_weights_output =
-              Nx.indexed_put(sample_weights_output, Nx.new_axis(index, 0), current_weight)
+            not started ->
+              {x_output, y_output, sample_weights_output, index, x_j, sample_weights[j],
+               y[j] * sample_weights[j], Nx.u8(1)}
 
-            index = index + 1
-            current_x = x_j
-            current_weight = sample_weights[j]
-            current_y = y[j] * sample_weights[j]
+            x_j - current_x >= eps ->
+              x_output = Nx.indexed_put(x_output, Nx.new_axis(index, 0), current_x)
 
-            {x_output, y_output, sample_weights_output, index, current_x, current_weight,
-             current_y}
-          else
-            current_weight = current_weight + sample_weights[j]
-            current_y = current_y + y[j] * sample_weights[j]
+              y_output =
+                Nx.indexed_put(y_output, Nx.new_axis(index, 0), current_y / current_weight)
 
-            {x_output, y_output, sample_weights_output, index, current_x, current_weight,
-             current_y}
+              sample_weights_output =
+                Nx.indexed_put(sample_weights_output, Nx.new_axis(index, 0), current_weight)
+
+              {x_output, y_output, sample_weights_output, index + 1, x_j, sample_weights[j],
+               y[j] * sample_weights[j], started}
+
+            true ->
+              {x_output, y_output, sample_weights_output, index, current_x,
+               current_weight + sample_weights[j], current_y + y[j] * sample_weights[j], started}
           end
 
-        {{x_output, y_output, sample_weights_output, index, current_x, current_y, current_weight},
-         {j + 1, eps, y, x, sample_weights}}
+        {{x_output, y_output, sample_weights_output, index, current_x, current_y, current_weight,
+          started}, {j + 1, eps, y, x, sample_weights}}
       end
 
     x_output = Nx.indexed_put(x_output, Nx.new_axis(index, 0), current_x)
@@ -505,23 +535,41 @@ defmodule Scholar.Linear.IsotonicRegression do
 
     i = if(increasing, do: 0, else: Nx.axis_size(y, 0) - 1 - max_size) |> Nx.as_type(:u32)
 
+    # the blocks run to y_size, which trails the placeholder slots when decreasing
     {y, _} =
-      while {y, {target, i, _k = Nx.u32(0), max_size}}, i < max_size + 1 do
+      while {y, {target, i, _k = Nx.u32(0), y_size}}, i < y_size + 1 do
         k = target[i] + 1
         indices = Nx.iota({Nx.axis_size(y, 0)}, type: :u32)
         in_range? = Nx.logical_and(i + 1 <= indices, indices < k)
         y = Nx.select(in_range?, y[i], y)
         i = k
-        {y, {target, i, k, max_size}}
+        {y, {target, i, k, y_size}}
       end
 
     if increasing, do: y, else: Nx.reverse(y)
   end
 
+  # sign of Spearman's rho, matching sklearn; a constant input makes it undefined
+  # and the comparison then picks decreasing
   defnp check_increasing(x, y) do
-    x = Nx.new_axis(x, -1)
-    y = Nx.new_axis(y, -1)
-    model = Scholar.Linear.LinearRegression.fit(x, y)
-    model.coefficients[0] >= 0
+    rank_x = average_rank(Nx.flatten(x))
+    rank_y = average_rank(Nx.flatten(y))
+
+    centered_x = rank_x - Nx.mean(rank_x)
+    centered_y = rank_y - Nx.mean(rank_y)
+
+    rho =
+      Nx.sum(centered_x * centered_y) /
+        Nx.sqrt(Nx.sum(centered_x ** 2) * Nx.sum(centered_y ** 2))
+
+    rho >= 0
+  end
+
+  defnp average_rank(t) do
+    column = Nx.new_axis(t, 1)
+    row = Nx.new_axis(t, 0)
+    smaller = Nx.sum(row < column, axes: [1])
+    tied = Nx.sum(row == column, axes: [1])
+    smaller + (tied + 1) / 2
   end
 end
