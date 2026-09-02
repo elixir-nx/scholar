@@ -36,10 +36,8 @@ defmodule Scholar.Cluster.MeanShift do
       default: 300,
       type: :pos_integer,
       doc: """
-      The maximum number of times every seed is moved. Seeds stop early once
-      none of them moves further than `bandwidth / 1000`. Note that
-      scikit-learn's `max_iter` checks the limit after moving, so it takes one
-      more step than the number given.
+      The maximum number of times a seed is moved past its first step. Seeds
+      stop early once none of them moves further than `bandwidth / 1000`.
       """
     ],
     cluster_all: [
@@ -84,8 +82,8 @@ defmodule Scholar.Cluster.MeanShift do
 
     * `:num_clusters` - The number of centers that survived.
 
-    * `:iterations` - How many times the seeds were moved. This is at least one,
-      since the seeds have to move once for their movement to be measured.
+    * `:iterations` - How many times the seeds were moved past their first step.
+      This is zero when every seed settles on that first step.
 
   ## Examples
 
@@ -102,7 +100,7 @@ defmodule Scholar.Cluster.MeanShift do
         ),
         labels: Nx.s32([2, 2, 0, 0]),
         num_clusters: Nx.u32(2),
-        iterations: Nx.u32(2)
+        iterations: Nx.u32(1)
       }
   """
   deftransform fit(x, opts \\ []) do
@@ -140,9 +138,8 @@ defmodule Scholar.Cluster.MeanShift do
     seeds = Nx.as_type(seeds, type)
 
     bandwidth = opts[:bandwidth]
-    {centers, iterations} = shift_seeds(x, seeds, bandwidth, opts)
+    {centers, gathered, iterations} = shift_seeds(x, seeds, bandwidth, opts)
 
-    gathered = intensity(x, centers, bandwidth)
     order = strongest_first(gathered, centers)
     centers = Nx.take(centers, order)
 
@@ -186,9 +183,14 @@ defmodule Scholar.Cluster.MeanShift do
   defnp shift_seeds(x, seeds, bandwidth, opts) do
     tolerance = bandwidth / 1000
 
-    {seeds, _, iterations} =
-      while {seeds, {x, bandwidth, tolerance, moving = Nx.u8(1)}, i = Nx.u32(0)},
-            i < opts[:max_iterations] and moving do
+    # the limit is checked after moving, as scikit-learn does, so a run capped at
+    # k takes k + 1 steps and reports k
+    empty = Nx.broadcast(Nx.u32(0), {Nx.axis_size(seeds, 0)})
+
+    {seeds, gathered, _, moves} =
+      while {seeds, _gathered = empty, {x, bandwidth, tolerance, moving = Nx.u8(1)},
+             i = Nx.u32(0)},
+            i <= opts[:max_iterations] and moving do
         within = Scholar.Metrics.Distance.pairwise_euclidean(seeds, x) <= bandwidth
         members = Nx.as_type(within, Nx.type(seeds))
         count = Nx.sum(members, axes: [1], keep_axes: true)
@@ -202,16 +204,14 @@ defmodule Scholar.Cluster.MeanShift do
           )
 
         shift = Scholar.Metrics.Distance.euclidean(moved, seeds, axes: [1])
-        {moved, {x, bandwidth, tolerance, Nx.any(shift > tolerance)}, i + 1}
+
+        # the weight scikit-learn sorts by is the neighborhood that produced the
+        # center, counted before the move, not the one around where it landed
+        {moved, Nx.sum(Nx.as_type(within, :u32), axes: [1]),
+         {x, bandwidth, tolerance, Nx.any(shift > tolerance)}, i + 1}
       end
 
-    {seeds, iterations}
-  end
-
-  defnp intensity(x, centers, bandwidth) do
-    Scholar.Metrics.Distance.pairwise_euclidean(centers, x)
-    |> Nx.less_equal(bandwidth)
-    |> Nx.sum(axes: [1])
+    {seeds, gathered, moves - 1}
   end
 
   # ties break on the coordinates, descending, so that seeds landing on the same
@@ -269,7 +269,7 @@ defmodule Scholar.Cluster.MeanShift do
         ),
         labels: Nx.s32([1, 1, 0, 0]),
         num_clusters: Nx.u32(2),
-        iterations: Nx.u32(2)
+        iterations: Nx.u32(1)
       }
   """
   def prune(%__MODULE__{cluster_centers: centers, labels: labels} = model) do

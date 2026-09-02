@@ -110,10 +110,49 @@ defmodule Scholar.Cluster.MeanShiftTest do
       settled = MeanShift.fit(x, bandwidth: 2.5)
 
       assert truncated.iterations == Nx.u32(1)
-      assert settled.iterations == Nx.u32(8)
+      assert settled.iterations == Nx.u32(7)
 
       # seeds cut off early have not merged yet, so more of them survive
       assert Nx.greater(truncated.num_clusters, settled.num_clusters) == Nx.u8(1)
+    end
+
+    test "fit truncated by max_iterations" do
+      # Expected values from scikit-learn 1.6.1 on this data, which checks the
+      # limit after moving, so a run capped at one still takes a second step
+      x =
+        Nx.tensor([
+          [-5.1, -4.1],
+          [4.5, 5.3],
+          [-3.0, -2.2],
+          [-5.9, -0.2],
+          [-1.5, -4.0],
+          [2.7, -4.0],
+          [-4.1, 0.2],
+          [-1.3, -4.9]
+        ])
+
+      capped = MeanShift.fit(x, bandwidth: 3.0, max_iterations: 1) |> MeanShift.prune()
+
+      assert capped.iterations == Nx.u32(1)
+      assert capped.labels == Nx.s32([0, 1, 0, 0, 0, 2, 0, 0])
+
+      assert_all_close(
+        capped.cluster_centers,
+        Nx.tensor([[-3.425, -2.525], [4.5, 5.3], [2.7, -4.0]])
+      )
+
+      # left to settle it finds one more mode, and the weight that decides which
+      # center survives is the neighborhood that produced it, counted before the
+      # last move
+      settled = MeanShift.fit(x, bandwidth: 3.0) |> MeanShift.prune()
+
+      assert settled.iterations == Nx.u32(3)
+      assert settled.labels == Nx.s32([0, 2, 0, 1, 0, 3, 1, 0])
+
+      assert_all_close(
+        settled.cluster_centers,
+        Nx.tensor([[-2.725, -3.8], [-4.3333333, -0.7333333], [4.5, 5.3], [2.7, -4.0]])
+      )
     end
 
     test "fit from a given set of seeds" do
