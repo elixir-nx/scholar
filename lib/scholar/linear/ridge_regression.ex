@@ -100,10 +100,10 @@ defmodule Scholar.Linear.RidgeRegression do
       iex> Scholar.Linear.RidgeRegression.fit(x, y)
       %Scholar.Linear.RidgeRegression{
         coefficients: Nx.tensor(
-          [-0.4251492, -0.6886231]
+          [-0.42514837, -0.6886236]
         ),
         intercept: Nx.tensor(
-          5.658683
+          5.6586823
         )
       }
   """
@@ -208,7 +208,7 @@ defmodule Scholar.Linear.RidgeRegression do
       iex> model = Scholar.Linear.RidgeRegression.fit(x, y)
       iex> Scholar.Linear.RidgeRegression.predict(model, Nx.tensor([[2.0, 1.0]]))
       Nx.tensor(
-        [4.1197615]
+        [4.119762]
       )
   """
   defn predict(%__MODULE__{coefficients: coeff, intercept: intercept} = _model, x) do
