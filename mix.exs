@@ -29,10 +29,10 @@ defmodule Scholar.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.34", only: :docs},
-      {:nx, "~> 0.13 or ~> 1.0", override: true},
+      {:nx, "~> 1.0"},
       {:nimble_options, "~> 0.5.2 or ~> 1.0"},
       {:exla, ">= 0.0.0", only: :test},
-      {:polaris, "~> 0.1"},
+      {:polaris, "~> 0.2"},
       {:benchee, "~> 1.0", only: :dev},
       {:scidata, "~> 0.1.11", only: :test}
     ]
