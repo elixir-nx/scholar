@@ -40,6 +40,36 @@ defmodule Scholar.Cluster.DBSCANTest do
       assert model.core_sample_indices == Nx.tensor([0, 1, 0, 1, 0, 1, 0, 1, 0, 0], type: :u8)
     end
 
+    test "fit with weights" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      x = Nx.tensor([[1, 2], [2, 2], [2, 3], [8, 7], [8, 8], [25, 80]])
+      weights = Nx.tensor([5.0, 0.1, 0.1, 1.0, 1.0, 1.0])
+      model = DBSCAN.fit(x, eps: 3, min_samples: 2, weights: weights)
+
+      assert model.labels == Nx.tensor([0, 0, 0, 1, 1, -1])
+      assert model.core_sample_indices == Nx.tensor([1, 1, 1, 1, 1, 0], type: :u8)
+    end
+
+    test "fit with weights joining two clusters through a light sample" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      x = Nx.tensor([[0, 0], [1, 0], [2, 0]])
+      weights = Nx.tensor([5.0, 0.1, 5.0])
+      model = DBSCAN.fit(x, eps: 1.5, min_samples: 3, weights: weights)
+
+      assert model.labels == Nx.tensor([0, 0, 0])
+      assert model.core_sample_indices == Nx.tensor([1, 1, 1], type: :u8)
+    end
+
+    test "fit with negative weights" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      x = Nx.tensor([[0, 0], [1, 0], [2, 0]])
+      weights = Nx.tensor([3.0, -1.0, 3.0])
+      model = DBSCAN.fit(x, eps: 1.5, min_samples: 3, weights: weights)
+
+      assert model.labels == Nx.tensor([0, 0, 0])
+      assert model.core_sample_indices == Nx.tensor([0, 1, 0], type: :u8)
+    end
+
     test "test with artificially created 3 blobs" do
       x =
         Nx.tensor([
