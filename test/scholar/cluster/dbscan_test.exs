@@ -70,6 +70,20 @@ defmodule Scholar.Cluster.DBSCANTest do
       assert model.core_sample_indices == Nx.tensor([0, 1, 0], type: :u8)
     end
 
+    test "works with jit_apply" do
+      opts = [
+        eps: 3.3,
+        min_samples: 2,
+        weights: Nx.tensor([5.0, 0.1, 0.1, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+      ]
+
+      model = DBSCAN.fit(x(), opts)
+      jitted = Nx.Defn.jit_apply(&DBSCAN.fit(&1, opts), [x()])
+
+      assert jitted.labels == model.labels
+      assert jitted.core_sample_indices == model.core_sample_indices
+    end
+
     test "test with artificially created 3 blobs" do
       x =
         Nx.tensor([
