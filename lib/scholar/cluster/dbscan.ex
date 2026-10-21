@@ -88,13 +88,15 @@ defmodule Scholar.Cluster.DBSCAN do
       }
   """
   deftransform fit(x, opts \\ []) do
-    fit_n(x, NimbleOptions.validate!(opts, @opts_schema))
+    opts = NimbleOptions.validate!(opts, @opts_schema)
+    {weights, opts} = Keyword.pop(opts, :weights, nil)
+    weights = validate_weights(weights, Nx.axis_size(x, 0), type: to_float_type(x))
+    fit_n(x, weights, opts)
   end
 
-  defnp fit_n(x, opts) do
+  defnp fit_n(x, weights, opts) do
     num_samples = Nx.axis_size(x, 0)
-    weights = validate_weights(opts[:weights], num_samples, type: to_float_type(x))
-    weights = if Nx.rank(weights) == 0, do: weights, else: Nx.new_axis(weights, -1)
+    weights = if Nx.rank(weights) == 0, do: weights, else: Nx.new_axis(weights, 0)
     y_dummy = Nx.broadcast(Nx.tensor(0), {num_samples})
 
     neighbor_model =
