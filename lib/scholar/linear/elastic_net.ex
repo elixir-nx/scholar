@@ -83,6 +83,11 @@ defmodule Scholar.Linear.ElasticNet do
       of targets for a zero-vector on input.
       """
     ],
+    positive?: [
+      type: :boolean,
+      default: false,
+      doc: "If set to `true`, the coefficients are constrained to be non-negative."
+    ],
     max_iterations: [
       type: :pos_integer,
       default: 1000,
@@ -165,7 +170,8 @@ defmodule Scholar.Linear.ElasticNet do
       l2_reg: l2_reg,
       tol: opts[:tol],
       max_iterations: opts[:max_iterations],
-      fit_intercept?: opts[:fit_intercept?]
+      fit_intercept?: opts[:fit_intercept?],
+      positive?: opts[:positive?]
     )
   end
 
@@ -258,6 +264,14 @@ defmodule Scholar.Linear.ElasticNet do
             tmp = Nx.dot(x_j, residual)
 
             updated = Nx.sign(tmp) * Nx.max(Nx.abs(tmp) - l1_reg, 0) / (norm_j + l2_reg)
+
+            updated =
+              if opts[:positive?] do
+                Nx.select(tmp < 0, 0.0, updated)
+              else
+                updated
+              end
+
             # A zero column carries no information, its coefficient stays at zero.
             new_w_j = Nx.select(norm_j == 0, w_j, updated)
 
@@ -273,7 +287,7 @@ defmodule Scholar.Linear.ElasticNet do
 
         gap =
           if check_gap? do
-            duality_gap(xt, y, w, residual, l1_reg, l2_reg)
+            duality_gap(xt, y, w, residual, l1_reg, l2_reg, positive?: opts[:positive?])
           else
             gap
           end
@@ -286,9 +300,16 @@ defmodule Scholar.Linear.ElasticNet do
     {w, gap, iteration}
   end
 
-  defnp duality_gap(xt, y, w, residual, l1_reg, l2_reg) do
+  defnp duality_gap(xt, y, w, residual, l1_reg, l2_reg, opts) do
     xta = Nx.dot(xt, residual) - l2_reg * w
-    dual_norm_xta = Nx.reduce_max(Nx.abs(xta))
+
+    # With non-negative coefficients the dual constraint is one-sided.
+    dual_norm_xta =
+      if opts[:positive?] do
+        Nx.reduce_max(xta)
+      else
+        Nx.reduce_max(Nx.abs(xta))
+      end
 
     r_norm2 = Nx.dot(residual, residual)
     w_norm2 = Nx.dot(w, w)

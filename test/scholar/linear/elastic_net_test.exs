@@ -281,6 +281,35 @@ defmodule Scholar.Linear.ElasticNetTest do
     end
   end
 
+  describe "fit with positive?: true" do
+    test "matches scikit-learn" do
+      {x, y} = diabetes_data()
+
+      model = ElasticNet.fit(x, y, alpha: 0.5, l1_ratio: 0.9, positive?: true)
+
+      expected_coefficients =
+        Nx.tensor([
+          0.0,
+          0.0,
+          5.843557357788086,
+          0.34552234411239624,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          59.480377197265625,
+          0.0
+        ])
+
+      assert_all_close(model.coefficients, expected_coefficients, atol: 1.0e-4, rtol: 1.0e-4)
+      assert_all_close(model.intercept, Nx.tensor(-312.4940490722656), atol: 1.0e-3, rtol: 1.0e-4)
+      assert Nx.to_number(model.num_iterations) == 9
+      assert_all_close(model.dual_gap, Nx.tensor(0.21160589158535004), rtol: 5.0e-2)
+
+      assert model.coefficients |> Nx.greater_equal(0) |> Nx.all() |> Nx.to_number() == 1
+    end
+  end
+
   describe "fit with :sample_weights" do
     # Weights 1, 2, 3, 1, 2, 3, ... over the 50 samples.
     defp diabetes_weights(type \\ :f32) do

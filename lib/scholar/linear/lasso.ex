@@ -64,6 +64,11 @@ defmodule Scholar.Linear.Lasso do
       of targets for a zero-vector on input.
       """
     ],
+    positive?: [
+      type: :boolean,
+      default: false,
+      doc: "If set to `true`, the coefficients are constrained to be non-negative."
+    ],
     max_iterations: [
       type: :pos_integer,
       default: 1000,
@@ -141,7 +146,8 @@ defmodule Scholar.Linear.Lasso do
       l2_reg: 0.0,
       tol: opts[:tol],
       max_iterations: opts[:max_iterations],
-      fit_intercept?: opts[:fit_intercept?]
+      fit_intercept?: opts[:fit_intercept?],
+      positive?: opts[:positive?]
     )
   end
 

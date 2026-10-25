@@ -135,6 +135,45 @@ defmodule Scholar.Linear.LassoTest do
     end
   end
 
+  describe "fit with positive?: true" do
+    test "f64 inputs match scikit-learn to full precision" do
+      {x, y} = diabetes_data(:f64)
+
+      model = Lasso.fit(x, y, alpha: 1.0, positive?: true)
+
+      expected_coefficients =
+        Nx.tensor(
+          [
+            0.0,
+            0.0,
+            5.036420844380907,
+            0.19632831356420247,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            75.0819048381021,
+            0.0
+          ],
+          type: :f64
+        )
+
+      assert_all_close(model.coefficients, expected_coefficients, atol: 1.0e-10, rtol: 1.0e-10)
+
+      assert_all_close(model.intercept, Nx.tensor(-349.19227950758795, type: :f64),
+        atol: 1.0e-10,
+        rtol: 1.0e-10
+      )
+
+      assert Nx.to_number(model.num_iterations) == 10
+
+      assert_all_close(model.dual_gap, Nx.tensor(0.18248233268182956, type: :f64),
+        atol: 1.0e-10,
+        rtol: 1.0e-8
+      )
+    end
+  end
+
   describe "fit with :sample_weights" do
     test "matches scikit-learn" do
       {x, y} = diabetes_data()
