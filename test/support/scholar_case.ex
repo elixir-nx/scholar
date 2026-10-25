@@ -196,20 +196,20 @@ defmodule Scholar.Case do
   end
 
   # https://scikit-learn.org/stable/datasets/toy_dataset.html#diabetes-dataset
-  def diabetes_data do
+  def diabetes_data(type \\ :f32) do
     x =
       File.read!("./test/support/diabetes_data_raw.csv")
       |> String.split("\n")
       |> Enum.map(&String.split(&1, " "))
       |> Enum.map(&list_of_string_to_floats(&1))
-      |> Nx.tensor()
+      |> Nx.tensor(type: type)
 
     y =
       File.read!("./test/support/diabetes_target.csv")
       |> String.split("\n")
       |> Enum.map(&String.split(&1, " "))
       |> Enum.map(&list_of_string_to_floats(&1))
-      |> Nx.tensor()
+      |> Nx.tensor(type: type)
 
     {x, y}
   end
