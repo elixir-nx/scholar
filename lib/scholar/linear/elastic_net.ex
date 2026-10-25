@@ -160,7 +160,9 @@ defmodule Scholar.Linear.ElasticNet do
     )
   end
 
-  defnp fit_n(x, y, opts) do
+  # Shared with `Scholar.Linear.Lasso`, which is this model with `l1_ratio: 1.0`.
+  @doc false
+  defn fit_n(x, y, opts) do
     x = Nx.as_type(x, opts[:type])
     y = Nx.as_type(y, opts[:type])
     {num_samples, num_features} = Nx.shape(x)
