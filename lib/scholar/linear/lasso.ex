@@ -35,6 +35,14 @@ defmodule Scholar.Linear.Lasso do
   defstruct [:coefficients, :intercept, :dual_gap, :num_iterations]
 
   opts = [
+    sample_weights: [
+      type: {:custom, Scholar.Options, :weights, []},
+      doc: """
+      The non-negative weights for each observation. If not provided,
+      all observations are assigned equal weight. The weights are rescaled
+      to sum to the number of samples, so only their ratios matter.
+      """
+    ],
     alpha: [
       type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0,
@@ -125,8 +133,9 @@ defmodule Scholar.Linear.Lasso do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     type = Nx.Type.merge(to_float_type(x), to_float_type(y))
+    sample_weights = validate_weights(opts[:sample_weights], num_samples, type: type)
 
-    fit_n(x, y,
+    fit_n(x, y, sample_weights,
       type: type,
       l1_reg: opts[:alpha] * num_samples,
       l2_reg: 0.0,
@@ -136,8 +145,8 @@ defmodule Scholar.Linear.Lasso do
     )
   end
 
-  defnp fit_n(x, y, opts) do
-    model = ElasticNet.fit_n(x, y, opts)
+  defnp fit_n(x, y, sample_weights, opts) do
+    model = ElasticNet.fit_n(x, y, sample_weights, opts)
 
     %__MODULE__{
       coefficients: model.coefficients,

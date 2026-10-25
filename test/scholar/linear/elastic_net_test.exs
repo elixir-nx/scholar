@@ -281,6 +281,141 @@ defmodule Scholar.Linear.ElasticNetTest do
     end
   end
 
+  describe "fit with :sample_weights" do
+    # Weights 1, 2, 3, 1, 2, 3, ... over the 50 samples.
+    defp diabetes_weights(type \\ :f32) do
+      Nx.iota({50}, type: type) |> Nx.remainder(3) |> Nx.add(1)
+    end
+
+    test "matches scikit-learn" do
+      {x, y} = diabetes_data()
+
+      model =
+        ElasticNet.fit(x, y, alpha: 0.5, l1_ratio: 0.9, sample_weights: diabetes_weights())
+
+      expected_coefficients =
+        Nx.tensor([
+          -0.2730790078639984,
+          -11.280350685119629,
+          7.9027018547058105,
+          1.4443596601486206,
+          0.15722469985485077,
+          -1.2773523330688477,
+          0.3878490924835205,
+          16.634002685546875,
+          42.64410400390625,
+          -0.8805441856384277
+        ])
+
+      assert_all_close(model.coefficients, expected_coefficients, atol: 1.0e-4, rtol: 1.0e-4)
+      assert_all_close(model.intercept, Nx.tensor(-257.2607116699219), atol: 1.0e-3, rtol: 1.0e-4)
+
+      assert Nx.to_number(model.num_iterations) == 207
+    end
+
+    test "f64 inputs match scikit-learn to full precision" do
+      {x, y} = diabetes_data(:f64)
+
+      model =
+        ElasticNet.fit(x, y, alpha: 0.5, l1_ratio: 0.9, sample_weights: diabetes_weights(:f64))
+
+      expected_coefficients =
+        Nx.tensor(
+          [
+            -0.2730789694077994,
+            -11.280362494253572,
+            7.902702236458736,
+            1.444359782371634,
+            0.15721992579990451,
+            -1.2773478196589887,
+            0.3878531799506173,
+            16.63401511315393,
+            42.644181846950815,
+            -0.8805425282225469
+          ],
+          type: :f64
+        )
+
+      assert_all_close(model.coefficients, expected_coefficients, atol: 1.0e-10, rtol: 1.0e-10)
+
+      assert_all_close(model.intercept, Nx.tensor(-257.2610665991673, type: :f64),
+        atol: 1.0e-10,
+        rtol: 1.0e-10
+      )
+
+      assert Nx.to_number(model.num_iterations) == 207
+    end
+
+    test "fit_intercept?: false matches scikit-learn" do
+      {x, y} = diabetes_data()
+
+      model =
+        ElasticNet.fit(x, y,
+          alpha: 0.5,
+          fit_intercept?: false,
+          sample_weights: diabetes_weights()
+        )
+
+      expected_coefficients =
+        Nx.tensor([
+          -0.17961205542087555,
+          -4.513019561767578,
+          7.822999477386475,
+          1.118497371673584,
+          1.813488483428955,
+          -2.6816623210906982,
+          -2.1007020473480225,
+          4.266779899597168,
+          6.318896770477295,
+          -1.4221750497817993
+        ])
+
+      assert_all_close(model.coefficients, expected_coefficients, atol: 1.0e-4, rtol: 1.0e-4)
+      assert Nx.to_number(model.intercept) == 0.0
+      assert Nx.to_number(model.num_iterations) == 1000
+    end
+
+    test "integer weights are the same as repeating samples" do
+      {x, y} = small_data(:f64)
+      weights = [1, 3, 2, 1, 2]
+      repeated = Nx.tensor([0, 1, 1, 1, 2, 2, 3, 4, 4])
+      opts = [alpha: 0.05, l1_ratio: 0.6, tol: 1.0e-12, max_iterations: 10_000]
+
+      model = ElasticNet.fit(x, y, [sample_weights: weights] ++ opts)
+      expected = ElasticNet.fit(Nx.take(x, repeated), Nx.take(y, repeated), opts)
+
+      assert_all_close(model.coefficients, expected.coefficients, atol: 1.0e-8, rtol: 1.0e-8)
+      assert_all_close(model.intercept, expected.intercept, atol: 1.0e-8, rtol: 1.0e-8)
+    end
+
+    test "only the ratios between weights matter" do
+      {x, y} = small_data(:f64)
+      opts = [alpha: 0.05, tol: 1.0e-12, max_iterations: 10_000]
+
+      model = ElasticNet.fit(x, y, [sample_weights: Nx.tensor([2.0, 2.0, 2.0, 2.0, 2.0])] ++ opts)
+      expected = ElasticNet.fit(x, y, opts)
+
+      assert_all_close(model.coefficients, expected.coefficients, atol: 1.0e-10, rtol: 1.0e-10)
+      assert_all_close(model.intercept, expected.intercept, atol: 1.0e-10, rtol: 1.0e-10)
+    end
+
+    test "works with jit_apply" do
+      {x, y} = small_data()
+      weights = Nx.tensor([1.0, 3.0, 2.0, 1.0, 2.0])
+
+      model =
+        Nx.Defn.jit_apply(
+          fn x, y, weights -> ElasticNet.fit(x, y, alpha: 0.05, sample_weights: weights) end,
+          [x, y, weights]
+        )
+
+      expected = ElasticNet.fit(x, y, alpha: 0.05, sample_weights: weights)
+
+      assert_all_close(model.coefficients, expected.coefficients, atol: 1.0e-6, rtol: 1.0e-6)
+      assert_all_close(model.intercept, expected.intercept, atol: 1.0e-6, rtol: 1.0e-6)
+    end
+  end
+
   describe "predict" do
     test "matches scikit-learn" do
       {x, y} = diabetes_data()

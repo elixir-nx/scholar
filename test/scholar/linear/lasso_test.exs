@@ -135,6 +135,33 @@ defmodule Scholar.Linear.LassoTest do
     end
   end
 
+  describe "fit with :sample_weights" do
+    test "matches scikit-learn" do
+      {x, y} = diabetes_data()
+      weights = Nx.iota({50}) |> Nx.remainder(3) |> Nx.add(1)
+
+      model = Lasso.fit(x, y, alpha: 10.0, sample_weights: weights)
+
+      expected_coefficients =
+        Nx.tensor([
+          -0.24204550683498383,
+          0.0,
+          8.516009330749512,
+          1.4087196588516235,
+          1.5237725973129272,
+          -2.3194687366485596,
+          -1.757298231124878,
+          0.0,
+          0.0,
+          -0.761890172958374
+        ])
+
+      assert_all_close(model.coefficients, expected_coefficients, atol: 1.0e-4, rtol: 1.0e-4)
+      assert_all_close(model.intercept, Nx.tensor(-65.58184814453125), atol: 1.0e-3, rtol: 1.0e-4)
+      assert Nx.to_number(model.num_iterations) == 90
+    end
+  end
+
   describe "errors" do
     test "does not accept :l1_ratio" do
       {x, y} = diabetes_data()

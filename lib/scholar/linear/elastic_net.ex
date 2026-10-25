@@ -41,6 +41,14 @@ defmodule Scholar.Linear.ElasticNet do
   defstruct [:coefficients, :intercept, :dual_gap, :num_iterations]
 
   opts = [
+    sample_weights: [
+      type: {:custom, Scholar.Options, :weights, []},
+      doc: """
+      The non-negative weights for each observation. If not provided,
+      all observations are assigned equal weight. The weights are rescaled
+      to sum to the number of samples, so only their ratios matter.
+      """
+    ],
     alpha: [
       type: {:custom, Scholar.Options, :non_negative_number, []},
       default: 1.0,
@@ -144,13 +152,14 @@ defmodule Scholar.Linear.ElasticNet do
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
     type = Nx.Type.merge(to_float_type(x), to_float_type(y))
+    sample_weights = validate_weights(opts[:sample_weights], num_samples, type: type)
 
     # Penalties on the scale of 1/2 ||y - Xw||^2, the objective that coordinate
     # descent minimizes. They stay Elixir numbers to keep their f64 precision.
     l1_reg = opts[:alpha] * opts[:l1_ratio] * num_samples
     l2_reg = opts[:alpha] * (1.0 - opts[:l1_ratio]) * num_samples
 
-    fit_n(x, y,
+    fit_n(x, y, sample_weights,
       type: type,
       l1_reg: l1_reg,
       l2_reg: l2_reg,
@@ -161,15 +170,23 @@ defmodule Scholar.Linear.ElasticNet do
   end
 
   # Shared with `Scholar.Linear.Lasso`, which is this model with `l1_ratio: 1.0`.
+  #
+  # `sample_weights` is a scalar when the user gave no weights, and a tensor
+  # of shape {num_samples} otherwise.
   @doc false
-  defn fit_n(x, y, opts) do
+  defn fit_n(x, y, sample_weights, opts) do
     x = Nx.as_type(x, opts[:type])
     y = Nx.as_type(y, opts[:type])
     {num_samples, num_features} = Nx.shape(x)
+    weighted? = Nx.rank(sample_weights) == 1
 
     {x_offset, y_offset} =
       if opts[:fit_intercept?] do
-        {Nx.mean(x, axes: [0]), Nx.mean(y)}
+        if weighted? do
+          {Nx.weighted_mean(x, sample_weights, axes: [0]), Nx.weighted_mean(y, sample_weights)}
+        else
+          {Nx.mean(x, axes: [0]), Nx.mean(y)}
+        end
       else
         {Nx.broadcast(Nx.tensor(0.0, type: opts[:type]), {num_features}),
          Nx.tensor(0.0, type: opts[:type])}
@@ -177,6 +194,17 @@ defmodule Scholar.Linear.ElasticNet do
 
     x = x - x_offset
     y = y - y_offset
+
+    # Same as scikit-learn: the weights are rescaled to sum to num_samples,
+    # so the penalties keep their scale, and the centered data is multiplied
+    # by their square root.
+    {x, y} =
+      if weighted? do
+        sample_weights = sample_weights * num_samples / Nx.sum(sample_weights)
+        LinearHelpers.rescale(x, y, sample_weights)
+      else
+        {x, y}
+      end
 
     {coefficients, dual_gap, num_iterations} = coordinate_descent(x, y, opts)
 
