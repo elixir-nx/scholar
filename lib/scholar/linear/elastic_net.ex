@@ -118,16 +118,23 @@ defmodule Scholar.Linear.ElasticNet do
 
     The function returns a struct with the following parameters:
 
-    * `:coefficients` - Estimated coefficients for the linear regression problem.
+    * `:coefficients` - Estimated coefficients for the linear regression problem,
+      of shape `{num_features}` for targets of shape `{num_samples}`, and
+      `{num_targets, num_features}` for targets of shape `{num_samples, num_targets}`.
 
-    * `:intercept` - Independent term in the linear model.
+    * `:intercept` - Independent term in the linear model, one per target.
+      It is a scalar `0.0` when `:fit_intercept?` is `false`.
 
     * `:dual_gap` - Duality gap at the end of the optimization, divided by the
       number of samples so it is on the scale of the objective function.
+      One per target.
 
-    * `:num_iterations` - Number of coordinate descent iterations performed.
-      When it equals `:max_iterations`, the fit stopped before reaching the
-      tolerance.
+    * `:num_iterations` - Number of coordinate descent iterations performed,
+      one per target. When it equals `:max_iterations`, the fit stopped before
+      reaching the tolerance.
+
+  Each target is fitted on its own, the same as fitting the model once per
+  column of `y`.
 
   ## Examples
 
@@ -142,7 +149,7 @@ defmodule Scholar.Linear.ElasticNet do
           5.7753325
         ),
         dual_gap: Nx.tensor(
-          2.1224221e-5
+          2.1226704e-5
         ),
         num_iterations: Nx.tensor(
           17,
@@ -152,7 +159,7 @@ defmodule Scholar.Linear.ElasticNet do
   """
   deftransform fit(x, y, opts \\ []) do
     {num_samples, _} = Nx.shape(x)
-    y = LinearHelpers.validate_y_shape(y, num_samples, __MODULE__)
+    y = LinearHelpers.validate_multi_target_y_shape(y, num_samples, __MODULE__)
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
@@ -186,16 +193,21 @@ defmodule Scholar.Linear.ElasticNet do
     {num_samples, num_features} = Nx.shape(x)
     weighted? = Nx.rank(sample_weights) == 1
 
+    single_target? = Nx.rank(y) == 1
+    y = if single_target?, do: Nx.new_axis(y, 1), else: y
+    num_targets = Nx.axis_size(y, 1)
+
     {x_offset, y_offset} =
       if opts[:fit_intercept?] do
         if weighted? do
-          {Nx.weighted_mean(x, sample_weights, axes: [0]), Nx.weighted_mean(y, sample_weights)}
+          {Nx.weighted_mean(x, sample_weights, axes: [0]),
+           Nx.weighted_mean(y, sample_weights, axes: [0])}
         else
-          {Nx.mean(x, axes: [0]), Nx.mean(y)}
+          {Nx.mean(x, axes: [0]), Nx.mean(y, axes: [0])}
         end
       else
         {Nx.broadcast(Nx.tensor(0.0, type: opts[:type]), {num_features}),
-         Nx.tensor(0.0, type: opts[:type])}
+         Nx.broadcast(Nx.tensor(0.0, type: opts[:type]), {num_targets})}
       end
 
     x = x - x_offset
@@ -217,23 +229,39 @@ defmodule Scholar.Linear.ElasticNet do
     intercept =
       LinearHelpers.set_intercept(coefficients, x_offset, y_offset, opts[:fit_intercept?])
 
-    %__MODULE__{
-      coefficients: coefficients,
-      intercept: intercept,
-      dual_gap: dual_gap / num_samples,
-      num_iterations: num_iterations
-    }
+    dual_gap = dual_gap / num_samples
+
+    if single_target? do
+      %__MODULE__{
+        coefficients: Nx.squeeze(coefficients, axes: [0]),
+        intercept: Nx.squeeze(intercept),
+        dual_gap: Nx.squeeze(dual_gap, axes: [0]),
+        num_iterations: Nx.squeeze(num_iterations, axes: [0])
+      }
+    else
+      %__MODULE__{
+        coefficients: coefficients,
+        intercept: intercept,
+        dual_gap: dual_gap,
+        num_iterations: num_iterations
+      }
+    end
   end
 
-  # Cyclic coordinate descent for
+  # Cyclic coordinate descent for each target k
   #
-  #     1/2 ||y - Xw||^2 + l1_reg ||w||_1 + l2_reg / 2 ||w||^2
+  #     1/2 ||y_k - X w_k||^2 + l1_reg ||w_k||_1 + l2_reg / 2 ||w_k||^2
   #
   # following scikit-learn's `enet_coordinate_descent`, so the iterates,
   # the stopping rule and the number of iterations are the same.
+  #
+  # The targets are solved together, one column each. scikit-learn fits them
+  # one at a time, so a target that converges is frozen: its coefficients,
+  # duality gap and iteration count stop changing while the others go on.
   defnp coordinate_descent(x, y, opts) do
     type = Nx.type(x)
     num_features = Nx.axis_size(x, 1)
+    num_targets = Nx.axis_size(y, 1)
     l1_reg = opts[:l1_reg]
     l2_reg = opts[:l2_reg]
     max_iterations = opts[:max_iterations]
@@ -241,27 +269,28 @@ defmodule Scholar.Linear.ElasticNet do
 
     xt = Nx.transpose(x)
     norm_cols = Nx.sum(xt * xt, axes: [1])
-    gap_tol = d_w_tol * Nx.dot(y, y)
+    gap_tol = d_w_tol * Nx.sum(y * y, axes: [0])
 
-    w = Nx.broadcast(Nx.tensor(0.0, type: type), {num_features})
-    residual = y
+    zeros = Nx.broadcast(Nx.tensor(0.0, type: type), {num_targets})
+    w = Nx.broadcast(Nx.tensor(0.0, type: type), {num_targets, num_features})
     gap = gap_tol + 1.0
+    num_iterations = Nx.broadcast(Nx.u32(0), {num_targets})
+    active = Nx.broadcast(Nx.u8(1), {num_targets})
 
-    {{w, _residual, gap, iteration, _converged?}, _} =
-      while {{w, residual, gap, iteration = Nx.u32(0), converged? = Nx.u8(0)},
-             {xt, y, norm_cols, gap_tol}},
-            iteration < max_iterations and not converged? do
+    {{w, gap, num_iterations, _residual, _active, _iteration}, _} =
+      while {{w, gap, num_iterations, residual = y, active, iteration = Nx.u32(0)},
+             {xt, y, norm_cols, gap_tol, zeros}},
+            iteration < max_iterations and Nx.any(active) do
         {{w, residual, w_max, d_w_max}, _} =
-          while {{w, residual, w_max = Nx.tensor(0.0, type: type),
-                  d_w_max = Nx.tensor(0.0, type: type)}, {xt, norm_cols}},
+          while {{w, residual, w_max = zeros, d_w_max = zeros}, {xt, norm_cols, active}},
                 j <- 0..(num_features - 1) do
             x_j = xt[j]
             norm_j = norm_cols[j]
-            w_j = w[j]
+            w_j = w |> Nx.slice_along_axis(j, 1, axis: 1) |> Nx.squeeze(axes: [1])
 
             # Residual without the contribution of feature j.
-            residual = residual + w_j * x_j
-            tmp = Nx.dot(x_j, residual)
+            residual = residual + Nx.outer(x_j, w_j)
+            tmp = Nx.dot(x_j, [0], residual, [0])
 
             updated = Nx.sign(tmp) * Nx.max(Nx.abs(tmp) - l1_reg, 0) / (norm_j + l2_reg)
 
@@ -272,58 +301,69 @@ defmodule Scholar.Linear.ElasticNet do
                 updated
               end
 
-            # A zero column carries no information, its coefficient stays at zero.
-            new_w_j = Nx.select(norm_j == 0, w_j, updated)
+            # A zero column carries no information, its coefficient stays at
+            # zero, and a target that already converged keeps its coefficients.
+            new_w_j = Nx.select(norm_j == 0 or not active, w_j, updated)
 
-            residual = residual - new_w_j * x_j
-            w = Nx.put_slice(w, [j], Nx.reshape(new_w_j, {1}))
+            residual = residual - Nx.outer(x_j, new_w_j)
+            w = Nx.put_slice(w, [0, j], Nx.new_axis(new_w_j, 1))
 
             {{w, residual, Nx.max(w_max, Nx.abs(new_w_j)),
-              Nx.max(d_w_max, Nx.abs(new_w_j - w_j))}, {xt, norm_cols}}
+              Nx.max(d_w_max, Nx.abs(new_w_j - w_j))}, {xt, norm_cols, active}}
           end
 
         check_gap? =
-          w_max == 0 or d_w_max / w_max < d_w_tol or iteration == max_iterations - 1
+          active and
+            (w_max == 0 or d_w_max / w_max < d_w_tol or iteration == max_iterations - 1)
 
         gap =
-          if check_gap? do
-            duality_gap(xt, y, w, residual, l1_reg, l2_reg, positive?: opts[:positive?])
+          if Nx.any(check_gap?) do
+            new_gap = duality_gap(xt, y, w, residual, l1_reg, l2_reg, positive?: opts[:positive?])
+            Nx.select(check_gap?, new_gap, gap)
           else
             gap
           end
 
-        converged? = check_gap? and gap < gap_tol
+        num_iterations = Nx.select(active, iteration + 1, num_iterations)
+        active = active and not (check_gap? and gap < gap_tol)
 
-        {{w, residual, gap, iteration + 1, converged?}, {xt, y, norm_cols, gap_tol}}
+        {{w, gap, num_iterations, residual, active, iteration + 1},
+         {xt, y, norm_cols, gap_tol, zeros}}
       end
 
-    {w, gap, iteration}
+    {w, gap, num_iterations}
   end
 
+  # Duality gap of each target, for `w` of shape {num_targets, num_features}
+  # and `y` and `residual` of shape {num_samples, num_targets}.
   defnp duality_gap(xt, y, w, residual, l1_reg, l2_reg, opts) do
-    xta = Nx.dot(xt, residual) - l2_reg * w
+    xta = Nx.dot(xt, residual) - l2_reg * Nx.transpose(w)
 
     # With non-negative coefficients the dual constraint is one-sided.
     dual_norm_xta =
       if opts[:positive?] do
-        Nx.reduce_max(xta)
+        Nx.reduce_max(xta, axes: [0])
       else
-        Nx.reduce_max(Nx.abs(xta))
+        Nx.reduce_max(Nx.abs(xta), axes: [0])
       end
 
-    r_norm2 = Nx.dot(residual, residual)
-    w_norm2 = Nx.dot(w, w)
+    r_norm2 = Nx.sum(residual * residual, axes: [0])
+    w_norm2 = Nx.sum(w * w, axes: [1])
 
     scale? = dual_norm_xta > l1_reg
     const = Nx.select(scale?, l1_reg / dual_norm_xta, 1.0)
     gap = Nx.select(scale?, 0.5 * (r_norm2 + r_norm2 * const ** 2), r_norm2)
 
-    gap + l1_reg * Nx.sum(Nx.abs(w)) - const * Nx.dot(residual, y) +
+    gap + l1_reg * Nx.sum(Nx.abs(w), axes: [1]) - const * Nx.sum(residual * y, axes: [0]) +
       0.5 * l2_reg * (1 + const ** 2) * w_norm2
   end
 
   @doc """
   Makes predictions with the given `model` on input `x`.
+
+  Output predictions have shape `{num_samples}` when the model was fitted on
+  targets of shape `{num_samples}` or `{num_samples, 1}`, and
+  `{num_samples, num_targets}` otherwise.
 
   ## Examples
 

@@ -99,16 +99,23 @@ defmodule Scholar.Linear.Lasso do
 
     The function returns a struct with the following parameters:
 
-    * `:coefficients` - Estimated coefficients for the linear regression problem.
+    * `:coefficients` - Estimated coefficients for the linear regression problem,
+      of shape `{num_features}` for targets of shape `{num_samples}`, and
+      `{num_targets, num_features}` for targets of shape `{num_samples, num_targets}`.
 
-    * `:intercept` - Independent term in the linear model.
+    * `:intercept` - Independent term in the linear model, one per target.
+      It is a scalar `0.0` when `:fit_intercept?` is `false`.
 
     * `:dual_gap` - Duality gap at the end of the optimization, divided by the
       number of samples so it is on the scale of the objective function.
+      One per target.
 
-    * `:num_iterations` - Number of coordinate descent iterations performed.
-      When it equals `:max_iterations`, the fit stopped before reaching the
-      tolerance.
+    * `:num_iterations` - Number of coordinate descent iterations performed,
+      one per target. When it equals `:max_iterations`, the fit stopped before
+      reaching the tolerance.
+
+  Each target is fitted on its own, the same as fitting the model once per
+  column of `y`.
 
   ## Examples
 
@@ -133,7 +140,7 @@ defmodule Scholar.Linear.Lasso do
   """
   deftransform fit(x, y, opts \\ []) do
     {num_samples, _} = Nx.shape(x)
-    y = LinearHelpers.validate_y_shape(y, num_samples, __MODULE__)
+    y = LinearHelpers.validate_multi_target_y_shape(y, num_samples, __MODULE__)
 
     opts = NimbleOptions.validate!(opts, @opts_schema)
 
@@ -164,6 +171,10 @@ defmodule Scholar.Linear.Lasso do
 
   @doc """
   Makes predictions with the given `model` on input `x`.
+
+  Output predictions have shape `{num_samples}` when the model was fitted on
+  targets of shape `{num_samples}` or `{num_samples, 1}`, and
+  `{num_samples, num_targets}` otherwise.
 
   ## Examples
 

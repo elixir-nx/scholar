@@ -174,6 +174,58 @@ defmodule Scholar.Linear.LassoTest do
     end
   end
 
+  describe "fit with several targets" do
+    test "matches scikit-learn" do
+      {x, y} = diabetes_data(:f64)
+      y = Nx.squeeze(y, axes: [1])
+      y = Nx.stack([y, y |> Nx.multiply(0.5) |> Nx.add(x[[.., 3]])], axis: 1)
+
+      model = Lasso.fit(x, y, alpha: 10.0)
+
+      expected_coefficients =
+        Nx.tensor(
+          [
+            [
+              -0.36746418227743394,
+              0.0,
+              7.349765026065425,
+              0.8376782001289618,
+              2.562256698081846,
+              -3.057470261176257,
+              -2.620645588480563,
+              0.0,
+              0.0,
+              -1.340024966289126
+            ],
+            [
+              -0.119820879036427,
+              0.0,
+              3.2075089753934956,
+              1.4196941760789878,
+              1.1494311613362613,
+              -1.3915255584503088,
+              -1.2484761144648941,
+              0.0,
+              0.0,
+              -0.4896649366262131
+            ]
+          ],
+          type: :f64
+        )
+
+      assert_all_close(model.coefficients, expected_coefficients, atol: 1.0e-10, rtol: 1.0e-10)
+
+      assert_all_close(
+        model.intercept,
+        Nx.tensor([7.948965558338216, 3.208131416763365], type: :f64),
+        atol: 1.0e-10,
+        rtol: 1.0e-10
+      )
+
+      assert Nx.to_list(model.num_iterations) == [93, 88]
+    end
+  end
+
   describe "fit with :sample_weights" do
     test "matches scikit-learn" do
       {x, y} = diabetes_data()

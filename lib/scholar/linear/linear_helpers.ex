@@ -36,6 +36,19 @@ defmodule Scholar.Linear.LinearHelpers do
   end
 
   @doc false
+  def validate_multi_target_y_shape(y, n_samples, module_name) do
+    y = flatten_column_vector(y, n_samples)
+
+    if Nx.rank(y) in [1, 2] and Nx.axis_size(y, 0) == n_samples do
+      y
+    else
+      raise ArgumentError,
+            "#{inspect(module_name)} expected y to have shape {n_samples} or {n_samples, n_targets}, " <>
+              "with n_samples = #{n_samples}, got tensor with shape: #{inspect(Nx.shape(y))}"
+    end
+  end
+
+  @doc false
   def build_sample_weights(x, opts) do
     x_type = to_float_type(x)
     {num_samples, _} = Nx.shape(x)

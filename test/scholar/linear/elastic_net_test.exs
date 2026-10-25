@@ -445,6 +445,163 @@ defmodule Scholar.Linear.ElasticNetTest do
     end
   end
 
+  describe "fit with several targets" do
+    # The diabetes target and a second one built from it, so the two targets
+    # converge after a different number of iterations.
+    defp two_targets({x, y}) do
+      y = Nx.squeeze(y, axes: [1])
+      {x, Nx.stack([y, y |> Nx.multiply(0.5) |> Nx.add(x[[.., 3]])], axis: 1)}
+    end
+
+    test "f64 inputs match scikit-learn to full precision" do
+      {x, y} = two_targets(diabetes_data(:f64))
+
+      model = ElasticNet.fit(x, y, alpha: 0.5, l1_ratio: 0.9)
+
+      expected_coefficients =
+        Nx.tensor(
+          [
+            [
+              -0.28094471678986765,
+              -18.150803918915617,
+              7.0523218336227815,
+              0.9806484594312437,
+              1.4129314513976976,
+              -2.1302788588623183,
+              -1.0994201789301488,
+              11.446606121519787,
+              33.52319783024136,
+              -1.3516061622476911
+            ],
+            [
+              -0.15374071594757874,
+              -7.621783203302804,
+              3.5975216218220756,
+              1.4783648505259899,
+              0.8100020074521119,
+              -1.1498203752954401,
+              -0.6801368559992828,
+              4.730410327882695,
+              14.210944871567444,
+              -0.6937982981601881
+            ]
+          ],
+          type: :f64
+        )
+
+      assert Nx.shape(model.coefficients) == {2, 10}
+      assert_all_close(model.coefficients, expected_coefficients, atol: 1.0e-10, rtol: 1.0e-10)
+
+      assert_all_close(
+        model.intercept,
+        Nx.tensor([-140.0262635089252, -58.24567394114845], type: :f64),
+        atol: 1.0e-10,
+        rtol: 1.0e-10
+      )
+
+      assert Nx.to_list(model.num_iterations) == [246, 234]
+
+      assert_all_close(
+        model.dual_gap,
+        Nx.tensor([0.5221082509332337, 0.1823269801285642], type: :f64),
+        atol: 1.0e-10,
+        rtol: 1.0e-8
+      )
+    end
+
+    test "each target is fitted as if it were alone" do
+      {x, y} = two_targets(diabetes_data())
+      opts = [alpha: 0.5, l1_ratio: 0.9]
+
+      model = ElasticNet.fit(x, y, opts)
+
+      for k <- 0..1 do
+        single = ElasticNet.fit(x, y[[.., k]], opts)
+
+        assert_all_close(model.coefficients[k], single.coefficients, atol: 1.0e-4, rtol: 1.0e-5)
+        assert_all_close(model.intercept[k], single.intercept, atol: 1.0e-3, rtol: 1.0e-5)
+        assert Nx.to_number(model.num_iterations[k]) == Nx.to_number(single.num_iterations)
+      end
+    end
+
+    test "with :sample_weights, f64 inputs match scikit-learn" do
+      {x, y} = two_targets(diabetes_data(:f64))
+      weights = Nx.iota({50}, type: :f64) |> Nx.remainder(3) |> Nx.add(1)
+
+      model = ElasticNet.fit(x, y, alpha: 0.5, l1_ratio: 0.9, sample_weights: weights)
+
+      expected_coefficients =
+        Nx.tensor(
+          [
+            [
+              -0.2730789694077994,
+              -11.280362494253572,
+              7.902702236458736,
+              1.444359782371634,
+              0.15721992579990451,
+              -1.2773478196589887,
+              0.3878531799506173,
+              16.63401511315393,
+              42.644181846950815,
+              -0.8805425282225469
+            ],
+            [
+              -0.15168767447453504,
+              -3.929661082912579,
+              4.035321994067257,
+              1.7107593375607786,
+              0.18664615177661692,
+              -0.725285447075043,
+              0.0431253879942725,
+              7.083760641714669,
+              18.528353807653406,
+              -0.45841861790397753
+            ]
+          ],
+          type: :f64
+        )
+
+      assert_all_close(model.coefficients, expected_coefficients, atol: 1.0e-10, rtol: 1.0e-10)
+
+      assert_all_close(
+        model.intercept,
+        Nx.tensor([-257.2610665991673, -115.05206716114222], type: :f64),
+        atol: 1.0e-10,
+        rtol: 1.0e-10
+      )
+
+      assert Nx.to_list(model.num_iterations) == [207, 203]
+    end
+
+    test "fit_intercept?: false gives a zero intercept" do
+      {x, y} = two_targets(diabetes_data())
+
+      model = ElasticNet.fit(x, y, alpha: 0.5, fit_intercept?: false, max_iterations: 20)
+
+      assert Nx.shape(model.coefficients) == {2, 10}
+      assert Nx.to_number(model.intercept) == 0.0
+      assert Nx.to_list(model.num_iterations) == [20, 20]
+    end
+
+    test "predict returns one column per target" do
+      {x, y} = two_targets(diabetes_data())
+
+      model = ElasticNet.fit(x, y, alpha: 0.5, l1_ratio: 0.9)
+      predictions = ElasticNet.predict(model, x)
+
+      assert Nx.shape(predictions) == {50, 2}
+
+      for k <- 0..1 do
+        single = ElasticNet.fit(x, y[[.., k]], alpha: 0.5, l1_ratio: 0.9)
+
+        assert_all_close(predictions[[.., k]], ElasticNet.predict(single, x),
+          atol: 1.0e-2,
+          rtol: 1.0e-5
+        )
+      end
+    end
+  end
+
   describe "predict" do
     test "matches scikit-learn" do
       {x, y} = diabetes_data()
@@ -471,13 +628,18 @@ defmodule Scholar.Linear.ElasticNetTest do
       assert_raise NimbleOptions.ValidationError, fn -> ElasticNet.fit(x, y, alpha: -1.0) end
     end
 
-    test "targets with more than one column" do
+    test "targets with the wrong shape" do
       {x, y} = small_data()
-      y = Nx.stack([y, y], axis: 1)
 
       assert_raise ArgumentError,
-                   "Scholar.Linear.ElasticNet expected y to have shape {n_samples}, got tensor with shape: {5, 2}",
-                   fn -> ElasticNet.fit(x, y) end
+                   "Scholar.Linear.ElasticNet expected y to have shape {n_samples} or {n_samples, n_targets}, " <>
+                     "with n_samples = 5, got tensor with shape: {5, 2, 1}",
+                   fn -> ElasticNet.fit(x, Nx.stack([y, y], axis: 1) |> Nx.new_axis(2)) end
+
+      assert_raise ArgumentError,
+                   "Scholar.Linear.ElasticNet expected y to have shape {n_samples} or {n_samples, n_targets}, " <>
+                     "with n_samples = 5, got tensor with shape: {4}",
+                   fn -> ElasticNet.fit(x, y[0..3]) end
     end
   end
 end
