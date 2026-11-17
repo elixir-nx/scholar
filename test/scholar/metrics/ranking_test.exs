@@ -124,6 +124,13 @@ defmodule Scholar.Metrics.RankingTest do
       )
     end
 
+    test "returns 0 when all relevances are zero" do
+      y_true = Nx.tensor([0, 0, 0])
+      y_score = Nx.tensor([0.3, 0.2, 0.1])
+
+      assert Ranking.ndcg_n(y_true, y_score) == Nx.tensor(0.0)
+    end
+
     test "raises on invalid options" do
       y_true = Nx.tensor([3, 2, 3])
       y_score = Nx.tensor([3.0, 2.2, 3.5])

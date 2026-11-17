@@ -104,7 +104,7 @@ defmodule Scholar.Metrics.Ranking do
   @doc """
   Computes the normalized discounted cumulative gain (NDCG) based on true relevance scores `y_true` and their respective predicted scores `y_score`.
 
-  Tied scores are handled as in `dcg/3`.
+  Tied scores are handled as in `dcg/3`. The NDCG is 0 when all relevances are zero.
 
   ## Options
 
@@ -144,6 +144,12 @@ defmodule Scholar.Metrics.Ranking do
       >
   """
   defn ndcg_n(y_true, y_score, opts \\ []) do
-    dcg_n(y_true, y_score, opts) / dcg_n(y_true, y_true, opts)
+    dcg = dcg_n(y_true, y_score, opts)
+    type = Nx.type(dcg)
+
+    ideal_gains = y_true |> Nx.sort(direction: :desc) |> Nx.as_type(type)
+    ideal_dcg = Nx.sum(ideal_gains * discount(Nx.axis_size(y_true, 0), type, opts))
+
+    Nx.select(ideal_dcg == 0, 0, dcg / ideal_dcg)
   end
 end
