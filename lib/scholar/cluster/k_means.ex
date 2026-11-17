@@ -316,7 +316,7 @@ defmodule Scholar.Cluster.KMeans do
       )
   """
   defn predict(%__MODULE__{clusters: clusters} = _model, x) do
-    assert_same_shape!(x[0], clusters[0])
+    check_input_shape(x, clusters)
 
     Scholar.Metrics.Distance.pairwise_squared_euclidean(clusters, x) |> Nx.argmin(axis: 0)
   end
@@ -344,6 +344,24 @@ defmodule Scholar.Cluster.KMeans do
       )
   """
   defn transform(%__MODULE__{clusters: clusters} = _model, x) do
+    check_input_shape(x, clusters)
+
     Scholar.Metrics.Distance.pairwise_euclidean(x, clusters)
+  end
+
+  deftransformp check_input_shape(x, clusters) do
+    if Nx.rank(x) != 2 do
+      raise ArgumentError,
+            "expected input tensor to have shape {n_samples, n_features}, got tensor with shape: #{inspect(Nx.shape(x))}"
+    end
+
+    num_features = Nx.axis_size(x, 1)
+    num_features_seen = Nx.axis_size(clusters, 1)
+
+    if num_features != num_features_seen do
+      raise ArgumentError,
+            "expected input tensor to have the same number of features as tensor used to fit the model, " <>
+              "got #{num_features} and #{num_features_seen}"
+    end
   end
 end

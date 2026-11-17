@@ -127,6 +127,28 @@ defmodule Scholar.Cluster.KMeansTest do
                    fn -> KMeans.fit(x, num_clusters: 2) end
     end
 
+    test "when predict or transform input is not rank 2" do
+      model = KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]), num_clusters: 2, key: key())
+      x = Nx.tensor([1, 2])
+
+      message =
+        "expected input tensor to have shape {n_samples, n_features}, got tensor with shape: {2}"
+
+      assert_raise ArgumentError, message, fn -> KMeans.predict(model, x) end
+      assert_raise ArgumentError, message, fn -> KMeans.transform(model, x) end
+    end
+
+    test "when predict or transform input has a different number of features" do
+      model = KMeans.fit(Nx.tensor([[1, 2], [2, 4], [1, 3], [2, 5]]), num_clusters: 2, key: key())
+      x = Nx.tensor([[1], [2]])
+
+      message =
+        "expected input tensor to have the same number of features as tensor used to fit the model, got 1 and 2"
+
+      assert_raise ArgumentError, message, fn -> KMeans.predict(model, x) end
+      assert_raise ArgumentError, message, fn -> KMeans.transform(model, x) end
+    end
+
     test "when :max_iterations is not a positive integer" do
       x = Nx.tensor([[1, 2], [3, 4]])
 
