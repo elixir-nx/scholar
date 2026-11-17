@@ -137,4 +137,36 @@ defmodule Scholar.Metrics.DistanceTest do
       assert_all_close(jit_result, Distance.pairwise_squared_euclidean(x, y))
     end
   end
+
+  describe "pairwise distance shapes" do
+    test "raises when inputs do not have the same number of features" do
+      x = Nx.tensor([[1.0], [2.0]])
+      y = Nx.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+      message =
+        "expected input tensors to have shapes {n, num_features} and {m, num_features}, " <>
+          "got tensors with shapes {2, 1} and {2, 3}"
+
+      for fun <- [
+            &Distance.pairwise_squared_euclidean/2,
+            &Distance.pairwise_euclidean/2,
+            &Distance.pairwise_minkowski/2,
+            &Distance.pairwise_minkowski(&1, &2, p: 1),
+            &Distance.pairwise_cosine/2
+          ] do
+        assert_raise ArgumentError, message, fn -> fun.(x, y) end
+      end
+    end
+
+    test "raises when an input is not rank 2" do
+      x = Nx.tensor([1.0, 2.0, 3.0])
+      y = Nx.tensor([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+
+      message =
+        "expected input tensors to have shapes {n, num_features} and {m, num_features}, " <>
+          "got tensors with shapes {3} and {2, 3}"
+
+      assert_raise ArgumentError, message, fn -> Distance.pairwise_euclidean(x, y) end
+    end
+  end
 end
