@@ -12,90 +12,99 @@ defmodule Scholar.Metrics.Ranking do
   import Nx.Defn
   import Scholar.Shared
 
+  @ln2 :math.log(2)
+
   @dcg_opts [
     k: [
-      type: {:custom, Scholar.Options, :positive_number, []},
+      type: {:or, [:pos_integer, nil]},
       doc: "Truncation parameter to consider only the top-k elements."
     ]
   ]
 
   @dcg_opts_schema NimbleOptions.new!(@dcg_opts)
 
+  @doc """
+  Computes the discounted cumulative gain (DCG) based on true relevance scores `y_true`
+  and their respective predicted scores `y_score`.
+
+  Tied scores get the mean gain of their group, which is the expected DCG when the ties
+  are broken at random. This follows scikit-learn and McSherry and Najork, "Computing
+  Information Retrieval Performance Measures Efficiently in the Presence of Tied Scores"
+  (ECIR 2008).
+
+  ## Options
+
+  #{NimbleOptions.docs(@dcg_opts_schema)}
+
+  ## Examples
+
+      iex> y_true = Nx.tensor([10, 0, 0, 1, 5])
+      iex> y_score = Nx.tensor([1.0, 0.0, 0.0, 0.0, 1.0])
+      iex> Scholar.Metrics.Ranking.dcg(y_true, y_score, k: 1)
+      #Nx.Tensor<
+        f32
+        7.5
+      >
+  """
   deftransform dcg(y_true, y_score, opts \\ []) do
-    dcg_n(y_true, y_score, NimbleOptions.validate!(opts, @dcg_opts_schema))
+    dcg_n(y_true, y_score, opts)
   end
 
   @doc """
-  ## Options
-  #{NimbleOptions.docs(@dcg_opts_schema)}
-
-  Computes the DCG based on true relevance scores (`y_true`) and their respective predicted scores (`y_score`).
+  Same as `dcg/3`.
   """
   defn dcg_n(y_true, y_score, opts) do
+    opts = validate_opts(opts)
+
     y_true_shape = Nx.shape(y_true)
     y_score_shape = Nx.shape(y_score)
 
     check_shape(y_true_shape, y_score_shape)
 
-    {adjusted_y_true, adjusted_y_score} = handle_ties(y_true, y_score)
+    type = Nx.Type.merge(to_float_type(y_true), to_float_type(y_score))
+    gains = tie_averaged_gains(y_true, y_score, type)
+    Nx.sum(gains * discount(Nx.axis_size(gains, 0), type, opts))
+  end
 
-    sorted_indices = Nx.argsort(adjusted_y_score, axis: 0, direction: :desc)
-    sorted_y_true = Nx.take(adjusted_y_true, sorted_indices)
-
-    truncated_y_true = truncate_at_k(sorted_y_true, opts)
-    dcg_value(truncated_y_true)
+  deftransformp validate_opts(opts) do
+    NimbleOptions.validate!(opts, @dcg_opts_schema)
   end
 
   defnp check_shape(y_true, y_pred) do
     assert_same_shape!(y_true, y_pred)
   end
 
-  defnp handle_ties(y_true, y_score) do
-    sorted_indices = Nx.argsort(y_score, axis: 0, direction: :desc)
+  defnp tie_averaged_gains(y_true, y_score, type) do
+    size = Nx.axis_size(y_true, 0)
+    order = Nx.argsort(y_score, direction: :desc)
+    gains = y_true |> Nx.take(order) |> Nx.as_type(type)
+    scores = Nx.take(y_score, order)
 
-    sorted_y_true = Nx.take(y_true, sorted_indices)
-    sorted_y_score = Nx.take(y_score, sorted_indices)
+    previous_scores = Nx.take(scores, Nx.max(Nx.iota({size}) - 1, 0))
+    groups = Nx.cumulative_sum(Nx.as_type(scores != previous_scores, :s32))
+    indices = Nx.new_axis(groups, 1)
 
-    tie_sorted_indices = Nx.argsort(sorted_y_true, axis: 0, direction: :desc)
-    adjusted_y_true = Nx.take(sorted_y_true, tie_sorted_indices)
-    adjusted_y_score = Nx.take(sorted_y_score, tie_sorted_indices)
+    group_gains = Nx.indexed_add(Nx.broadcast(Nx.tensor(0, type: type), {size}), indices, gains)
+    group_sizes = Nx.indexed_add(Nx.broadcast(0, {size}), indices, Nx.broadcast(1, {size}))
 
-    {adjusted_y_true, adjusted_y_score}
+    Nx.take(group_gains / Nx.max(group_sizes, 1), groups)
   end
 
-  defnp dcg_value(y_true) do
-    float_y_true = Nx.as_type(y_true, :f32)
+  defnp discount(size, type, opts) do
+    positions = Nx.iota({size}, type: type)
+    # Nx.log2 computes log(2) in f32 in Nx 1.0, which loses precision for f64 inputs
+    discount = @ln2 / Nx.log(positions + 2)
 
-    log_tensor =
-      y_true
-      |> Nx.shape()
-      |> Nx.iota()
-      |> Nx.as_type(:f32)
-      |> Nx.add(2.0)
-      |> Nx.log2()
-
-    div_result = Nx.divide(float_y_true, log_tensor)
-
-    Nx.sum(div_result)
-  end
-
-  defnp truncate_at_k(tensor, opts) do
     case opts[:k] do
-      nil ->
-        tensor
-
-      _ ->
-        if opts[:k] > Nx.axis_size(tensor, 0) do
-          tensor
-        else
-          {top_k, _rest} = Nx.split(tensor, opts[:k], axis: 0)
-          top_k
-        end
+      nil -> discount
+      k -> Nx.select(positions < k, discount, 0)
     end
   end
 
   @doc """
   Computes the normalized discounted cumulative gain (NDCG) based on true relevance scores `y_true` and their respective predicted scores `y_score`.
+
+  Tied scores are handled as in `dcg/3`.
 
   ## Options
 
@@ -108,19 +117,25 @@ defmodule Scholar.Metrics.Ranking do
       iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, scores)
       #Nx.Tensor<
         f32
-        0.6956940293312073
+        0.695694
       >
       iex> scores = Nx.tensor([0.05, 1.1, 1.0, 0.5, 0.0])
       iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, scores)
       #Nx.Tensor<
         f32
-        0.4936802089214325
+        0.4936802
       >
       iex> scores = Nx.tensor([0.05, 1.1, 1.0, 0.5, 0.0])
       iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, scores, k: 4)
       #Nx.Tensor<
         f32
-        0.352024108171463
+        0.3520241
+      >
+      iex> scores = Nx.tensor([1, 0, 0, 0, 1])
+      iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, scores, k: 1)
+      #Nx.Tensor<
+        f32
+        0.75
       >
       iex> Scholar.Metrics.Ranking.ndcg_n(true_relevance, true_relevance, k: 4)
       #Nx.Tensor<
