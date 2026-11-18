@@ -382,6 +382,7 @@ defmodule Scholar.Metrics.Distance do
   end
 
   defnp pairwise_minkowski_n(x, y, opts) do
+    check_pairwise_shapes(x, y)
     p = opts[:p]
 
     cond do
@@ -605,6 +606,7 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   defn pairwise_squared_euclidean(x, y) do
+    check_pairwise_shapes(x, y)
     {x, y} = center(x, y)
     y_norm = Nx.sum(y * y, axes: [1]) |> Nx.new_axis(0)
     x_norm = Nx.sum(x * x, axes: [1], keep_axes: true)
@@ -753,6 +755,7 @@ defmodule Scholar.Metrics.Distance do
       >
   """
   defn pairwise_cosine(x, y) do
+    check_pairwise_shapes(x, y)
     x_normalized = Scholar.Preprocessing.normalize(x, axes: [1])
     y_normalized = Scholar.Preprocessing.normalize(y, axes: [1])
     Nx.max(0, 1 - Nx.dot(x_normalized, [-1], y_normalized, [-1]))
@@ -782,5 +785,17 @@ defmodule Scholar.Metrics.Distance do
     x_normalized = Scholar.Preprocessing.normalize(x, axes: [1])
     dist = Nx.max(0, 1 - Nx.dot(x_normalized, [-1], x_normalized, [-1]))
     Nx.put_diagonal(dist, Nx.broadcast(Nx.tensor(0, type: Nx.type(dist)), {Nx.axis_size(x, 0)}))
+  end
+
+  deftransformp check_pairwise_shapes(x, y) do
+    case {Nx.shape(x), Nx.shape(y)} do
+      {{_, num_features}, {_, num_features}} ->
+        :ok
+
+      {x_shape, y_shape} ->
+        raise ArgumentError,
+              "expected input tensors to have shapes {n, num_features} and {m, num_features}, " <>
+                "got tensors with shapes #{inspect(x_shape)} and #{inspect(y_shape)}"
+    end
   end
 end
