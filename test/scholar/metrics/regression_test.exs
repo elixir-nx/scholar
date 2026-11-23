@@ -169,4 +169,66 @@ defmodule Scholar.Metrics.RegressionTest do
       assert_all_close(mpbl, Nx.tensor(0.225))
     end
   end
+
+  describe "mean_poisson_deviance/3" do
+    # Reference values from scikit-learn's `mean_poisson_deviance`.
+    test "matches sklearn when y_true has zeros" do
+      y_true = Nx.tensor([0.0, 2.0, 5.0, 1.0])
+      y_pred = Nx.tensor([0.5, 2.5, 4.0, 1.0])
+
+      assert_all_close(Regression.mean_poisson_deviance(y_true, y_pred), 0.33471533)
+      assert_all_close(Regression.d2_tweedie_score(y_true, y_pred, 1), 0.82783491)
+
+      assert_all_close(
+        Regression.mean_poisson_deviance(Nx.tensor([0, 2]), Nx.tensor([1, 2])),
+        1.0
+      )
+    end
+  end
+
+  describe "scores of multiple outputs" do
+    # Reference values from scikit-learn: `multioutput="raw_values"` for
+    # `axes: [0]`, and the scores of the flattened tensors for no `:axes`.
+    @y_true Nx.tensor([[1.0, 10.0], [2.0, 30.0], [4.0, 20.0], [3.0, 50.0]])
+    @y_pred Nx.tensor([[1.5, 12.0], [2.0, 25.0], [3.0, 22.0], [3.5, 45.0]])
+
+    test "r2_score" do
+      assert_all_close(Regression.r2_score(@y_true, @y_pred), 0.97206573)
+
+      assert_all_close(
+        Regression.r2_score(@y_true, @y_pred, axes: [0]),
+        Nx.tensor([0.7, 0.93371429])
+      )
+
+      assert_all_close(
+        Regression.r2_score(Nx.transpose(@y_true), Nx.transpose(@y_pred), axes: [1]),
+        Nx.tensor([0.7, 0.93371429])
+      )
+    end
+
+    test "explained_variance_score" do
+      assert_all_close(Regression.explained_variance_score(@y_true, @y_pred), 0.97417840)
+
+      assert_all_close(
+        Regression.explained_variance_score(@y_true, @y_pred, axes: [0]),
+        Nx.tensor([0.7, 0.944])
+      )
+
+      assert_all_close(
+        Regression.explained_variance_score(
+          Nx.transpose(@y_true),
+          Nx.transpose(@y_pred),
+          axes: [1]
+        ),
+        Nx.tensor([0.7, 0.944])
+      )
+    end
+
+    test "constant outputs" do
+      y_true = Nx.tensor([[1.0, 3.0], [2.0, 3.0], [4.0, 3.0]])
+      y_pred = Nx.tensor([[1.0, 3.0], [2.0, 3.0], [3.0, 4.0]])
+      r2 = Regression.r2_score(y_true, y_pred, axes: [0])
+      assert_all_close(r2, Nx.tensor([0.78571429, 0.0]))
+    end
+  end
 end
