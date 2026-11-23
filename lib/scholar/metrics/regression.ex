@@ -285,7 +285,9 @@ defmodule Scholar.Metrics.Regression do
 
         # Poisson distribution
         power == 1 ->
-          2 * (y_true * Nx.log(y_true / y_pred) + y_pred - y_true)
+          # y_true * log(y_true / y_pred) is 0 when y_true is 0
+          ratio = Nx.select(y_true == 0, 1, y_true / y_pred)
+          2 * (y_true * Nx.log(ratio) + y_pred - y_true)
 
         # Gamma distribution
         power == 2 ->
@@ -420,7 +422,7 @@ defmodule Scholar.Metrics.Regression do
       iex> Scholar.Metrics.Regression.r2_score(y_true, y_pred, axes: [0])
       #Nx.Tensor<
         f32[2]
-        [0.68, 0.9559956]
+        [0.5, 0.95555556]
       >
 
       iex> y_true = Nx.tensor([-2.0, -2.0, -2.0], type: :f64)
@@ -463,7 +465,7 @@ defmodule Scholar.Metrics.Regression do
     assert_same_shape!(y_true, y_pred)
     ssr = squared_euclidean(y_true, y_pred, axes: opts[:axes])
 
-    y_mean = Nx.broadcast(Nx.mean(y_true), Nx.shape(y_true))
+    y_mean = Nx.broadcast(Nx.mean(y_true, axes: opts[:axes], keep_axes: true), y_true)
     sst = squared_euclidean(y_true, y_mean, axes: opts[:axes])
 
     handle_non_finite(ssr, sst, opts)
@@ -538,12 +540,11 @@ defmodule Scholar.Metrics.Regression do
 
   defnp explained_variance_score_n(y_true, y_pred, opts) do
     axes = opts[:axes]
-    y_diff_avg = Nx.mean(y_true - y_pred, axes: axes)
-    sample_size = Nx.axis_size(y_true, 0)
+    y_diff = y_true - y_pred
+    y_diff_avg = Nx.mean(y_diff, axes: axes, keep_axes: true)
+    numerator = Nx.mean((y_diff - y_diff_avg) ** 2, axes: axes)
 
-    numerator = squared_euclidean(y_true, y_pred + y_diff_avg, axes: axes) / sample_size
-
-    y_true_avg = Nx.mean(y_true, axes: axes)
+    y_true_avg = Nx.mean(y_true, axes: axes, keep_axes: true)
     denominator = Nx.mean((y_true - y_true_avg) ** 2, axes: axes)
     handle_non_finite(numerator, denominator, opts)
   end
