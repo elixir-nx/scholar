@@ -35,6 +35,10 @@ defmodule Scholar.Cluster.HDBSCAN do
   where the merge heights are all distinct, and therefore the dendrogram is unique, the two
   agree on which points are grouped together, up to which cluster gets which integer id.
 
+  The membership probabilities are read off the condensed hierarchy itself, so they are more
+  sensitive to those ties than the labels are: on tied data they can differ even where both
+  implementations put the same points in the same cluster.
+
   ## References
 
     * [Density-Based Clustering Based on Hierarchical Density Estimates](https://doi.org/10.1007/978-3-642-37456-2_14),
@@ -43,8 +47,8 @@ defmodule Scholar.Cluster.HDBSCAN do
   import Nx.Defn
   import Scholar.Shared
 
-  @derive {Nx.Container, containers: [:labels]}
-  defstruct [:labels]
+  @derive {Nx.Container, containers: [:labels, :probabilities]}
+  defstruct [:labels, :probabilities]
 
   opts = [
     min_cluster_size: [
@@ -102,6 +106,11 @@ defmodule Scholar.Cluster.HDBSCAN do
     Clusters are numbered from `0`, ordered by the point at which they appear in the
     condensed hierarchy.
 
+  * `:probabilities` - How strongly each point belongs to the cluster it was given, between
+    `0` and `1`. A point that stays in its cluster until the cluster itself dies scores
+    `1.0`, one that drops out earlier scores the fraction of its cluster's lifetime it
+    lasted, and noise scores `0.0`.
+
   ## Examples
 
       iex> x = Nx.tensor([[1, 2], [2, 2], [2, 3], [1, 3], [8, 7], [8, 8], [7, 8], [7, 7]])
@@ -110,6 +119,19 @@ defmodule Scholar.Cluster.HDBSCAN do
       #Nx.Tensor<
         s32[8]
         [0, 0, 0, 0, 1, 1, 1, 1]
+      >
+
+      iex> x = Nx.tensor([[0, 0], [1, 0], [2, 0], [3, 0], [5, 0], [10, 0], [11, 0], [12, 0], [20, 0]], type: :f64)
+      iex> model = Scholar.Cluster.HDBSCAN.fit(x, min_cluster_size: 3, min_samples: 2)
+      iex> model.labels
+      #Nx.Tensor<
+        s32[9]
+        [1, 1, 1, 1, 1, 0, 0, 0, -1]
+      >
+      iex> model.probabilities
+      #Nx.Tensor<
+        f64[9]
+        [1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 0.0]
       >
   """
   deftransform fit(x, opts \\ []) do
@@ -157,7 +179,7 @@ defmodule Scholar.Cluster.HDBSCAN do
         linkage: :single
       )
 
-    labels =
+    {labels, probabilities} =
       extract_clusters(
         model.clades,
         model.dissimilarities,
@@ -165,7 +187,7 @@ defmodule Scholar.Cluster.HDBSCAN do
         min_cluster_size: opts[:min_cluster_size]
       )
 
-    %__MODULE__{labels: labels}
+    %__MODULE__{labels: labels, probabilities: probabilities}
   end
 
   # d_mreach(a, b) = max(core(a), core(b), d(a, b)), where core(a) is the distance from a
@@ -195,7 +217,8 @@ defmodule Scholar.Cluster.HDBSCAN do
     Nx.max(Nx.max(Nx.new_axis(core, 1), Nx.new_axis(core, 0)), distances)
   end
 
-  # Condenses the single linkage hierarchy and selects clusters by excess of mass.
+  # Condenses the single linkage hierarchy, selects clusters by excess of mass, and measures
+  # how strongly each point belongs to the cluster it ends up in.
   #
   # A condensed cluster is identified by the node at which it was born, so cluster ids live
   # in the same 0..2n-2 space as tree nodes. A cluster born at node `c` always has a smaller
@@ -467,6 +490,47 @@ defmodule Scholar.Cluster.HDBSCAN do
         {selected, resolved, {cluster_parent, step + 1}}
       end
 
+    # Pass 5: the lambda at which each cluster dies, which is the largest lambda among the
+    # children it has in the condensed hierarchy. Points leave one at a time, while a
+    # sub-cluster takes a whole group with it at the lambda where it was born.
+    death = Nx.broadcast(Nx.tensor(0.0, type: Nx.type(dissimilarities)), {total})
+
+    {death, _} =
+      while {death, {node_cluster, node_lambda, p = Nx.u32(0)}}, p < n do
+        idx = Nx.as_type(p, :s64)
+        c = Nx.max(node_cluster[idx], 0)
+
+        death =
+          Nx.indexed_put(
+            death,
+            Nx.reshape(c, {1, 1}),
+            Nx.reshape(Nx.max(death[c], node_lambda[idx]), {1})
+          )
+
+        {death, {node_cluster, node_lambda, p + 1}}
+      end
+
+    {death, _} =
+      while {death, {is_cluster, cluster_parent, cluster_birth, step = Nx.u32(0)}},
+            step < total - n do
+        c = n + Nx.as_type(step, :s64)
+        parent = cluster_parent[c]
+        counts? = is_cluster[c] == 1 and parent >= 0
+        into = Nx.max(parent, 0)
+
+        death =
+          Nx.indexed_put(
+            death,
+            Nx.reshape(into, {1, 1}),
+            Nx.reshape(
+              Nx.select(counts?, Nx.max(death[into], cluster_birth[c]), death[into]),
+              {1}
+            )
+          )
+
+        {death, {is_cluster, cluster_parent, cluster_birth, step + 1}}
+      end
+
     # Number the surviving clusters from 0 in the order they were born, walking the hierarchy
     # from the root down, then label every point by the cluster that owns it.
     born_selected = Nx.take(selected, Nx.max(birth_cluster, 0))
@@ -479,7 +543,29 @@ defmodule Scholar.Cluster.HDBSCAN do
 
     owner_birth = Nx.take(birth_order, Nx.max(owner, 0))
     labels = Nx.take(rank_by_birth, Nx.max(owner_birth, 0))
-    Nx.select(owner >= 0, labels, Nx.s64(-1)) |> Nx.as_type(:s32)
+    labels = Nx.select(owner >= 0, labels, Nx.s64(-1)) |> Nx.as_type(:s32)
+
+    # A point's membership is the share of its cluster's lifetime that it lasted. The point
+    # may have dropped out of a sub-cluster that was discarded, in which case it outlived
+    # the cluster that owns it and is capped at a full membership. Duplicate points leave at
+    # an infinite lambda, which is also a full membership rather than a division of
+    # infinities.
+    point_lambda = Nx.take(node_lambda, Nx.iota({n}))
+    owner_death = Nx.take(death, Nx.max(owner, 0))
+    safe_death = Nx.select(owner_death > 0, owner_death, 1)
+
+    probabilities =
+      Nx.select(
+        owner < 0,
+        0.0,
+        Nx.select(
+          owner_death == 0 or Nx.is_infinity(point_lambda),
+          1.0,
+          Nx.min(point_lambda, owner_death) / safe_death
+        )
+      )
+
+    {labels, probabilities}
   end
 
   # Number of original points under `node`: 1 for a leaf, else the size recorded for the
