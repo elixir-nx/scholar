@@ -258,7 +258,10 @@ defmodule Scholar.Cluster.HDBSCANTest do
       jitted =
         Nx.Defn.jit_apply(&HDBSCAN.fit(&1, min_cluster_size: 3, min_samples: 3), [blobs()])
 
-      assert jitted.labels == HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3).labels
+      direct = HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3)
+
+      assert jitted.labels == direct.labels
+      assert_all_close(jitted.probabilities, direct.probabilities, atol: 0.0, rtol: 0.0)
     end
 
     test "is deterministic" do
@@ -274,6 +277,159 @@ defmodule Scholar.Cluster.HDBSCANTest do
 
       assert HDBSCAN.fit(Nx.as_type(x, :f32), min_cluster_size: 3, min_samples: 3).labels ==
                HDBSCAN.fit(Nx.as_type(x, :f64), min_cluster_size: 3, min_samples: 3).labels
+    end
+  end
+
+  describe "probabilities" do
+    # Reference: sklearn.cluster.HDBSCAN(min_cluster_size=3, min_samples=3).fit(x).probabilities_
+    test "match scikit-learn on three separated blobs" do
+      model = HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3)
+
+      assert_all_close(
+        model.probabilities,
+        Nx.tensor([
+          0.9995818827546994,
+          1.0,
+          1.0,
+          0.8297169836024464,
+          1.0,
+          0.933906690303436,
+          0.9349886790485804,
+          1.0,
+          1.0,
+          0.9208321594067206,
+          0.7442533438899909,
+          1.0,
+          1.0,
+          1.0,
+          0.6837901010915983,
+          0.795992941929263,
+          1.0,
+          0.42367886310518843
+        ])
+      )
+    end
+
+    # Reference: sklearn.cluster.HDBSCAN(min_cluster_size=2, min_samples=2).fit(x).probabilities_
+    # The fifth point leaves its cluster halfway through the cluster's lifetime.
+    test "a point that leaves early scores the fraction of its cluster's lifetime it lasted" do
+      x = Nx.tensor([[1.0], [1.2], [1.1], [8.0], [8.3], [8.1]])
+      model = HDBSCAN.fit(x, min_cluster_size: 2, min_samples: 2)
+
+      assert model.labels == Nx.tensor([0, 0, 0, 1, 1, 1], type: :s32)
+      assert_all_close(model.probabilities, Nx.tensor([1.0, 1.0, 1.0, 1.0, 0.5, 1.0]))
+    end
+
+    # Reference: sklearn.cluster.HDBSCAN(min_cluster_size=2, min_samples=2).fit(x).probabilities_
+    # At this `min_cluster_size` the blobs split into sub-clusters that lose to their parent,
+    # so the points inside them outlive the cluster that ends up owning them.
+    test "a point that outlives the cluster owning it is a full member" do
+      model = HDBSCAN.fit(blobs(), min_cluster_size: 2, min_samples: 2)
+
+      assert model.labels ==
+               Nx.tensor([0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 3, 2, 2, 3], type: :s32)
+
+      assert_all_close(
+        model.probabilities,
+        Nx.tensor([
+          0.3256787572416946,
+          1.0,
+          0.44674517481596904,
+          0.3496548231486193,
+          1.0,
+          0.32554258533686375,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          0.4263703362431833,
+          0.5356374544530236,
+          1.0
+        ])
+      )
+    end
+
+    # Reference: sklearn.cluster.HDBSCAN(min_cluster_size=3, min_samples=2).fit(x).probabilities_
+    # The seventh point drops out of the larger cluster at lambda 1 / 2.0, and that cluster
+    # then ends by splitting in two at lambda 1 / 1.3, so the point lasted 0.65 of its
+    # cluster's lifetime. A cluster that dies by splitting rather than by losing its last
+    # point is the case that tells those two lambdas apart.
+    test "a cluster's lifetime ends at the split that breaks it up" do
+      x =
+        Nx.tensor(
+          [[0.0], [1.0], [2.05], [3.35], [4.4], [5.5], [7.5], [22.0], [23.05], [24.15]],
+          type: :f64
+        )
+
+      model = HDBSCAN.fit(x, min_cluster_size: 3, min_samples: 2)
+
+      assert model.labels == Nx.tensor([1, 1, 1, 1, 1, 1, 1, 0, 0, 0], type: :s32)
+
+      assert_all_close(
+        model.probabilities,
+        Nx.tensor([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.65, 1.0, 1.0, 1.0])
+      )
+    end
+
+    test "noise scores zero" do
+      x = Nx.tensor(Enum.map(0..9, &[&1 * 1.0, 0.0]))
+      model = HDBSCAN.fit(x, min_cluster_size: 3)
+
+      assert model.labels == Nx.broadcast(Nx.tensor(-1, type: :s32), {10})
+      assert_all_close(model.probabilities, Nx.broadcast(0.0, {10}))
+    end
+
+    # Duplicate points merge at distance 0, so they leave at an infinite lambda. That is a
+    # full membership rather than a division of infinities.
+    test "duplicate points are full members" do
+      x = Nx.tensor([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [9.0, 9.0], [9.0, 9.0], [9.0, 9.0]])
+      model = HDBSCAN.fit(x, min_cluster_size: 2, min_samples: 2)
+
+      assert_all_close(model.probabilities, Nx.broadcast(1.0, {6}))
+    end
+
+    # A cluster's lifetime ends when its last member leaves, so whoever leaves last scores 1.
+    test "every cluster keeps at least one point at full membership" do
+      model = HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 3)
+
+      for cluster <- 0..2 do
+        strongest =
+          Nx.select(Nx.equal(model.labels, cluster), model.probabilities, 0.0)
+          |> Nx.reduce_max()
+
+        assert_all_close(strongest, Nx.tensor(1.0))
+      end
+    end
+
+    test "probabilities stay between zero and one" do
+      model = HDBSCAN.fit(blobs(), min_cluster_size: 3, min_samples: 2)
+
+      in_range =
+        Nx.logical_and(
+          Nx.greater_equal(model.probabilities, 0.0),
+          Nx.less_equal(model.probabilities, 1.0)
+        )
+        |> Nx.all()
+
+      assert in_range == Nx.u8(1)
+    end
+
+    test "the type follows the input" do
+      assert Nx.type(HDBSCAN.fit(Nx.as_type(blobs(), :f64), min_cluster_size: 3).probabilities) ==
+               {:f, 64}
+
+      assert Nx.type(HDBSCAN.fit(Nx.as_type(blobs(), :f32), min_cluster_size: 3).probabilities) ==
+               {:f, 32}
+
+      x = Nx.tensor([[1, 2], [2, 2], [2, 3], [1, 3], [8, 7], [8, 8], [7, 8], [7, 7]])
+
+      assert Nx.type(HDBSCAN.fit(x, min_cluster_size: 3, min_samples: 2).probabilities) ==
+               {:f, 32}
     end
   end
 
