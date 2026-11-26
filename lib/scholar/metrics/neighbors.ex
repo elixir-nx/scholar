@@ -60,8 +60,17 @@ defmodule Scholar.Metrics.Neighbors do
     end
 
     {n, k} = Nx.shape(neighbors_true)
-    concatenated = Nx.concatenate([neighbors_true, neighbors_pred], axis: 1) |> Nx.sort(axis: 1)
-    duplicate_mask = concatenated[[.., 0..(2 * k - 2)]] == concatenated[[.., 1..(2 * k - 1)]]
-    duplicate_mask |> Nx.sum() |> Nx.divide(n * k)
+    concatenated = Nx.concatenate([neighbors_true, neighbors_pred], axis: 1)
+    order = Nx.argsort(concatenated, axis: 1, stable: true)
+    sorted = Nx.take_along_axis(concatenated, order, axis: 1)
+    from_true = order < k
+
+    # With a stable sort, equal indices come from neighbors_true first, so a shared index
+    # yields one pair from different tensors and a repetition inside a row yields none.
+    match_mask =
+      sorted[[.., 0..(2 * k - 2)]] == sorted[[.., 1..(2 * k - 1)]] and
+        from_true[[.., 0..(2 * k - 2)]] != from_true[[.., 1..(2 * k - 1)]]
+
+    match_mask |> Nx.sum() |> Nx.divide(n * k)
   end
 end
