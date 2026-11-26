@@ -132,6 +132,33 @@ defmodule Scholar.Neighbors.KNNClassifierTest do
       labels_pred = KNNClassifier.predict(model, x)
       assert labels_pred == Nx.tensor([0, 1, 0, 1])
     end
+
+    test "predict with weights set to :distance and a single neighbor" do
+      # Expected values from scikit-learn 1.6.1 on this data.
+      model =
+        KNNClassifier.fit(x_train(), y_train(),
+          num_classes: 2,
+          num_neighbors: 1,
+          weights: :distance
+        )
+
+      labels_pred = KNNClassifier.predict(model, x())
+      assert labels_pred == Nx.tensor([0, 1, 0, 1])
+    end
+
+    test "predict with weights set to :distance, a single neighbor and a sample with zero-distance" do
+      x = Nx.tensor([[3, 6, 7, 5], [1, 6, 1, 1], [3, 7, 9, 2], [5, 2, 1, 2]])
+
+      model =
+        KNNClassifier.fit(x_train(), y_train(),
+          num_classes: 2,
+          num_neighbors: 1,
+          weights: :distance
+        )
+
+      labels_pred = KNNClassifier.predict(model, x)
+      assert labels_pred == Nx.tensor([0, 1, 0, 1])
+    end
   end
 
   describe "predict_probability" do

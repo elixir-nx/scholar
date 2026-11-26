@@ -212,10 +212,10 @@ defmodule Scholar.Neighbors.KNNClassifier do
   end
 
   defnp weighted_mode(tensor, weights) do
-    tensor_size = Nx.size(tensor)
+    num_neighbors = Nx.axis_size(tensor, 1)
 
     cond do
-      tensor_size == 1 ->
+      num_neighbors == 1 ->
         Nx.squeeze(tensor, axes: [1])
 
       true ->
